@@ -102,7 +102,7 @@ export default function HaypAccountPicker({
       />
 
       {open && !disabled && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
           <div className="max-h-56 overflow-y-auto">
             {loading ? (
               <p className="px-3 py-3 text-xs text-slate-500 text-center">Loading accounts...</p>

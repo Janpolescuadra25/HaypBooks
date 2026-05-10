@@ -9,6 +9,7 @@ import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
 import { expensesService, ExpenseReportPayload } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
+import { getPolicyGuidanceText } from '@/config/expense-policies'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
 import HaypSelect from '@/components/shared/HaypSelect'
 
@@ -536,7 +537,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
               <div>
                 <label htmlFor="advancePayment" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Advance Payment</label>
                 <div className="relative mt-1">
@@ -595,19 +596,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                   </div>
                   <div className="px-4 pb-4 sm:px-5 lg:px-6">
                     <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-3">Important Policy Reminders</div>
-                    <ul className="space-y-3">
-                      {[
-                        'Receipts required for all items over $25.00',
-                        'Travel must be pre-authorized by department head',
-                        'All entries must include a specific business purpose',
-                        'Late submissions (>60 days) may be rejected'
-                      ].map((item, i) => (
-                        <li key={i} className="flex gap-3 text-sm text-amber-900/70 font-medium">
-                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+                    <p className="text-sm text-amber-800">{getPolicyGuidanceText()}</p>
                   </div>
                 </div>
               </section>

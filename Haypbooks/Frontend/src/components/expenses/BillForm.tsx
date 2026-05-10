@@ -771,7 +771,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
             )}
 
             <section>
-              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-visible">
                 <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
                   <div className="w-1 h-6 bg-emerald-500 rounded-full" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Line Items</h2>
@@ -797,7 +797,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
               </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Discount</h3>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <select aria-label="Discount type" value={discountType} onChange={(e) => setDiscountType(e.target.value as 'pct' | 'flat')} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none">

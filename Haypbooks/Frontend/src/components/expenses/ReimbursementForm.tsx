@@ -113,8 +113,8 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
     accountingService.listAccounts(companyId, { includeInactive: false })
       .then((res) => {
         if (!active) return
-        const data = res.data ?? []
-        const list = Array.isArray(data) ? data : data.data ?? []
+        const payload = res.data ?? res
+        const list = Array.isArray(payload) ? payload : payload.data ?? []
         setAccounts(list.map((account: any) => ({ id: account.id, code: account.code, name: account.name })))
       })
       .catch(() => {})
