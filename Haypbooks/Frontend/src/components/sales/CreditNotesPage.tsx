@@ -1,17 +1,18 @@
 ﻿'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUpDown, Clock, Download, Loader2, Plus, RefreshCw, X } from 'lucide-react'
+import { Plus, Download, Eye, Check, Ban, X, ListOrdered, Clock, Banknote, Loader2, Trash2 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
-import { useCompanyId } from '@/hooks/useCompanyId'
-import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
-import ColumnResizer from '@/components/ColumnResizer'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useCompanyId } from '@/hooks/useCompanyId'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
 import { InvoicePickerField } from './pickers'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypColumn, HaypActionItem, HaypBulkAction, HaypStat } from '@/components/shared/HaypDataTable.types'
+import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 const CREDIT_REASONS = ['Returned Goods', 'Price Adjustment', 'Overpayment', 'Billing Error', 'Discount Applied', 'Writing Off Bad Debt', 'Other']
 const REFUND_METHODS = ['Check', 'ACH', 'Credit Card', 'Cash']
@@ -48,38 +49,11 @@ interface CreditNoteRow {
 interface CustomerOption { id: string; name: string }
 interface InvoiceOption { id: string; invoiceNumber: string; balance: number; date?: string }
 
-interface ColDef {
-  key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right'
+interface EnrichedCN extends CreditNoteRow {
+  _unapplied: number
 }
 
-const DEFAULT_COLS: ColDef[] = [
-  { key: 'creditNoteNumber', label: 'CN #', visible: true, width: 120, align: 'left' },
-  { key: 'customer', label: 'Customer', visible: true, width: 180, align: 'left' },
-  { key: 'type', label: 'Type', visible: true, width: 100, align: 'left' },
-  { key: 'invoiceNumber', label: 'Invoice #', visible: true, width: 120, align: 'left' },
-  { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
-  { key: 'amount', label: 'Amount', visible: true, width: 120, align: 'right' },
-  { key: 'appliedAmount', label: 'Applied', visible: true, width: 120, align: 'right' },
-  { key: 'unappliedAmount', label: 'Unapplied', visible: true, width: 120, align: 'right' },
-  { key: 'reasonCode', label: 'Reason', visible: true, width: 150, align: 'left' },
-  { key: 'status', label: 'Status', visible: true, width: 96, align: 'left' },
-]
-
-function loadCols(): ColDef[] {
-  try {
-    const s = localStorage.getItem('credit-notes-cols-v1')
-    if (s) {
-      const saved = JSON.parse(s) as ColDef[]
-      return DEFAULT_COLS.map(d => {
-        const sc = saved.find(c => c.key === d.key)
-        return sc ? { ...d, visible: sc.visible, width: sc.width } : d
-      })
-    }
-  } catch { /* ignore */ }
-  return DEFAULT_COLS
-}
-
-function normalizeCN(cn: any): CreditNoteRow {
+function normalizeCN(cn: any): EnrichedCN {
   const amount = Number(cn.amount ?? cn.totalAmount ?? 0)
   const appliedAmount = Number(cn.appliedAmount ?? cn.applied ?? 0)
   return {
@@ -98,13 +72,8 @@ function normalizeCN(cn: any): CreditNoteRow {
     type: cn.type === 'refund' ? 'refund' : 'credit',
     appliedAmount,
     unappliedAmount: Number(cn.unappliedAmount ?? Math.max(0, amount - appliedAmount)),
+    _unapplied: Math.max(0, amount - appliedAmount),
   }
-}
-
-function fmtDate(d: string | null) {
-  if (!d) return '—'
-  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
-  catch { return d }
 }
 
 function statusBadge(status: string) {
@@ -136,26 +105,6 @@ function parsePickerDueAmount(value?: string): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-type SortDirection = 'asc' | 'desc'
-type SortKey = 'creditNoteNumber' | 'customer' | 'type' | 'invoiceNumber' | 'date' | 'amount' | 'appliedAmount' | 'unappliedAmount' | 'reasonCode' | 'memo' | 'status'
-
-function compareCreditNotes(a: CreditNoteRow, b: CreditNoteRow, key: SortKey, dir: SortDirection): number {
-  const asc = dir === 'asc' ? 1 : -1
-  if (key === 'amount' || key === 'appliedAmount' || key === 'unappliedAmount') {
-    const av = Number((a as any)[key] ?? 0)
-    const bv = Number((b as any)[key] ?? 0)
-    return av === bv ? 0 : av > bv ? asc : -asc
-  }
-  if (key === 'date') {
-    const ad = a.date ? new Date(a.date).getTime() : 0
-    const bd = b.date ? new Date(b.date).getTime() : 0
-    return ad === bd ? 0 : ad > bd ? asc : -asc
-  }
-  const av = String((a as any)[key] ?? '').toLowerCase()
-  const bv = String((b as any)[key] ?? '').toLowerCase()
-  if (av === bv) return 0
-  return av > bv ? asc : -asc
-}
 
 export default function CreditNotesPage() {
   const router = useRouter()
@@ -171,9 +120,6 @@ export default function CreditNotesPage() {
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [exportLoading, setExportLoading] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
-
-  // Selection
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Detail drawer
   const [drawerCN, setDrawerCN] = useState<CreditNoteRow | null>(null)
@@ -210,8 +156,6 @@ export default function CreditNotesPage() {
   const [filterType, setFilterType] = useState('')
   const [filterDateFrom, setFilterDateFrom] = useState('')
   const [filterDateTo, setFilterDateTo] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('date')
-  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
   // Apply to Invoice modal
   const [applyOpen, setApplyOpen] = useState(false)
@@ -222,24 +166,6 @@ export default function CreditNotesPage() {
   const [applyError, setApplyError] = useState('')
   const [applyAmountFocused, setApplyAmountFocused] = useState(false)
   const [newAmountFocused, setNewAmountFocused] = useState(false)
-
-  // Column defs
-  const [cols, setCols] = useState<ColDef[]>(() => loadCols())
-  const [showColMenu, setShowColMenu] = useState(false)
-  const colsRef = useRef(cols)
-  useEffect(() => { colsRef.current = cols }, [cols])
-
-  const saveCols = (next: ColDef[]) => {
-    setCols(next)
-    try { localStorage.setItem('credit-notes-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
-  }
-
-  const { containerRef, startResize: onResizeStart, isOverflowing: creditNotesIsOverflowing } = useFixedWidthResizableColumns({
-    columns: cols,
-    columnsRef: colsRef,
-    saveColumns: saveCols,
-    fixedWidth: 160,
-  })
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
@@ -263,37 +189,26 @@ export default function CreditNotesPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // ─── Selection ────────────────────────────────────────────────────────────
-
-  const toggleAll = () => {
-    if (selectedIds.size === filtered.length) setSelectedIds(new Set())
-    else setSelectedIds(new Set(filtered.map(r => r.id)))
-  }
-  const toggleOne = (id: string) => {
-    setSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
-  }
-
   // ─── Batch ops ────────────────────────────────────────────────────────────
 
-  async function handleBatchDelete() {
-    if (!companyId || selectedIds.size === 0) return
-    if (!window.confirm(`Delete ${selectedIds.size} credit note(s)?`)) return
+  const handleBatchDelete = useCallback(async (ids: string[]) => {
+    if (!companyId || ids.length === 0) return
+    if (!window.confirm(`Delete ${ids.length} credit note(s)?`)) return
     setBatchLoading(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/credit-notes/batch/delete`, { ids: Array.from(selectedIds) })
-      setSelectedIds(new Set())
+      await apiClient.post(`/companies/${companyId}/ar/credit-notes/batch/delete`, { ids })
       fetchData()
-      showToast(`Deleted ${selectedIds.size} credit note(s)`)
+      showToast(`Deleted ${ids.length} credit note(s)`)
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Batch delete failed')
     } finally {
       setBatchLoading(false)
     }
-  }
+  }, [companyId, fetchData, showToast])
 
   // ─── Export ───────────────────────────────────────────────────────────────
 
-  async function handleExport() {
+  const handleExport = useCallback(async () => {
     if (!companyId) return
     setExportLoading(true)
     try {
@@ -302,7 +217,10 @@ export default function CreditNotesPage() {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/credit-notes/export`, { params })
       const blob = new Blob([data], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a'); a.href = url; a.download = 'credit-notes-export.csv'; a.click()
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'credit-notes-export.csv'
+      a.click()
       URL.revokeObjectURL(url)
       showToast('Export downloaded')
     } catch {
@@ -310,16 +228,171 @@ export default function CreditNotesPage() {
     } finally {
       setExportLoading(false)
     }
-  }
+  }, [companyId, statusFilter, showToast])
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-      return
-    }
-    setSortKey(key)
-    setSortDir(key === 'date' || key === 'amount' ? 'desc' : 'asc')
-  }
+  const handleExportSelected = useCallback((ids: string[], selectedRows: EnrichedCN[]) => {
+    if (ids.length === 0) return
+    const headers = ['CN #', 'Customer', 'Type', 'Invoice #', 'Date', 'Amount', 'Applied', 'Unapplied', 'Reason', 'Status']
+    const rows = selectedRows.map((row) => [
+      row.creditNoteNumber,
+      row.customer,
+      row.type === 'refund' ? 'Refund' : 'Credit',
+      row.invoiceNumber ?? '',
+      fmtDate(row.date),
+      formatCurrency(row.amount, currency),
+      formatCurrency(row.appliedAmount, currency),
+      formatCurrency(row._unapplied, currency),
+      row.reasonCode,
+      row.status,
+    ])
+    csvDownload('credit-notes-selected', headers, rows)
+    showToast('Selected credit notes exported')
+  }, [currency, showToast])
+
+  const tableData = useMemo<EnrichedCN[]>(() => {
+    let list = items.map((cn) => ({ ...cn, _unapplied: Math.max(0, (cn.amount || 0) - (cn.appliedAmount || 0)) }))
+    if (filterReason) list = list.filter((cn) => cn.reasonCode === filterReason)
+    if (filterType) list = list.filter((cn) => cn.type === filterType)
+    if (filterDateFrom) list = list.filter((cn) => cn.date && cn.date >= filterDateFrom)
+    if (filterDateTo) list = list.filter((cn) => cn.date && cn.date <= filterDateTo)
+    return list
+  }, [items, filterReason, filterType, filterDateFrom, filterDateTo])
+
+  const columns = useMemo<HaypColumn<EnrichedCN>[]>(() => [
+    {
+      id: 'creditNoteNumber',
+      header: 'CN #',
+      accessorKey: 'creditNoteNumber',
+      size: 140,
+      render: (value) => <span className="font-mono text-xs text-gray-800">{value}</span>,
+    },
+    {
+      id: 'customer',
+      header: 'Customer',
+      accessorKey: 'customer',
+      size: 200,
+      render: (value) => <span className="font-medium text-gray-700 truncate">{value || '—'}</span>,
+    },
+    {
+      id: 'type',
+      header: 'Type',
+      accessorKey: 'type',
+      size: 110,
+      render: (value) => (
+        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${value === 'refund' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'}`}>
+          {value === 'refund' ? 'Refund' : 'Credit'}
+        </span>
+      ),
+    },
+    {
+      id: 'invoiceNumber',
+      header: 'Invoice #',
+      accessorKey: 'invoiceNumber',
+      size: 130,
+      render: (value) => value ? <span className="text-emerald-600 text-xs">{value}</span> : <span className="text-slate-400">—</span>,
+    },
+    {
+      id: 'date',
+      header: 'Date',
+      accessorKey: 'date',
+      size: 120,
+      render: (value) => <span className="text-slate-600">{fmtDate(value)}</span>,
+    },
+    {
+      id: 'amount',
+      header: 'Amount',
+      accessorKey: 'amount',
+      size: 130,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className="font-semibold text-emerald-800 tabular-nums">{formatCurrency(value, currency)}</span>,
+    },
+    {
+      id: 'appliedAmount',
+      header: 'Applied',
+      accessorKey: 'appliedAmount',
+      size: 130,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className="font-semibold tabular-nums text-gray-800">{formatCurrency(value, currency)}</span>,
+    },
+    {
+      id: 'unappliedAmount',
+      header: 'Unapplied',
+      accessorKey: '_unapplied',
+      size: 130,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className={`font-semibold tabular-nums ${value > 0 ? 'text-amber-600' : 'text-gray-400'}`}>{value > 0 ? formatCurrency(value, currency) : '—'}</span>,
+    },
+    {
+      id: 'reasonCode',
+      header: 'Reason',
+      accessorKey: 'reasonCode',
+      size: 160,
+      render: (value) => <span className="text-xs text-gray-600 truncate" title={value}>{value || '—'}</span>,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'status',
+      size: 120,
+      render: (value) => <StatusPill status={value} />,
+    },
+  ], [currency])
+
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'Edit Credit Note',
+      icon: <Eye size={13} />,
+      onClick: (_id, row) => openEditCN(row.original),
+    },
+    { label: '', divider: true, onClick: () => {} },
+    {
+      label: 'Apply to Invoice',
+      icon: <Check size={13} />,
+      show: (row) => !['VOID', 'APPLIED'].includes(row.original.status),
+      onClick: (_id, row) => openApplyModal(row.original),
+    },
+    {
+      label: 'Void',
+      icon: <Ban size={13} />,
+      danger: true,
+      show: (row) => !['VOID', 'APPLIED'].includes(row.original.status),
+      onClick: (id) => handleVoid(id),
+    },
+  ], [handleVoid])
+
+  const bulkActions = useMemo<HaypBulkAction[]>(() => [
+    {
+      label: 'Export Selected',
+      icon: <Download size={14} />,
+      onClick: handleExportSelected,
+    },
+    {
+      label: 'Delete Selected',
+      icon: <Trash2 size={14} />,
+      variant: 'danger',
+      onClick: handleBatchDelete,
+    },
+  ], [handleBatchDelete, handleExportSelected])
+
+  const fmt = useCallback((value: number) => formatCurrency(value, currency), [currency])
+
+  const stats = useMemo<HaypStat[]>(() => [
+    { icon: ListOrdered, label: 'Total Credit Notes', value: String(items.length), color: 'blue' },
+    { icon: Check, label: 'Issued', value: String(items.filter(r => r.status === 'ISSUED').length), color: 'emerald' },
+    { icon: Clock, label: 'Applied', value: String(items.filter(r => r.status === 'APPLIED').length), color: 'amber' },
+    { icon: Banknote, label: 'Total Credit Value', value: fmt(items.reduce((sum, row) => sum + (row.amount || 0), 0)), color: 'rose' },
+  ], [fmt, items])
+
+  const statusFilterOptions = useMemo(() => [
+    { value: '', label: 'All Statuses' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'ISSUED', label: 'Issued' },
+    { value: 'APPLIED', label: 'Applied' },
+    { value: 'VOID', label: 'Void' },
+  ], [])
 
   // ─── Void ─────────────────────────────────────────────────────────────────
 
@@ -543,40 +616,6 @@ export default function CreditNotesPage() {
     }
   }
 
-  // ─── Search filter ────────────────────────────────────────────────────────
-
-  const filtered = useMemo(() => {
-    return items.filter((r) => {
-      if (search) {
-        const q = search.toLowerCase()
-        if (!(
-          r.creditNoteNumber?.toLowerCase().includes(q) ||
-          r.customer?.toLowerCase().includes(q) ||
-          (r.invoiceNumber ?? '').toLowerCase().includes(q) ||
-          r.reasonCode?.toLowerCase().includes(q) ||
-          r.memo?.toLowerCase().includes(q) ||
-          r.status?.toLowerCase().includes(q)
-        )) {
-          return false
-        }
-      }
-      if (statusFilter && r.status !== statusFilter) return false
-      if (filterReason && r.reasonCode !== filterReason) return false
-      if (filterType && r.type !== filterType) return false
-      if (filterDateFrom && new Date(r.date ?? '').getTime() < new Date(filterDateFrom).getTime()) return false
-      if (filterDateTo && new Date(r.date ?? '').getTime() > new Date(filterDateTo).getTime()) return false
-      return true
-    })
-  }, [search, items, statusFilter, filterReason, filterType, filterDateFrom, filterDateTo])
-
-  const sorted = useMemo(() => {
-    const next = [...filtered]
-    next.sort((a, b) => compareCreditNotes(a, b, sortKey, sortDir))
-    return next
-  }, [filtered, sortKey, sortDir])
-
-  const visibleCols = cols.filter(c => c.visible)
-
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -586,218 +625,70 @@ export default function CreditNotesPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Credit Notes</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage customer credit notes and adjustments</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleExport} disabled={exportLoading} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40">
-              <Download size={15} /> {exportLoading ? 'Exporting…' : 'Export'}
-            </button>
-            <button onClick={fetchData} className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Refresh">
-              <RefreshCw size={16} />
-            </button>
-            <button
-              onClick={() => router.push('/sales/revenue/credit-notes/activity')}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
-            >
-              <Clock size={15} /> Activity Log
-            </button>
-            {/* Column visibility */}
-            <div className="relative">
-              <button onClick={() => setShowColMenu(v => !v)} className="px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Columns</button>
-              {showColMenu && (
-                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-40 py-2">
-                  {cols.map(c => (
-                    <label key={c.key} className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" checked={c.visible} onChange={() => saveCols(cols.map(col => col.key === c.key ? { ...col, visible: !col.visible } : col))} className="accent-emerald-600" />
-                      {c.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button onClick={openModal} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">
-              <Plus size={16} /> New Credit Note
-            </button>
-          </div>
-        </div>
-
-        <div className="px-6 pb-4 flex flex-wrap gap-3">
-          <input
-            placeholder="Search by number, customer, reason…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full max-w-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-          />
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-          >
-            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s || 'All Statuses'}</option>)}
-          </select>
-          <select
-            value={filterReason}
-            onChange={e => setFilterReason(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-          >
-            <option value="">All Reasons</option>
-            {CREDIT_REASONS.map(code => <option key={code} value={code}>{code}</option>)}
-          </select>
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-          >
-            <option value="">All Types</option>
-            <option value="credit">Credit</option>
-            <option value="refund">Refund</option>
-          </select>
-          <input
-            type="date"
-            value={filterDateFrom}
-            onChange={e => setFilterDateFrom(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-          />
-          <input
-            type="date"
-            value={filterDateTo}
-            onChange={e => setFilterDateTo(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Batch bar */}
-      {selectedIds.size > 0 && (
-        <div className="bg-emerald-700 text-white px-6 py-2.5 flex items-center gap-3 text-sm font-medium">
-          <span>{selectedIds.size} selected</span>
-          <button onClick={handleBatchDelete} disabled={batchLoading} className="px-3 py-1 bg-rose-500 hover:bg-rose-600 rounded text-white text-xs font-semibold disabled:opacity-50">Delete</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto p-1 hover:bg-white/20 rounded"><X size={14} /></button>
-        </div>
-      )}
-
-      {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${creditNotesIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
-            <thead>
-              <tr className="bg-slate-100 text-slate-700">
-                <th className="px-3 py-3 w-10 border-r border-slate-200">
-                  <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleAll} className="accent-emerald-600" />
-                </th>
-                {visibleCols.map((col, ci) => (
-                  <th
-                    key={col.key}
-                    style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 overflow-hidden ${col.align === 'right' ? 'text-right' : 'text-left'}`}
-                    title={col.label}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleSort(col.key as SortKey)}
-                      className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2"
-                      style={{ justifyContent: col.align === 'right' ? 'flex-end' : 'flex-start' }}
-                    >
-                      <span className="truncate">{col.label}</span>
-                      <ArrowUpDown size={11} className={`shrink-0 ${sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'}`} />
-                    </button>
-                    {ci < visibleCols.length - 1 && (
-                      <ColumnResizer
-                        colKey={col.key}
-                        width={col.width}
-                        onChange={(_, next) => saveCols(cols.map((c) => c.key === col.key ? { ...c, width: next } : c))}
-                        min={80}
-                      />
-                    )}
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-400">
-                  <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />Loading…
-                </td></tr>
-              ) : error ? (
-                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
-                  <p className="text-rose-500 font-medium">{error}</p>
-                  <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
-                </td></tr>
-              ) : sorted.length === 0 ? (
-                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No credit notes found.</td></tr>
-              ) : (
-                sorted.map(row => (
-                  <tr key={row.id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}>
-                    <td className="px-3 py-3 border-r border-slate-100">
-                      <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
-                    </td>
-                    {visibleCols.map(col => (
-                      <td key={col.key} className={`px-4 py-3 truncate cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => { setDrawerCN(row); setDrawerTab('details'); setCnActivity([]) }}>
-                        {col.key === 'creditNoteNumber' && <span className="font-mono text-xs text-slate-700">{row.creditNoteNumber}</span>}
-                        {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
-                        {col.key === 'type' && (
-                          <span className={`inline-block px-2.5 py-0.5 text-xs font-medium rounded-full border ${row.type === 'refund' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                            {row.type === 'refund' ? 'Refund' : 'Credit'}
-                          </span>
-                        )}
-                        {col.key === 'invoiceNumber' && <span className="text-slate-600">{row.invoiceNumber ?? '—'}</span>}
-                        {col.key === 'date' && <span className="text-slate-600">{fmtDate(row.date)}</span>}
-                        {col.key === 'amount' && <span className="font-semibold text-slate-800">{formatCurrency(row.amount, currency)}</span>}
-                        {col.key === 'appliedAmount' && <span className="font-medium text-slate-900">{formatCurrency(row.appliedAmount, currency)}</span>}
-                        {col.key === 'unappliedAmount' && <span className="font-medium text-slate-900">{formatCurrency(row.unappliedAmount, currency)}</span>}
-                        {col.key === 'reasonCode' && <span className="text-slate-600 truncate max-w-[140px] inline-block" title={row.reasonCode}>{row.reasonCode || '—'}</span>}
-                        {col.key === 'memo' && <span className="text-slate-600 truncate max-w-[140px] inline-block" title={row.memo}>{row.memo || '—'}</span>}
-                        {col.key === 'status' && (
-                          <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusBadge(row.status)}`}>
-                            {row.status}
-                          </span>
-                        )}
-                      </td>
-                    ))}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => openEditCN(row)}
-                          className="text-xs font-semibold text-slate-500 hover:text-slate-700 hover:underline"
-                        >
-                          Edit
-                        </button>
-                        <span className="text-slate-300">·</span>
-                        {row.status !== 'VOID' && row.status !== 'APPLIED' && (
-                          <>
-                            <button
-                              disabled={actioningId === row.id}
-                              onClick={() => openApplyModal(row)}
-                              className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-40"
-                            >
-                              Apply
-                            </button>
-                            <span className="text-slate-300">·</span>
-                            <button
-                              disabled={actioningId === row.id}
-                              onClick={() => handleVoid(row.id)}
-                              className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40"
-                            >
-                              Void
-                            </button>
-                          </>
-                        )}
-                        {(row.status === 'VOID' || row.status === 'APPLIED') && (
-                          <span className="text-xs text-slate-400 italic">{row.status === 'VOID' ? 'Voided' : 'Applied'}</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <HaypDataTable
+          data={tableData}
+          columns={columns}
+          tableId="credit-notes"
+          title="Credit Notes"
+          stats={stats}
+          headerActions={
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={filterReason}
+                onChange={e => setFilterReason(e.target.value)}
+                className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">All Reasons</option>
+                {CREDIT_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+              </select>
+              <select
+                value={filterType}
+                onChange={e => setFilterType(e.target.value)}
+                className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">All Types</option>
+                <option value="credit">Credit</option>
+                <option value="refund">Refund</option>
+              </select>
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={e => setFilterDateFrom(e.target.value)}
+                className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={e => setFilterDateTo(e.target.value)}
+                className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <button
+                onClick={openModal}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+              >
+                <Plus size={14} /> New Credit Note
+              </button>
+            </div>
+          }
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          searchPlaceholder="Search credit notes..."
+          filters={statusFilterOptions}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="Status"
+          actions={actions}
+          bulkActions={bulkActions}
+          totals={{ enabled: true, sumColumns: ['amount', 'appliedAmount', '_unapplied'], formatValue: (value) => fmt(Number(value)) }}
+          onRefresh={fetchData}
+          onExport={handleExport}
+          onActivityLog={() => router.push('/sales/revenue/credit-notes/activity')}
+          onRowClick={(row) => { setDrawerCN(row.original); setDrawerTab('details'); setCnActivity([]) }}
+          loading={loading}
+          emptyTitle="No credit notes yet"
+          emptySubtitle="Create your first credit note to get started"
+        />
       </div>
 
       {/* Detail Drawer */}
