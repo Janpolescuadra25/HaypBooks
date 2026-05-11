@@ -156,7 +156,7 @@ export default function RfqPage() {
   const actions = useMemo<HaypActionItem[]>(() => [
     {
       label: 'Edit RFQ',
-      onClick: (id) => router.push(`/expenses/procurement/rfqs/${id}/edit`),
+      onClick: (id) => router.push(`/expenses/procurement/rfq/${id}/edit`),
     },
     {
       label: 'Send to vendors',
@@ -202,7 +202,7 @@ export default function RfqPage() {
         description="Manage RFQs and track vendor responses."
         headerActions={
           <Link
-            href="/expenses/procurement/rfqs/new"
+            href="/expenses/procurement/rfq/new"
             className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
           >
             <Plus size={18} />
@@ -236,7 +236,7 @@ export default function RfqPage() {
         onExport={handleExportCSV}
         exportLabel="Export CSV"
         onActivityLog={() => router.push('/expenses/procurement/rfq/activity')}
-        onRowClick={(row) => router.push(`/expenses/procurement/rfqs/${row.id}/edit`)}
+        onRowClick={(row) => router.push(`/expenses/procurement/rfq/${row.id}/edit`)}
         emptyTitle={loading ? 'Loading...' : 'No RFQs found'}
         emptySubtitle="Adjust filters or create a new RFQ"
         loading={loading}

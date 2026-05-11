@@ -5,7 +5,7 @@ export default function Page() {
     <ModuleActivityPage
       title="RFQs Activity Log"
       subtitle="Review RFQ creation and vendor response activity."
-      backHref="/expenses/procurement/rfqs"
+      backHref="/expenses/procurement/rfq"
       entityType="Rfq"
       emptyMessage="No rfq activity recorded yet."
       searchPlaceholder="Search rfq activity..."
