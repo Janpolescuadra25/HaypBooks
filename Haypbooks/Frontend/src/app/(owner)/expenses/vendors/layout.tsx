@@ -7,6 +7,8 @@ import { ToastProvider } from '@/components/ui/Toast'
 
 const TABS = [
   { label: 'Vendors', value: 'vendors' },
+  { label: 'Statements', value: 'statements' },
+  { label: 'Contacts', value: 'contacts' },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
