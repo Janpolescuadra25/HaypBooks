@@ -4,6 +4,8 @@ const TABS = [
   { label: 'Customers', value: 'customers', path: '/sales/customers' },
   { label: 'Groups', value: 'groups' },
   { label: 'Portal', value: 'portal' },
+  { label: 'Statements', value: 'statements' },
+  { label: 'Documents', value: 'documents' },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
