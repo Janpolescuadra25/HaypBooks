@@ -244,7 +244,7 @@ export default function ProductsServicesPage() {
             <p className="text-sm text-slate-500 mt-0.5">Manage items used in invoices and purchases</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => router.push('/sales/sales/products-services/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-100 rounded-lg hover:bg-slate-50 text-slate-700 transition-colors"><Clock size={14} /> Activity Log</button>
+            <button onClick={() => router.push('/sales/opportunities/products-services/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-100 rounded-lg hover:bg-slate-50 text-slate-700 transition-colors"><Clock size={14} /> Activity Log</button>
             <button
               onClick={() => setModalItem('new')}
               className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors"
@@ -351,7 +351,7 @@ export default function ProductsServicesPage() {
                   return (
                     <tr
                       key={row.id}
-                      onClick={() => router.push(`/sales/sales/products-services/${row.id}`)}
+                      onClick={() => router.push(`/sales/opportunities/products-services/${row.id}`)}
                       className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer ${isDeleting ? 'opacity-50' : ''}`}
                     >
                       <td className="px-4 py-2.5 text-slate-700 truncate border-r border-gray-100 font-medium" title={row.name}>{row.name}</td>

@@ -90,12 +90,12 @@ function getEntryPath(entry: ActivityLogItem): string {
 
   const target = (() => {
     if (table === 'INVOICE') return '/sales/billing/invoices'
-    if (table === 'QUOTE') return '/sales/sales/quotes'
-    if (table === 'SALESORDER') return '/sales/sales/orders'
+    if (table === 'QUOTE') return '/sales/opportunities/quotes'
+    if (table === 'SALESORDER') return '/sales/opportunities/orders'
     if (table === 'CREDITNOTE') return '/sales/revenue/credit-notes'
     if (table === 'CUSTOMER' || table === 'CONTACT') return '/sales/customers'
     if (table === 'PAYMENTRECEIVED' || table === 'CUSTOMERPAYMENT' || table === 'PAYMENT') return '/sales/collections/payments'
-    if (table === 'ITEM' || table === 'INVENTORYITEM' || table === 'PRODUCT') return '/sales/sales/products-services'
+    if (table === 'ITEM' || table === 'INVENTORYITEM' || table === 'PRODUCT') return '/sales/opportunities/products-services'
     if (table === 'BANKACCOUNT') return '/banking/transactions'
     if (table === 'BILL') return '/expenses/bills-payments/bills'
     if (table === 'VENDOR') return '/expenses/vendors'

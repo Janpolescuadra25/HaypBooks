@@ -5,7 +5,7 @@ export default function Page() {
     <ModuleActivityPage
       title="Quotes Activity Log"
       subtitle="Track quote creation, updates, and quote conversion events."
-      backHref="/sales/sales/quotes"
+      backHref="/sales/opportunities/quotes"
       entityType="Quote"
       emptyMessage="No quote activity recorded yet."
       searchPlaceholder="Search quote activity..."

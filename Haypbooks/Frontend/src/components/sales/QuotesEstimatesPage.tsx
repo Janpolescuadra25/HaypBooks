@@ -494,7 +494,7 @@ export default function QuotesEstimatesPage() {
               <RefreshCw size={16} />
             </button>
             <button
-              onClick={() => router.push('/sales/sales/quotes/activity')}
+              onClick={() => router.push('/sales/opportunities/quotes/activity')}
               className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
             >
               <Clock size={15} /> Activity Log

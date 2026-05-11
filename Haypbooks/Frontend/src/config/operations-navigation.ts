@@ -90,10 +90,10 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         id: 'sales',
         label: 'Sales',
         tabs: [
-          { id: 'pipeline',             label: 'Pipeline',             path: '/sales/sales/pipeline' },
-          { id: 'products-services',    label: 'Products & Services',  path: '/sales/sales/products-services' },
-          { id: 'quotes',               label: 'Quotes',               path: '/sales/sales/quotes' },
-          { id: 'orders',               label: 'Sales Orders',         path: '/sales/sales/orders' },
+          { id: 'pipeline',             label: 'Pipeline',             path: '/sales/opportunities/pipeline' },
+          { id: 'products-services',    label: 'Products & Services',  path: '/sales/opportunities/products-services' },
+          { id: 'quotes',               label: 'Quotes',               path: '/sales/opportunities/quotes' },
+          { id: 'orders',               label: 'Sales Orders',         path: '/sales/opportunities/orders' },
         ],
       },
       {

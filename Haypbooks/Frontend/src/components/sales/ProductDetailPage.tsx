@@ -117,7 +117,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
     try {
       await apiClient.delete(`/companies/${companyId}/inventory/items/${product.id}`)
       toast.success('Item deleted')
-      router.push('/sales/sales/products-services')
+      router.push('/sales/opportunities/products-services')
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Delete failed')
       setDeleting(false)
@@ -153,7 +153,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-sm">
           <p className="text-rose-600 font-semibold mb-3">{error || 'Item not found'}</p>
-          <button onClick={() => router.push('/sales/sales/products-services')} className="text-sm text-emerald-600 hover:underline">
+          <button onClick={() => router.push('/sales/opportunities/products-services')} className="text-sm text-emerald-600 hover:underline">
             ← Back to Products & Services
           </button>
         </div>
@@ -167,7 +167,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
         <div className="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push('/sales/sales/products-services')}
+              onClick={() => router.push('/sales/opportunities/products-services')}
               aria-label="Back to products"
               className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
             >

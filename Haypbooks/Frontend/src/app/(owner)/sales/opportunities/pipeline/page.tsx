@@ -173,7 +173,7 @@ export default function Page() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/sales/sales/quotes" className="px-4 py-2 text-sm font-medium border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">
+            <Link href="/sales/opportunities/quotes" className="px-4 py-2 text-sm font-medium border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">
               Manage Quotes
             </Link>
             <Link href="/sales/billing/invoices" className="px-4 py-2 text-sm font-semibold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700">
@@ -207,7 +207,7 @@ export default function Page() {
           <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900">Top Opportunities</h2>
-              <Link href="/sales/sales/quotes" className="text-xs text-emerald-700 hover:underline">View all quotes</Link>
+              <Link href="/sales/opportunities/quotes" className="text-xs text-emerald-700 hover:underline">View all quotes</Link>
             </div>
             {loading ? (
               <div className="px-4 py-10 text-sm text-slate-500">Loading opportunities…</div>

@@ -5,7 +5,7 @@ export default function Page() {
     <ModuleActivityPage
       title="Sales Orders Activity Log"
       subtitle="Track sales order creation, updates, and invoice conversions."
-      backHref="/sales/sales/orders"
+      backHref="/sales/opportunities/orders"
       entityType="SalesOrder"
       emptyMessage="No sales order activity recorded yet."
       searchPlaceholder="Search sales order activity..."
