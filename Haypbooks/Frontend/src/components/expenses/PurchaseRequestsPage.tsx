@@ -307,7 +307,7 @@ export default function PurchaseRequestsPage() {
         title="Purchase Requests"
         description="Track purchase requests through review and approval."
         columns={columns}
-        data={dateFiltered}
+        data={filtered}
         headerActions={
           <button
             onClick={() => router.push('/expenses/procurement/purchase-requests/new')}
