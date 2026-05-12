@@ -84,7 +84,9 @@ export default function PaymentRunsPage() {
     if (!companyId) return
     if (!confirm('Delete this payment run?')) return
     try {
-      toast.error('Delete not available: backend does not have a DELETE endpoint for payment runs yet.')
+      await expensesService.updatePaymentRun(companyId, id, { status: 'DELETED' } as any)
+      setRows((prev) => prev.filter((run) => run.id !== id))
+      toast.success('Payment run deleted')
     } catch {
       toast.error('Failed to delete payment run')
     }

@@ -169,13 +169,19 @@ export default function BillsPage() {
   const handleMarkPaidSelected = useCallback(async (selectedIds: string[]) => {
     if (!companyId || selectedIds.length === 0) return
     try {
-      await Promise.all(selectedIds.map((id) => expensesService.recordBillPaymentForBill(companyId, id, { amount: 0, method: 'CASH' })))
+      await Promise.all(selectedIds.map((id) => {
+        const bill = rows.find((r) => r.id === id)
+        return expensesService.recordBillPaymentForBill(companyId, id, {
+          amount: bill?.amountDue ?? bill?.total ?? 0,
+          method: 'CASH',
+        })
+      }))
       setRows((prev) => prev.map((row) => selectedIds.includes(row.id) ? { ...row, status: 'PAID' } : row))
       showToast(`${selectedIds.length} selected bill${selectedIds.length !== 1 ? 's' : ''} marked as paid`)
     } catch {
       showToast('Failed to mark selected bills as paid')
     }
-  }, [companyId, showToast])
+  }, [companyId, rows, showToast])
 
   const handleExportSelected = useCallback((selectedIds: string[], selectedRows: Bill[]) => {
     csvDownload(

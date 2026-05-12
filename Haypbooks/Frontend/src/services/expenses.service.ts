@@ -549,6 +549,9 @@ export const expensesService = {
   processPaymentRun: (companyId: string, runId: string): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/ap/payment-runs/${runId}/process`),
 
+  updatePaymentRun: (companyId: string, runId: string, body: Record<string, unknown>): Promise<AxiosResponse> =>
+    apiClient.patch(`/companies/${companyId}/ap/payment-runs/${runId}`, body),
+
   // ─── Per Diem ─────────────────────────────────────────────────────────────
   listPerDiem: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/ap/per-diem`, { params: query }),

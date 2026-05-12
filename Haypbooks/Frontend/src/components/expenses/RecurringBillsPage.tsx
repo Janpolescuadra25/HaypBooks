@@ -164,7 +164,9 @@ export default function RecurringBillsPage() {
       onClick: async (id) => {
         if (!companyId || !confirm('Delete this recurring bill template?')) return
         try {
-          toast.error('Delete not available: backend does not have a DELETE endpoint for recurring bills yet.')
+          await expensesService.updateRecurringBill(companyId, id, { status: 'DELETED' } as any)
+          setRows((prev) => prev.filter((row) => row.id !== id))
+          toast.success('Recurring bill template deleted')
         } catch {
           toast.error('Failed to delete recurring bill')
         }
