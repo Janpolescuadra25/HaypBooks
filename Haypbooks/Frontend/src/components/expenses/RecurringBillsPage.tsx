@@ -161,10 +161,13 @@ export default function RecurringBillsPage() {
       icon: <X size={14} />,
       variant: 'danger',
       show: (row) => row.status === 'DRAFT',
-      onClick: (id) => {
-        if (!confirm('Delete this recurring bill template?')) return
-        setRows((prev) => prev.filter((row) => row.id !== id))
-        toast.success('Recurring bill template deleted')
+      onClick: async (id) => {
+        if (!companyId || !confirm('Delete this recurring bill template?')) return
+        try {
+          toast.error('Delete not available: backend does not have a DELETE endpoint for recurring bills yet.')
+        } catch {
+          toast.error('Failed to delete recurring bill')
+        }
       },
     },
   ], [openEdit, toast])

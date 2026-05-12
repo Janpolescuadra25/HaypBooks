@@ -80,11 +80,15 @@ export default function PaymentRunsPage() {
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
 
-  const handleDeletePaymentRun = useCallback((id: string) => {
+  const handleDeletePaymentRun = useCallback(async (id: string) => {
+    if (!companyId) return
     if (!confirm('Delete this payment run?')) return
-    setRows((prev) => prev.filter((run) => run.id !== id))
-    toast.success('Payment run deleted')
-  }, [toast])
+    try {
+      toast.error('Delete not available: backend does not have a DELETE endpoint for payment runs yet.')
+    } catch {
+      toast.error('Failed to delete payment run')
+    }
+  }, [companyId, toast])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -212,7 +216,7 @@ export default function PaymentRunsPage() {
         )}
 
         <HaypDataTable
-          data={dateFiltered}
+          data={filtered}
           columns={columns}
           tableId="payment-runs"
           title="Payment Runs"

@@ -62,11 +62,17 @@ export default function MileagePage() {
     router.push(`/expenses/employee-expenses/mileage/${id}/edit`)
   }, [router])
 
-  const handleDeleteMileage = useCallback((id: string) => {
+  const handleDeleteMileage = useCallback(async (id: string) => {
+    if (!companyId) return
     if (!confirm('Delete this mileage log?')) return
-    setRows((prev) => prev.filter((row) => row.id !== id))
-    toast.success('Mileage log deleted')
-  }, [toast])
+    try {
+      await expensesService.deleteMileageLog(companyId, id)
+      setRows((prev) => prev.filter((row) => row.id !== id))
+      toast.success('Mileage log deleted')
+    } catch {
+      toast.error('Failed to delete mileage log')
+    }
+  }, [companyId, toast])
 
   const dateFiltered = useMemo(() => {
     return rows

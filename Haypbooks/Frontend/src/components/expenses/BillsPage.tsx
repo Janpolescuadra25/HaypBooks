@@ -169,7 +169,7 @@ export default function BillsPage() {
   const handleMarkPaidSelected = useCallback(async (selectedIds: string[]) => {
     if (!companyId || selectedIds.length === 0) return
     try {
-      await Promise.all(selectedIds.map((id) => expensesService.approveBill(companyId, id)))
+      await Promise.all(selectedIds.map((id) => expensesService.recordBillPaymentForBill(companyId, id, { amount: 0, method: 'CASH' })))
       setRows((prev) => prev.map((row) => selectedIds.includes(row.id) ? { ...row, status: 'PAID' } : row))
       showToast(`${selectedIds.length} selected bill${selectedIds.length !== 1 ? 's' : ''} marked as paid`)
     } catch {

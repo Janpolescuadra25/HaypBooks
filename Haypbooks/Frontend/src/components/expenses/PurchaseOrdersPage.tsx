@@ -136,12 +136,17 @@ export default function PurchaseOrdersPage() {
   )
 
   const handleApproveSelected = useCallback(
-    (selectedIds: string[], selectedRows: PurchaseOrder[]) => {
-      if (selectedRows.length === 0) return
-      setRows((prev) => prev.map((row) => (selectedIds.includes(row.id) ? { ...row, status: 'APPROVED' } : row)))
-      toast.success(`${selectedRows.length} selected order${selectedRows.length !== 1 ? 's' : ''} approved`)
+    async (selectedIds: string[], selectedRows: PurchaseOrder[]) => {
+      if (!companyId || selectedRows.length === 0) return
+      try {
+        await Promise.all(selectedIds.map((id) => expensesService.updatePurchaseOrderStatus(companyId, id, { status: 'APPROVED' })))
+        setRows((prev) => prev.map((row) => (selectedIds.includes(row.id) ? { ...row, status: 'APPROVED' } : row)))
+        toast.success(`${selectedRows.length} selected order${selectedRows.length !== 1 ? 's' : ''} approved`)
+      } catch {
+        toast.error('Failed to approve purchase orders')
+      }
     },
-    [toast],
+    [companyId, toast],
   )
 
   const handleConvertSelected = useCallback(
@@ -315,7 +320,7 @@ export default function PurchaseOrdersPage() {
         title="Purchase Orders"
         description="Manage purchase orders, approvals, and vendor deliveries."
         columns={columns}
-        data={dateFiltered}
+        data={filtered}
         loading={loading || cidLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}

@@ -60,11 +60,17 @@ export default function PerDiemPage() {
   useEffect(() => { fetchRows() }, [fetchRows])
 
 
-  const handleDeletePerDiem = useCallback((id: string) => {
+  const handleDeletePerDiem = useCallback(async (id: string) => {
+    if (!companyId) return
     if (!confirm('Delete this per diem claim?')) return
-    setRows((prev) => prev.filter((row) => row.id !== id))
-    toast.success('Per diem claim deleted')
-  }, [toast])
+    try {
+      await expensesService.updatePerDiem(companyId, id, { status: 'DELETED' } as any)
+      setRows((prev) => prev.filter((row) => row.id !== id))
+      toast.success('Per diem claim deleted')
+    } catch {
+      toast.error('Failed to delete per diem. Backend delete endpoint may not exist yet.')
+    }
+  }, [companyId, toast])
 
   const dateFiltered = useMemo(() => {
     return rows

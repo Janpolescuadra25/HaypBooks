@@ -10,7 +10,7 @@ import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
-import { csvDownload } from './_helpers'
+import { csvDownload, StatusPill } from './_helpers'
 
 interface Reimbursement {
   id: string
@@ -79,11 +79,17 @@ export default function ReimbursementsPage() {
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
 
-  const handleDeleteReimbursement = useCallback((id: string) => {
+  const handleDeleteReimbursement = useCallback(async (id: string) => {
+    if (!companyId) return
     if (!confirm('Delete this reimbursement?')) return
-    setRows((prev) => prev.filter((row) => row.id !== id))
-    toast.success('Reimbursement deleted')
-  }, [toast])
+    try {
+      await expensesService.updateReimbursement(companyId, id, { status: 'DELETED' } as any)
+      setRows((prev) => prev.filter((row) => row.id !== id))
+      toast.success('Reimbursement deleted')
+    } catch {
+      toast.error('Failed to delete reimbursement. Backend delete endpoint may not exist yet.')
+    }
+  }, [companyId, toast])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -140,7 +146,7 @@ export default function ReimbursementsPage() {
       accessorKey: 'status',
       size: 120,
       minSize: 100,
-      render: (value) => <span className="text-slate-600 uppercase tracking-wide text-[11px] font-semibold">{value ?? 'PENDING'}</span>,
+      render: (value) => <StatusPill status={value ?? 'PENDING'} />,
     },
   ], [currency])
 

@@ -167,10 +167,15 @@ export default function ReceiptsPage() {
     },
     {
       label: 'Mark selected matched',
-      onClick: (_ids, selectedRows) => {
+      onClick: async (_ids, selectedRows) => {
         if (selectedRows.length === 0) return
-        setRows((prev) => prev.map((row) => selectedRows.some((selected) => selected.id === row.id) ? { ...row, status: 'MATCHED' } : row))
-        toast.success(`${selectedRows.length} selected receipt${selectedRows.length !== 1 ? 's' : ''} marked as matched`)
+        try {
+          await Promise.all(selectedRows.map((row) => expensesService.updateReceipt(companyId, row.id, { status: 'MATCHED' })))
+          setRows((prev) => prev.map((row) => selectedRows.some((selected) => selected.id === row.id) ? { ...row, status: 'MATCHED' } : row))
+          toast.success(`${selectedRows.length} receipt${selectedRows.length !== 1 ? 's' : ''} marked as matched`)
+        } catch {
+          toast.error('Failed to update receipt status')
+        }
       },
     },
     {
