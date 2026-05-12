@@ -93,7 +93,7 @@ export default function MileagePage() {
     { icon: Car, label: 'Total Trips', value: rows.length, color: 'blue' },
     { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT' || row.status === 'SUBMITTED').length, color: 'amber' },
     { icon: CheckCircle, label: 'Approved', value: rows.filter((row) => row.status === 'APPROVED').length, color: 'emerald' },
-    { icon: CreditCard, label: 'Reimbursed', value: rows.filter((row) => row.status === 'REJECTED').length, color: 'rose' },
+    { icon: CreditCard, label: 'Rejected', value: rows.filter((row) => row.status === 'REJECTED').length, color: 'red' },
   ], [rows])
 
   const actions = useMemo<HaypActionItem[]>(() => [
@@ -233,7 +233,7 @@ export default function MileagePage() {
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
         <HaypDataTable
-        data={dateFiltered}
+        data={filtered}
         columns={columns}
         tableId="mileage"
         title="Mileage"

@@ -93,7 +93,7 @@ export default function PerDiemPage() {
     { icon: Calendar, label: 'Total Entries', value: rows.length, color: 'blue' },
     { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT' || row.status === 'SUBMITTED').length, color: 'amber' },
     { icon: CheckCircle, label: 'Approved', value: rows.filter((row) => row.status === 'APPROVED').length, color: 'emerald' },
-    { icon: Wallet, label: 'Reimbursed', value: rows.filter((row) => row.status === 'REJECTED').length, color: 'rose' },
+    { icon: Wallet, label: 'Rejected', value: rows.filter((row) => row.status === 'REJECTED').length, color: 'rose' },
   ], [rows])
 
   const actions = useMemo<HaypActionItem[]>(() => [
@@ -251,7 +251,7 @@ export default function PerDiemPage() {
         headerActions={
           <button onClick={() => router.push('/expenses/employee-expenses/per-diem/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
         }
-        data={dateFiltered}
+        data={filtered}
         columns={columns}
         tableId="per-diem"
         title="Per Diem"
