@@ -138,7 +138,7 @@ export const navigationData: NavSection[] = [
           },
           {
             title: 'Sales',
-            path: '/sales/sales',
+            path: '/sales/opportunities',
             tabs: [
               { label: 'Pipeline',            value: 'pipeline',          status: 'existing' },
               { label: 'Products & Services', value: 'products-services', status: 'existing' },
