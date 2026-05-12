@@ -31,20 +31,22 @@ export function useCompany() {
     let cancelled = false
     async function load() {
       setLoading(true)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
       try {
         let data: any = null
         if (queryCompany) {
-          const res = await fetch(`/api/companies/${encodeURIComponent(queryCompany)}`)
+          const res = await fetch(`/api/companies/${encodeURIComponent(queryCompany)}`, { signal: controller.signal })
           if (res.ok) data = await res.json()
         } else {
-          const res = await fetch('/api/companies/current')
+          const res = await fetch('/api/companies/current', { signal: controller.signal })
           if (res.ok) data = await res.json()
         }
 
         // If we got just a lightweight company object (e.g., from /api/companies/current),
         // fetch the full company details by ID to ensure we have fields like country.
         if (data?.id && !data?.country) {
-          const res2 = await fetch(`/api/companies/${encodeURIComponent(data.id)}`)
+          const res2 = await fetch(`/api/companies/${encodeURIComponent(data.id)}`, { signal: controller.signal })
           if (res2.ok) {
             const full = await res2.json()
             if (!cancelled) data = full
@@ -52,9 +54,13 @@ export function useCompany() {
         }
 
         if (!cancelled) setCompany(data)
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          console.warn('Company fetch timed out')
+        }
         if (!cancelled) setCompany(null)
       } finally {
+        clearTimeout(timeoutId)
         if (!cancelled) setLoading(false)
       }
     }
