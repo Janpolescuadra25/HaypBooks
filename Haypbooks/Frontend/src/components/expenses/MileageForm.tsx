@@ -245,7 +245,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
         )}
 
         {activeTab === 'details' && (
-          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="flex flex-col">
+          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col">
             <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
               <div className="w-full px-0 py-6">
                 <div className="space-y-6 text-slate-900">
