@@ -1215,6 +1215,7 @@ model Workspace {
   vendorCredits               VendorCredit[]
   vendorCreditLines           VendorCreditLine[]
   vendorPaymentMethods        VendorPaymentMethod[]
+  mileageLogs                 MileageLog[]
   workflows                   Workflow[]
 
   // Banking / Deposits
@@ -11030,6 +11031,7 @@ model Receipt {
 
 model MileageLog {
   id             String   @id @default(uuid())
+  workspaceId    String
   companyId      String
   employeeId     String?
   userId         String
@@ -11054,11 +11056,13 @@ model MileageLog {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   journalEntryId String?
   postingStatus PostingStatus @default(DRAFT)
   journalEntry JournalEntry? @relation("JournalEntry_MileageLogs", fields: [journalEntryId], references: [id])
 
+  @@index([workspaceId])
   @@index([companyId])
   @@index([userId])
   @@index([logDate])
