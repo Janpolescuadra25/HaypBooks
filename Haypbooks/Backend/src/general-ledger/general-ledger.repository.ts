@@ -204,6 +204,21 @@ function buildCleanWhere(companyId: string, opts: GlQueryDto) {
                 ...existing,
                 transactionSource: { contains: 'Per Diem', mode: 'insensitive' },
             }
+        } else if (st === 'EXPENSE_REPORT') {
+            lineFilter['journal'] = {
+                ...existing,
+                transactionSource: { contains: 'Expense Report', mode: 'insensitive' },
+            }
+        } else if (st === 'EXPENSE_REIMBURSEMENT') {
+            lineFilter['journal'] = {
+                ...existing,
+                transactionSource: { contains: 'Expense Reimbursement', mode: 'insensitive' },
+            }
+        } else if (st === 'VENDOR_CREDIT') {
+            lineFilter['journal'] = {
+                ...existing,
+                transactionSource: { contains: 'VendorCredit', mode: 'insensitive' },
+            }
         } else if (st === 'MANUAL_JOURNAL') {
             lineFilter['journal'] = {
                 ...existing,
@@ -218,6 +233,9 @@ function buildCleanWhere(companyId: string, opts: GlQueryDto) {
                     OR: [
                         { transactionSource: { contains: 'Mileage', mode: 'insensitive' } },
                         { transactionSource: { contains: 'Per Diem', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'Expense Report', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'Expense Reimbursement', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'VendorCredit', mode: 'insensitive' } },
                     ],
                 },
             }
