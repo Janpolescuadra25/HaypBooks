@@ -1228,6 +1228,9 @@ export class SubLedgerService {
     try {
       const { companyId, workspaceId, expenseClaimId, lines, totalAmount, employeeId } = params
       await this.prisma.$transaction(async (tx) => {
+        const claim = await tx.expenseClaim.findUnique({ where: { id: expenseClaimId } })
+        if (!claim || claim.journalEntryId) return
+
         const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
         const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
 
@@ -1247,7 +1250,7 @@ export class SubLedgerService {
 
         const totalDebit = this.roundMoney(debitLines.reduce((s, l) => s + l.debit, 0))
         const entryNumber = await this.nextEntryNumber(companyId, 'EXP')
-        await createAndPostJE(tx, {
+        const jeId = await createAndPostJE(tx, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1259,6 +1262,11 @@ export class SubLedgerService {
             ...debitLines,
             { accountId: accruedAccount.id, debit: 0, credit: totalDebit, description: 'Accrued Expenses - Employee Payable' },
           ],
+        })
+
+        await tx.expenseClaim.update({
+          where: { id: expenseClaimId },
+          data: { journalEntryId: jeId, postingStatus: 'POSTED' },
         })
       })
     } catch (err: any) {
@@ -1281,6 +1289,9 @@ export class SubLedgerService {
     try {
       const { companyId, workspaceId, expenseClaimId, amount, bankAccountId } = params
       await this.prisma.$transaction(async (tx) => {
+        const claim = await tx.expenseClaim.findUnique({ where: { id: expenseClaimId } })
+        if (!claim || claim.journalEntryId) return
+
         const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
         const cashAccountRaw = bankAccountId
           ? await this.findAccountById(companyId, bankAccountId, tx)
@@ -1289,7 +1300,7 @@ export class SubLedgerService {
 
         const amt = this.roundMoney(amount)
         const entryNumber = await this.nextEntryNumber(companyId, 'EXR')
-        await createAndPostJE(tx, {
+        const jeId = await createAndPostJE(tx, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1301,6 +1312,11 @@ export class SubLedgerService {
             { accountId: accruedAccount.id, debit: amt, credit: 0, description: 'Accrued Expenses - Employee Payable' },
             { accountId: cashAccountId, debit: 0, credit: amt, description: 'Cash disbursed' },
           ],
+        })
+
+        await tx.expenseClaim.update({
+          where: { id: expenseClaimId },
+          data: { journalEntryId: jeId },
         })
       })
     } catch (err: any) {
@@ -1323,6 +1339,9 @@ export class SubLedgerService {
     try {
       const { companyId, workspaceId, mileageLogId, amount, accountId } = params
       await this.prisma.$transaction(async (tx) => {
+        const log = await tx.mileageLog.findUnique({ where: { id: mileageLogId } })
+        if (!log || log.journalEntryId) return
+
         const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
         const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
         let expAccountId: string | null = null
@@ -1331,7 +1350,7 @@ export class SubLedgerService {
 
         const amt = this.roundMoney(amount)
         const entryNumber = await this.nextEntryNumber(companyId, 'MIL')
-        await createAndPostJE(tx, {
+        const jeId = await createAndPostJE(tx, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1343,6 +1362,11 @@ export class SubLedgerService {
             { accountId: expAccountId, debit: amt, credit: 0, description: 'Mileage expense' },
             { accountId: accruedAccount.id, debit: 0, credit: amt, description: 'Accrued Expenses - Employee Payable' },
           ],
+        })
+
+        await tx.mileageLog.update({
+          where: { id: mileageLogId },
+          data: { journalEntryId: jeId, postingStatus: 'POSTED' },
         })
       })
     } catch (err: any) {
@@ -1365,6 +1389,9 @@ export class SubLedgerService {
     try {
       const { companyId, workspaceId, perDiemId, amount, accountId } = params
       await this.prisma.$transaction(async (tx) => {
+        const claim = await tx.perDiemClaim.findUnique({ where: { id: perDiemId } })
+        if (!claim || claim.journalEntryId) return
+
         const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
         const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
         let expAccountId: string | null = null
@@ -1373,7 +1400,7 @@ export class SubLedgerService {
 
         const amt = this.roundMoney(amount)
         const entryNumber = await this.nextEntryNumber(companyId, 'PER')
-        await createAndPostJE(tx, {
+        const jeId = await createAndPostJE(tx, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1385,6 +1412,11 @@ export class SubLedgerService {
             { accountId: expAccountId, debit: amt, credit: 0, description: 'Per diem expense' },
             { accountId: accruedAccount.id, debit: 0, credit: amt, description: 'Accrued Expenses - Employee Payable' },
           ],
+        })
+
+        await tx.perDiemClaim.update({
+          where: { id: perDiemId },
+          data: { journalEntryId: jeId, postingStatus: 'POSTED' },
         })
       })
     } catch (err: any) {

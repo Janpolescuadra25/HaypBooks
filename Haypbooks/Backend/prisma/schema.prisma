@@ -5467,6 +5467,10 @@ model JournalEntry {
   company               Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
   invoices              Invoice[]              @relation("JournalEntry_Invoices")
   bills                 Bill[]                 @relation("JournalEntry_Bills")
+  expenseClaims         ExpenseClaim[]         @relation("JournalEntry_ExpenseClaims")
+  mileageLogs           MileageLog[]           @relation("JournalEntry_MileageLogs")
+  perDiemClaims         PerDiemClaim[]         @relation("JournalEntry_PerDiemClaims")
+  vendorCredits         VendorCredit[]         @relation("JournalEntry_VendorCredits")
   paymentsReceived      PaymentReceived[]      @relation("JournalEntry_PaymentsReceived")
   billPayments          BillPayment[]          @relation("JournalEntry_BillPayments")
   inventoryTransactions InventoryTransaction[] @relation("JournalEntry_InventoryTransactions")
@@ -8100,6 +8104,9 @@ model ExpenseClaim {
   department   Department?       @relation(fields: [departmentId], references: [id])
   paycheck     Paycheck?          @relation(fields: [paycheckId], references: [id])
   lines        ExpenseClaimLine[]
+  journalEntryId String?
+  postingStatus PostingStatus @default(DRAFT)
+  journalEntry JournalEntry? @relation("JournalEntry_ExpenseClaims", fields: [journalEntryId], references: [id])
 
   @@index([workspaceId, employeeId])
   @@index([workspaceId, departmentId])
@@ -8136,6 +8143,9 @@ model PerDiemClaim {
   employee    Employee    @relation(fields: [employeeId], references: [id])
   department  Department? @relation(fields: [departmentId], references: [id])
   account     Account?    @relation(fields: [accountId], references: [id])
+  journalEntryId String?
+  postingStatus PostingStatus @default(DRAFT)
+  journalEntry JournalEntry? @relation("JournalEntry_PerDiemClaims", fields: [journalEntryId], references: [id])
 
   @@index([workspaceId, employeeId])
   @@index([companyId, status])
@@ -9292,6 +9302,8 @@ model VendorCredit {
   template      DocumentTemplate?  @relation(fields: [templateId], references: [id])
   lines         VendorCreditLine[]
   postingStatus PostingStatus      @default(DRAFT)
+  journalEntryId String?
+  journalEntry JournalEntry? @relation("JournalEntry_VendorCredits", fields: [journalEntryId], references: [id])
 
   @@unique([workspaceId, creditNumber])
   @@index([workspaceId, status])
@@ -11040,6 +11052,9 @@ model MileageLog {
   updatedAt      DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  journalEntryId String?
+  postingStatus PostingStatus @default(DRAFT)
+  journalEntry JournalEntry? @relation("JournalEntry_MileageLogs", fields: [journalEntryId], references: [id])
 
   @@index([companyId])
   @@index([userId])

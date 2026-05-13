@@ -877,14 +877,18 @@ export class ApService {
         }).catch(() => { /* non-critical */ })
         // Post to GL when status transitions to APPROVED
         if (data.status && String(data.status).toUpperCase() === 'APPROVED' && String(existingAny.status ?? '').toUpperCase() !== 'APPROVED') {
-            this.subLedger.postMileageToGL({
-                companyId,
-                workspaceId,
-                mileageLogId: logId,
-                amount: Number(payload.amount ?? 0),
-                accountId: payload.accountId ?? null,
-                employeeId: payload.employeeId ?? null,
-            }).catch(() => { /* non-critical — GL failure must not block mileage update */ })
+            try {
+                await this.subLedger.postMileageToGL({
+                    companyId,
+                    workspaceId,
+                    mileageLogId: logId,
+                    amount: Number(payload.amount ?? 0),
+                    accountId: payload.accountId ?? null,
+                    employeeId: payload.employeeId ?? null,
+                })
+            } catch (glErr: any) {
+                console.error('GL posting failed for mileage:', logId, glErr.message)
+            }
         }
         return result
     }
@@ -981,14 +985,18 @@ export class ApService {
         // Post to GL when status transitions to APPROVED
         if (data.status === 'APPROVED' && existing.status !== 'APPROVED') {
             const workspaceId = await this.getWorkspaceId(companyId)
-            this.subLedger.postPerDiemToGL({
-                companyId,
-                workspaceId,
-                perDiemId,
-                amount: Number(payload.totalAmount ?? 0),
-                accountId: payload.accountId ?? null,
-                employeeId: payload.employeeId ?? null,
-            }).catch(() => { /* non-critical — GL failure must not block per diem update */ })
+            try {
+                await this.subLedger.postPerDiemToGL({
+                    companyId,
+                    workspaceId,
+                    perDiemId,
+                    amount: Number(payload.totalAmount ?? 0),
+                    accountId: payload.accountId ?? null,
+                    employeeId: payload.employeeId ?? null,
+                })
+            } catch (glErr: any) {
+                console.error('GL posting failed for per diem:', perDiemId, glErr.message)
+            }
         }
         return result
     }

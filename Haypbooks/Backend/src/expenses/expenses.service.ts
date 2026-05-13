@@ -189,14 +189,18 @@ export class ExpensesService {
     })
     const workspaceId = (record as any).workspaceId
     if (workspaceId) {
-      this.subLedgerService.postExpenseClaimToGL({
-        companyId,
-        workspaceId,
-        expenseClaimId: expenseId,
-        lines: (record.lines as any[]).map(l => ({ accountId: l.accountId ?? null, amount: Number(l.amount ?? 0) })),
-        totalAmount: Number(record.totalAmount ?? 0),
-        employeeId: record.employeeId ?? null,
-      }).catch(() => { /* non-critical — GL failure must not block approval */ })
+      try {
+        await this.subLedgerService.postExpenseClaimToGL({
+          companyId,
+          workspaceId,
+          expenseClaimId: expenseId,
+          lines: (record.lines as any[]).map(l => ({ accountId: l.accountId ?? null, amount: Number(l.amount ?? 0) })),
+          totalAmount: Number(record.totalAmount ?? 0),
+          employeeId: record.employeeId ?? null,
+        })
+      } catch (glErr: any) {
+        console.error('GL posting failed for expense claim:', expenseId, glErr.message)
+      }
     }
     return updated
   }
@@ -218,13 +222,17 @@ export class ExpensesService {
     })
     const workspaceId = (record as any).workspaceId
     if (workspaceId) {
-      this.subLedgerService.postExpenseReimbursementToGL({
-        companyId,
-        workspaceId,
-        expenseClaimId: expenseId,
-        amount: Number(record.totalAmount ?? 0),
-        bankAccountId: data?.bankAccountId ?? null,
-      }).catch(() => { /* non-critical — GL failure must not block reimbursement */ })
+      try {
+        await this.subLedgerService.postExpenseReimbursementToGL({
+          companyId,
+          workspaceId,
+          expenseClaimId: expenseId,
+          amount: Number(record.totalAmount ?? 0),
+          bankAccountId: data?.bankAccountId ?? null,
+        })
+      } catch (glErr: any) {
+        console.error('GL posting failed for expense reimbursement:', expenseId, glErr.message)
+      }
     }
     return updated
   }
