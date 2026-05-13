@@ -8112,6 +8112,7 @@ model ExpenseClaim {
   @@index([workspaceId, departmentId])
   @@index([companyId, status])
   @@index([companyId, departmentId])
+  @@index([journalEntryId])
 }
 
 model PerDiemClaim {
@@ -8150,6 +8151,7 @@ model PerDiemClaim {
   @@index([workspaceId, employeeId])
   @@index([companyId, status])
   @@index([companyId, employeeId])
+  @@index([journalEntryId])
 }
 
 model ExpenseClaimLine {
@@ -9311,6 +9313,7 @@ model VendorCredit {
   @@index([workspaceId, referenceBillId])
   @@index([companyId])
   @@index([companyId, templateId])
+  @@index([journalEntryId])
 }
 
 model CustomerCredit {
@@ -11059,6 +11062,7 @@ model MileageLog {
   @@index([companyId])
   @@index([userId])
   @@index([logDate])
+  @@index([journalEntryId])
   @@map("mileage_logs")
 }
 

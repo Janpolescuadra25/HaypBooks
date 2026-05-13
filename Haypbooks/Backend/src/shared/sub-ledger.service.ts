@@ -1289,8 +1289,6 @@ export class SubLedgerService {
     try {
       const { companyId, workspaceId, expenseClaimId, amount, bankAccountId } = params
       await this.prisma.$transaction(async (tx) => {
-        const claim = await tx.expenseClaim.findUnique({ where: { id: expenseClaimId } })
-        if (!claim || claim.journalEntryId) return
 
         const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
         const cashAccountRaw = bankAccountId
@@ -1312,11 +1310,6 @@ export class SubLedgerService {
             { accountId: accruedAccount.id, debit: amt, credit: 0, description: 'Accrued Expenses - Employee Payable' },
             { accountId: cashAccountId, debit: 0, credit: amt, description: 'Cash disbursed' },
           ],
-        })
-
-        await tx.expenseClaim.update({
-          where: { id: expenseClaimId },
-          data: { journalEntryId: jeId },
         })
       })
     } catch (err: any) {
