@@ -27,7 +27,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SourceType = 'ALL' | 'MANUAL_JOURNAL' | 'INVOICE' | 'BILL' | 'PAYMENT' | 'BILL_PAYMENT' | 'BANK_DEPOSIT' | 'REFUND'
+type SourceType = 'ALL' | 'MANUAL_JOURNAL' | 'INVOICE' | 'BILL' | 'PAYMENT' | 'BILL_PAYMENT' | 'BANK_DEPOSIT' | 'REFUND' | 'MILEAGE' | 'PER_DIEM'
 
 interface GlEntry {
   id: string
@@ -75,6 +75,8 @@ const SOURCE_OPTIONS: { value: SourceType; label: string }[] = [
   { value: 'BANK_DEPOSIT',   label: 'Bank Deposits' },
   { value: 'REFUND',         label: 'Refunds' },
   { value: 'MANUAL_JOURNAL', label: 'Manual Journals' },
+  { value: 'MILEAGE',        label: 'Mileage' },
+  { value: 'PER_DIEM',       label: 'Per Diem' },
 ]
 
 const SOURCE_BADGE: Record<SourceType, { label: string; cls: string }> = {
@@ -86,6 +88,8 @@ const SOURCE_BADGE: Record<SourceType, { label: string; cls: string }> = {
   BILL_PAYMENT:   { label: 'Bill Pmt',     cls: 'bg-orange-100 text-orange-700' },
   BANK_DEPOSIT:   { label: 'Bank Dep.',    cls: 'bg-teal-100 text-teal-700' },
   REFUND:         { label: 'Refund',       cls: 'bg-rose-100 text-rose-700' },
+  MILEAGE:        { label: 'Mileage',      cls: 'bg-sky-100 text-sky-700' },
+  PER_DIEM:       { label: 'Per Diem',     cls: 'bg-purple-100 text-purple-700' },
 }
 
 /** Maps sourceType → the route where the source document lives */
@@ -99,6 +103,8 @@ function getSourceRoute(sourceType: SourceType, sourceId?: string): string | nul
     case 'BANK_DEPOSIT':   return `/banking/transactions/${sourceId}`
     case 'REFUND':         return `/sales/billing/invoices/${sourceId}`
     case 'MANUAL_JOURNAL': return `/accounting/core-accounting/journal-entries/${sourceId}`
+    case 'MILEAGE':        return `/expenses/employee-expenses/mileage`
+    case 'PER_DIEM':       return `/expenses/employee-expenses/per-diem`
     default:               return null
   }
 }

@@ -51,6 +51,8 @@ export class GeneralLedgerService {
                 : j.transactionSource?.toUpperCase().includes('PAYMENT') ? 'PAYMENT'
                 : j.transactionSource?.toUpperCase().includes('BANK') ? 'BANK_DEPOSIT'
                 : j.transactionSource?.toUpperCase().includes('REFUND') ? 'REFUND'
+                : j.transactionSource?.toUpperCase().includes('PER DIEM') ? 'PER_DIEM'
+                : j.transactionSource?.toUpperCase().includes('MILEAGE') ? 'MILEAGE'
                 : 'MANUAL_JOURNAL'
             const sourceId =
                 j.invoices?.[0]?.id

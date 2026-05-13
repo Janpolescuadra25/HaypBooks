@@ -194,6 +194,16 @@ function buildCleanWhere(companyId: string, opts: GlQueryDto) {
                     { transactionSource: { contains: 'REFUND', mode: 'insensitive' } },
                 ],
             }
+        } else if (st === 'MILEAGE') {
+            lineFilter['journal'] = {
+                ...existing,
+                transactionSource: { contains: 'Mileage', mode: 'insensitive' },
+            }
+        } else if (st === 'PER_DIEM') {
+            lineFilter['journal'] = {
+                ...existing,
+                transactionSource: { contains: 'Per Diem', mode: 'insensitive' },
+            }
         } else if (st === 'MANUAL_JOURNAL') {
             lineFilter['journal'] = {
                 ...existing,
@@ -204,6 +214,12 @@ function buildCleanWhere(companyId: string, opts: GlQueryDto) {
                 bankDeposits: { none: {} },
                 customerRefunds: { none: {} },
                 vendorRefunds: { none: {} },
+                NOT: {
+                    OR: [
+                        { transactionSource: { contains: 'Mileage', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'Per Diem', mode: 'insensitive' } },
+                    ],
+                },
             }
         }
     }
