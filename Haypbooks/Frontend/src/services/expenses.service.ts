@@ -1,3 +1,8 @@
+  deletePerDiem: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/per-diem/${id}`),
+
+  deleteReimbursement: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/reimbursements/${id}`),
 // ─── Frontend API Service: Expenses (Unified) ─────────────────────────────────
 // Single source of truth for ALL expense-module API calls.
 // Every page in the expenses module MUST import from here — never use apiClient directly.

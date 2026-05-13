@@ -289,6 +289,16 @@ export class ExpensesService {
     })
   }
 
+  async deleteReimbursement(userId: string, companyId: string, id: string) {
+    await this.assertAccess(userId, companyId)
+    const record = await this.prisma.expenseClaim.findUnique({ where: { id } })
+    if (!record || record.companyId !== companyId) throw new NotFoundException('Reimbursement not found')
+    if (!['DRAFT', 'REJECTED'].includes(record.status)) {
+      throw new BadRequestException('Only draft or rejected reimbursements can be deleted')
+    }
+    return this.prisma.expenseClaim.delete({ where: { id } })
+  }
+
   async updateExpenseReport(userId: string, companyId: string, expenseId: string, data: any) {
     await this.assertAccess(userId, companyId)
     const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId } })

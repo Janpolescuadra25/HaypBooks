@@ -678,7 +678,9 @@ export class ApService {
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'VendorCredit', recordId: creditId, changes: { status: 'APPLIED' } },
         }).catch(() => { /* non-critical */ })
-        return this.prisma.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED' } })
+        const result = await this.prisma.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED' } })
+        this.subLedger.postVendorCreditToGL(creditId, userId).catch(() => {})
+        return result
     }
 
     // ─── Receipts ────────────────────────────────────────────────────────────
@@ -989,6 +991,16 @@ export class ApService {
             }).catch(() => { /* non-critical — GL failure must not block per diem update */ })
         }
         return result
+    }
+
+    async deletePerDiem(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.perDiem.findUnique({ where: { id } })
+        if (!existing || existing.companyId !== companyId) throw new NotFoundException('Per diem not found')
+        if (!['DRAFT'].includes(existing.status)) {
+            throw new BadRequestException('Only draft per diems can be deleted')
+        }
+        return this.prisma.perDiem.delete({ where: { id } })
     }
 
     async deleteMileageLog(userId: string, companyId: string, logId: string) {

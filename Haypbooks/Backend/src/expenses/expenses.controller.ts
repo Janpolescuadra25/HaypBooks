@@ -1,3 +1,11 @@
+    @Delete('reimbursements/:id')
+    deleteReimbursement(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+      return this.expensesService.deleteReimbursement(req.user.userId, companyId, id)
+    }
+  @Delete('per-diem/:id')
+  deletePerDiem(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.apService.deletePerDiem(req.user.userId, companyId, id)
+  }
 import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'

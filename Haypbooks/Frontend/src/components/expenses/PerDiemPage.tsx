@@ -64,7 +64,7 @@ export default function PerDiemPage() {
     if (!companyId) return
     if (!confirm('Delete this per diem claim?')) return
     try {
-      await expensesService.updatePerDiem(companyId, id, { status: 'DELETED' } as any)
+      await expensesService.deletePerDiem(companyId, id)
       setRows((prev) => prev.filter((row) => row.id !== id))
       toast.success('Per diem claim deleted')
     } catch {

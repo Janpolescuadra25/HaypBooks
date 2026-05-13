@@ -1,3 +1,61 @@
+  async postVendorCreditToGL(vendorCreditId: string, postedById?: string, tx?: any): Promise<void> {
+    const executor = tx ?? this.prisma
+    const vc = await executor.vendorCredit.findUnique({
+      where: { id: vendorCreditId },
+      include: { lines: true },
+    })
+    if (!vc) return
+    if (vc.journalEntryId) return
+
+    const run = async (t: any) => {
+      const apAcct = await resolveAccount(t, vc.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
+
+      const jeLines: any[] = []
+      for (const line of (vc.lines as any[])) {
+        const expAcct = line.accountId
+          ? await t.account.findUnique({ where: { id: line.accountId }, select: { id: true, normalSide: true } })
+          : await resolveAccount(t, vc.companyId, SYSTEM_ACCOUNTS.OPERATING_EXPENSES)
+        if (expAcct) {
+          jeLines.push({
+            accountId: expAcct.id,
+            credit: Number(line.amount ?? 0),
+            debit: 0,
+            description: `Vendor credit – ${vc.vendorCreditNumber ?? vendorCreditId}`,
+          })
+        }
+      }
+      const totalCredits = jeLines.reduce((s, l) => s + l.credit, 0)
+      jeLines.push({
+        accountId: apAcct.id,
+        debit: totalCredits,
+        credit: 0,
+        description: `AP reduced – vendor credit ${vc.vendorCreditNumber ?? vendorCreditId}`,
+      })
+
+      const jeId = await createAndPostJE(t, {
+        workspaceId: vc.workspaceId,
+        companyId: vc.companyId,
+        date: new Date(vc.date ?? Date.now()),
+        description: `Vendor credit – ${vc.vendorCreditNumber ?? vendorCreditId}`,
+        createdById: postedById,
+        entryNumber: `VC-${Date.now()}`,
+        transactionSource: 'VendorCredit',
+        sourceReferenceId: vendorCreditId,
+        lines: jeLines,
+      })
+
+      await t.vendorCredit.update({
+        where: { id: vendorCreditId },
+        data: { journalEntryId: jeId, postingStatus: 'POSTED' },
+      })
+    }
+
+    if (tx) {
+      await run(tx)
+    } else {
+      await this.prisma.$transaction(run)
+    }
+  }
 import { Injectable, Logger } from '@nestjs/common'
 import fs from 'fs'
 import path from 'path'

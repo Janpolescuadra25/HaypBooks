@@ -83,7 +83,7 @@ export default function ReimbursementsPage() {
     if (!companyId) return
     if (!confirm('Delete this reimbursement?')) return
     try {
-      await expensesService.updateReimbursement(companyId, id, { status: 'DELETED' } as any)
+      await expensesService.deleteReimbursement(companyId, id)
       setRows((prev) => prev.filter((row) => row.id !== id))
       toast.success('Reimbursement deleted')
     } catch {
