@@ -46,3 +46,10 @@ tmp-debug-*.js
 test-suite-output.txt
 e2e/logs/
 e2e/screenshots/debug-*
+
+# Sensitive files
+cookies.txt
+
+# Temp files
+temp_*.txt
+tsc-out.txt
