@@ -536,6 +536,9 @@ export const expensesService = {
   updateRecurringBill: (companyId: string, billId: string, body: Record<string, unknown>): Promise<AxiosResponse> =>
     apiClient.put(`/companies/${companyId}/ap/recurring-bills/${billId}`, body),
 
+  deleteRecurringBill: (companyId: string, billId: string): Promise<AxiosResponse> =>
+    apiClient.delete(`/companies/${companyId}/ap/recurring-bills/${billId}`),
+
   // ─── Payment Runs ─────────────────────────────────────────────────────────
   listPaymentRuns: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/ap/payment-runs`, { params: query }),

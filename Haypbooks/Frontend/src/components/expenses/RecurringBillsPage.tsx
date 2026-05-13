@@ -164,7 +164,7 @@ export default function RecurringBillsPage() {
       onClick: async (id) => {
         if (!companyId || !confirm('Delete this recurring bill template?')) return
         try {
-          await expensesService.updateRecurringBill(companyId, id, { status: 'DELETED' } as any)
+          await expensesService.deleteRecurringBill(companyId, id)
           setRows((prev) => prev.filter((row) => row.id !== id))
           toast.success('Recurring bill template deleted')
         } catch {
@@ -185,7 +185,7 @@ export default function RecurringBillsPage() {
           return
         }
         if (!confirm(`Delete ${drafts.length} selected recurring bill${drafts.length !== 1 ? 's' : ''}?`)) return
-        Promise.all(drafts.map((row) => expensesService.updateRecurringBill(companyId ?? '', row.id, { status: 'DELETED' })))
+        Promise.all(drafts.map((row) => expensesService.deleteRecurringBill(companyId ?? '', row.id)))
           .then(() => {
             setRows((prev) => prev.filter((row) => !drafts.some((draft) => draft.id === row.id)))
             toast.success(`${drafts.length} selected recurring bill${drafts.length !== 1 ? 's' : ''} deleted`)

@@ -13,8 +13,15 @@ export class ApRepository {
         return company?.currency ?? 'PHP'
     }
 
-    buildBillNumber(): string {
-        return `BILL-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+    async buildBillNumber(companyId: string): Promise<string> {
+        const last = await this.prisma.bill.findFirst({
+            where: { companyId },
+            orderBy: { billNumber: 'desc' },
+            select: { billNumber: true },
+        })
+        const match = last?.billNumber?.match(/^BILL-(\d+)$/)
+        const next = match ? parseInt(match[1], 10) + 1 : 1
+        return `BILL-${String(next).padStart(4, '0')}`
     }
 
     isBillNumberConflict(error: any): boolean {
@@ -150,7 +157,7 @@ export class ApRepository {
             throw new BadRequestException('Each bill line item must have an expense account assigned')
         }
         const total = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? 0), 0)
-        let billNumber = data.billNumber?.toString().trim() || this.buildBillNumber()
+        let billNumber = data.billNumber?.toString().trim() || await this.buildBillNumber(data.companyId)
 
         const maxAttempts = 5
         for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -181,7 +188,7 @@ export class ApRepository {
                 })
             } catch (err: any) {
                 if (!data.billNumber && this.isBillNumberConflict(err) && attempt < maxAttempts - 1) {
-                    billNumber = this.buildBillNumber()
+                    billNumber = await this.buildBillNumber(data.companyId)
                     continue
                 }
                 throw err

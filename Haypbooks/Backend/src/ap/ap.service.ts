@@ -286,7 +286,7 @@ export class ApService {
                 data: {
                     status: 'APPROVED',
                     postingStatus: 'POSTED',
-                    billNumber: bill.billNumber ?? this.repo.buildBillNumber(),
+                    billNumber: bill.billNumber ?? await this.repo.buildBillNumber(companyId),
                 },
             })
         })
@@ -374,8 +374,6 @@ export class ApService {
             bankAccountId: data.bankAccountId, currency: data.currency,
             createdById: userId, applications,
         })
-        // Post bill payment to the General Ledger (DR: Accounts Payable, CR: Cash/Bank)
-        await this.subLedger.postBillPaymentToGL(result.id, userId)
         return this.normalizeBillPayment(result)
     }
 
@@ -408,7 +406,6 @@ export class ApService {
             createdById: userId,
             applications: [{ billId, amount }],
         })
-        await this.subLedger.postBillPaymentToGL(result.id, userId)
 
         await this.prisma.auditLog.create({
             data: {
