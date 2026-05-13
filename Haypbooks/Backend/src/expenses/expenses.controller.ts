@@ -1,20 +1,13 @@
-    @Delete('reimbursements/:id')
-    deleteReimbursement(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
-      return this.expensesService.deleteReimbursement(req.user.userId, companyId, id)
-    }
-  @Delete('per-diem/:id')
-  deletePerDiem(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
-    return this.apService.deletePerDiem(req.user.userId, companyId, id)
-  }
-import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { ExpensesService } from './expenses.service'
+import { APService } from '../ap/ap.service'
 
 @Controller('api/companies/:companyId')
 @UseGuards(JwtAuthGuard, CompanyAccessGuard)
 export class ExpensesController {
-  constructor(private readonly expensesService: ExpensesService) {}
+  constructor(private readonly expensesService: ExpensesService, private readonly apService: APService) {}
 
   @Get('vendors')
   listVendors(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
@@ -84,6 +77,16 @@ export class ExpensesController {
   @Post('expenses/:id/submit')
   submitExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
     return this.expensesService.submitExpenseReport(req.user.userId, companyId, id)
+  }
+
+  @Delete('reimbursements/:id')
+  deleteReimbursement(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.expensesService.deleteReimbursement(req.user.userId, companyId, id)
+  }
+
+  @Delete('per-diem/:id')
+  deletePerDiem(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.apService.deletePerDiem(req.user.userId, companyId, id)
   }
 
   @Post('expenses/:id/approve')

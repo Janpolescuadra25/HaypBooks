@@ -1,8 +1,3 @@
-  deletePerDiem: (companyId: string, id: string) =>
-    apiClient.delete(`/companies/${companyId}/per-diem/${id}`),
-
-  deleteReimbursement: (companyId: string, id: string) =>
-    apiClient.delete(`/companies/${companyId}/reimbursements/${id}`),
 // ─── Frontend API Service: Expenses (Unified) ─────────────────────────────────
 // Single source of truth for ALL expense-module API calls.
 // Every page in the expenses module MUST import from here — never use apiClient directly.
@@ -572,6 +567,12 @@ export const expensesService = {
 
   updatePerDiem: (companyId: string, perDiemId: string, body: Partial<PerDiemPayload>): Promise<AxiosResponse> =>
     apiClient.put(`/companies/${companyId}/ap/per-diem/${perDiemId}`, body),
+
+  deletePerDiem: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/per-diem/${id}`),
+
+  deleteReimbursement: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/reimbursements/${id}`),
 
   // ─── Payroll Employees (shared lookup) ───────────────────────────────────
   listEmployees: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>

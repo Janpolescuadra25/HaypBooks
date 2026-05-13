@@ -1022,6 +1022,16 @@ export class ApService {
         return this.repo.deleteMileageLog(companyId, logId)
     }
 
+    async deletePerDiem(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.perDiem.findUnique({ where: { id } })
+        if (!existing || existing.companyId !== companyId) throw new NotFoundException('Per diem not found')
+        if (!['DRAFT'].includes(existing.status)) {
+            throw new BadRequestException('Only draft per diems can be deleted')
+        }
+        return this.prisma.perDiem.delete({ where: { id } })
+    }
+
     // ─── RFQs (Request for Quotation) ─────────────────────────────────────────
     // TODO: Add Rfq Prisma model and full CRUD when schema is extended.
 
