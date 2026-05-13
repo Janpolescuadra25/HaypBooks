@@ -2,12 +2,12 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, UseGuard
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { ExpensesService } from './expenses.service'
-import { APService } from '../ap/ap.service'
+import { ApService } from '../ap/ap.service'
 
 @Controller('api/companies/:companyId')
 @UseGuards(JwtAuthGuard, CompanyAccessGuard)
 export class ExpensesController {
-  constructor(private readonly expensesService: ExpensesService, private readonly apService: APService) {}
+  constructor(private readonly expensesService: ExpensesService, private readonly apService: ApService) {}
 
   @Get('vendors')
   listVendors(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
