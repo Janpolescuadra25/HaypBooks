@@ -218,15 +218,15 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   }, [onClose, router])
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
-      <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+    <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
         <div className="max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Mileage' : 'Edit Mileage'}</h1>
         </div>
       </div>
-      <div className="max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         {mode !== 'new' && (
-          <div className="flex border-b border-slate-200">
+          <div className="flex border-b border-slate-200 px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
             <button
               type="button"
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'details' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
@@ -245,10 +245,8 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
         )}
 
         {activeTab === 'details' && (
-          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col">
-            <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-              <div className="w-full px-0 py-6">
-                <div className="space-y-6 text-slate-900">
+          <div className="max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+            <div className="space-y-6 text-slate-900">
       <section>
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
@@ -523,8 +521,15 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
       )}
           </div>
         </div>
-      </main>
-      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+            <ActivityLog entries={activities} loading={activityLoading} />
+          </div>
+        )}
+      </div>
+      <div className="z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
         <div className="max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <div className="flex items-center justify-end gap-3">
             <button type="button" onClick={handleCancel} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
@@ -544,15 +549,6 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
         </div>
       </div>
     </form>
-        )}
-
-        {activeTab === 'activity' && (
-          <div className="space-y-6 py-6">
-            <ActivityLog entries={activities} loading={activityLoading} />
-          </div>
-        )}
-      </div>
-    </div>
   )
 }
 
