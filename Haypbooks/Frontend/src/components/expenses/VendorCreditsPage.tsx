@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Download, Eye, Check, Ban, X, ListOrdered, CheckCircle, Clock, Banknote } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
+import HaypSelect from '@/components/shared/HaypSelect'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -14,6 +15,7 @@ import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface VendorCredit {
   id: string
+  vendorId?: string
   creditNumber?: string
   vendorName?: string
   issueDate: string
@@ -34,6 +36,8 @@ export default function VendorCreditsPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>('ALL')
+  const [vendorFilter, setVendorFilter] = useState('ALL')
+  const [vendors, setVendors] = useState<Array<{ id: string; name: string }>>([])
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -60,6 +64,30 @@ export default function VendorCreditsPage() {
   useEffect(() => {
     fetchCredits()
   }, [fetchCredits])
+
+  useEffect(() => {
+    if (!companyId) return
+    let active = true
+
+    async function fetchVendors() {
+      try {
+        const res = await expensesService.listVendors(companyId)
+        const data = res.data ?? res
+        const list = Array.isArray(data) ? data : data.data ?? []
+        const normalized = list.map((vendor: any) => ({
+          id: String(vendor.id ?? vendor.contactId ?? vendor.contact?.id ?? ''),
+          name: String(vendor.displayName ?? vendor.name ?? vendor.contact?.displayName ?? ''),
+        })).filter((vendor: any) => Boolean(vendor.id))
+        if (!active) return
+        setVendors(normalized)
+      } catch {
+        // ignore vendor list failure for filter UI
+      }
+    }
+
+    fetchVendors()
+    return () => { active = false }
+  }, [companyId])
 
   const handleApply = useCallback(async (id: string) => {
     if (!companyId) return
@@ -99,6 +127,10 @@ export default function VendorCreditsPage() {
   const filtered = useMemo(() => {
     let list = rows
     if (statusFilter !== 'ALL') list = list.filter((row) => row.status === statusFilter)
+    if (vendorFilter !== 'ALL') {
+      const selectedVendor = vendors.find((vendor) => vendor.id === vendorFilter)?.name
+      list = list.filter((row) => row.vendorId === vendorFilter || row.vendorName === selectedVendor)
+    }
     if (search) {
       const q = search.toLowerCase()
       list = list.filter((row) =>
@@ -107,7 +139,7 @@ export default function VendorCreditsPage() {
       )
     }
     return list
-  }, [rows, statusFilter, search])
+  }, [rows, statusFilter, search, vendorFilter, vendors])
 
   const columns = useMemo<HaypColumn<VendorCredit>[]>(() => [
     {
@@ -299,13 +331,27 @@ export default function VendorCreditsPage() {
         description="Manage credits from vendors and apply them to bills."
         stats={stats}
         headerActions={
-          <button
-            onClick={() => router.push('/expenses/bills-payments/vendor-credits/new')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            <Plus size={18} />
-            New Vendor Credit
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="w-full sm:w-64">
+              <HaypSelect
+                value={vendorFilter}
+                onChange={setVendorFilter}
+                options={[
+                  { value: 'ALL', label: 'All Vendors' },
+                  ...vendors.map((vendor) => ({ value: vendor.id, label: vendor.name })),
+                ]}
+                placeholder="All vendors"
+                className="w-full"
+              />
+            </div>
+            <button
+              onClick={() => router.push('/expenses/bills-payments/vendor-credits/new')}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Plus size={18} />
+              New Vendor Credit
+            </button>
+          </div>
         }
         loading={loading || cidLoading}
         globalFilter={search}
