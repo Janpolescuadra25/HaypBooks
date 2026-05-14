@@ -136,8 +136,13 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
   const expenseAccounts = useMemo(
     () => accounts.filter((a) => {
-      const type = a.type?.toLowerCase() ?? ''
-      return !a.type || type === 'expense' || type === 'asset'
+      const type = (a.type ?? '').toLowerCase()
+      return [
+        'expense',
+        'cost of goods sold',
+        'cogs',
+        'other expense',
+      ].some((accepted) => type.includes(accepted))
     }),
     [accounts],
   )
