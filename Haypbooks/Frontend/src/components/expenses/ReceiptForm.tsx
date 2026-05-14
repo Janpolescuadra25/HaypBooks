@@ -337,7 +337,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
                       companyId={companyId}
                       onClose={() => setShowAccountModal(false)}
                       onCreated={(a) => {
-                        setAccounts((prev) => [{ id: a.id, code: a.code, name: a.name }, ...prev])
+                        setAccounts((prev) => [{ id: a.id, code: a.code ?? '', name: a.name }, ...prev])
                         setAccountId(a.id)
                       }}
                     />

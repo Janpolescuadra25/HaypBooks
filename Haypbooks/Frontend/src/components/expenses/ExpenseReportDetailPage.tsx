@@ -159,7 +159,7 @@ export default function ExpenseReportDetailPage({ expenseId: expenseIdProp }: { 
         variant: 'default' as const,
         disabled: status !== 'DRAFT',
       },
-    ]
+    ] as Array<{ label: string; icon: React.ReactNode; onClick: () => void; variant: 'default' | 'primary'; disabled: boolean }>
 
     if (approvableStatuses.has(status)) {
       result.push({

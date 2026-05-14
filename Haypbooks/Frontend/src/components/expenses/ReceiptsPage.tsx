@@ -169,6 +169,7 @@ export default function ReceiptsPage() {
       label: 'Mark selected matched',
       onClick: async (_ids, selectedRows) => {
         if (selectedRows.length === 0) return
+        if (!companyId) return
         try {
           await Promise.all(selectedRows.map((row) => expensesService.updateReceipt(companyId, row.id, { status: 'MATCHED' })))
           setRows((prev) => prev.map((row) => selectedRows.some((selected) => selected.id === row.id) ? { ...row, status: 'MATCHED' } : row))

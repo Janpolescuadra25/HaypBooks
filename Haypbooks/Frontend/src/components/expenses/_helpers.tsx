@@ -3,7 +3,7 @@
 import React from 'react'
 
 // ─── Date formatter ──────────────────────────────────────────────────────────
-export function fmtDate(d: string): string {
+export function fmtDate(d: string | undefined): string {
   if (!d) return '—'
   try {
     return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {

@@ -249,9 +249,9 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
     const companyIdValue = companyId
     const billIdValue = billId
     let cancelled = false
-    async function loadBill() {
+    async function doLoadBill() {
       try {
-        const loadBillFn = loadBill ?? ((companyIdParam: string, id: string) => expensesService.getBill(companyIdParam, id))
+        const loadBillFn = loadBill ?? ((companyIdParam: string, id: string): Promise<any> => expensesService.getBill(companyIdParam, id))
     const { data } = await loadBillFn(companyIdValue, billIdValue)
         if (cancelled) return
         setBillNumber((data.billNumber ?? '') as string)
@@ -299,7 +299,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
         toast.error('Failed to load bill')
       }
     }
-    loadBill()
+    doLoadBill()
     return () => { cancelled = true }
   }, [billId, companyId, mode, toast])
 
@@ -385,7 +385,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
     setSubmitting(true)
     try {
       let payload = buildPayload()
-      if (buildPayloadExtras) payload = buildPayloadExtras(payload)
+      if (buildPayloadExtras) payload = buildPayloadExtras(payload) as typeof payload
 
       if (mode === 'new') {
         if (saveBill) {
@@ -761,7 +761,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                   setNewAccountRowId(null)
                 }}
                 onCreated={(account) => {
-                  setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name, type: account.type }, ...prev])
+                  setAccounts((prev) => [{ id: account.id, code: account.code ?? '', name: account.name }, ...prev])
                   if (newAccountRowId) {
                     setLineItems((rows) => rows.map((row) => row.id === newAccountRowId ? { ...row, account: account.id } : row))
                   }
