@@ -80,7 +80,7 @@ export default function RfqPage() {
     return list
   }, [rows, dateFrom, dateTo])
 
-  const exportRows = useMemo(() => {
+  const filteredRows = useMemo(() => {
     let list = dateFiltered
     if (statusFilter !== 'ALL') list = list.filter((row) => row.status === statusFilter)
     if (search) {
@@ -175,10 +175,10 @@ export default function RfqPage() {
   const handleExportCSV = useCallback(() => {
     csvDownload(`rfq-${new Date().toISOString().slice(0, 10)}.csv`,
       ['RFQ #', 'Subject', 'Vendors', 'Date Sent', 'Closing Date', 'Status'],
-      exportRows.map((row) => [row.rfqNumber ?? '', row.subject ?? '', String(row.vendorCount ?? 0), row.dateSent ?? '', row.closingDate ?? '', row.status ?? '']),
+      filteredRows.map((row) => [row.rfqNumber ?? '', row.subject ?? '', String(row.vendorCount ?? 0), row.dateSent ?? '', row.closingDate ?? '', row.status ?? '']),
     )
     toast.success('CSV exported')
-  }, [exportRows, toast])
+  }, [filteredRows, toast])
 
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
@@ -195,7 +195,7 @@ export default function RfqPage() {
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
         <HaypDataTable
-        data={exportRows}
+        data={filteredRows}
         columns={columns}
         tableId="rfq"
         title="Requests for Quote"
