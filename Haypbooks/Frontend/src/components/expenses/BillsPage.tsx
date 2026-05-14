@@ -455,6 +455,7 @@ export default function BillsPage() {
             { value: 'DRAFT', label: 'Draft' },
             { value: 'PENDING', label: 'Pending' },
             { value: 'APPROVED', label: 'Approved' },
+            { value: 'REJECTED', label: 'Rejected' },
             { value: 'PARTIALLY_PAID', label: 'Partially Paid' },
             { value: 'PAID', label: 'Paid' },
             { value: 'VOIDED', label: 'Voided' },
