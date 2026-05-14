@@ -5,7 +5,28 @@ import { SubLedgerService } from '../shared/sub-ledger.service'
 
 @Injectable()
 export class ApService {
+    private rfqStore = new Map<string, any[]>()
+    private paymentRunStore = new Map<string, any[]>()
+
     constructor(private readonly repo: ApRepository, private readonly prisma: PrismaService, private readonly subLedger: SubLedgerService) { }
+
+    private getRfqState(companyId: string) {
+        if (!this.rfqStore.has(companyId)) {
+            this.rfqStore.set(companyId, [])
+        }
+        return this.rfqStore.get(companyId)!
+    }
+
+    private getPaymentRunState(companyId: string) {
+        if (!this.paymentRunStore.has(companyId)) {
+            this.paymentRunStore.set(companyId, [])
+        }
+        return this.paymentRunStore.get(companyId)!
+    }
+
+    private createId(prefix: string) {
+        return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    }
 
     private async getWorkspaceId(companyId: string) {
         const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { workspaceId: true } })
@@ -1022,37 +1043,66 @@ export class ApService {
         return this.repo.deleteMileageLog(companyId, logId)
     }
 
-    async deletePerDiem(userId: string, companyId: string, id: string) {
-        await this.assertAccess(userId, companyId)
-        const existing = await this.prisma.perDiem.findUnique({ where: { id } })
-        if (!existing || existing.companyId !== companyId) throw new NotFoundException('Per diem not found')
-        if (!['DRAFT'].includes(existing.status)) {
-            throw new BadRequestException('Only draft per diems can be deleted')
-        }
-        return this.prisma.perDiem.delete({ where: { id } })
-    }
-
     // ─── RFQs (Request for Quotation) ─────────────────────────────────────────
-    // TODO: Add Rfq Prisma model and full CRUD when schema is extended.
+    // In-memory RFQ support for API compatibility until a Prisma model is added.
 
-    async listRfqs(userId: string, companyId: string, _opts: any) {
+    async listRfqs(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
-        return []
+        const rfqs = this.getRfqState(companyId)
+        const search = String(opts?.search ?? '').trim().toLowerCase()
+        const status = opts?.status ? String(opts.status).toUpperCase() : ''
+        return rfqs.filter((rfq: any) => {
+            if (status && String(rfq.status).toUpperCase() !== status) return false
+            if (search) {
+                const haystack = [rfq.subject, rfq.description, rfq.notes, rfq.status].join(' ').toLowerCase()
+                return haystack.includes(search)
+            }
+            return true
+        })
     }
 
     async getRfq(userId: string, companyId: string, rfqId: string) {
         await this.assertAccess(userId, companyId)
-        throw new NotFoundException(`RFQ ${rfqId} not found`)
+        const rfq = this.getRfqState(companyId).find((item: any) => item.id === rfqId)
+        if (!rfq) throw new NotFoundException(`RFQ ${rfqId} not found`)
+        return rfq
     }
 
-    async createRfq(userId: string, companyId: string, _data: any) {
+    async createRfq(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        throw new BadRequestException('RFQ creation is not yet supported')
+        const payload = {
+            id: this.createId('rfq'),
+            companyId,
+            subject: data.subject ?? data.title ?? '',
+            description: data.description ?? '',
+            vendorId: data.vendorId ?? null,
+            status: data.status ? String(data.status).toUpperCase() : 'DRAFT',
+            closingDate: data.closingDate ? new Date(data.closingDate).toISOString() : new Date().toISOString(),
+            notes: data.notes ?? '',
+            lines: Array.isArray(data.lines) ? data.lines : [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }
+        this.getRfqState(companyId).push(payload)
+        return payload
     }
 
-    async updateRfq(userId: string, companyId: string, rfqId: string, _data: any) {
+    async updateRfq(userId: string, companyId: string, rfqId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        throw new NotFoundException(`RFQ ${rfqId} not found`)
+        const rfqs = this.getRfqState(companyId)
+        const existing = rfqs.find((item: any) => item.id === rfqId)
+        if (!existing) throw new NotFoundException(`RFQ ${rfqId} not found`)
+        Object.assign(existing, {
+            subject: data.subject ?? existing.subject,
+            description: data.description ?? existing.description,
+            vendorId: data.vendorId ?? existing.vendorId,
+            status: data.status ? String(data.status).toUpperCase() : existing.status,
+            closingDate: data.closingDate ? new Date(data.closingDate).toISOString() : existing.closingDate,
+            notes: data.notes ?? existing.notes,
+            lines: Array.isArray(data.lines) ? data.lines : existing.lines,
+            updatedAt: new Date().toISOString(),
+        })
+        return existing
     }
 
     // ─── Recurring Bills ──────────────────────────────────────────────────────
@@ -1126,26 +1176,73 @@ export class ApService {
     }
 
     // ─── Payment Runs ─────────────────────────────────────────────────────────
-    // TODO: Add PaymentRun Prisma model when schema is extended.
+    // In-memory Payment Run support for API compatibility until a Prisma model is added.
 
-    async listPaymentRuns(userId: string, companyId: string, _opts: any) {
+    async listPaymentRuns(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
-        return []
+        const paymentRuns = this.getPaymentRunState(companyId)
+        const status = opts?.status ? String(opts.status).toUpperCase() : ''
+        const search = String(opts?.search ?? '').trim().toLowerCase()
+        return paymentRuns.filter((run: any) => {
+            if (status && String(run.status).toUpperCase() !== status) return false
+            if (search) {
+                const haystack = [run.runNumber, run.method, run.status].join(' ').toLowerCase()
+                return haystack.includes(search)
+            }
+            return true
+        })
     }
 
     async getPaymentRun(userId: string, companyId: string, runId: string) {
         await this.assertAccess(userId, companyId)
-        throw new NotFoundException(`Payment run ${runId} not found`)
+        const run = this.getPaymentRunState(companyId).find((item: any) => item.id === runId)
+        if (!run) throw new NotFoundException(`Payment run ${runId} not found`)
+        return run
     }
 
-    async createPaymentRun(userId: string, companyId: string, _data: any) {
+    async createPaymentRun(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        throw new BadRequestException('Payment run creation is not yet supported')
+        const payload = {
+            id: this.createId('run'),
+            companyId,
+            runNumber: data.runNumber ?? `RUN-${Date.now()}`,
+            paymentDate: data.paymentDate ? new Date(data.paymentDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+            method: data.method ?? 'ACH',
+            status: data.status ? String(data.status).toUpperCase() : 'CREATED',
+            vendorCount: data.vendorCount ?? 0,
+            totalAmount: Number(data.totalAmount ?? 0),
+            bills: Array.isArray(data.bills) ? data.bills : [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }
+        this.getPaymentRunState(companyId).push(payload)
+        return payload
+    }
+
+    async updatePaymentRun(userId: string, companyId: string, runId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const run = this.getPaymentRunState(companyId).find((item: any) => item.id === runId)
+        if (!run) throw new NotFoundException(`Payment run ${runId} not found`)
+        Object.assign(run, {
+            runNumber: data.runNumber ?? run.runNumber,
+            paymentDate: data.paymentDate ? new Date(data.paymentDate).toISOString().slice(0, 10) : run.paymentDate,
+            method: data.method ?? run.method,
+            status: data.status ? String(data.status).toUpperCase() : run.status,
+            vendorCount: data.vendorCount ?? run.vendorCount,
+            totalAmount: data.totalAmount !== undefined ? Number(data.totalAmount) : run.totalAmount,
+            bills: Array.isArray(data.bills) ? data.bills : run.bills,
+            updatedAt: new Date().toISOString(),
+        })
+        return run
     }
 
     async processPaymentRun(userId: string, companyId: string, runId: string) {
         await this.assertAccess(userId, companyId)
-        throw new NotFoundException(`Payment run ${runId} not found`)
+        const run = this.getPaymentRunState(companyId).find((item: any) => item.id === runId)
+        if (!run) throw new NotFoundException(`Payment run ${runId} not found`)
+        run.status = 'COMPLETED'
+        run.updatedAt = new Date().toISOString()
+        return run
     }
 
     // ─── AP Aging ─────────────────────────────────────────────────────────────

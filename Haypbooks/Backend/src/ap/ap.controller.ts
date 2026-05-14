@@ -358,6 +358,11 @@ export class ApController {
         return this.svc.getPaymentRun(req.user.userId, cid, runId)
     }
 
+    @Patch('payment-runs/:runId')
+    updatePaymentRun(@Req() req: any, @Param('companyId') cid: string, @Param('runId') runId: string, @Body() body: any) {
+        return this.svc.updatePaymentRun(req.user.userId, cid, runId, body)
+    }
+
     @Post('payment-runs/:runId/process')
     @HttpCode(HttpStatus.OK)
     processPaymentRun(@Req() req: any, @Param('companyId') cid: string, @Param('runId') runId: string) {
