@@ -323,11 +323,11 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const b = await this.repo.findBillById(companyId, billId)
         if (!b) throw new NotFoundException('Bill not found')
-        if (b.status === 'CANCELLED') throw new BadRequestException('Bill is already void')
+        if (b.status === 'CANCELLED' || b.status === 'VOIDED') throw new BadRequestException('Bill is already void')
         if (Number(b.total) - Number(b.balance) > 0) throw new BadRequestException('Cannot void a bill that has payments applied')
         const workspaceId = await this.getWorkspaceId(companyId)
         await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'VOID', tableName: 'Bill', recordId: billId, changes: { status: 'CANCELLED' } },
+            data: { workspaceId, companyId, userId, action: 'VOID', tableName: 'Bill', recordId: billId, changes: { status: 'VOIDED' } },
         }).catch(() => { /* non-critical */ })
         return this.repo.voidBill(companyId, billId)
     }

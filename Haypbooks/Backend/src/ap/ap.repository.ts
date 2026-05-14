@@ -262,7 +262,7 @@ export class ApRepository {
             }
             return tx.bill.update({
                 where: { id: billId },
-                data: { status: 'CANCELLED', postingStatus: 'VOIDED', deletedAt: new Date() },
+                data: { status: 'VOIDED', postingStatus: 'VOIDED', deletedAt: new Date() },
             })
         })
     }
@@ -362,7 +362,7 @@ export class ApRepository {
             const apps = await tx.billPaymentApplication.findMany({ where: { paymentId } })
             for (const app of apps) {
                 const bill = await tx.bill.findUnique({ where: { id: app.billId } })
-                if (bill && bill.status !== 'CANCELLED') {
+                if (bill && bill.status !== 'CANCELLED' && bill.status !== 'VOIDED') {
                     const restoredBalance = Number(bill.balance) + Number(app.amount)
                     await tx.bill.update({ where: { id: app.billId }, data: { balance: restoredBalance, status: 'APPROVED' as any, paymentStatus: 'PARTIAL' as any } })
                 }
