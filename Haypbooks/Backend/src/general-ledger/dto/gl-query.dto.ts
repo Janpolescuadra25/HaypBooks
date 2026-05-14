@@ -52,7 +52,7 @@ export class GlQueryDto {
 
     /** Filter entries by transaction source type. MANUAL_JOURNAL = only hand-keyed entries. */
     @IsOptional()
-    @IsIn(['ALL', 'MANUAL_JOURNAL', 'INVOICE', 'BILL', 'PAYMENT', 'BILL_PAYMENT', 'BANK_DEPOSIT', 'REFUND'])
+    @IsIn(['ALL', 'MANUAL_JOURNAL', 'INVOICE', 'BILL', 'PAYMENT', 'BILL_PAYMENT', 'BANK_DEPOSIT', 'REFUND', 'MILEAGE', 'PER_DIEM', 'EXPENSE_REPORT', 'EXPENSE_REIMBURSEMENT', 'VENDOR_CREDIT'])
     sourceType?: string
 
     /** Column to sort by. Defaults to date. */
