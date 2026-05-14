@@ -27,6 +27,8 @@ export default function ActivityLog({
   showEntityBadge = false,
   onEntryNavigate,
 }: ActivityLogProps) {
+  const safeEntries = entries ?? []
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10 text-slate-500">
@@ -35,13 +37,13 @@ export default function ActivityLog({
     )
   }
 
-  if (entries.length === 0) {
+  if (safeEntries.length === 0) {
     return <div className="py-10 text-center text-sm text-slate-400">{emptyMessage}</div>
   }
 
   return (
     <div className={`space-y-3 ${className ?? ''}`}>
-      {entries.map((entry, index) => (
+      {safeEntries.map((entry, index) => (
         <ActivityLogEntry
           key={entry.id || (entry as any)._id || (entry as any).uuid || (entry as any).entryId || (entry as any).activityId || `${entry.recordId ?? 'entry'}-${index}`}
           entry={entry}
