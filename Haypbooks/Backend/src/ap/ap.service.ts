@@ -1041,12 +1041,12 @@ export class ApService {
 
     async deletePerDiem(userId: string, companyId: string, id: string) {
         await this.assertAccess(userId, companyId)
-        const existing = await this.prisma.perDiem.findUnique({ where: { id } })
+        const existing = await this.prisma.perDiemClaim.findUnique({ where: { id } })
         if (!existing || existing.companyId !== companyId) throw new NotFoundException('Per diem not found')
         if (!['DRAFT'].includes(existing.status)) {
             throw new BadRequestException('Only draft per diems can be deleted')
         }
-        return this.prisma.perDiem.delete({ where: { id } })
+        return this.prisma.perDiemClaim.delete({ where: { id } })
     }
 
     async deleteMileageLog(userId: string, companyId: string, logId: string) {
