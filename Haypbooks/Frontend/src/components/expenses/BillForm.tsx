@@ -75,6 +75,7 @@ interface BillFormProps {
   loadBill?: (companyId: string, billId: string) => Promise<any>
   buildPayloadExtras?: (payload: Record<string, unknown>) => Record<string, unknown>
   isRecurringTemplate?: boolean
+  hideHeader?: boolean
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -94,7 +95,7 @@ const defaultLineItem = (): LineItem => ({
   amount: 0,
 })
 
-export default function BillForm({ mode, billId, title, onClose, onSaved, saveBill, loadBill, buildPayloadExtras, isRecurringTemplate }: BillFormProps) {
+export default function BillForm({ mode, billId, title, onClose, onSaved, saveBill, loadBill, buildPayloadExtras, isRecurringTemplate, hideHeader }: BillFormProps) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -451,27 +452,29 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       }}
       className="h-full flex flex-col bg-slate-50 text-slate-900"
     >
-      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-2.5">
-            <div className="flex items-center">
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{titleText}</h1>
+      {!hideHeader && (
+        <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between py-2.5">
+              <div className="flex items-center">
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight text-slate-900">{titleText}</h1>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
-                {status}
+              <div className="flex items-center gap-2">
+                <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                  {status}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-4">
-          {mode !== 'new' && (
+          {mode !== 'new' && !hideHeader && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
               <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
               <button type="button" onClick={() => setActiveTab('activity')} disabled={!billId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>

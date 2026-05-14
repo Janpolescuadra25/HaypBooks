@@ -60,6 +60,7 @@ export default function RecurringBillForm({ mode, billId, onClose, onSaved }: Re
           isRecurringTemplate={true}
           onClose={onClose}
           onSaved={onSaved}
+          hideHeader={true}
         />
       )}
 
