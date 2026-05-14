@@ -829,7 +829,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
   ) : null;
 
   return (
-    <div data-page-scroll={usePageScroll} className={cn('flex flex-col w-full max-w-full overflow-x-clip overflow-y-visible bg-slate-50/10 relative', className)}>
+    <div data-page-scroll={usePageScroll} className={cn('flex flex-col w-full max-w-full overflow-x-clip overflow-y-visible bg-slate-50 relative', className)}>
       <div className={cn(
         "flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-clip relative",
         (title || stats) ? "px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4 md:py-5" : "p-0",

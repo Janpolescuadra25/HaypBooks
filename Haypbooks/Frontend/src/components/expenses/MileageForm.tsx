@@ -219,7 +219,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900">
-      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+      <div className="shrink-0 border-b border-slate-200 bg-white z-30">
         <div className="max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Mileage' : 'Edit Mileage'}</h1>
         </div>

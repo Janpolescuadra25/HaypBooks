@@ -27,7 +27,7 @@ export default function RecurringBillForm({ mode, billId, onClose, onSaved }: Re
 
   return (
     <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
-      <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+      <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Recurring Bill' : 'Edit Recurring Bill'}</h1>
         </div>

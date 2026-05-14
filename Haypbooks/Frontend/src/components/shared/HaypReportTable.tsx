@@ -72,7 +72,7 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
   return (
     <div className="bg-white border text-slate-900 border-slate-200 rounded-[32px] overflow-hidden shadow-xl flex flex-col min-h-[600px]">
       {/* Report Toolbar */}
-      <div className="px-8 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="px-8 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
         <div className="flex items-center gap-3">
            <div className="relative">
               <select 
@@ -109,7 +109,7 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
           {/* Structured Table */}
           <div className="w-full px-12 pb-12">
             <table className="w-full border-collapse relative">
-              <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm shadow-[0_1px_0_0_rgb(226,232,240)]">
+              <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_rgb(226,232,240)]">
                 <tr>
                   {columns.map((col) => (
                     <th 

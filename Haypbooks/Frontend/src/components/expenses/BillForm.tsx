@@ -453,7 +453,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       className="h-full flex flex-col bg-slate-50 text-slate-900"
     >
       {!hideHeader && (
-        <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="shrink-0 border-b border-slate-200 bg-white z-30">
           <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between py-2.5">
               <div className="flex items-center">
