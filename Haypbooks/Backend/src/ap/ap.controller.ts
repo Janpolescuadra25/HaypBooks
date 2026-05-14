@@ -28,6 +28,11 @@ export class ApController {
         return this.svc.getVendorActivity(req.user.userId, cid, vid, q)
     }
 
+    @Get('vendors/:contactId/statement')
+    getVendorStatement(@Req() req: any, @Param('companyId') cid: string, @Param('contactId') vid: string, @Query() q: any) {
+        return this.svc.getVendorStatement(req.user.userId, cid, vid, q)
+    }
+
     @Get('vendors/:contactId')
     getVendor(@Req() req: any, @Param('companyId') cid: string, @Param('contactId') vid: string) {
         return this.svc.getVendor(req.user.userId, cid, vid)

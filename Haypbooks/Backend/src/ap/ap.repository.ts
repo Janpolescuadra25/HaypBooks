@@ -273,6 +273,7 @@ export class ApRepository {
         return this.prisma.billPayment.findMany({
             where: {
                 companyId, deletedAt: null,
+                ...(opts.vendorId ? { bill: { vendorId: opts.vendorId } } : {}),
                 ...(opts.from || opts.to ? { paymentDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },
             include: {
@@ -442,12 +443,13 @@ export class ApRepository {
 
     // ─── Vendor Credits ──────────────────────────────────────────────────────
 
-    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: string; limit?: number; offset?: number } = {}) {
+    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.vendorCredit.findMany({
             where: {
                 companyId,
                 ...(opts.vendorId ? { vendorId: opts.vendorId } : {}),
                 ...(opts.status ? { status: opts.status as any } : {}),
+                ...(opts.from || opts.to ? { issuedAt: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },
             include: {
                 vendor: { include: { contact: { select: { displayName: true } } } },

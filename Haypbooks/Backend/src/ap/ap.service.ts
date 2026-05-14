@@ -165,6 +165,180 @@ export class ApService {
         return { data: logs, total }
     }
 
+    async getVendorStatement(userId: string, companyId: string, contactId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const vendor = await this.repo.findVendorById(wid, contactId)
+        if (!vendor) throw new NotFoundException('Vendor not found')
+
+        const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
+        if (Number.isNaN(asOf.getTime())) throw new BadRequestException('Invalid asOf date')
+
+        const start = opts.start ? new Date(opts.start) : undefined
+        if (opts.start && Number.isNaN(start.getTime())) throw new BadRequestException('Invalid start date')
+
+        const type = typeof opts.type === 'string' ? opts.type : undefined
+        const asOfIso = asOf.toISOString().slice(0, 10)
+        const startIso = start ? start.toISOString().slice(0, 10) : null
+
+        const [bills, payments, credits] = await Promise.all([
+            this.repo.findBills(companyId, { vendorId: contactId, to: asOf }),
+            this.repo.findBillPayments(companyId, { vendorId: contactId, from: undefined, to: asOf }),
+            this.repo.findVendorCredits(companyId, { vendorId: contactId, from: undefined, to: asOf }),
+        ])
+
+        const paymentApplications = payments.flatMap((payment: any) => {
+            return (payment.BillPaymentApplication ?? []).map((application: any) => ({
+                ...application,
+                paymentId: payment.id,
+                paymentDate: payment.paymentDate,
+                paymentMethod: payment.method,
+                paymentReference: payment.referenceNumber,
+            }))
+        })
+
+        const lines: any[] = []
+
+        for (const bill of bills) {
+            const billDate = bill.issuedAt ? bill.issuedAt.toISOString().slice(0, 10) : bill.dueAt ? bill.dueAt.toISOString().slice(0, 10) : ''
+            if (billDate > asOfIso) continue
+            const applications = paymentApplications.filter((app: any) => app.billId === bill.id && app.paymentDate && app.paymentDate.toISOString().slice(0, 10) <= asOfIso)
+            const paidAmount = applications.reduce((sum: number, app: any) => sum + Number(app.amount ?? 0), 0)
+            const billBalance = Math.max(0, Number(bill.total ?? 0) - paidAmount)
+            const includeBill = (() => {
+                if (!type) return true
+                if (type === 'open-item') return billBalance > 0
+                if (type === 'transaction' || type === 'balance-forward') {
+                    if (!startIso) return billDate <= asOfIso
+                    return billDate >= startIso && billDate <= asOfIso
+                }
+                return true
+            })()
+
+            if (includeBill) {
+                lines.push({
+                    id: `bill_${bill.id}`,
+                    date: billDate,
+                    type: 'bill',
+                    description: `Bill ${bill.billNumber ?? ''}`,
+                    number: bill.billNumber,
+                    dueDate: bill.dueAt ? bill.dueAt.toISOString().slice(0, 10) : undefined,
+                    amount: Number(bill.total ?? 0),
+                    impact: Number(bill.total ?? 0),
+                    billBalance,
+                    runningBalance: 0,
+                })
+            }
+
+            for (const application of applications) {
+                const paymentDate = application.paymentDate ? application.paymentDate.toISOString().slice(0, 10) : ''
+                const includePayment = (() => {
+                    if (type === 'open-item') return false
+                    if (!startIso) return paymentDate <= asOfIso
+                    return paymentDate >= startIso && paymentDate <= asOfIso
+                })()
+                if (!includePayment) continue
+                lines.push({
+                    id: `payment_${application.id}`,
+                    date: paymentDate,
+                    type: 'payment',
+                    description: `Payment ${application.paymentReference || application.paymentId}`,
+                    appliedToBillId: application.billId,
+                    appliedToBillNumber: application.bill?.billNumber,
+                    amount: -Number(application.amount ?? 0),
+                    impact: -Number(application.amount ?? 0),
+                    runningBalance: 0,
+                })
+            }
+        }
+
+        for (const credit of credits) {
+            const creditDate = credit.issuedAt ? credit.issuedAt.toISOString().slice(0, 10) : ''
+            if (creditDate > asOfIso) continue
+            const includeCredit = (() => {
+                if (type === 'open-item') return false
+                if (!startIso) return creditDate <= asOfIso
+                return creditDate >= startIso && creditDate <= asOfIso
+            })()
+            if (!includeCredit) continue
+            lines.push({
+                id: `credit_${credit.id}`,
+                date: creditDate,
+                type: 'vendor_credit',
+                description: `Vendor Credit ${credit.creditNumber ?? ''}`,
+                number: credit.creditNumber,
+                remaining: Number(credit.balance ?? 0),
+                amount: -Number(credit.total ?? 0),
+                impact: -Number(credit.total ?? 0),
+                runningBalance: 0,
+            })
+        }
+
+        if (type === 'balance-forward' && startIso) {
+            let priorImpact = 0
+            for (const bill of bills) {
+                const billDate = bill.issuedAt ? bill.issuedAt.toISOString().slice(0, 10) : bill.dueAt ? bill.dueAt.toISOString().slice(0, 10) : ''
+                if (billDate && billDate < startIso) {
+                    priorImpact += Number(bill.total ?? 0)
+                }
+            }
+            for (const application of paymentApplications) {
+                const paymentDate = application.paymentDate ? application.paymentDate.toISOString().slice(0, 10) : ''
+                if (paymentDate && paymentDate < startIso) {
+                    priorImpact -= Number(application.amount ?? 0)
+                }
+            }
+            for (const credit of credits) {
+                const creditDate = credit.issuedAt ? credit.issuedAt.toISOString().slice(0, 10) : ''
+                if (creditDate && creditDate < startIso) {
+                    priorImpact -= Number(credit.total ?? 0)
+                }
+            }
+            lines.unshift({
+                id: `bf_${contactId}_${startIso}`,
+                date: startIso,
+                type: 'balance_forward',
+                description: 'Balance Forward',
+                amount: priorImpact,
+                impact: priorImpact,
+                runningBalance: 0,
+            })
+        }
+
+        const typeOrder: Record<string, number> = { bill: 0, vendor_credit: 1, payment: 2, balance_forward: -1 }
+        lines.sort((a, b) => {
+            const dateDiff = a.date.localeCompare(b.date)
+            if (dateDiff !== 0) return dateDiff
+            const order = (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9)
+            if (order !== 0) return order
+            return String(a.number ?? a.id ?? '').localeCompare(String(b.number ?? b.id ?? ''))
+        })
+
+        let running = 0
+        for (const line of lines) {
+            running += Number(line.impact ?? 0)
+            line.runningBalance = Number(running.toFixed(2))
+        }
+
+        const totals = lines.reduce((acc: any, line: any) => {
+            if (line.type === 'bill') acc.bills += Number(line.amount ?? 0)
+            if (line.type === 'payment') acc.payments += Number(line.amount ?? 0)
+            if (line.type === 'vendor_credit') acc.credits += Number(line.amount ?? 0)
+            acc.net = Number((acc.bills + acc.payments + acc.credits).toFixed(2))
+            return acc
+        }, { bills: 0, payments: 0, credits: 0, net: 0 })
+
+        return {
+            vendorId: contactId,
+            vendorName: vendor.contact?.displayName ?? vendor.name ?? '',
+            asOf: asOfIso,
+            start: startIso,
+            type,
+            lines,
+            totals,
+        }
+    }
+
     // ─── Bills ────────────────────────────────────────────────────────────────
 
     async listBills(userId: string, companyId: string, opts: any) {
@@ -452,6 +626,7 @@ export class ApService {
     async listBillPayments(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
         const payments = await this.repo.findBillPayments(companyId, {
+            vendorId: opts.vendorId,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
@@ -696,6 +871,8 @@ export class ApService {
         return this.repo.findVendorCredits(companyId, {
             vendorId: opts.vendorId,
             status: opts.status,
+            from: opts.from ? new Date(opts.from) : undefined,
+            to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
         })

@@ -303,6 +303,9 @@ export const expensesService = {
   getVendor: (companyId: string, vendorId: string): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/ap/vendors/${vendorId}`),
 
+  getVendorStatement: (companyId: string, vendorId: string, query?: ListQuery): Promise<AxiosResponse> =>
+    apiClient.get(`/companies/${companyId}/ap/vendors/${vendorId}/statement`, { params: query }),
+
   createVendor: (companyId: string, body: VendorPayload): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/ap/vendors`, body),
 
