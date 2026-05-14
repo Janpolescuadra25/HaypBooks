@@ -172,7 +172,23 @@ export class AccountingRepository {
             else if (st === 'PAYMENT') sourceFilter['paymentsReceived'] = { some: {} }
             else if (st === 'BILL_PAYMENT') sourceFilter['billPayments'] = { some: {} }
             else if (st === 'BANK_DEPOSIT') sourceFilter['bankDeposits'] = { some: {} }
-            else if (st === 'MANUAL_JOURNAL') {
+            else if (st === 'REFUND') {
+                sourceFilter['OR'] = [
+                    { customerRefunds: { some: {} } },
+                    { vendorRefunds: { some: {} } },
+                    { transactionSource: { contains: 'REFUND', mode: 'insensitive' } },
+                ]
+            } else if (st === 'MILEAGE') {
+                sourceFilter['transactionSource'] = { contains: 'Mileage', mode: 'insensitive' }
+            } else if (st === 'PER_DIEM') {
+                sourceFilter['transactionSource'] = { contains: 'Per Diem', mode: 'insensitive' }
+            } else if (st === 'EXPENSE_REPORT') {
+                sourceFilter['transactionSource'] = { contains: 'Expense Report', mode: 'insensitive' }
+            } else if (st === 'EXPENSE_REIMBURSEMENT') {
+                sourceFilter['transactionSource'] = { contains: 'Expense Reimbursement', mode: 'insensitive' }
+            } else if (st === 'VENDOR_CREDIT') {
+                sourceFilter['transactionSource'] = { contains: 'VendorCredit', mode: 'insensitive' }
+            } else if (st === 'MANUAL_JOURNAL') {
                 sourceFilter['invoices'] = { none: {} }
                 sourceFilter['bills'] = { none: {} }
                 sourceFilter['paymentsReceived'] = { none: {} }
@@ -180,6 +196,15 @@ export class AccountingRepository {
                 sourceFilter['bankDeposits'] = { none: {} }
                 sourceFilter['customerRefunds'] = { none: {} }
                 sourceFilter['vendorRefunds'] = { none: {} }
+                sourceFilter['NOT'] = {
+                    OR: [
+                        { transactionSource: { contains: 'Mileage', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'Per Diem', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'Expense Report', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'Expense Reimbursement', mode: 'insensitive' } },
+                        { transactionSource: { contains: 'VendorCredit', mode: 'insensitive' } },
+                    ],
+                }
             }
         }
 
