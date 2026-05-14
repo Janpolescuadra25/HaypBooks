@@ -79,7 +79,7 @@ export class ExpensesController {
     return this.expensesService.submitExpenseReport(req.user.userId, companyId, id)
   }
 
-  @Delete('reimbursements/:id')
+  @Delete('expenses/reimbursements/:id')
   deleteReimbursement(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
     return this.expensesService.deleteReimbursement(req.user.userId, companyId, id)
   }
