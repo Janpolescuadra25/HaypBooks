@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Edit2, Trash2, Send, Check, X, Ban } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -10,6 +10,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { fmtDate } from './_helpers'
 import ExpenseDetailLayout, { DetailSection } from './ExpenseDetailLayout'
+import RejectionReasonModal from '@/components/shared/RejectionReasonModal'
 
 interface BillDetail {
   id: string
@@ -83,6 +84,8 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
   const billVendorName = bill?.vendorName || bill?.vendor?.displayName || 'Vendor'
   const billNumberTitle = bill?.billNumber || 'Bill Details'
@@ -212,15 +215,101 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
     },
   }
 
+  const hasNoPayments = bill?.balanceDue !== undefined && bill?.total !== undefined && bill.balanceDue === bill.total
+
+  const handleSubmitBill = useCallback(async () => {
+    if (!companyId || !billId) return
+    setActionLoading(true)
+    try {
+      await expensesService.submitBill(companyId, billId)
+      toast.success('Bill submitted')
+      router.refresh()
+    } catch (err) {
+      toast.error('Failed to submit bill')
+    } finally {
+      setActionLoading(false)
+    }
+  }, [companyId, billId, router, toast])
+
+  const handleApproveBill = useCallback(async () => {
+    if (!companyId || !billId) return
+    setActionLoading(true)
+    try {
+      await expensesService.approveBill(companyId, billId)
+      toast.success('Bill approved')
+      router.refresh()
+    } catch (err) {
+      toast.error('Failed to approve bill')
+    } finally {
+      setActionLoading(false)
+    }
+  }, [companyId, billId, router, toast])
+
+  const handleRejectBill = useCallback(async (reason: string) => {
+    if (!companyId || !billId) return
+    setActionLoading(true)
+    try {
+      await expensesService.rejectBill(companyId, billId, { reason })
+      toast.success('Bill rejected')
+      setRejectModalOpen(false)
+      router.refresh()
+    } catch (err) {
+      toast.error('Failed to reject bill')
+    } finally {
+      setActionLoading(false)
+    }
+  }, [companyId, billId, router, toast])
+
+  const handleUnapproveBill = useCallback(async () => {
+    if (!companyId || !billId) return
+    setActionLoading(true)
+    try {
+      await expensesService.unapproveBill(companyId, billId)
+      toast.success('Bill unapproved')
+      router.refresh()
+    } catch (err) {
+      toast.error('Failed to unapprove bill')
+    } finally {
+      setActionLoading(false)
+    }
+  }, [companyId, billId, router, toast])
+
   const actions = [
     {
       label: 'Edit',
       icon: <Edit2 size={14} />,
       onClick: () => router.push(`/expenses/bills-payments/bills/${billId}/edit`),
       variant: 'primary' as const,
-      disabled: !billId,
+      disabled: !billId || status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED',
     },
-    {
+    ...(status === 'DRAFT' || status === 'REJECTED' ? [{
+      label: status === 'DRAFT' ? 'Submit bill' : 'Resubmit bill',
+      icon: <Send size={14} />,
+      onClick: handleSubmitBill,
+      variant: 'secondary' as const,
+      disabled: actionLoading || !billId,
+    }] : []),
+    ...(status === 'PENDING' ? [{
+      label: 'Approve bill',
+      icon: <Check size={14} />,
+      onClick: handleApproveBill,
+      variant: 'success' as const,
+      disabled: actionLoading || !billId,
+    }, {
+      label: 'Reject bill',
+      icon: <X size={14} />,
+      onClick: () => setRejectModalOpen(true),
+      variant: 'danger' as const,
+      disabled: actionLoading || !billId,
+    }] : []),
+    ...(status === 'APPROVED' && hasNoPayments ? [{
+      label: 'Unapprove bill',
+      icon: <Ban size={14} />,
+      onClick: handleUnapproveBill,
+      variant: 'warning' as const,
+      disabled: actionLoading || !billId,
+    }] : []),
+    ...(status === 'DRAFT' ? [{
       label: 'Delete',
       icon: <Trash2 size={14} />,
       onClick: async () => {
@@ -239,24 +328,33 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
       },
       variant: 'danger' as const,
       disabled: deleting || !billId,
-    },
+    }] : []),
   ]
 
   return (
-    <ExpenseDetailLayout
-      title={billNumberTitle}
-      subtitle={billVendorName}
-      status={status}
-      statusColor={statusColor}
-      metadata={[
-        { label: 'Created', value: bill?.createdAt ? fmtDate(bill.createdAt) : '—' },
-        { label: 'Vendor', value: billVendorName },
-      ]}
-      sections={[generalSection, financialSection, vendorSection, itemsSection, paymentsSection]}
-      actions={actions}
-      backUrl="/expenses/bills-payments/bills"
-      loading={loading || cidLoading}
-      error={error}
-    />
+    <>
+      <ExpenseDetailLayout
+        title={billNumberTitle}
+        subtitle={billVendorName}
+        status={status}
+        statusColor={statusColor}
+        metadata={[
+          { label: 'Created', value: bill?.createdAt ? fmtDate(bill.createdAt) : '—' },
+          { label: 'Vendor', value: billVendorName },
+        ]}
+        sections={[generalSection, financialSection, vendorSection, itemsSection, paymentsSection]}
+        actions={actions}
+        backUrl="/expenses/bills-payments/bills"
+        loading={loading || cidLoading}
+        error={error}
+      />
+      <RejectionReasonModal
+        open={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        onConfirm={handleRejectBill}
+        title="Reject bill"
+        description="Provide a reason for rejecting this bill."
+      />
+    </>
   )
 }
