@@ -165,6 +165,7 @@ export default function JournalEntriesPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<string>('ALL')
   const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -176,7 +177,8 @@ export default function JournalEntriesPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const params: Record<string, string> = { sourceType: 'MANUAL_JOURNAL' }
+      const params: Record<string, string> = {}
+      if (sourceTypeFilter !== 'ALL') params.sourceType = sourceTypeFilter
       if (dateFrom) params.from = dateFrom
       if (dateTo) params.to = dateTo
       const { data } = await apiClient.get(`/companies/${companyId}/accounting/journal-entries`, { params })
@@ -188,7 +190,7 @@ export default function JournalEntriesPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, dateFrom, dateTo])
+  }, [companyId, dateFrom, dateTo, sourceTypeFilter])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
 
@@ -232,7 +234,7 @@ export default function JournalEntriesPage() {
   const totalPages = Math.ceil(filtered.length / pageSize)
 
   // Reset to page 1 when search or status filter changes
-  useEffect(() => { setPage(1) }, [search, statusFilter])
+  useEffect(() => { setPage(1) }, [search, statusFilter, sourceTypeFilter])
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const totalEntries = entries.length
@@ -340,7 +342,7 @@ export default function JournalEntriesPage() {
       {/* Page header */}
       <div className="px-6 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Journal Entries</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Transaction Journal</h1>
           <p className="text-sm text-slate-500 mt-0.5">{filtered.length} of {totalEntries} entries</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -393,6 +395,29 @@ export default function JournalEntriesPage() {
             )}
           </button>
         ))}
+      </div>
+
+      <div className="px-6 py-3 bg-white mx-6 border-x border-gray-200 flex flex-wrap items-center gap-3">
+        <label className="text-xs font-medium text-gray-500">Transaction type:</label>
+        <select
+          value={sourceTypeFilter}
+          onChange={(e) => setSourceTypeFilter(e.target.value)}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+        >
+          <option value="ALL">All transactions</option>
+          <option value="MANUAL_JOURNAL">Manual journals</option>
+          <option value="INVOICE">Invoices</option>
+          <option value="BILL">Bills</option>
+          <option value="PAYMENT">Customer payments</option>
+          <option value="BILL_PAYMENT">Bill payments</option>
+          <option value="BANK_DEPOSIT">Bank deposits</option>
+          <option value="REFUND">Refunds</option>
+          <option value="MILEAGE">Mileage</option>
+          <option value="PER_DIEM">Per diem</option>
+          <option value="EXPENSE_REPORT">Expense reports</option>
+          <option value="EXPENSE_REIMBURSEMENT">Expense reimbursements</option>
+          <option value="VENDOR_CREDIT">Vendor credits</option>
+        </select>
       </div>
 
       {/* Search bar */}
@@ -474,7 +499,7 @@ export default function JournalEntriesPage() {
                     </div>
                     <h3 className="text-base font-semibold text-gray-700">No journal entries yet</h3>
                     <p className="text-sm text-gray-400 max-w-sm text-center mt-1 mb-4">
-                      {search || statusFilter !== 'ALL'
+                      {search || statusFilter !== 'ALL' || sourceTypeFilter !== 'ALL'
                         ? 'No entries match your current filters.'
                         : 'Create your first journal entry to start recording transactions.'}
                     </p>
