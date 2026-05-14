@@ -796,12 +796,10 @@ export class ApService {
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'VendorCredit', recordId: creditId, changes: { status: 'APPLIED' } },
         }).catch(() => { /* non-critical */ })
-        try {
-            await this.subLedger.postVendorCreditToGL(creditId, userId)
-        } catch (glErr) {
-            console.error('postVendorCreditToGL failed for credit', creditId, glErr)
-        }
-        const result = await this.prisma.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED' } })
+        const result = await this.prisma.$transaction(async (tx) => {
+            await this.subLedger.postVendorCreditToGL(creditId, userId, tx)
+            return tx.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED' } })
+        })
         return result
     }
 
