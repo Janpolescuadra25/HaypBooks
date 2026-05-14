@@ -625,6 +625,7 @@ export class SubLedgerService {
         })
 
         if (je) {
+          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' } })
           await tx.bill.update({ where: { id: billId }, data: { postingStatus: 'VOIDED' } })
         }
       })
