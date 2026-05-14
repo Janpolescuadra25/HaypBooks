@@ -6,6 +6,7 @@ import {
   Plus, Download, X, Eye, Check, Ban, ListOrdered, Clock, Send,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
+import HaypSelect from '@/components/shared/HaypSelect'
 import RejectionReasonModal from '@/components/shared/RejectionReasonModal'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -68,6 +69,8 @@ export default function BillsPage() {
   const [error, setError]     = useState('')
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [vendorFilter, setVendorFilter] = useState('ALL')
+  const [vendors, setVendors] = useState<Array<{ id: string; name: string }>>([])
   const [sortKey, setSortKey]   = useState<SortKey>('date')
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [toast, setToast] = useState('')
@@ -93,6 +96,30 @@ export default function BillsPage() {
   }, [companyId])
 
   useEffect(() => { fetchBills() }, [fetchBills])
+
+  useEffect(() => {
+    if (!companyId) return
+    let active = true
+
+    async function fetchVendors() {
+      try {
+        const res = await expensesService.listVendors(companyId)
+        const data = res.data ?? res
+        const list = Array.isArray(data) ? data : data.data ?? []
+        const normalized = list.map((vendor: any) => ({
+          id: String(vendor.id ?? vendor.contactId ?? vendor.contact?.id ?? ''),
+          name: String(vendor.displayName ?? vendor.name ?? vendor.contact?.displayName ?? ''),
+        })).filter((vendor: any) => Boolean(vendor.id))
+        if (!active) return
+        setVendors(normalized)
+      } catch {
+        // ignore vendor list failure for filter UI
+      }
+    }
+
+    fetchVendors()
+    return () => { active = false }
+  }, [companyId])
 
   const handleApprove = useCallback(async (id: string) => {
     if (!companyId) return
@@ -182,8 +209,12 @@ export default function BillsPage() {
   const filtered = useMemo(() => {
     let list = rows
     if (statusFilter !== 'ALL') list = list.filter((r) => r.status === statusFilter)
+    if (vendorFilter !== 'ALL') {
+      const selectedVendor = vendors.find((vendor) => vendor.id === vendorFilter)?.name
+      list = list.filter((r) => r.vendorId === vendorFilter || r.vendorName === selectedVendor)
+    }
     return list
-  }, [rows, statusFilter])
+  }, [rows, statusFilter, vendorFilter, vendors])
 
   const handleDeleteSelected = useCallback(async (selectedIds: string[]) => {
     if (!companyId || selectedIds.length === 0) return
@@ -441,13 +472,27 @@ export default function BillsPage() {
           description="Manage your vendor bills and track payment status."
           stats={stats}
           headerActions={
-            <button
-              onClick={() => router.push('/expenses/bills/new')}
-              className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
-            >
-              <Plus size={18} />
-              New Bill
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <div className="w-full sm:w-64">
+                <HaypSelect
+                  value={vendorFilter}
+                  onChange={setVendorFilter}
+                  options={[
+                    { value: 'ALL', label: 'All Vendors' },
+                    ...vendors.map((vendor) => ({ value: vendor.id, label: vendor.name })),
+                  ]}
+                  placeholder="All vendors"
+                  className="w-full"
+                />
+              </div>
+              <button
+                onClick={() => router.push('/expenses/bills/new')}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                <Plus size={18} />
+                New Bill
+              </button>
+            </div>
           }
           globalFilter={search}
           onGlobalFilterChange={setSearch}
