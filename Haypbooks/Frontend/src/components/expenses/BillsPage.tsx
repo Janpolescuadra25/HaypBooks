@@ -424,7 +424,8 @@ export default function BillsPage() {
 
   const stats = useMemo(() => [
     { icon: ListOrdered, label: 'Total Bills', value: rows.length, color: 'blue' },
-    { icon: Clock, label: 'Draft Bills', value: rows.filter(r => r.status === 'DRAFT').length, color: 'amber' },
+    { icon: Clock, label: 'Pending Bills', value: rows.filter(r => r.status === 'PENDING').length, color: 'amber' },
+    { icon: X, label: 'Overdue Bills', value: rows.filter(r => r.status === 'OVERDUE').length, color: 'rose' },
     { icon: Check, label: 'Paid Bills', value: rows.filter(r => r.status === 'PAID').length, color: 'emerald' },
     { icon: X, label: 'Voided Bills', value: rows.filter(r => r.status === 'VOIDED').length, color: 'rose' },
   ], [rows])
