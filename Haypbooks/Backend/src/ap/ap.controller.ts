@@ -87,6 +87,18 @@ export class ApController {
         return this.svc.submitBill(req.user.userId, cid, bid)
     }
 
+    @Post('bills/:billId/reject')
+    @HttpCode(HttpStatus.OK)
+    rejectBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string, @Body() body: any) {
+        return this.svc.rejectBill(req.user.userId, cid, bid, body?.reason)
+    }
+
+    @Post('bills/:billId/unapprove')
+    @HttpCode(HttpStatus.OK)
+    unapproveBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string) {
+        return this.svc.unapproveBill(req.user.userId, cid, bid)
+    }
+
     @Post('bills/:billId/payments')
     @HttpCode(HttpStatus.OK)
     recordBillPaymentForBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string, @Body() body: any) {

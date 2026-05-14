@@ -334,6 +334,15 @@ export const expensesService = {
   approveBill: (companyId: string, billId: string): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/ap/bills/${billId}/approve`),
 
+  submitBill: (companyId: string, billId: string): Promise<AxiosResponse> =>
+    apiClient.post(`/companies/${companyId}/ap/bills/${billId}/submit`),
+
+  rejectBill: (companyId: string, billId: string, body: { reason?: string }): Promise<AxiosResponse> =>
+    apiClient.post(`/companies/${companyId}/ap/bills/${billId}/reject`, body),
+
+  unapproveBill: (companyId: string, billId: string): Promise<AxiosResponse> =>
+    apiClient.post(`/companies/${companyId}/ap/bills/${billId}/unapprove`),
+
   voidBill: (companyId: string, billId: string): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/ap/bills/${billId}/void`),
 

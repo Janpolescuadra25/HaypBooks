@@ -298,18 +298,24 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const bill = await this.repo.findBillById(companyId, billId)
         if (!bill) throw new NotFoundException('Bill not found')
-        if (bill.status !== 'DRAFT') throw new BadRequestException('Only draft bills can be approved')
+        if (!['DRAFT', 'PENDING'].includes(bill.status)) throw new BadRequestException('Only draft or pending bills can be approved')
 
         const result = await this.prisma.$transaction(async (tx) => {
             await this.subLedger.postBillToGL(billId, userId, tx)
-            return tx.bill.update({
+            const updatedBill = await tx.bill.update({
                 where: { id: billId },
                 data: {
                     status: 'APPROVED',
                     postingStatus: 'POSTED',
                     billNumber: bill.billNumber ?? await this.repo.buildBillNumber(companyId),
+                    approvedAt: new Date(),
                 },
             })
+            await tx.approvalRequest.updateMany({
+                where: { entityId: billId, status: 'PENDING' },
+                data: { status: 'APPROVED' },
+            })
+            return updatedBill
         })
 
         const workspaceId = await this.getWorkspaceId(companyId)
@@ -355,6 +361,57 @@ export class ApService {
         const workspaceId = await this.getWorkspaceId(companyId)
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'SUBMIT', tableName: 'Bill', recordId: billId, changes: { status: 'PENDING' } },
+        }).catch(() => { /* non-critical */ })
+        return result
+    }
+
+    async rejectBill(userId: string, companyId: string, billId: string, reason?: string) {
+        await this.assertAccess(userId, companyId)
+        const bill = await this.repo.findBillById(companyId, billId)
+        if (!bill) throw new NotFoundException('Bill not found')
+        if (bill.status !== 'PENDING') throw new BadRequestException('Only pending bills can be rejected')
+
+        const result = await this.prisma.$transaction(async (tx) => {
+            const updatedBill = await tx.bill.update({
+                where: { id: billId },
+                data: {
+                    status: 'REJECTED',
+                    rejectionReason: reason ?? null,
+                },
+            })
+            await tx.approvalRequest.updateMany({
+                where: { entityId: billId, status: 'PENDING' },
+                data: { status: 'REJECTED' },
+            })
+            return updatedBill
+        })
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'REJECT', tableName: 'Bill', recordId: billId, changes: { status: 'REJECTED', reason: reason ?? '' } },
+        }).catch(() => { /* non-critical */ })
+        return result
+    }
+
+    async unapproveBill(userId: string, companyId: string, billId: string) {
+        await this.assertAccess(userId, companyId)
+        const bill = await this.repo.findBillById(companyId, billId)
+        if (!bill) throw new NotFoundException('Bill not found')
+        if (bill.status !== 'APPROVED') throw new BadRequestException('Only approved bills can be unapproved')
+
+        await this.subLedger.postBillReversalToGL(billId, userId)
+        const result = await this.prisma.bill.update({
+            where: { id: billId },
+            data: {
+                status: 'DRAFT',
+                postingStatus: 'DRAFT',
+                approvedAt: null,
+            },
+        })
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'UNAPPROVE', tableName: 'Bill', recordId: billId, changes: { status: 'DRAFT' } },
         }).catch(() => { /* non-critical */ })
         return result
     }
