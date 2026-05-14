@@ -97,7 +97,7 @@ const STATUS_STYLES: Record<string, string> = {
   VOIDED:          'bg-gray-200 text-gray-500 border-gray-300',
   VOID:            'bg-gray-200 text-gray-500 border-gray-300',
   SUBMITTED:       'bg-blue-100 text-blue-700 border-blue-200',
-  REJECTED:        'bg-red-100 text-red-700 border-red-200',
+  REJECTED:        'bg-red-100 text-red-600 border-red-200',
   FAILED:          'bg-red-100 text-red-700 border-red-200',
   PARTIALLY_PAID:  'bg-amber-100 text-amber-700 border-amber-200',
   PARTIALLY_USED:  'bg-amber-100 text-amber-700 border-amber-200',
