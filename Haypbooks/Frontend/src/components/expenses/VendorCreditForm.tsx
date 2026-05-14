@@ -549,33 +549,20 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
     <div className="flex h-full flex-col bg-slate-50 text-slate-900 overflow-hidden">
 
       <div className="shrink-0 border-b border-slate-200 bg-white z-30">
-
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
-
             <div className="flex items-center gap-4">
-
               <h1 className="text-lg font-bold tracking-tight text-slate-900">
-
                 {mode === 'new' ? 'New Vendor Credit' : 'Edit Vendor Credit'}
-
               </h1>
-
             </div>
-
             <div className="flex items-center gap-2">
-
               <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
-
                 {status}
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
 
 
