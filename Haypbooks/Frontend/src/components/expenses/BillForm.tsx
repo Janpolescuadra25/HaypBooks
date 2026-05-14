@@ -398,7 +398,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
           const billId = result.data?.id ?? (result as any)?.id
           if (action === 'submit') {
             if (!billId) throw new Error('Created bill id missing')
-            await expensesService.approveBill(companyId, billId)
+            await expensesService.submitBill(companyId, billId)
             toast.success('Bill submitted')
           } else {
             toast.success('Draft saved')
@@ -413,7 +413,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
         } else {
           await expensesService.updateBill(companyId, billId, payload)
           if (action === 'submit' && status === 'DRAFT') {
-            await expensesService.approveBill(companyId, billId)
+            await expensesService.submitBill(companyId, billId)
             toast.success('Bill submitted')
           } else {
             toast.success(action === 'submit' ? 'Bill updated' : 'Draft updated')
