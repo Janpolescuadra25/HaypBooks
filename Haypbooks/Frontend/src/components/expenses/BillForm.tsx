@@ -825,7 +825,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="memo" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Public Notes (Memo)</label>
+                    <label htmlFor="memo" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Memo</label>
                     <textarea 
                       id="memo" 
                       value={memo} 
