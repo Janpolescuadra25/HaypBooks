@@ -95,6 +95,15 @@ const defaultLineItem = (): LineItem => ({
   amount: 0,
 })
 
+const PAYMENT_TERM_OPTIONS = [
+  'Due on Receipt',
+  'Net 15',
+  'Net 30',
+  'Net 45',
+  'Net 60',
+  'Net 90',
+].map((term) => ({ value: term, label: term }))
+
 export default function BillForm({ mode, billId, title, onClose, onSaved, saveBill, loadBill, buildPayloadExtras, isRecurringTemplate, hideHeader }: BillFormProps) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
@@ -658,12 +667,13 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                     </div>
                     <div>
                       <label htmlFor="paymentTerms" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Terms</label>
-                      <input 
+                      <HaypSelect
                         id="paymentTerms"
-                        value={paymentTerms} 
-                        onChange={e => setPaymentTerms(e.target.value)} 
-                        className="mt-2 w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
-                        placeholder="Net 30" 
+                        value={paymentTerms}
+                        onChange={setPaymentTerms}
+                        options={PAYMENT_TERM_OPTIONS}
+                        placeholder="Select payment terms"
+                        className="mt-2"
                       />
                     </div>
                   </div>
