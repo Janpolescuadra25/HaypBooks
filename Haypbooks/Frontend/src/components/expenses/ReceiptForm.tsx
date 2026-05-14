@@ -202,7 +202,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
       </div>
 
       {activeTab === 'details' && (
-        <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="flex flex-col">
+        <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col">
           <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
             <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
               <h1 className="sr-only">{mode === 'new' ? 'New Receipt' : 'Edit Receipt'}</h1>
