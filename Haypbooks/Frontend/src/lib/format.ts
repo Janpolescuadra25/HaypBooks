@@ -36,29 +36,5 @@ export function formatPercent(value: number | null | undefined, fractionDigits =
 
 // Simple date formatting helpers could live here later if needed.
 
-// Utility to safely display days past due or similar integer metrics.
-export function formatInteger(value: number | null | undefined) {
-  if (value == null || isNaN(value)) return '—'
-  return Math.trunc(value).toString()
-}
-
 // Tabular helper wrapper for consistent className usage in components.
 export const tabular = (s: string) => s
-/**
- * Formats a percentage value that is expressed on a 0–100 scale
- * (e.g., 12.34 means 12.34%) into a localized percent string.
- * Example: formatPercentFromPct(12.34) => "12.3%" (locale-dependent)
- */
-export function formatPercentFromPct(
-  pct: number,
-  options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
-): string {
-  const minimumFractionDigits = options?.minimumFractionDigits ?? 1
-  const maximumFractionDigits = options?.maximumFractionDigits ?? 1
-  const ratio = Number(pct) / 100
-  return ratio.toLocaleString(undefined, {
-    style: 'percent',
-    minimumFractionDigits,
-    maximumFractionDigits,
-  })
-}

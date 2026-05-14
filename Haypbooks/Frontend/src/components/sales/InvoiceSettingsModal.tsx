@@ -3,8 +3,8 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  X, Settings, Calendar, CreditCard, Bell, ChevronDown, ChevronRight,
-  Check, RefreshCw, Clock, Repeat, DollarSign, FileText, Eye, Type,
+  X, Settings, CreditCard, Bell, ChevronRight,
+  Check, RefreshCw, Repeat, FileText,
 } from 'lucide-react'
 import { ModalPortal } from '@/components/shared/ModalPortal'
 
