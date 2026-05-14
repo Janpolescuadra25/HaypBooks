@@ -9107,6 +9107,7 @@ model Bill {
   memo                  String?
   terms                 String?
   internalNotes         String?
+  rejectionReason       String?
   status                BillStatus       @default(DRAFT)
   approvedAt            DateTime?
   paymentStatus         PaymentStatus    @default(DRAFT)

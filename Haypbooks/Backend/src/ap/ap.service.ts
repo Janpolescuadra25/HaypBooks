@@ -319,6 +319,46 @@ export class ApService {
         return result
     }
 
+    async submitBill(userId: string, companyId: string, billId: string) {
+        await this.assertAccess(userId, companyId)
+        const bill = await this.repo.findBillById(companyId, billId)
+        if (!bill) throw new NotFoundException('Bill not found')
+        if (!['DRAFT', 'REJECTED'].includes(bill.status)) {
+            throw new BadRequestException('Only draft or rejected bills can be submitted')
+        }
+
+        const workflow = await this.prisma.approvalWorkflow.findFirst({
+            where: { workspaceId: bill.workspaceId, entityType: 'BILL', isActive: true },
+            orderBy: { createdAt: 'desc' },
+        })
+
+        const result = await this.prisma.$transaction(async (tx) => {
+            if (workflow) {
+                await tx.approvalRequest.create({
+                    data: {
+                        workflowId: workflow.id,
+                        entityId: billId,
+                        requestedById: userId,
+                        status: 'PENDING',
+                    },
+                })
+            }
+            return tx.bill.update({
+                where: { id: billId },
+                data: {
+                    status: 'PENDING',
+                    rejectionReason: null,
+                },
+            })
+        })
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'SUBMIT', tableName: 'Bill', recordId: billId, changes: { status: 'PENDING' } },
+        }).catch(() => { /* non-critical */ })
+        return result
+    }
+
     async voidBill(userId: string, companyId: string, billId: string) {
         await this.assertAccess(userId, companyId)
         const b = await this.repo.findBillById(companyId, billId)
