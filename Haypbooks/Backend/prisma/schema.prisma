@@ -243,10 +243,14 @@ enum FilingStatus {
 // Common status enums (added for future conversions)
 enum BillStatus {
   DRAFT
+  PENDING
+  SUBMITTED
   APPROVED
   PARTIALLY_PAID
   PAID
   OVERDUE
+  REJECTED
+  VOIDED
   CANCELLED
 }
 
