@@ -326,6 +326,13 @@ export class ApService {
         if (b.status === 'CANCELLED') throw new BadRequestException('Bill is already void')
         if (Number(b.total) - Number(b.balance) > 0) throw new BadRequestException('Cannot void a bill that has payments applied')
         const workspaceId = await this.getWorkspaceId(companyId)
+        if (b.postingStatus === 'POSTED') {
+            try {
+                await this.subLedger.postBillReversalToGL(billId, userId)
+            } catch (glErr) {
+                console.error(`postBillReversalToGL failed for bill ${billId}`, glErr)
+            }
+        }
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'VOID', tableName: 'Bill', recordId: billId, changes: { status: 'CANCELLED' } },
         }).catch(() => { /* non-critical */ })
@@ -395,6 +402,11 @@ export class ApService {
             bankAccountId: data.bankAccountId, currency: data.currency,
             createdById: userId, applications,
         })
+        try {
+            await this.subLedger.postBillPaymentToGL(result.id, userId)
+        } catch (glErr) {
+            console.error(`postBillPaymentToGL failed for payment ${result.id}`, glErr)
+        }
         return this.normalizeBillPayment(result)
     }
 
@@ -427,6 +439,11 @@ export class ApService {
             createdById: userId,
             applications: [{ billId, amount }],
         })
+        try {
+            await this.subLedger.postBillPaymentToGL(result.id, userId)
+        } catch (glErr) {
+            console.error(`postBillPaymentToGL failed for payment ${result.id}`, glErr)
+        }
 
         await this.prisma.auditLog.create({
             data: {

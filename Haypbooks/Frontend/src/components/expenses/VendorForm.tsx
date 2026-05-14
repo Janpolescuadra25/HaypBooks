@@ -60,7 +60,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
   const [internalNotes, setInternalNotes] = useState('')
   const [publicNotes, setPublicNotes] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
-  const { activities, loading: activityLoading, refetch: refreshActivity } = useActivityLog({
+  const { entries: activities, loading: activityLoading, refetch: refreshActivity } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
     initialFilters: { tableName: 'Vendor', recordId: vendorId },
   })

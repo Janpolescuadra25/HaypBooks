@@ -244,12 +244,6 @@ export default function PerDiemPage() {
 
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
-  const openEdit = useCallback((id: string) => {
-    setPanelOpen(true)
-    setOpenMode('edit')
-    setOpenId(id)
-  }, [])
-
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
       <div className="min-h-full min-w-0 overflow-visible">

@@ -579,6 +579,61 @@ export class SubLedgerService {
     }
   }
 
+  // ─── AP: Bill Reversal (mirrors and negates the original bill JE) ─────────
+
+  /**
+   * Called when an approved bill is voided.
+   * Finds the original JournalEntry for the bill and creates a mirror entry
+   * with all debit/credit amounts swapped, effectively cancelling the original.
+   * Updates bill postingStatus to 'REVERSED'.
+   */
+  async postBillReversalToGL(billId: string, postedById?: string): Promise<void> {
+    try {
+      const bill = await this.prisma.bill.findUnique({
+        where: { id: billId },
+        select: { id: true, billNumber: true, workspaceId: true, companyId: true, journalEntryId: true, postingStatus: true, currency: true },
+      })
+      if (!bill) return
+      if (!bill.journalEntryId || bill.postingStatus !== 'POSTED') return
+
+      const originalJE = await this.prisma.journalEntry.findUnique({
+        where: { id: bill.journalEntryId },
+        include: { lines: true },
+      })
+      if (!originalJE || !(originalJE as any).lines?.length) return
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(bill.companyId, 'REV')
+        const reversalLines = (originalJE as any).lines.map((l: any) => ({
+          accountId: l.accountId,
+          debit: Number(l.credit ?? 0),
+          credit: Number(l.debit ?? 0),
+          memo: `Reversal: ${l.memo ?? ''}`.trim(),
+        }))
+
+        const je = await createAndPostJE(tx, {
+          workspaceId: bill.workspaceId,
+          companyId: bill.companyId,
+          date: new Date(),
+          description: `Void Bill ${bill.billNumber ?? billId}`,
+          currency: bill.currency ?? undefined,
+          createdById: postedById,
+          entryNumber,
+          transactionSource: 'Bill Reversal',
+          sourceReferenceId: billId,
+          lines: reversalLines,
+        })
+
+        if (je) {
+          await tx.bill.update({ where: { id: billId }, data: { postingStatus: 'VOIDED' } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post bill reversal for ${billId}: ${err?.message ?? String(err)}`)
+      throw err
+    }
+  }
+
   // ─── AP: Bill Payment (DR: Accounts Payable  CR: Cash/Bank) ──────────────
 
   /**

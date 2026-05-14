@@ -160,7 +160,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
     accountId: accountId || null,
     isBillable: billable,
     projectId: billable ? clientProject : null,
-    employeeId: employeeId || null,
+    employeeId: employeeId || undefined,
     attachments: attachments.map((file) => ({ name: file.name })),
     notes,
   }), [logDate, status, tripDate, purpose, startLocation, endLocation, distance, distanceUnit, rate, amount, vehicle, personalVehicle, accountId, billable, clientProject, employeeId, attachments, notes, logNumber])

@@ -90,7 +90,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const [internalNotes, setInternalNotes] = useState('')
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [activeTab, setActiveTab] = useState<'notes' | 'policy' | 'attachments' | 'activity'>('notes')
-  const { activities, loading: activityLoading, refetch: refreshActivity } = useActivityLog({
+  const { entries: activities, loading: activityLoading, refetch: refreshActivity } = useActivityLog({
     initialFilters: { tableName: 'ExpenseReport', recordId: expenseId },
   })
   const [uploadingLineId, setUploadingLineId] = useState<string | null>(null)
