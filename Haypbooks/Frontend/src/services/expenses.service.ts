@@ -572,7 +572,7 @@ export const expensesService = {
     apiClient.delete(`/companies/${companyId}/ap/per-diem/${id}`),
 
   deleteReimbursement: (companyId: string, id: string) =>
-    apiClient.delete(`/companies/${companyId}/reimbursements/${id}`),
+    apiClient.delete(`/companies/${companyId}/ap/reimbursements/${id}`),
 
   // ─── Payroll Employees (shared lookup) ───────────────────────────────────
   listEmployees: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>
