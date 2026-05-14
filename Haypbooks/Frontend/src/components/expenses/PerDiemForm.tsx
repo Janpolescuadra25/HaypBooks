@@ -214,8 +214,8 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
             </div>
           </div>
         )}
-        <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
-          {mode !== 'new' && (
+        {mode !== 'new' && (
+          <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
             <div className="flex border-b border-slate-200">
               <button
                 type="button"
@@ -232,13 +232,14 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                 Activity
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {activeTab === 'details' && (
-          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col">
-            <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-              <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="flex flex-col">
+              <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
                 <div className="space-y-6">
         <section>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
