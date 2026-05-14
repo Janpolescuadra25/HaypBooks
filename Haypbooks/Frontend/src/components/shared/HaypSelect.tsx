@@ -141,7 +141,7 @@ export default function HaypSelect({
         anchorRef={triggerRef as unknown as React.RefObject<HTMLElement>}
         onClose={close}
         matchWidth
-        className="bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-[9999]"
+        className="bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-[100050]"
       >
         <div role="listbox" className="max-h-56 overflow-y-auto">
           {options.length === 0 ? (

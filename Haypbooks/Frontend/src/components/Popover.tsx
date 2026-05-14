@@ -62,14 +62,14 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
         left,
         top,
         width: isMobile ? `calc(100vw - 2rem)` : (matchWidth ? rect.width : undefined),
-        zIndex: 9999,
+        zIndex: 10050,
       })
     }
 
     const popoverHeight = menuRef.current?.offsetHeight || 0
     if (!measured && popoverHeight === 0) {
       // First pass: render off-screen so the browser can measure the popover height
-      setMenuStyle({ position: 'fixed', left: -9999, top: -9999, opacity: 0, pointerEvents: 'none', zIndex: 9999 })
+      setMenuStyle({ position: 'fixed', left: -9999, top: -9999, opacity: 0, pointerEvents: 'none', zIndex: 10050 })
       rafId = requestAnimationFrame(() => setMeasured(true))
       return () => cancelAnimationFrame(rafId)
     }
