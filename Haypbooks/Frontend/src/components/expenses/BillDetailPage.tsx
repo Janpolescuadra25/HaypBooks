@@ -158,6 +158,7 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
     rows: [
       { label: 'Expense Date', value: bill?.date ?? bill?.billDate ?? '—', type: 'date' },
       { label: 'Due Date', value: bill?.dueDate ?? bill?.dueAt ?? '—', type: 'date' },
+      { label: 'Memo', value: bill?.memo ?? bill?.description ?? '—', type: 'text' },
       { label: 'Payment Terms', value: bill?.paymentTerms ?? bill?.terms ?? '—', type: 'text' },
       { label: 'Reference', value: bill?.reference ?? '—', type: 'text' },
     ],
@@ -309,7 +310,7 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
       variant: 'warning' as const,
       disabled: actionLoading || !billId,
     }] : []),
-    ...(status === 'DRAFT' ? [{
+    ...(status === 'DRAFT' || status === 'REJECTED' ? [{
       label: 'Delete',
       icon: <Trash2 size={14} />,
       onClick: async () => {
