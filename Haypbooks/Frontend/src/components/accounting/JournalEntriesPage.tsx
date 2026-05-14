@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Plus, Search, Eye, X, AlertCircle, Loader2,
   FileText, RefreshCw, Ban, Pencil, Copy, Clock,
@@ -159,6 +159,7 @@ export default function JournalEntriesPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const searchRef = useRef<HTMLInputElement>(null)
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -172,6 +173,14 @@ export default function JournalEntriesPage() {
   const [reverseEntry, setReverseEntry] = useState<JournalEntry | null>(null)
   const [page, setPage] = useState(1)
   const pageSize = 25
+
+  // Sync sourceTypeFilter with URL query params on mount
+  useEffect(() => {
+    const sourceTypeFromUrl = searchParams.get('sourceType')
+    if (sourceTypeFromUrl) {
+      setSourceTypeFilter(sourceTypeFromUrl)
+    }
+  }, [searchParams])
 
   const fetchEntries = useCallback(async () => {
     if (!companyId) return
@@ -401,7 +410,18 @@ export default function JournalEntriesPage() {
         <label className="text-xs font-medium text-gray-500">Transaction type:</label>
         <select
           value={sourceTypeFilter}
-          onChange={(e) => setSourceTypeFilter(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            setSourceTypeFilter(value)
+            // Update URL to keep filter persistent
+            const params = new URLSearchParams(window.location.search)
+            if (value === 'ALL') {
+              params.delete('sourceType')
+            } else {
+              params.set('sourceType', value)
+            }
+            router.push(`?${params.toString()}`)
+          }}
           className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
         >
           <option value="ALL">All transactions</option>

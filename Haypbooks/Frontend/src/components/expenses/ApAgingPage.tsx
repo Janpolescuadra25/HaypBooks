@@ -52,13 +52,13 @@ export default function ApAgingPage() {
 
   useEffect(() => { fetchAging() }, [fetchAging])
 
-  const filtered = useMemo(() => rows, [rows])
-
-  const exportRows = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.toLowerCase()
     if (!q) return rows
     return rows.filter((row) => (row.vendorName ?? '').toLowerCase().includes(q))
   }, [rows, search])
+
+  const exportRows = filtered
 
   const columns = useMemo<HaypColumn<ApAgingRow>[]>(() => [
     {
