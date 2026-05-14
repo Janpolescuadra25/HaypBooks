@@ -37,7 +37,7 @@ export class ApRepository {
 
     async findVendors(workspaceId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
         const take = opts.limit && opts.limit > 0 ? Math.min(opts.limit, 200) : 200
-        return this.prisma.vendor.findMany({
+        const vendors = await this.prisma.vendor.findMany({
             where: {
                 workspaceId,
                 deletedAt: null,
@@ -53,6 +53,23 @@ export class ApRepository {
             skip: opts.offset ?? 0,
             orderBy: { contact: { displayName: 'asc' } },
         })
+
+        const contactIds = vendors.map((vendor) => vendor.contactId).filter(Boolean)
+        const addresses = await this.prisma.contactAddress.findMany({
+            where: { workspaceId, contactId: { in: contactIds } },
+            orderBy: { type: 'asc' },
+        })
+        const addressMap = new Map<string, any>()
+        for (const address of addresses) {
+            if (!addressMap.has(address.contactId)) {
+                addressMap.set(address.contactId, address)
+            }
+        }
+
+        return vendors.map((vendor) => ({
+            ...vendor,
+            contactAddress: addressMap.get(vendor.contactId) ?? null,
+        }))
     }
 
     async findVendorById(workspaceId: string, contactId: string) {

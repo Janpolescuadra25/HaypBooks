@@ -17,8 +17,11 @@ import { Badge } from '@/components/ui/badge'
 interface Vendor {
   id: string
   name: string
+  contactPerson?: string
   email?: string
   phone?: string
+  address?: string
+  city?: string
   balance?: number
   status?: string
 }
@@ -144,6 +147,30 @@ export default function VendorsPage() {
       size: 220,
       minSize: 90,
       render: (val) => <span className="font-semibold text-gray-800 truncate">{val || '—'}</span>,
+    },
+    {
+      id: 'contactPerson',
+      header: 'Contact Person',
+      accessorKey: 'contactPerson',
+      size: 200,
+      minSize: 90,
+      render: (val) => <span className="text-gray-700 truncate">{val || '—'}</span>,
+    },
+    {
+      id: 'address',
+      header: 'Address',
+      accessorKey: 'address',
+      size: 220,
+      minSize: 100,
+      render: (val) => <span className="text-gray-500 text-xs truncate">{val || '—'}</span>,
+    },
+    {
+      id: 'city',
+      header: 'City',
+      accessorKey: 'city',
+      size: 150,
+      minSize: 90,
+      render: (val) => <span className="text-gray-500 text-xs truncate">{val || '—'}</span>,
     },
     {
       id: 'email',

@@ -49,8 +49,11 @@ export class ApService {
             id: v.contactId ?? v.id,
             name: v.contact?.displayName ?? v.name ?? '',
             displayName: v.contact?.displayName ?? v.name ?? '',
+            contactPerson: v.contact?.displayName ?? v.name ?? '',
             email: v.contact?.contactEmails?.[0]?.email ?? v.email ?? '',
             phone: v.contact?.contactPhones?.[0]?.phone ?? v.phone ?? '',
+            address: v.contactAddress?.line1 ?? '',
+            city: v.contactAddress?.city ?? '',
             balance: Number(v.balance ?? 0),
         }
     }
