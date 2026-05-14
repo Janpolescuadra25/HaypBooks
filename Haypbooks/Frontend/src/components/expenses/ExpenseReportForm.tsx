@@ -688,9 +688,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
 
           <div className={activeTab === 'activity' ? 'space-y-4' : 'hidden'}>
             <ActivityLog
-              activities={activities}
+              entries={activities}
               loading={activityLoading}
-              onRefresh={refreshActivity}
             />
           </div>
         </div>

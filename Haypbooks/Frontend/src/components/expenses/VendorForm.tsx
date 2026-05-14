@@ -485,9 +485,8 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
       {activeTab === 'activity' && (
         <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           <ActivityLog
-            activities={activities}
+            entries={activities}
             loading={activityLoading}
-            onRefresh={refreshActivity}
           />
         </div>
       )}
