@@ -266,23 +266,7 @@ export default function GeneralLedgerPage() {
     return arr
   }, [glData?.entries, sortField, sortDir])
 
-  if (cidLoading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-        <span className="ml-2 text-emerald-700">Loading…</span>
-      </div>
-    )
-  }
-  if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
-
   const entries = glData?.entries ?? []
-  const pagination = glData?.pagination
-  const account = glData?.account
-  const totalDebits = glData?.totalDebits ?? entries.reduce((s, e) => s + (e.debit ?? 0), 0)
-  const totalCredits = glData?.totalCredits ?? entries.reduce((s, e) => s + (e.credit ?? 0), 0)
-  const netBalance = totalDebits - totalCredits
-  const isBalanced = Math.abs(netBalance) < 0.005
   const showRunningBalance = !!accountId && entries.some(e => e.runningBalance !== undefined)
 
   const columns = useMemo(() => {
@@ -299,6 +283,23 @@ export default function GeneralLedgerPage() {
     cols.push({ key: 'actions', header: '', align: 'right', className: 'w-10' })
     return cols
   }, [showRunningBalance])
+
+  if (cidLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+        <span className="ml-2 text-emerald-700">Loading…</span>
+      </div>
+    )
+  }
+  if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
+
+  const pagination = glData?.pagination
+  const account = glData?.account
+  const totalDebits = glData?.totalDebits ?? entries.reduce((s, e) => s + (e.debit ?? 0), 0)
+  const totalCredits = glData?.totalCredits ?? entries.reduce((s, e) => s + (e.credit ?? 0), 0)
+  const netBalance = totalDebits - totalCredits
+  const isBalanced = Math.abs(netBalance) < 0.005
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
