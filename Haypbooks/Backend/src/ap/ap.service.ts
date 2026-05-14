@@ -402,11 +402,6 @@ export class ApService {
             bankAccountId: data.bankAccountId, currency: data.currency,
             createdById: userId, applications,
         })
-        try {
-            await this.subLedger.postBillPaymentToGL(result.id, userId)
-        } catch (glErr) {
-            console.error(`postBillPaymentToGL failed for payment ${result.id}`, glErr)
-        }
         return this.normalizeBillPayment(result)
     }
 
@@ -439,11 +434,6 @@ export class ApService {
             createdById: userId,
             applications: [{ billId, amount }],
         })
-        try {
-            await this.subLedger.postBillPaymentToGL(result.id, userId)
-        } catch (glErr) {
-            console.error(`postBillPaymentToGL failed for payment ${result.id}`, glErr)
-        }
 
         await this.prisma.auditLog.create({
             data: {
