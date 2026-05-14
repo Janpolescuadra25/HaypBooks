@@ -569,7 +569,7 @@ export const expensesService = {
     apiClient.put(`/companies/${companyId}/ap/per-diem/${perDiemId}`, body),
 
   deletePerDiem: (companyId: string, id: string) =>
-    apiClient.delete(`/companies/${companyId}/per-diem/${id}`),
+    apiClient.delete(`/companies/${companyId}/ap/per-diem/${id}`),
 
   deleteReimbursement: (companyId: string, id: string) =>
     apiClient.delete(`/companies/${companyId}/reimbursements/${id}`),
