@@ -3,9 +3,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Download, X, Eye, Check, Ban, ListOrdered, Clock,
+  Plus, Download, X, Eye, Check, Ban, ListOrdered, Clock, Send,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
+import RejectionReasonModal from '@/components/shared/RejectionReasonModal'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -20,7 +21,7 @@ interface Bill {
   vendorName?: string
   date: string
   dueDate: string
-  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'VOIDED'
+  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'PARTIALLY_PAID' | 'PAID' | 'VOIDED' | 'OVERDUE'
   total: number
   amountDue?: number
   amountPaid?: number
@@ -56,7 +57,7 @@ function compare(a: Bill, b: Bill, key: SortKey, dir: 'asc' | 'desc'): number {
   return dir === 'asc' ? al.localeCompare(bl) : bl.localeCompare(al)
 }
 
-const STATUSES = ['ALL', 'DRAFT', 'PENDING', 'APPROVED', 'PARTIALLY_PAID', 'PAID', 'VOIDED']
+const STATUSES = ['ALL', 'DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'PARTIALLY_PAID', 'PAID', 'VOIDED']
 
 export default function BillsPage() {
   const router = useRouter()
@@ -72,6 +73,8 @@ export default function BillsPage() {
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [selectedRejectBillId, setSelectedRejectBillId] = useState<string | null>(null)
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -99,6 +102,52 @@ export default function BillsPage() {
       showToast('Bill approved')
     } catch {
       showToast('Failed to approve bill')
+    }
+  }, [companyId, showToast])
+
+  const handleSubmitBill = useCallback(async (id: string) => {
+    if (!companyId) return
+    try {
+      await expensesService.submitBill(companyId, id)
+      setRows((p) => p.map((r) => r.id === id ? { ...r, status: 'PENDING' } : r))
+      showToast('Bill submitted')
+    } catch {
+      showToast('Failed to submit bill')
+    }
+  }, [companyId, showToast])
+
+  const handleReject = useCallback(async (id: string, reason: string) => {
+    if (!companyId) return
+    try {
+      await expensesService.rejectBill(companyId, id, { reason })
+      setRows((p) => p.map((r) => r.id === id ? { ...r, status: 'REJECTED' } : r))
+      showToast('Bill rejected')
+      setRejectModalOpen(false)
+      setSelectedRejectBillId(null)
+    } catch {
+      showToast('Failed to reject bill')
+    }
+  }, [companyId, showToast])
+
+  const handleUnapprove = useCallback(async (id: string) => {
+    if (!companyId) return
+    try {
+      await expensesService.unapproveBill(companyId, id)
+      setRows((p) => p.map((r) => r.id === id ? { ...r, status: 'DRAFT' } : r))
+      showToast('Bill unapproved')
+    } catch {
+      showToast('Failed to unapprove bill')
+    }
+  }, [companyId, showToast])
+
+  const handleResubmit = useCallback(async (id: string) => {
+    if (!companyId) return
+    try {
+      await expensesService.submitBill(companyId, id)
+      setRows((p) => p.map((r) => r.id === id ? { ...r, status: 'PENDING' } : r))
+      showToast('Bill resubmitted')
+    } catch {
+      showToast('Failed to resubmit bill')
     }
   }, [companyId, showToast])
 
@@ -204,10 +253,39 @@ export default function BillsPage() {
       onClick: (id, row) => router.push(`/expenses/bills/${id}/edit`),
     },
     {
+      label: 'Submit Bill',
+      icon: <Send size={14} className="mr-2.5 opacity-70" />,
+      onClick: (id, row) => handleSubmitBill(id),
+      show: (row) => row.status === 'DRAFT',
+    },
+    {
       label: 'Approve Bill',
       icon: <Check size={14} className="mr-2.5 opacity-70" />,
       onClick: (id, row) => handleApprove(id),
-      show: (row) => row.status === 'DRAFT' || row.status === 'PENDING',
+      show: (row) => row.status === 'PENDING',
+    },
+    {
+      label: 'Reject Bill',
+      icon: <X size={14} className="mr-2.5 opacity-70" />,
+      danger: true,
+      onClick: (id, row) => {
+        setSelectedRejectBillId(id)
+        setRejectModalOpen(true)
+      },
+      show: (row) => row.status === 'PENDING',
+    },
+    {
+      label: 'Unapprove Bill',
+      icon: <Ban size={14} className="mr-2.5 opacity-70" />,
+      danger: true,
+      onClick: (id, row) => handleUnapprove(id),
+      show: (row) => row.status === 'APPROVED' && !(row.amountPaid ?? 0),
+    },
+    {
+      label: 'Resubmit Bill',
+      icon: <Send size={14} className="mr-2.5 opacity-70" />,
+      onClick: (id, row) => handleResubmit(id),
+      show: (row) => row.status === 'REJECTED',
     },
     {
       label: 'Record Payment',
@@ -230,7 +308,7 @@ export default function BillsPage() {
       onClick: (id, row) => handleVoid(id),
       show: (row) => isVoidableStatus(row.status),
     },
-  ], [handleApprove, handleDeleteBill, handleVoid, router, isVoidableStatus])
+  ], [handleApprove, handleSubmitBill, handleReject, handleUnapprove, handleResubmit, handleDeleteBill, handleVoid, router, isVoidableStatus])
 
   const bulkActions: HaypBulkAction[] = useMemo(() => [
     {
@@ -397,6 +475,21 @@ export default function BillsPage() {
           loading={loading}
         />
       </div>
+
+      <RejectionReasonModal
+        open={rejectModalOpen}
+        title="Reject Bill"
+        description="Provide the reason for rejecting this bill. This reason will be recorded with the bill."
+        onClose={() => {
+          setRejectModalOpen(false)
+          setSelectedRejectBillId(null)
+        }}
+        onConfirm={(reason) => {
+          if (selectedRejectBillId) {
+            handleReject(selectedRejectBillId, reason)
+          }
+        }}
+      />
 
       {toast && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
