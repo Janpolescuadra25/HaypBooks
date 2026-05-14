@@ -32,8 +32,8 @@ export default function RecurringBillForm({ mode, billId, onClose, onSaved }: Re
           <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Recurring Bill' : 'Edit Recurring Bill'}</h1>
         </div>
       </div>
-      <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
-        {mode !== 'new' && (
+      {mode !== 'new' && (
+        <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           <div className="flex border-b border-slate-200">
             <button
               type="button"
@@ -50,25 +50,27 @@ export default function RecurringBillForm({ mode, billId, onClose, onSaved }: Re
               Activity
             </button>
           </div>
-        )}
-      </div>
-
-      {activeTab === 'details' && (
-        <BillForm
-          mode={mode}
-          billId={billId}
-          isRecurringTemplate={true}
-          onClose={onClose}
-          onSaved={onSaved}
-          hideHeader={true}
-        />
-      )}
-
-      {activeTab === 'activity' && (
-        <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
-          <ActivityLog entries={activities} loading={activityLoading} />
         </div>
       )}
+
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {activeTab === 'details' && (
+          <BillForm
+            mode={mode}
+            billId={billId}
+            isRecurringTemplate={true}
+            onClose={onClose}
+            onSaved={onSaved}
+            hideHeader={true}
+          />
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+            <ActivityLog entries={activities} loading={activityLoading} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
