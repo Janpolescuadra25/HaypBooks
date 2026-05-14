@@ -1,11 +1,12 @@
-import React from 'react';
-import { ChevronDown, ChevronRight, Mail, Printer, Download, Share2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { ChevronDown, ChevronRight, Mail, Printer, Download, Share2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 export interface HaypReportColumn {
   key: string;
   header: string;
   align?: 'left' | 'center' | 'right';
   className?: string;
+  sortable?: boolean;
 }
 
 export interface HaypReportTableProps {
@@ -19,6 +20,11 @@ export interface HaypReportTableProps {
   onPrint?: () => void;
   onShare?: () => void;
   onMail?: () => void;
+  
+  // Sorting (optional)
+  sortField?: string;
+  sortDir?: 'asc' | 'desc';
+  onSort?: (key: string) => void;
   
   // Grand Total section (optional)
   grandTotalLabel?: string;
@@ -56,6 +62,9 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
   onPrint,
   onShare,
   onMail,
+  sortField,
+  sortDir,
+  onSort,
   grandTotalLabel,
   grandTotalValue,
   children
@@ -88,37 +97,51 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
       </div>
 
       {/* Report Content */}
-      <div className="flex-1 overflow-x-auto custom-scrollbar">
-        <div className="min-w-[1000px] p-12 flex flex-col items-center">
-          {/* Report Identity */}
-          <div className="text-center mb-12">
+      <div className="flex-1 overflow-auto custom-scrollbar relative max-h-[800px]">
+        <div className="min-w-[1000px] flex flex-col items-center">
+          {/* Report Identity (Header area, moved out of sticky flow to stay at top of content but scroll away) */}
+          <div className="text-center py-8 w-full">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1">{title}</h2>
             <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{companyName}</p>
             <p className="text-sm font-medium text-slate-400 mt-1">{dateSubtitle}</p>
           </div>
 
           {/* Structured Table */}
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-y border-slate-200">
-                {columns.map((col) => (
-                  <th 
-                    key={col.key} 
-                    className={`px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${col.className || ''}`}
-                  >
-                    {col.header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {children}
+          <div className="w-full px-12 pb-12">
+            <table className="w-full border-collapse relative">
+              <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm shadow-[0_1px_0_0_rgb(226,232,240)]">
+                <tr>
+                  {columns.map((col) => (
+                    <th 
+                      key={col.key} 
+                      onClick={() => col.sortable && onSort && onSort(col.key)}
+                      className={`px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${col.className || ''} ${col.sortable ? 'cursor-pointer hover:bg-slate-50 hover:text-slate-600 transition-colors select-none' : ''}`}
+                      style={{ resize: 'horizontal', overflow: 'hidden' }}
+                    >
+                      <div className={`flex items-center gap-1.5 ${col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : 'justify-start'}`}>
+                        {col.header}
+                        {col.sortable && (
+                          <span className="flex-shrink-0">
+                            {sortField === col.key ? (
+                              sortDir === 'asc' ? <ArrowUp size={12} className="text-brand-emerald" /> : <ArrowDown size={12} className="text-brand-emerald" />
+                            ) : (
+                              <ArrowUpDown size={12} className="text-slate-300" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {children}
             </tbody>
 
             {/* Report Grand Total */}
             {grandTotalLabel && (
               <tfoot>
-                <tr className="bg-slate-900 text-white">
+                <tr className="bg-slate-900 text-white leading-loose">
                   <td colSpan={columns.length - 1} className="px-4 py-5 text-sm font-black uppercase tracking-[0.2em] text-right">
                     {grandTotalLabel}
                   </td>
@@ -132,7 +155,8 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
                 </tr>
               </tfoot>
             )}
-          </table>
+            </table>
+          </div>
 
           {/* Footer Disclaimer */}
           <div className="mt-12 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-4">

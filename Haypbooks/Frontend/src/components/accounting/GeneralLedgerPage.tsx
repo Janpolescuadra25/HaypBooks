@@ -24,6 +24,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { HaypReportTable, HaypReportColumn } from '@/components/shared/HaypReportTable'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -284,6 +285,21 @@ export default function GeneralLedgerPage() {
   const isBalanced = Math.abs(netBalance) < 0.005
   const showRunningBalance = !!accountId && entries.some(e => e.runningBalance !== undefined)
 
+  const columns = useMemo(() => {
+    const cols: HaypReportColumn[] = [
+      { key: 'date', header: 'Date', align: 'left', sortable: true },
+      { key: 'entryNumber', header: 'Entry #', align: 'left', sortable: true },
+      { key: 'sourceType', header: 'Type', align: 'left', sortable: true },
+      { key: 'accountName', header: 'Account', align: 'left', className: 'hidden lg:table-cell', sortable: true },
+      { key: 'description', header: 'Description', align: 'left', className: 'hidden md:table-cell' },
+      { key: 'debit', header: 'Debit', align: 'right', sortable: true },
+      { key: 'credit', header: 'Credit', align: 'right', sortable: true },
+    ]
+    if (showRunningBalance) cols.push({ key: 'runningBalance', header: 'Balance', align: 'right' })
+    cols.push({ key: 'actions', header: '', align: 'right', className: 'w-10' })
+    return cols
+  }, [showRunningBalance])
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
 
@@ -454,119 +470,85 @@ export default function GeneralLedgerPage() {
       )}
 
       {/* ── Table ── */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="p-10 text-center">
-            <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto" />
-            <p className="text-xs text-slate-400 mt-2">Loading entries…</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  {([
-                    { field: 'date'        as SortField, label: 'Date',        align: 'left',  cls: '' },
-                    { field: 'entryNumber' as SortField, label: 'Entry #',     align: 'left',  cls: '' },
-                    { field: 'sourceType'  as SortField, label: 'Type',        align: 'left',  cls: '' },
-                    { field: 'accountName' as SortField, label: 'Account',     align: 'left',  cls: 'hidden lg:table-cell' },
-                    { field: null,                       label: 'Description', align: 'left',  cls: 'hidden md:table-cell' },
-                    { field: 'debit'       as SortField, label: 'Debit',       align: 'right', cls: '' },
-                    { field: 'credit'      as SortField, label: 'Credit',      align: 'right', cls: '' },
-                  ] as { field: SortField | null; label: string; align: string; cls: string }[]).map(col => (
-                    <th
-                      key={col.label}
-                      className={`px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.cls} ${col.field ? 'cursor-pointer select-none hover:text-slate-800 hover:bg-slate-100 transition-colors' : ''}`}
-                      onClick={col.field ? () => handleSort(col.field!) : undefined}
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        {col.label}
-                        {col.field && (
-                          sortField === col.field
-                            ? sortDir === 'asc' ? <ArrowUp size={11} className="text-emerald-600" /> : <ArrowDown size={11} className="text-emerald-600" />
-                            : <ArrowUpDown size={11} className="text-slate-300" />
-                        )}
-                      </span>
-                    </th>
-                  ))}
+      {loading ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center">
+          <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto" />
+          <p className="text-xs text-slate-400 mt-2">Loading entries…</p>
+        </div>
+      ) : (
+        <HaypReportTable
+          title="General Ledger"
+          companyName="Company Financials"
+          dateSubtitle={from && to ? `${fmtDate(from)} - ${fmtDate(to)}` : 'All Time'}
+          columns={columns}
+          sortField={sortField}
+          sortDir={sortDir}
+          onSort={(key) => handleSort(key as any)}
+          onDownload={handleExport}
+        >
+          {entries.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className="px-4 py-14 text-center">
+                <Activity size={32} className="text-slate-200 mx-auto mb-2" />
+                <p className="text-sm font-medium text-slate-400">No transactions found</p>
+                <p className="text-xs text-slate-300 mt-1">Adjust the filters or date range to see results</p>
+              </td>
+            </tr>
+          ) : (
+            sortedEntries.map((e, i) => {
+              const badge = SOURCE_BADGE[e.sourceType] ?? SOURCE_BADGE.ALL
+              const sourceRoute = getSourceRoute(e.sourceType, e.sourceId)
+              return (
+                <tr
+                  key={e.id ?? i}
+                  className={`border-t border-slate-100 transition-colors ${sourceRoute ? 'cursor-pointer hover:bg-emerald-50' : 'hover:bg-slate-50/50'}`}
+                  onClick={() => sourceRoute && router.push(sourceRoute)}
+                  title={sourceRoute ? `View source: ${badge.label}` : undefined}
+                >
+                  <td className="px-4 py-3 text-slate-700 whitespace-nowrap text-xs">{fmtDate(e.date)}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
+                    {e.entryNumber ?? '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${badge.cls}`}>
+                      {badge.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <span className="font-mono text-xs text-slate-400">{e.accountCode}</span>
+                    <span className="ml-1.5 text-emerald-700 text-xs font-bold">{e.accountName}</span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-500 text-xs max-w-[240px] hidden md:table-cell">
+                    <span className="truncate block">{e.entryDescription ?? e.description ?? '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 text-xs">
+                    {e.debit ? fmt(e.debit) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 text-xs">
+                    {e.credit ? fmt(e.credit) : <span className="text-slate-300">—</span>}
+                  </td>
                   {showRunningBalance && (
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Balance</th>
-                  )}
-                  <th className="w-10 px-2 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {entries.length === 0 ? (
-                  <tr>
-                    <td colSpan={showRunningBalance ? 9 : 8} className="px-4 py-14 text-center">
-                      <Activity size={32} className="text-slate-200 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-slate-400">No transactions found</p>
-                      <p className="text-xs text-slate-300 mt-1">Adjust the filters or date range to see results</p>
+                    <td className="px-4 py-3 text-right tabular-nums font-bold text-emerald-900 text-xs">
+                      {e.runningBalance !== undefined ? fmt(e.runningBalance) : '—'}
                     </td>
-                  </tr>
-                ) : (
-                  sortedEntries.map((e, i) => {
-                    const badge = SOURCE_BADGE[e.sourceType] ?? SOURCE_BADGE.ALL
-                    const sourceRoute = getSourceRoute(e.sourceType, e.sourceId)
-                    return (
-                      <tr
-                        key={e.id ?? i}
-                        className={`border-t border-slate-100 transition-colors ${sourceRoute ? 'cursor-pointer hover:bg-emerald-50/40' : 'hover:bg-slate-50/50'}`}
-                        onClick={() => sourceRoute && router.push(sourceRoute)}
-                        title={sourceRoute ? `View source: ${badge.label}` : undefined}
-                      >
-                        <td className="px-4 py-2.5 text-slate-700 whitespace-nowrap text-xs">{fmtDate(e.date)}</td>
-                        <td className="px-4 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">
-                          {e.entryNumber ?? '—'}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${badge.cls}`}>
-                            {badge.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 hidden lg:table-cell">
-                          <span className="font-mono text-xs text-slate-400">{e.accountCode}</span>
-                          <span className="ml-1.5 text-emerald-700 text-xs">{e.accountName}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-500 text-xs max-w-[240px] hidden md:table-cell">
-                          <span className="truncate block">{e.entryDescription ?? e.description ?? '—'}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-800">
-                          {e.debit ? fmt(e.debit) : <span className="text-slate-300">—</span>}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-800">
-                          {e.credit ? fmt(e.credit) : <span className="text-slate-300">—</span>}
-                        </td>
-                        {showRunningBalance && (
-                          <td className="px-4 py-2.5 text-right tabular-nums font-bold text-emerald-900">
-                            {e.runningBalance !== undefined ? fmt(e.runningBalance) : '—'}
-                          </td>
-                        )}
-                        <td className="px-2 py-2.5 text-slate-300">
-                          {sourceRoute && <ExternalLink size={12} className="hover:text-emerald-600" />}
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-              {entries.length > 0 && (
-                <tfoot>
-                  <tr className="bg-slate-50 border-t-2 border-slate-200">
-                    <td colSpan={showRunningBalance ? 5 : 4} className="hidden lg:table-cell" />
-                    <td colSpan={showRunningBalance ? 5 : 4} className="table-cell lg:hidden" />
-                    <td className="px-4 py-2.5 text-right text-xs font-bold text-slate-600 hidden lg:table-cell">Totals</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums font-bold text-emerald-800">{fmt(totalDebits)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums font-bold text-blue-800">{fmt(totalCredits)}</td>
-                    {showRunningBalance && <td />}
-                    <td />
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        )}
-      </div>
+                  )}
+                  <td className="px-2 py-3 text-slate-300 text-right">
+                    {sourceRoute && <ExternalLink size={12} className="hover:text-emerald-600 inline-block" />}
+                  </td>
+                </tr>
+              )
+            })
+          )}
+          {entries.length > 0 && (
+            <HaypReportTable.TotalRow
+              label="Totals"
+              amount={totalDebits}
+              balance={totalCredits} // Overloading balance prop to show credit logic side by side easily
+              colSpan={columns.length - (showRunningBalance ? 1 : 0) - 1} // Accounting for the missing columns 
+            />
+          )}
+        </HaypReportTable>
+      )}
 
       {/* ── Pagination ── */}
       {pagination && pagination.totalPages > 1 && (
