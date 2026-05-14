@@ -28,6 +28,7 @@ interface PerDiemFormProps {
   perDiemId?: string
   onClose?: () => void
   onSaved?: () => void
+  hideHeader?: boolean
 }
 
 function calcDays(start: string, end: string): number {
@@ -40,7 +41,7 @@ function calcDays(start: string, end: string): number {
 }
 
 const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
-  function PerDiemForm({ mode, perDiemId, onClose, onSaved }, ref) {
+  function PerDiemForm({ mode, perDiemId, onClose, onSaved, hideHeader }, ref) {
     const toast = useToast()
     const router = useRouter()
     const { companyId } = useCompanyId()
@@ -206,11 +207,13 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
 
     return (
       <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
-        <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-          <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
-            <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Per Diem' : 'Edit Per Diem'}</h1>
+        {!hideHeader && (
+          <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+              <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Per Diem' : 'Edit Per Diem'}</h1>
+            </div>
           </div>
-        </div>
+        )}
         <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           {mode !== 'new' && (
             <div className="flex border-b border-slate-200">
@@ -233,7 +236,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
         </div>
 
         {activeTab === 'details' && (
-          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="flex flex-col">
+          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col">
             <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
               <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
                 <h1 className="sr-only">{mode === 'new' ? 'New Per Diem' : 'Edit Per Diem'}</h1>
