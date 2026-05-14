@@ -7,6 +7,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypColumn, HaypActionItem, HaypBulkAction, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -27,17 +28,12 @@ export default function VendorCreditsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [rows, setRows] = useState<VendorCredit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>('ALL')
-  const [toast, setToast] = useState('')
-
-  const showToast = useCallback((message: string) => {
-    setToast(message)
-    setTimeout(() => setToast(''), 3000)
-  }, [])
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -55,11 +51,11 @@ export default function VendorCreditsPage() {
       setRows(Array.isArray(data) ? data : data.vendorCredits ?? [])
     } catch {
       setError('Failed to load vendor credits')
-      showToast('Failed to load vendor credits')
+      toast.error('Failed to load vendor credits')
     } finally {
       setLoading(false)
     }
-  }, [companyId, showToast])
+  }, [companyId, toast])
 
   useEffect(() => {
     fetchCredits()
@@ -70,11 +66,11 @@ export default function VendorCreditsPage() {
     try {
       await expensesService.applyVendorCredit(companyId, id)
       setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: 'APPLIED', availableAmount: 0 } : row)))
-      showToast('Credit applied')
+      toast.success('Credit applied')
     } catch {
-      showToast('Failed to apply credit')
+      toast.error('Failed to apply credit')
     }
-  }, [companyId, showToast])
+  }, [companyId, toast])
 
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
@@ -82,11 +78,11 @@ export default function VendorCreditsPage() {
     try {
       await expensesService.updateVendorCredit(companyId, id, { status: 'VOID' })
       setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: 'VOID', availableAmount: 0 } : row)))
-      showToast('Credit voided')
+      toast.success('Credit voided')
     } catch {
-      showToast('Failed to void credit')
+      toast.error('Failed to void credit')
     }
-  }, [companyId, showToast])
+  }, [companyId, toast])
 
   const handleDeleteCredit = useCallback(async (id: string) => {
     if (!companyId) return
@@ -94,11 +90,11 @@ export default function VendorCreditsPage() {
     try {
       await expensesService.deleteVendorCredit(companyId, id)
       setRows((prev) => prev.filter((row) => row.id !== id))
-      showToast('Credit deleted')
+      toast.success('Credit deleted')
     } catch {
-      showToast('Failed to delete credit')
+      toast.error('Failed to delete credit')
     }
-  }, [companyId, showToast])
+  }, [companyId, toast])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -223,7 +219,7 @@ export default function VendorCreditsPage() {
         if (!companyId || selectedRows.length === 0) return
         const voidable = selectedRows.filter((row) => row.id != null && (row.status ?? 'OPEN') !== 'VOID') as VendorCredit[]
         if (voidable.length === 0) {
-          showToast('No selected credits can be voided')
+          toast.error('No selected credits can be voided')
           return
         }
         if (!confirm(`Void ${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''}?`)) return
@@ -231,7 +227,7 @@ export default function VendorCreditsPage() {
           try {
             await expensesService.updateVendorCredit(companyId, row.id, { status: 'VOID' })
           } catch {
-            showToast('Failed to void selected credits')
+            toast.error('Failed to void selected credits')
           }
         })
         setRows((prev) => prev.map((row) =>
@@ -239,7 +235,7 @@ export default function VendorCreditsPage() {
             ? { ...row, status: 'VOID', availableAmount: 0 }
             : row,
         ))
-        showToast(`${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''} voided`)
+        toast.success(`${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''} voided`)
       },
     },
     {
@@ -251,10 +247,10 @@ export default function VendorCreditsPage() {
           ['Credit #', 'Vendor', 'Issue Date', 'Status', 'Amount', 'Remaining'],
           selectedRows.map((row) => [row.creditNumber ?? '', row.vendorName ?? '', row.issueDate, row.status ?? '', String(row.amount), String(row.availableAmount ?? 0)]),
         )
-        showToast('Selected credits exported')
+        toast.success('Selected credits exported')
       },
     },
-  ], [companyId, showToast])
+  ], [companyId, toast])
 
   const filterLabel = statusFilter === 'ALL' ? 'Status' : statusFilter.toLowerCase().replace(/_/g, ' ')
 
@@ -263,8 +259,8 @@ export default function VendorCreditsPage() {
       ['Credit #', 'Vendor', 'Issue Date', 'Status', 'Amount', 'Remaining'],
       filtered.map((row) => [row.creditNumber ?? '', row.vendorName ?? '', row.issueDate, row.status ?? '', String(row.amount), String(row.availableAmount ?? 0)]),
     )
-    showToast('CSV exported')
-  }, [filtered, showToast])
+    toast.success('CSV exported')
+  }, [filtered, toast])
 
   const stats = useMemo(() => [
     { icon: ListOrdered, label: 'Total Credits', value: rows.length, color: 'blue' },
