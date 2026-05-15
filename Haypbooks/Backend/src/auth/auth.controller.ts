@@ -95,12 +95,12 @@ export class AuthController {
     // Set per-hub onboarding cookies (if available) and keep legacy compatibility
     try {
       if ((result.user as any).ownerOnboardingCompleted) {
-        res.cookie('ownerOnboardingComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('ownerOnboardingComplete', 'true', cookieOptions)
       } else {
         res.clearCookie('ownerOnboardingComplete')
       }
       if ((result.user as any).accountantOnboardingCompleted) {
-        res.cookie('accountantOnboardingComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('accountantOnboardingComplete', 'true', cookieOptions)
       } else {
         res.clearCookie('accountantOnboardingComplete')
       }
@@ -409,6 +409,9 @@ export class AuthController {
     res.clearCookie('userId')
     res.clearCookie('role')
     res.clearCookie('onboardingComplete')
+    res.clearCookie('ownerOnboardingComplete')
+    res.clearCookie('accountantOnboardingComplete')
+    res.clearCookie('onboardingMode')
 
     return { success: true }
   }
