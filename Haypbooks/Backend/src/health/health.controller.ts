@@ -1,47 +1,33 @@
-import { Controller, Get, Inject, Optional } from '@nestjs/common'
-import { SkipThrottle } from '@nestjs/throttler'
+import { Controller, Get } from '@nestjs/common'
+import { PrismaService } from '../repositories/prisma/prisma.service'
 
-/** Health check controller — compatible with Kubernetes liveness & readiness probes. */
-@SkipThrottle()
-@Controller()
+@Controller('health')
 export class HealthController {
-  constructor(
-    @Optional() @Inject('PRISMA_SERVICE') private readonly prisma?: any,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  /** Liveness probe — responds as long as the process is running. */
-  @Get('api/health/live')
-  live() {
-    return { status: 'ok', timestamp: new Date().toISOString() }
-  }
+  @Get()
+  async check() {
+    const start = Date.now()
+    let dbStatus = 'ok'
+    let dbLatencyMs: number
 
-  /** Readiness probe — verifies the database connection before accepting traffic. */
-  @Get('api/health/ready')
-  async ready() {
-    const checks: Record<string, string> = { process: 'ok' }
-    let healthy = true
-
-    // Database connectivity check
-    if (this.prisma) {
-      try {
-        await this.prisma.$queryRaw`SELECT 1`
-        checks.database = 'ok'
-      } catch (err) {
-        checks.database = 'error'
-        healthy = false
-      }
+    try {
+      await this.prisma.$queryRaw`SELECT 1`
+      dbLatencyMs = Date.now() - start
+    } catch (e) {
+      dbStatus = 'error'
+      dbLatencyMs = -1
     }
 
     return {
-      status: healthy ? 'ok' : 'degraded',
-      checks,
+      status: dbStatus === 'ok' ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
+      checks: {
+        database: {
+          status: dbStatus,
+          latencyMs: dbLatencyMs,
+        },
+      },
     }
-  }
-
-  /** Legacy health endpoint — kept for backward compatibility. */
-  @Get('api/health')
-  health() {
-    return { ok: true }
   }
 }

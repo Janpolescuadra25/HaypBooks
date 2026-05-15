@@ -6,13 +6,14 @@ import { AppThrottlerGuard } from './shared/app-throttler.guard'
 import { UsersModule } from './users/users.module'
 import { OnboardingModule } from './onboarding/onboarding.module'
 import { TestController } from './test/test.controller'
-import { HealthController } from './health/health.controller'
 import { OwnerController } from './owner/owner.controller'
 import { PrismaRepositoriesModule } from './repositories/prisma/prisma-repositories.module'
 import { TasksModule } from './tasks/tasks.module'
 import { AttachmentsModule } from './attachments/attachments.module'
 import { TenantsModule } from './tenants/tenants.module'
 import { CompanyContextMiddleware } from './shared/company-context.middleware'
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware'
+import { HealthModule } from './health/health.module'
 
 // CUTOVER: use Prisma repositories in all environments by default for production readiness.
 // Remove this env-controlled toggle once the mock layer is fully deprecated.
@@ -75,8 +76,9 @@ const RepositoriesModule = PrismaRepositoriesModule
     (require('./practice/practice.module').PracticeModule),
     // Email Templates (saved send templates per company)
     (require('./email-templates/email-templates.module').EmailTemplatesModule),
+    HealthModule,
   ],
-  controllers: [TestController, HealthController, OwnerController],
+  controllers: [TestController, OwnerController],
   providers: [
     // Enforce throttling globally (per-email when available) to keep the system
     // protected but avoid per-IP rate limiting issues during local E2E runs.
