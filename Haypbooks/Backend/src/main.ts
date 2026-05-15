@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
+import { validateEnv } from './common/utils/env-validation.util'
 
 // Global handlers to surface crashes in logs quickly
 process.on('uncaughtException', (err) => {
@@ -34,10 +35,13 @@ process.on('SIGINT', () => {
 })
 
 async function bootstrap() {
-  // Fail fast if required secrets are missing — prevents starting with an insecure config
-  if (!process.env.JWT_SECRET) {
-    console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.')
+  const envCheck = validateEnv()
+  if (!envCheck.valid) {
     process.exit(1)
+  }
+  if (envCheck.warnings.length > 0) {
+    console.warn('[env] Optional variables not set:')
+    envCheck.warnings.forEach(w => console.warn(`  ⚠️  ${w}`))
   }
 
   const app = await NestFactory.create(AppModule)
@@ -78,14 +82,6 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
   })
-
-  // Add a lightweight request-id middleware (helps correlate e2e traces and server logs)
-  try {
-    const requestIdMiddleware = require('./common/request-id.middleware').default
-    app.use(requestIdMiddleware)
-  } catch (e) {
-    // ignore if middleware can't be loaded; this is best-effort for diagnostics
-  }
 
   // Add request logging middleware to trace all incoming requests
   const fs = require('fs')

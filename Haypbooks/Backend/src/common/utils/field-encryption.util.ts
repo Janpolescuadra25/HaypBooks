@@ -8,14 +8,14 @@ const TAG_LENGTH = 16
 function getFieldEncryptionKey(): Buffer {
   const key = process.env[KEY_ENV]
   if (!key) {
-    throw new Error(`${KEY_ENV} environment variable is required for field encryption`)   
+    throw new Error(`${KEY_ENV} environment variable is required for field encryption`)
   }
 
-  const keyBuffer = Buffer.from(key, 'utf8')
-  if (keyBuffer.length !== 32) {
-    throw new Error(`${KEY_ENV} must be exactly 32 bytes long for AES-256-GCM`)   
+  if (!/^[0-9a-fA-F]{64}$/.test(key)) {
+    throw new Error(`${KEY_ENV} must be exactly 64 hex characters (32 bytes) for AES-256-GCM`)
   }
 
+  const keyBuffer = Buffer.from(key, 'hex')
   return keyBuffer
 }
 
