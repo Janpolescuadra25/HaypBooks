@@ -271,18 +271,6 @@ export class AccountingRepository {
         let totalDebits = data.lines.reduce((s, l) => s + (l.debit ?? 0), 0)
         let totalCredits = data.lines.reduce((s, l) => s + (l.credit ?? 0), 0)
 
-        // For data seeded in early development where one line may be off, auto-balance two-line entries.
-        if (Math.abs(totalDebits - totalCredits) > 0.001 && data.lines.length === 2) {
-            const [line1, line2] = data.lines
-            if (line1.debit > 0 && line2.credit > 0) {
-                line2.credit = line1.debit
-            } else if (line1.credit > 0 && line2.debit > 0) {
-                line2.debit = line1.credit
-            }
-            totalDebits = data.lines.reduce((s, l) => s + (l.debit ?? 0), 0)
-            totalCredits = data.lines.reduce((s, l) => s + (l.credit ?? 0), 0)
-        }
-
         if (Math.abs(totalDebits - totalCredits) > 0.001) {
             throw new Error(`Journal entry is not balanced: debits ${totalDebits} ≠ credits ${totalCredits}`)
         }
