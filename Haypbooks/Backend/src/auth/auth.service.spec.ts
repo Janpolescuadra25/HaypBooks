@@ -1,18 +1,21 @@
-import { AuthService } from './auth.service'
+import { PrismaAuthService } from './prisma-auth.service'
 import { ConflictException } from '@nestjs/common'
 
-describe('AuthService.signup', () => {
-  let authService: AuthService
+describe('PrismaAuthService.signup', () => {
+  let authService: PrismaAuthService
   const mockUserRepo: any = {
     findByEmail: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
   }
+  const mockSessionRepo: any = {}
+  const mockOtpRepo: any = {}
+  const mockSecurityEventRepo: any = { create: jest.fn() }
   const mockJwt: any = { sign: jest.fn(() => 'signed-token') }
 
   beforeEach(() => {
     jest.resetAllMocks()
-    authService = new AuthService(mockUserRepo, mockJwt)
+    authService = new PrismaAuthService(mockUserRepo, mockSessionRepo, mockOtpRepo, mockSecurityEventRepo, mockJwt)
   })
 
   test('creates an accountant user with preferredHub ACCOUNTANT and isAccountant true', async () => {
