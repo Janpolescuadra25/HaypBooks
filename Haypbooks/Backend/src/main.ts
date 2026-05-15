@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { AppModule } from './app.module'
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 
 // Global handlers to surface crashes in logs quickly
 process.on('uncaughtException', (err) => {
@@ -123,6 +124,8 @@ async function bootstrap() {
       transform: true,
     }),
   )
+
+  app.useGlobalFilters(new AllExceptionsFilter())
 
   // Swagger API documentation (development + staging only)
   if (!isProduction) {
