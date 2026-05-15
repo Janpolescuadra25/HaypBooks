@@ -576,14 +576,16 @@ export class ApService {
         if (!bill) throw new NotFoundException('Bill not found')
         if (bill.status !== 'APPROVED') throw new BadRequestException('Only approved bills can be unapproved')
 
-        await this.subLedger.postBillReversalToGL(billId, userId)
-        const result = await this.prisma.bill.update({
-            where: { id: billId },
-            data: {
-                status: 'DRAFT',
-                postingStatus: 'DRAFT',
-                approvedAt: null,
-            },
+        const result = await this.prisma.$transaction(async (tx) => {
+            await this.subLedger.postBillReversalToGL(billId, userId, tx)
+            return tx.bill.update({
+                where: { id: billId },
+                data: {
+                    status: 'DRAFT',
+                    postingStatus: 'DRAFT',
+                    approvedAt: null,
+                },
+            })
         })
 
         const workspaceId = await this.getWorkspaceId(companyId)

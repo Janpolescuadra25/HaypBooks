@@ -74,8 +74,9 @@ export class SubLedgerService {
 
   // ─── Entry Number Generator ───────────────────────────────────────────────
 
-  private async nextEntryNumber(companyId: string, prefix: string): Promise<string> {
-    const lastEntry = await this.prisma.journalEntry.findFirst({
+  private async nextEntryNumber(companyId: string, prefix: string, tx?: any): Promise<string> {
+    const db = tx ?? this.prisma
+    const lastEntry = await db.journalEntry.findFirst({
       where: { companyId, entryNumber: { startsWith: `${prefix}-` } },
       orderBy: { entryNumber: 'desc' },
       select: { entryNumber: true },
@@ -587,23 +588,24 @@ export class SubLedgerService {
    * with all debit/credit amounts swapped, effectively cancelling the original.
    * Updates bill postingStatus to 'REVERSED'.
    */
-  async postBillReversalToGL(billId: string, postedById?: string): Promise<void> {
+  async postBillReversalToGL(billId: string, postedById?: string, tx?: any): Promise<void> {
     try {
-      const bill = await this.prisma.bill.findUnique({
+      const db = tx ?? this.prisma
+      const bill = await db.bill.findUnique({
         where: { id: billId },
         select: { id: true, billNumber: true, workspaceId: true, companyId: true, journalEntryId: true, postingStatus: true, currency: true },
       })
       if (!bill) return
       if (!bill.journalEntryId || bill.postingStatus !== 'POSTED') return
 
-      const originalJE = await this.prisma.journalEntry.findUnique({
+      const originalJE = await db.journalEntry.findUnique({
         where: { id: bill.journalEntryId },
         include: { lines: true },
       })
       if (!originalJE || !(originalJE as any).lines?.length) return
 
-      await this.prisma.$transaction(async (tx) => {
-        const entryNumber = await this.nextEntryNumber(bill.companyId, 'REV')
+      const runReversal = async (txClient: any) => {
+        const entryNumber = await this.nextEntryNumber(bill.companyId, 'REV', txClient)
         const reversalLines = (originalJE as any).lines.map((l: any) => ({
           accountId: l.accountId,
           debit: Number(l.credit ?? 0),
@@ -611,7 +613,7 @@ export class SubLedgerService {
           memo: `Reversal: ${l.memo ?? ''}`.trim(),
         }))
 
-        const je = await createAndPostJE(tx, {
+        const je = await createAndPostJE(txClient, {
           workspaceId: bill.workspaceId,
           companyId: bill.companyId,
           date: new Date(),
@@ -625,10 +627,18 @@ export class SubLedgerService {
         })
 
         if (je) {
-          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' } })
-          await tx.bill.update({ where: { id: billId }, data: { postingStatus: 'VOIDED' } })
+          await txClient.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' } })
+          await txClient.bill.update({ where: { id: billId }, data: { postingStatus: 'VOIDED' } })
         }
-      })
+      }
+
+      if (tx) {
+        await runReversal(tx)
+      } else {
+        await this.prisma.$transaction(async (txClient) => {
+          await runReversal(txClient)
+        })
+      }
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post bill reversal for ${billId}: ${err?.message ?? String(err)}`)
       throw err
