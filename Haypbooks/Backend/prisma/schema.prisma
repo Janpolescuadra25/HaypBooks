@@ -9781,6 +9781,7 @@ model CompanySettings {
   accountingMethod     String   @default("ACCRUAL")
   birFilingReminder    Boolean  @default(true)
   vatRegistered        Boolean  @default(false)
+  expensePolicy        Json?
 
   // ── Invoice / Accounting Defaults ────────────────────────────────────────
   defaultTaxTreatment  String   @default("exclusive")   // 'inclusive' | 'exclusive' | 'none'
