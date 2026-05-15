@@ -10,6 +10,7 @@ const REQUIRED_VARS: EnvVarSpec[] = [
   { key: 'HMAC_KEY', required: true, description: 'HMAC key used for phone hashing' },
   { key: 'FIELD_ENCRYPTION_KEY', required: true, description: 'AES-256 key for PII field encryption (64 hex characters)' },
   { key: 'FRONTEND_URL', required: false, description: 'Frontend URL for CORS (defaults to http://localhost:3000)' },
+  { key: 'CORS_ORIGINS', required: false, description: 'Comma-separated list of allowed browser origins' },
   { key: 'REDIS_URL', required: false, description: 'Redis URL for rate limiting (optional, uses in-memory fallback)' },
 ]
 

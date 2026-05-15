@@ -74,13 +74,15 @@ async function bootstrap() {
     console.warn('helmet not available, skipping security headers')
   }
 
-  // Enable CORS — restrict to explicit frontend origin in production
-  const allowedOrigins = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
-    : (isProduction ? [] : true)
+  // Enable CORS — restrict to explicit origins and avoid wildcards in production
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3000']
   app.enableCors({
-    origin: allowedOrigins,
+    origin: corsOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
   })
 
   // Add request logging middleware to trace all incoming requests
