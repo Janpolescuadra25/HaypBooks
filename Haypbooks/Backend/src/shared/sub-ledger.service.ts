@@ -1232,22 +1232,22 @@ export class SubLedgerService {
     lines: Array<{ accountId?: string | null; amount: number }>
     totalAmount: number
     employeeId?: string | null
-  }): Promise<void> {
+  }, tx?: any): Promise<void> {
     try {
       const { companyId, workspaceId, expenseClaimId, lines, totalAmount, employeeId } = params
-      await this.prisma.$transaction(async (tx) => {
-        const claim = await tx.expenseClaim.findUnique({ where: { id: expenseClaimId } })
+      const run = async (db: any) => {
+        const claim = await db.expenseClaim.findUnique({ where: { id: expenseClaimId } })
         if (!claim || claim.journalEntryId) return
 
-        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
-        const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
+        const accruedAccount = await resolveAccount(db, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+        const expenseFallback = await resolveAccount(db, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
 
         const debitLines: Array<{ accountId: string; debit: number; credit: number; description?: string }> = []
         for (const line of lines) {
           const lineAmount = this.roundMoney(Number(line.amount ?? 0))
           if (lineAmount <= 0.005) continue
           let expAccountId: string | null = null
-          if (line.accountId) expAccountId = await this.findAccountById(companyId, line.accountId, tx)
+          if (line.accountId) expAccountId = await this.findAccountById(companyId, line.accountId, db)
           expAccountId = expAccountId ?? expenseFallback.id
           debitLines.push({ accountId: expAccountId, debit: lineAmount, credit: 0, description: 'Expense claim line' })
         }
@@ -1257,8 +1257,8 @@ export class SubLedgerService {
         }
 
         const totalDebit = this.roundMoney(debitLines.reduce((s, l) => s + l.debit, 0))
-        const entryNumber = await this.nextEntryNumber(companyId, 'EXP')
-        const jeId = await createAndPostJE(tx, {
+        const entryNumber = await this.nextEntryNumber(companyId, 'EXP', db)
+        const jeId = await createAndPostJE(db, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1272,13 +1272,22 @@ export class SubLedgerService {
           ],
         })
 
-        await tx.expenseClaim.update({
+        await db.expenseClaim.update({
           where: { id: expenseClaimId },
           data: { journalEntryId: jeId, postingStatus: 'POSTED' },
         })
-      })
+      }
+
+      if (tx) {
+        await run(tx)
+      } else {
+        await this.prisma.$transaction(async (txClient) => {
+          await run(txClient)
+        })
+      }
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post expense claim ${params.expenseClaimId} to GL: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1293,19 +1302,19 @@ export class SubLedgerService {
     amount: number
     bankAccountId?: string | null
     description?: string
-  }): Promise<void> {
+  }, tx?: any): Promise<void> {
     try {
       const { companyId, workspaceId, expenseClaimId, amount, bankAccountId } = params
-      await this.prisma.$transaction(async (tx) => {
-        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+      const run = async (db: any) => {
+        const accruedAccount = await resolveAccount(db, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
         const cashAccountRaw = bankAccountId
-          ? await this.findAccountById(companyId, bankAccountId, tx)
+          ? await this.findAccountById(companyId, bankAccountId, db)
           : null
-        const cashAccountId = cashAccountRaw ?? (await resolveAccount(tx, companyId, SYSTEM_ACCOUNTS.CASH)).id
+        const cashAccountId = cashAccountRaw ?? (await resolveAccount(db, companyId, SYSTEM_ACCOUNTS.CASH)).id
 
         const amt = this.roundMoney(amount)
-        const entryNumber = await this.nextEntryNumber(companyId, 'EXR')
-        const jeId = await createAndPostJE(tx, {
+        const entryNumber = await this.nextEntryNumber(companyId, 'EXR', db)
+        await createAndPostJE(db, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1318,9 +1327,18 @@ export class SubLedgerService {
             { accountId: cashAccountId, debit: 0, credit: amt, description: 'Cash disbursed' },
           ],
         })
-      })
+      }
+
+      if (tx) {
+        await run(tx)
+      } else {
+        await this.prisma.$transaction(async (txClient) => {
+          await run(txClient)
+        })
+      }
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post expense reimbursement ${params.expenseClaimId} to GL: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1335,22 +1353,22 @@ export class SubLedgerService {
     amount: number
     accountId?: string | null
     employeeId?: string | null
-  }): Promise<void> {
+  }, tx?: any): Promise<void> {
     try {
       const { companyId, workspaceId, mileageLogId, amount, accountId } = params
-      await this.prisma.$transaction(async (tx) => {
-        const log = await tx.mileageLog.findUnique({ where: { id: mileageLogId } })
+      const run = async (db: any) => {
+        const log = await db.mileageLog.findUnique({ where: { id: mileageLogId } })
         if (!log || log.journalEntryId) return
 
-        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
-        const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
+        const accruedAccount = await resolveAccount(db, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+        const expenseFallback = await resolveAccount(db, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
         let expAccountId: string | null = null
-        if (accountId) expAccountId = await this.findAccountById(companyId, accountId, tx)
+        if (accountId) expAccountId = await this.findAccountById(companyId, accountId, db)
         expAccountId = expAccountId ?? expenseFallback.id
 
         const amt = this.roundMoney(amount)
-        const entryNumber = await this.nextEntryNumber(companyId, 'MIL')
-        const jeId = await createAndPostJE(tx, {
+        const entryNumber = await this.nextEntryNumber(companyId, 'MIL', db)
+        const jeId = await createAndPostJE(db, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1364,13 +1382,22 @@ export class SubLedgerService {
           ],
         })
 
-        await tx.mileageLog.update({
+        await db.mileageLog.update({
           where: { id: mileageLogId },
           data: { journalEntryId: jeId, postingStatus: 'POSTED' },
         })
-      })
+      }
+
+      if (tx) {
+        await run(tx)
+      } else {
+        await this.prisma.$transaction(async (txClient) => {
+          await run(txClient)
+        })
+      }
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post mileage log ${params.mileageLogId} to GL: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1385,22 +1412,22 @@ export class SubLedgerService {
     amount: number
     accountId?: string | null
     employeeId?: string | null
-  }): Promise<void> {
+  }, tx?: any): Promise<void> {
     try {
       const { companyId, workspaceId, perDiemId, amount, accountId } = params
-      await this.prisma.$transaction(async (tx) => {
-        const claim = await tx.perDiemClaim.findUnique({ where: { id: perDiemId } })
+      const run = async (db: any) => {
+        const claim = await db.perDiemClaim.findUnique({ where: { id: perDiemId } })
         if (!claim || claim.journalEntryId) return
 
-        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
-        const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
+        const accruedAccount = await resolveAccount(db, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+        const expenseFallback = await resolveAccount(db, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
         let expAccountId: string | null = null
-        if (accountId) expAccountId = await this.findAccountById(companyId, accountId, tx)
+        if (accountId) expAccountId = await this.findAccountById(companyId, accountId, db)
         expAccountId = expAccountId ?? expenseFallback.id
 
         const amt = this.roundMoney(amount)
-        const entryNumber = await this.nextEntryNumber(companyId, 'PER')
-        const jeId = await createAndPostJE(tx, {
+        const entryNumber = await this.nextEntryNumber(companyId, 'PER', db)
+        const jeId = await createAndPostJE(db, {
           workspaceId,
           companyId,
           date: new Date(),
@@ -1414,13 +1441,22 @@ export class SubLedgerService {
           ],
         })
 
-        await tx.perDiemClaim.update({
+        await db.perDiemClaim.update({
           where: { id: perDiemId },
           data: { journalEntryId: jeId, postingStatus: 'POSTED' },
         })
-      })
+      }
+
+      if (tx) {
+        await run(tx)
+      } else {
+        await this.prisma.$transaction(async (txClient) => {
+          await run(txClient)
+        })
+      }
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post per diem ${params.perDiemId} to GL: ${err?.message}`)
+      throw err
     }
   }
 

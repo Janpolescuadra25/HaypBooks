@@ -183,25 +183,36 @@ export class ExpensesService {
     if (record.status !== 'SUBMITTED') {
       throw new BadRequestException('Only submitted reports can be approved')
     }
-    const updated = await this.prisma.expenseClaim.update({
-      where: { id: expenseId },
-      data: { status: 'APPROVED', approvedAt: new Date() },
-    })
+
     const workspaceId = (record as any).workspaceId
-    if (workspaceId) {
-      try {
-        await this.subLedgerService.postExpenseClaimToGL({
-          companyId,
-          workspaceId,
-          expenseClaimId: expenseId,
-          lines: (record.lines as any[]).map(l => ({ accountId: l.accountId ?? null, amount: Number(l.amount ?? 0) })),
-          totalAmount: Number(record.totalAmount ?? 0),
-          employeeId: record.employeeId ?? null,
+    const updated = workspaceId
+      ? await this.prisma.$transaction(async (tx) => {
+          const updatedRecord = await tx.expenseClaim.update({
+            where: { id: expenseId },
+            data: { status: 'APPROVED', approvedAt: new Date() },
+          })
+          await this.subLedgerService.postExpenseClaimToGL(
+            {
+              companyId,
+              workspaceId,
+              expenseClaimId: expenseId,
+              lines: (record.lines as any[]).map((l) => ({ accountId: l.accountId ?? null, amount: Number(l.amount ?? 0) })),
+              totalAmount: Number(record.totalAmount ?? 0),
+              employeeId: record.employeeId ?? null,
+            },
+            tx,
+          )
+          return updatedRecord
         })
-      } catch (glErr: any) {
-        console.error('GL posting failed for expense claim:', expenseId, glErr.message)
-      }
-    }
+      : await this.prisma.expenseClaim.update({
+          where: { id: expenseId },
+          data: { status: 'APPROVED', approvedAt: new Date() },
+        })
+
+    await this.prisma.auditLog.create({
+      data: { workspaceId: workspaceId ?? null, companyId, userId, action: 'UPDATE', tableName: 'ExpenseClaim', recordId: expenseId, changes: { status: 'APPROVED', approvedAt: new Date().toISOString() } },
+    }).catch(() => { /* non-critical */ })
+
     return updated
   }
 
@@ -212,28 +223,43 @@ export class ExpensesService {
     if (record.status !== 'APPROVED') {
       throw new BadRequestException('Only approved reports can be reimbursed')
     }
-    const updated = await this.prisma.expenseClaim.update({
-      where: { id: expenseId },
-      data: {
-        status: 'PAID',
-        reimbursedAt: new Date(),
-        reimbursementMethod: data?.method ?? record.reimbursementMethod,
-      },
-    })
+
     const workspaceId = (record as any).workspaceId
-    if (workspaceId) {
-      try {
-        await this.subLedgerService.postExpenseReimbursementToGL({
-          companyId,
-          workspaceId,
-          expenseClaimId: expenseId,
-          amount: Number(record.totalAmount ?? 0),
-          bankAccountId: data?.bankAccountId ?? null,
+    const updated = workspaceId
+      ? await this.prisma.$transaction(async (tx) => {
+          const updatedRecord = await tx.expenseClaim.update({
+            where: { id: expenseId },
+            data: {
+              status: 'PAID',
+              reimbursedAt: new Date(),
+              reimbursementMethod: data?.method ?? record.reimbursementMethod,
+            },
+          })
+          await this.subLedgerService.postExpenseReimbursementToGL(
+            {
+              companyId,
+              workspaceId,
+              expenseClaimId: expenseId,
+              amount: Number(record.totalAmount ?? 0),
+              bankAccountId: data?.bankAccountId ?? null,
+            },
+            tx,
+          )
+          return updatedRecord
         })
-      } catch (glErr: any) {
-        console.error('GL posting failed for expense reimbursement:', expenseId, glErr.message)
-      }
-    }
+      : await this.prisma.expenseClaim.update({
+          where: { id: expenseId },
+          data: {
+            status: 'PAID',
+            reimbursedAt: new Date(),
+            reimbursementMethod: data?.method ?? record.reimbursementMethod,
+          },
+        })
+
+    await this.prisma.auditLog.create({
+      data: { workspaceId: workspaceId ?? null, companyId, userId, action: 'UPDATE', tableName: 'ExpenseClaim', recordId: expenseId, changes: { status: 'PAID', reimbursedAt: new Date().toISOString(), reimbursementMethod: data?.method ?? record.reimbursementMethod } },
+    }).catch(() => { /* non-critical */ })
+
     return updated
   }
 

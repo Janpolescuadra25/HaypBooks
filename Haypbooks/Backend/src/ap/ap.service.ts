@@ -1172,14 +1172,11 @@ export class ApService {
             notes: data.notes ?? existingAny.notes,
             status: data.status ?? existingAny.status,
         }
-        const result = await this.repo.updateMileageLog(companyId, logId, payload)
         const workspaceId = await this.getWorkspaceId(companyId)
-        await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'MileageLog', recordId: logId, changes: payload },
-        }).catch(() => { /* non-critical */ })
-        // Post to GL when status transitions to APPROVED
-        if (data.status && String(data.status).toUpperCase() === 'APPROVED' && String(existingAny.status ?? '').toUpperCase() !== 'APPROVED') {
-            try {
+        const shouldPost = data.status && String(data.status).toUpperCase() === 'APPROVED' && String(existingAny.status ?? '').toUpperCase() !== 'APPROVED'
+        const result = shouldPost
+            ? await this.prisma.$transaction(async (tx) => {
+                const updatedLog = await tx.mileageLog.update({ where: { id: logId }, data: payload })
                 await this.subLedger.postMileageToGL({
                     companyId,
                     workspaceId,
@@ -1187,11 +1184,14 @@ export class ApService {
                     amount: Number(payload.amount ?? 0),
                     accountId: payload.accountId ?? null,
                     employeeId: payload.employeeId ?? null,
-                })
-            } catch (glErr: any) {
-                console.error('GL posting failed for mileage:', logId, glErr.message)
-            }
-        }
+                }, tx)
+                return updatedLog
+            })
+            : await this.repo.updateMileageLog(companyId, logId, payload)
+
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'MileageLog', recordId: logId, changes: payload },
+        }).catch(() => { /* non-critical */ })
         return result
     }
 
@@ -1283,11 +1283,11 @@ export class ApService {
             approvedAt: data.status === 'APPROVED' ? new Date() : existing.approvedAt,
             reimbursedAt: data.status === 'PAID' ? new Date() : existing.reimbursedAt,
         }
-        const result = await this.repo.updatePerDiemClaim(companyId, perDiemId, payload)
-        // Post to GL when status transitions to APPROVED
-        if (data.status === 'APPROVED' && existing.status !== 'APPROVED') {
-            const workspaceId = await this.getWorkspaceId(companyId)
-            try {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        const shouldPost = data.status === 'APPROVED' && existing.status !== 'APPROVED'
+        const result = shouldPost
+            ? await this.prisma.$transaction(async (tx) => {
+                const updatedPerDiem = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: payload })
                 await this.subLedger.postPerDiemToGL({
                     companyId,
                     workspaceId,
@@ -1295,11 +1295,14 @@ export class ApService {
                     amount: Number(payload.totalAmount ?? 0),
                     accountId: payload.accountId ?? null,
                     employeeId: payload.employeeId ?? null,
-                })
-            } catch (glErr: any) {
-                console.error('GL posting failed for per diem:', perDiemId, glErr.message)
-            }
-        }
+                }, tx)
+                return updatedPerDiem
+            })
+            : await this.repo.updatePerDiemClaim(companyId, perDiemId, payload)
+
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'PerDiemClaim', recordId: perDiemId, changes: payload },
+        }).catch(() => { /* non-critical */ })
         return result
     }
 
