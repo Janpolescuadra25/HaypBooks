@@ -477,6 +477,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     // Dev-only: log raw Cookie header to verify proxy forwards cookies intact

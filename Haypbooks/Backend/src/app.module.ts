@@ -21,7 +21,13 @@ const RepositoriesModule = PrismaRepositoriesModule
 
 @Module({
   imports: [
-    // Global rate limiting: 60 requests per 60-second window per IP
+    // ── Rate Limiting Tiers ──────────────────────────────────
+    // General API:   60 req/min  (baseline protection)
+    // Login:         5 req/min  (brute-force protection)
+    // Signup:        5 req/min  (abuse prevention)
+    // Forgot PW:     3 req/min  (spam prevention)
+    // Refresh:       10 req/min (normal usage)
+    // ─────────────────────────────────────────────────────────
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 60,
