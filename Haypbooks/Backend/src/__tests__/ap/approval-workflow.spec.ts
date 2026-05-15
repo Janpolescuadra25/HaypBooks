@@ -60,7 +60,7 @@ describe('ApService - Approval Workflow Rules', () => {
     const result = await service.unapproveBill('user-1', 'company-1', 'bill-1')
 
     expect(result.status).toBe('DRAFT')
-    expect(mockSubLedger.postBillReversalToGL).toHaveBeenCalledWith('bill-1', 'user-1')
+    expect(mockSubLedger.postBillReversalToGL).toHaveBeenCalledWith('bill-1', 'user-1', expect.anything())
   })
 
   test('reject does not create GL entries', async () => {
