@@ -40,6 +40,17 @@ export class AuthController {
     return 'admin'
   }
 
+  private logAuthError(context: string, error: unknown, level: 'warn' | 'debug' | 'error' = 'warn') {
+    const message = error instanceof Error ? error.message : String(error)
+    if (level === 'debug') {
+      this.logger.debug(`[AuthController] ${context}: ${message}`)
+    } else if (level === 'error') {
+      this.logger.error(`[AuthController] ${context}: ${message}`)
+    } else {
+      this.logger.warn(`[AuthController] ${context}: ${message}`)
+    }
+  }
+
   @Post('login')
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
@@ -61,7 +72,7 @@ export class AuthController {
         }
       }
     } catch (e) {
-      // ignore
+      this.logAuthError('login redirect assignment failed', e, 'debug')
     }
 
     // Set cookies
@@ -104,12 +115,16 @@ export class AuthController {
       } else {
         res.clearCookie('accountantOnboardingComplete')
       }
-    } catch (e) { }
+    } catch (e) {
+      this.logAuthError('failed to set onboarding state cookies', e, 'debug')
+    }
 
     // Set accountant flag cookie for middleware/client
     try {
       res.cookie('isAccountant', result.user.isAccountant ? 'true' : 'false', cookieOptions)
-    } catch (e) { }
+    } catch (e) {
+      this.logAuthError('failed to set isAccountant cookie', e, 'debug')
+    }
 
     return result
   }
@@ -163,7 +178,7 @@ export class AuthController {
           if (process.env.DEV_SHOW_OTP === 'true') devOtpPhone = (phoneOtp as any).otpCode || (phoneOtp as any).otp
         }
       } catch (e) {
-        // ignore
+        this.logAuthError('[pre-signup] OTP flow failed', e, 'warn')
       }
 
       // Back-compat: return `otp` as the email OTP (first step)
@@ -232,7 +247,7 @@ export class AuthController {
       // If an unverified user exists (legacy direct-signup), upgrade it instead of creating a duplicate.
       const existing = await this.userRepository.findByEmail(normalizedEmail)
       if (existing && existing.isEmailVerified) {
-        try { await this.pendingSignupService.delete(signupToken) } catch (e) { }
+        try { await this.pendingSignupService.delete(signupToken) } catch (e) { this.logAuthError('[complete-signup] failed to delete pending signup after duplicate email detected', e, 'debug') }
         throw new ConflictException('Email already registered')
       }
 
@@ -292,7 +307,7 @@ export class AuthController {
       this.logger.log(`[complete-signup] User id=${created.id} emailVerified=${created.isEmailVerified}`)
 
       // Log signup success
-      try { await this.securityEventRepo.create({ userId: created.id, email: created.email, type: 'SIGNUP_SUCCESS' }) } catch (e) { /* ignore */ }
+      try { await this.securityEventRepo.create({ userId: created.id, email: created.email, type: 'SIGNUP_SUCCESS' }) } catch (e) { this.logAuthError('[complete-signup] failed to record signup success event', e, 'debug') }
 
       // Ensure any pending invitations for this user are activated
       await this.authService.activateInvitedWorkspaceUser(created.id).catch(() => {})
@@ -306,12 +321,12 @@ export class AuthController {
       }
 
       const session = await this.authService.createSessionForUser(created.id)
-      try { if (session) res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) } catch (e) { } // 2h for token
-      try { if (session?.refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions) } catch (e) { }
-      try { res.cookie('email', created.email, cookieOptions) } catch (e) { }
-      try { res.cookie('userId', created.id, cookieOptions) } catch (e) { }
-      try { res.cookie('role', this.mapRoleForFrontend(created.role), cookieOptions) } catch (e) { }
-      try { res.cookie('isAccountant', isAccountant ? 'true' : 'false', cookieOptions) } catch (e) { }
+      try { if (session) res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) } catch (e) { this.logAuthError('[complete-signup] failed to set token cookie', e, 'debug') } // 2h for token
+      try { if (session?.refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions) } catch (e) { this.logAuthError('[complete-signup] failed to set refreshToken cookie', e, 'debug') }
+      try { res.cookie('email', created.email, cookieOptions) } catch (e) { this.logAuthError('[complete-signup] failed to set email cookie', e, 'debug') }
+      try { res.cookie('userId', created.id, cookieOptions) } catch (e) { this.logAuthError('[complete-signup] failed to set userId cookie', e, 'debug') }
+      try { res.cookie('role', this.mapRoleForFrontend(created.role), cookieOptions) } catch (e) { this.logAuthError('[complete-signup] failed to set role cookie', e, 'debug') }
+      try { res.cookie('isAccountant', isAccountant ? 'true' : 'false', cookieOptions) } catch (e) { this.logAuthError('[complete-signup] failed to set isAccountant cookie', e, 'debug') }
 
       // Delete pending
       await this.pendingSignupService.delete(signupToken)
@@ -356,7 +371,7 @@ export class AuthController {
           return { success: true }
         }
       } catch (e) {
-        // ignore throttle errors and continue
+        this.logAuthError('[send-verification] throttle check failed', e, 'debug')
       }
 
       const created = await this.authService.startOtp(normalizeEmail(email), undefined, 5, 'VERIFY_EMAIL')
@@ -374,7 +389,7 @@ export class AuthController {
         return { success: true, otp: created.otpCode }
       }
     } catch (e) {
-      // ignore
+      this.logAuthError('[send-verification] unexpected error', e, 'warn')
     }
     return { success: true }
   }
@@ -392,14 +407,16 @@ export class AuthController {
           const tokenFromHeader = cookieMatch.split('=')[1]
           refreshToken = tokenFromHeader ? String(tokenFromHeader).split(/;|\s/)[0].trim() : refreshToken
         }
-      } catch (e) { }
+      } catch (e) {
+        this.logAuthError('[logout] failed to parse refreshToken from header', e, 'debug')
+      }
     }
     if (refreshToken) {
       try {
         const session = await this.sessionRepo.findByRefreshToken(refreshToken)
         if (session) await this.sessionRepo.delete(session.id)
       } catch (e) {
-        // ignore
+        this.logAuthError('[logout] failed to delete refresh session', e, 'warn')
       }
     }
 
@@ -468,7 +485,7 @@ export class AuthController {
         // eslint-disable-next-line no-console
         this.logger.debug(`[DEV] Refresh ip=${req.ip}`)
       }
-    } catch (e) { }
+    } catch (e) { this.logAuthError('[refresh] failed to log debug refresh IP', e, 'debug') }
 
     // Dev-only: if debug header present, return diagnostic info or execute refresh on demand
     try {
@@ -482,7 +499,7 @@ export class AuthController {
           const cookieMatch = rawCookie === 'NONE' ? null : rawCookie.split(';').map(p => p.trim()).find(p => p.startsWith('refreshToken='))
           tokenFromHeader = cookieMatch ? String(cookieMatch).split('=')[1] : null
           if (tokenFromHeader) s = await this.sessionRepo.findByRefreshToken(tokenFromHeader)
-        } catch (e) { /* ignore */ }
+        } catch (e) { this.logAuthError('[refresh debug] failed to inspect session from raw cookie', e, 'debug') }
         if (debugHeader === 'info') {
           const tokenCharCodes = tokenFromHeader ? Array.from(String(tokenFromHeader)).slice(0, 40).map((c: string) => c.charCodeAt(0)) : null
           return { debug: true, rawCookie: rawCookie, tokenFromHeader, tokenLen: tokenFromHeader ? String(tokenFromHeader).length : 0, tokenCharCodes, session: s }
@@ -510,7 +527,7 @@ export class AuthController {
           return { token: result.token, user: result.user, debug: true }
         }
       }
-    } catch (e) { }
+    } catch (e) { this.logAuthError('[refresh] debug header flow failed', e, 'debug') }
 
     let refreshToken = req.cookies?.refreshToken
     // Fallback: if cookie parsing middleware isn't present (e.g., in some test environments),
@@ -528,23 +545,23 @@ export class AuthController {
         if (tokenFromHeader) {
           refreshToken = tokenFromHeader
           // record a dev-only event to indicate we used fallback parsing
-          try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FALLBACK_HEADER_USED', email: String(refreshToken ?? '').slice(0, 12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { }
+          try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FALLBACK_HEADER_USED', email: String(refreshToken ?? '').slice(0, 12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { this.logAuthError('[refresh] fallback event creation failed', e, 'debug') }
         }
       } catch (e) {
-        // ignore parsing errors
+        this.logAuthError('[refresh] failed to parse refresh cookie header', e, 'debug')
       }
     }
 
     if (!refreshToken) {
       // record dev-only event to help debug cookie issues
-      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_NO_COOKIE', ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { }
+      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_NO_COOKIE', ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { this.logAuthError('[refresh] failed to create missing-cookie debug event', e, 'debug') }
       throw new UnauthorizedException()
     }
 
     const result = await this.authService.refresh(refreshToken)
     if (!result) {
       // record dev-only event with token prefix so we can inspect DB when console logs aren't available
-      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_INVALID', email: String(refreshToken ?? '').slice(0, 12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { }
+      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_INVALID', email: String(refreshToken ?? '').slice(0, 12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { this.logAuthError('[refresh] failed to create invalid-token debug event', e, 'debug') }
       throw new UnauthorizedException()
     }
 
@@ -584,7 +601,7 @@ export class AuthController {
         return { success: true }
       }
     } catch (e) {
-      // ignore errors and continue
+      this.logAuthError('[forgot-password] failed to count recent OTPs', e, 'debug')
     }
 
     // generate 6-digit numeric OTP and save to Otp table via authService
@@ -633,9 +650,9 @@ export class AuthController {
         const latest = await this.otpRepo.findLatestByEmail(email)
         this.logger.debug(`[verify-otp] latest row for ${email} purpose=${latest?.purpose}`)
         if (latest && (((latest as any).purpose === 'VERIFY_EMAIL') || ((latest as any).purpose === 'MFA'))) {
-          try { await this.otpRepo.delete(latest.id) } catch (e) { }
+          try { await this.otpRepo.delete(latest.id) } catch (e) { this.logAuthError('[verify-otp] failed to delete email OTP row', e, 'debug') }
         }
-      } catch (e) { }
+      } catch (e) { this.logAuthError('[verify-otp] failed to lookup latest email OTP row', e, 'debug') }
 
       // Mark user as email verified
       try {
@@ -645,7 +662,7 @@ export class AuthController {
         }
       } catch (e) {
         // Don't surface this to client; verification is already successful
-        this.logger.warn('Failed to update email verified flag: ' + (e?.message || e))
+        this.logAuthError('Failed to update email verified flag', e, 'warn')
       }
 
       return { success: true }
@@ -662,9 +679,9 @@ export class AuthController {
       try {
         const latest = await this.otpRepo.findLatestByPhone(normalized)
         if (latest && (latest as any).purpose === 'MFA') {
-          try { await this.otpRepo.delete(latest.id) } catch (e) { }
+          try { await this.otpRepo.delete(latest.id) } catch (e) { this.logAuthError('[verify-otp] failed to delete phone MFA OTP row', e, 'debug') }
         }
-      } catch (e) { }
+      } catch (e) { this.logAuthError('[verify-otp] failed to lookup latest phone OTP row', e, 'debug') }
 
       // Mark user as phone verified (persist flag/timestamp)
       try {
@@ -674,7 +691,7 @@ export class AuthController {
         }
       } catch (e) {
         // Don't surface to client; verification succeeded already
-        this.logger.warn('Failed to update phone verified flag: ' + (e?.message || e))
+        this.logAuthError('Failed to update phone verified flag', e, 'warn')
       }
 
       return { success: true }
@@ -719,14 +736,14 @@ export class AuthController {
               res.cookie('email', user.email, cookieOptions)
               res.cookie('userId', user.id, cookieOptions)
               res.cookie('role', this.mapRoleForFrontend(user.role), cookieOptions)
-              try { res.cookie('isAccountant', user.isAccountant ? 'true' : 'false', cookieOptions) } catch (e) { }
+              try { res.cookie('isAccountant', user.isAccountant ? 'true' : 'false', cookieOptions) } catch (e) { this.logAuthError('[verify-email] failed to set isAccountant cookie', e, 'debug') }
             }
           } catch (e) {
             // Do not block verification when session creation fails
-            this.logger.warn('Failed to create session on email verification: ' + (e?.message || e))
+            this.logAuthError('Failed to create session on email verification', e, 'warn')
           }
         }
-      } catch (e) { }
+      } catch (e) { this.logAuthError('[verify-email] failed to load/verify user after OTP verification', e, 'debug') }
 
       // Redirect to frontend success page and include the user's name + email for friendly messaging
       const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000')

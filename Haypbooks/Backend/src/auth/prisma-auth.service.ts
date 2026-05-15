@@ -41,7 +41,7 @@ export class PrismaAuthService {
     let phoneHmac: string | undefined = undefined
     try {
       normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone)
-      try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
+      try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { this.logServiceError('phone HMAC normalization failed', e, 'debug'); phoneHmac = undefined }
     } catch (e) { throw e }
     const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub, phone: normalizedPhone, phoneHmac } as any)
 
@@ -85,6 +85,17 @@ export class PrismaAuthService {
     return 'Browser'
   }
 
+  private logServiceError(context: string, error: unknown, level: 'warn' | 'debug' | 'error' = 'warn') {
+    const message = error instanceof Error ? error.message : String(error)
+    if (level === 'debug') {
+      this.logger.debug(`[PrismaAuthService] ${context}: ${message}`)
+    } else if (level === 'error') {
+      this.logger.error(`[PrismaAuthService] ${context}: ${message}`)
+    } else {
+      this.logger.warn(`[PrismaAuthService] ${context}: ${message}`)
+    }
+  }
+
   async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
     const user = await this.userRepo.findByEmail(email)
 
@@ -94,7 +105,7 @@ export class PrismaAuthService {
       try {
         recentFailures = await this.securityEventRepo.countRecentByEmail(email, 15)
       } catch (e) {
-        // Continue if rate limit check fails
+        this.logServiceError('rate limit check failed', e, 'debug')
       }
 
       if (recentFailures >= 5) {
@@ -125,7 +136,7 @@ export class PrismaAuthService {
     const verifiedOk = hasPhone ? (emailVerified || phoneVerified) : emailVerified
 
     // Debug logging to help diagnose verification issues
-    console.log('[auth:login] Verification check:', {
+    this.logger.debug('[auth:login] Verification check: ' + JSON.stringify({
       email,
       userId: user.id,
       hasPhone,
@@ -133,7 +144,7 @@ export class PrismaAuthService {
       phoneVerified,
       verifiedOk,
       policy: hasPhone ? 'OR (email OR phone)' : 'email required'
-    })
+    }))
 
     if (!verifiedOk) {
       await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_FAILED_UNVERIFIED_EMAIL', ipAddress, userAgent })
@@ -177,11 +188,11 @@ export class PrismaAuthService {
     const devMfa = (process.env.NODE_ENV || 'development') !== 'production' && !user.isEmailVerified
 
     if (devMfa) {
-      await this.activateInvitedWorkspaceUser(user.id).catch(() => {})
+      await this.activateInvitedWorkspaceUser(user.id).catch((e) => this.logServiceError('failed to activate invited workspace user', e, 'warn'))
       return { token, refreshToken, user: userResponse, mfaRequired: true }
     }
 
-    await this.activateInvitedWorkspaceUser(user.id).catch(() => {})
+    await this.activateInvitedWorkspaceUser(user.id).catch((e) => this.logServiceError('failed to activate invited workspace user', e, 'warn'))
 
     return { token, refreshToken, user: userResponse }
   }
@@ -216,7 +227,7 @@ export class PrismaAuthService {
       // Session DB write failed — the access token will still work for its 2h lifetime,
       // but the refresh token will be unusable. Log a clear warning so this is visible.
       this.logger?.error?.(`[createSessionForUser] CRITICAL: failed to persist session for userId=${userId}. Refresh will fail after token expiry. Error: ${e?.message || e}`)
-      console.error('[createSessionForUser] failed to persist session, refresh token is invalid:', e?.message || e)
+      this.logger.error('[createSessionForUser] failed to persist session, refresh token is invalid: ' + (e instanceof Error ? e.message : String(e)))
     }
 
     if (!sessionSaved) {
@@ -245,23 +256,23 @@ export class PrismaAuthService {
   }
 
   async refresh(refreshToken: string) {
-    try { console.log(`[auth:refresh] incoming token prefix=${String(refreshToken || '').slice(0, 12)}`) } catch (e) { }
+    try { this.logger.debug(`[auth:refresh] incoming token prefix=${String(refreshToken || '').slice(0, 12)}`) } catch (e) { this.logServiceError('failed to log incoming refresh token prefix', e, 'debug') }
     // find session
     const session = await this.sessionRepo.findByRefreshToken(refreshToken)
     if (!session) {
-      try { console.log(`[auth:refresh] no session found for token prefix=${String(refreshToken || '').slice(0, 12)}`) } catch (e) { }
+      try { this.logger.debug(`[auth:refresh] no session found for token prefix=${String(refreshToken || '').slice(0, 12)}`) } catch (e) { this.logServiceError('failed to log missing session for refresh', e, 'debug') }
       return null
     }
     const expired = (new Date(session.expiresAt)).getTime() < Date.now()
     if (expired || session.revoked) {
-      try { console.log(`[auth:refresh] session invalid: expired=${expired} revoked=${session.revoked} expiresAt=${session.expiresAt}`) } catch (e) { }
+      try { this.logger.debug(`[auth:refresh] session invalid: expired=${expired} revoked=${session.revoked} expiresAt=${session.expiresAt}`) } catch (e) { this.logServiceError('failed to log invalid refresh session state', e, 'debug') }
       return null
     }
 
     // sign a fresh access token
     const user = await this.userRepo.findById(session.userId)
     if (!user) {
-      try { console.log(`[auth:refresh] no user found for session.userId=${session.userId}`) } catch (e) { }
+      try { this.logger.debug(`[auth:refresh] no user found for session.userId=${session.userId}`) } catch (e) { this.logServiceError('failed to log missing user during refresh', e, 'debug') }
       return null
     }
 
@@ -275,7 +286,9 @@ export class PrismaAuthService {
     // Revoke old session with reason, create new one in the same family
     try {
       await this.sessionRepo.update(session.id, { revoked: true, revokedReason: 'REFRESHED' } as any)
-    } catch { }
+    } catch (e) {
+      this.logServiceError('[refresh] failed to revoke old session', e, 'debug')
+    }
     await this.sessionRepo.create({
       userId: user.id, refreshToken: newRefresh, expiresAt,
       ipAddress: session.ipAddress, userAgent: session.userAgent, lastUsedAt: new Date(),
@@ -283,7 +296,7 @@ export class PrismaAuthService {
       tokenFamily,
     } as any)
 
-    try { console.log(`[auth:refresh] success for user=${user.id} newRefreshPrefix=${String(newRefresh).slice(0, 12)}`) } catch (e) { }
+    try { this.logger.debug(`[auth:refresh] success for user=${user.id} newRefreshPrefix=${String(newRefresh).slice(0, 12)}`) } catch (e) { this.logServiceError('failed to log refresh success', e, 'debug') }
 
     // Return consistent user structure
     const userResponse = {
@@ -340,7 +353,7 @@ export class PrismaAuthService {
       if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
-    } catch (e) { }
+    } catch (e) { this.logServiceError('failed to delete consumed email OTP row', e, 'debug') }
 
     // If this OTP was used to VERIFY an email, mark user as verified
     try {
@@ -349,7 +362,7 @@ export class PrismaAuthService {
         if (user) await this.userRepo.update(user.id, { isEmailVerified: true })
       }
     } catch (e) {
-      // ignore errors here
+      this.logServiceError('failed to mark user as verified after email OTP', e, 'debug')
     }
 
     return true
@@ -370,7 +383,7 @@ export class PrismaAuthService {
       if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
-    } catch (e) { }
+    } catch (e) { this.logServiceError('failed to delete consumed phone OTP row', e, 'debug') }
 
     // No automatic user flags updated for phone-based OTPs
     return true
@@ -407,6 +420,7 @@ export class PrismaAuthService {
       await this.sessionRepo.update(sessionId, { activeCompanyId } as any)
     } catch (e) {
       // non-blocking — don't fail request if session context update fails
+      this.logServiceError('[updateSessionCompany] failed to update session company context', e, 'debug')
     }
   }
 
@@ -424,7 +438,7 @@ export class PrismaAuthService {
       await this.securityEventRepo.create(data)
     } catch (e) {
       // Log error but don't throw - security events shouldn't block auth flow
-      console.error('Failed to log security event:', e?.message)
+      this.logger.error('Failed to log security event: ' + (e instanceof Error ? e.message : String(e)))
     }
   }
 }
