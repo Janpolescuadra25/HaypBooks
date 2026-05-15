@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { resolveAccount, createAndPostJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
 
@@ -86,14 +87,14 @@ export class AccountingRepository {
                 typeId: data.typeId,
                 parentId: data.parentId ?? null,
                 currency: await this.resolveCurrency(data.companyId, data.currency),
-                normalSide: data.normalSide as any ?? null,
+                normalSide: data.normalSide ? data.normalSide as Prisma.NormalSide : null,
                 isHeader: data.isHeader ?? false,
-                liquidityType: data.liquidityType as any ?? null,
-                specialType: data.specialType as any ?? 'NONE',
+                liquidityType: data.liquidityType ? data.liquidityType as Prisma.LiquidityType : null,
+                specialType: data.specialType ? data.specialType as Prisma.AccountSpecialType : Prisma.AccountSpecialType.NONE,
                 cashFlowType: data.cashFlowType ?? null,
                 accountSubTypeId: data.accountSubTypeId ?? null,
                 isFromTemplate: data.isFromTemplate ?? false,
-            } as any,
+            },
         })
     }
 
@@ -106,10 +107,10 @@ export class AccountingRepository {
                 parentId: data.parentId,
                 isActive: data.isActive,
                 isHeader: data.isHeader,
-                liquidityType: data.liquidityType,
-                specialType: data.specialType,
+                liquidityType: data.liquidityType ? data.liquidityType as Prisma.LiquidityType : null,
+                specialType: data.specialType ? data.specialType as Prisma.AccountSpecialType : null,
                 cashFlowType: data.cashFlowType,
-            } as any,
+            },
         })
     }
 
@@ -157,7 +158,7 @@ export class AccountingRepository {
     // ─── Journal Entries ──────────────────────────────────────────────────────
 
     async findJournalEntries(companyId: string, opts: {
-        status?: string
+        status?: Prisma.PostingStatus
         from?: Date
         to?: Date
         limit?: number
@@ -212,7 +213,7 @@ export class AccountingRepository {
             where: {
                 companyId,
                 deletedAt: null,
-                ...(opts.status ? { postingStatus: opts.status as any } : {}),
+                ...(opts.status ? { postingStatus: opts.status } : {}),
                 ...(opts.from || opts.to ? {
                     date: {
                         ...(opts.from ? { gte: opts.from } : {}),
@@ -408,13 +409,13 @@ export class AccountingRepository {
                     accountId: l.accountId,
                     debit: Number(l.debit ?? 0),
                     credit: Number(l.credit ?? 0),
-                    description: (l as any).description ?? undefined,
+                    description: l.description ?? undefined,
                 }))
                 const created = await tx.journalEntry.create({
                     data: {
                         workspaceId: je.workspaceId,
                         companyId,
-                        date: data.date ? new Date(data.date as any) : new Date(je.date),
+                        date: data.date ? new Date(data.date) : new Date(je.date),
                         description: data.description ?? je.description,
                         currency: data.currency ?? je.currency,
                         postingStatus: 'POSTED',
@@ -450,7 +451,7 @@ export class AccountingRepository {
                     action: 'UPDATE',
                     tableName: 'JournalEntry',
                     recordId: jeId,
-                    changes: JSON.stringify({ replacedBy: newEntry.id, reason: 'Edit of posted entry' }) as any,
+                    changes: JSON.stringify({ replacedBy: newEntry.id, reason: 'Edit of posted entry' }),
                     lines: { create: [{ fieldName: 'postingStatus', oldValue: 'POSTED', newValue: 'VOIDED (replaced)', changeType: 'UPDATE' }] },
                 },
             }).catch(() => {})
@@ -472,7 +473,7 @@ export class AccountingRepository {
             return tx.journalEntry.update({
                 where: { id: jeId },
                 data: {
-                    date: data.date ? new Date(data.date as any) : undefined,
+                    date: data.date ? new Date(data.date) : undefined,
                     description: data.description,
                     currency: data.currency,
                     updatedById: data.updatedById,
@@ -489,7 +490,7 @@ export class AccountingRepository {
                             })),
                         },
                     } : {}),
-                } as any,
+                },
                 include: { lines: true },
             })
         })
@@ -511,7 +512,7 @@ export class AccountingRepository {
                 action: 'UPDATE',
                 tableName: 'JournalEntry',
                 recordId: jeId,
-                changes: JSON.stringify({ date: data.date, description: data.description, lineCount: data.lines?.length }) as any,
+                changes: JSON.stringify({ date: data.date, description: data.description, lineCount: data.lines?.length }),
                 ...(auditLines.length > 0 ? { lines: { create: auditLines } } : {}),
             },
         }).catch(() => {})
@@ -745,7 +746,7 @@ export class AccountingRepository {
                 endDate: data.endDate,
                 isClosed: false,
                 isLocked: false,
-            } as any,
+            },
         })
     }
 
@@ -770,7 +771,7 @@ export class AccountingRepository {
             const retainedEarnings = await resolveAccount(tx, companyId, SYSTEM_ACCOUNTS.RETAINED_EARNINGS)
 
             const userId = closedById ?? 'system'
-            const periodEnd = (period as any).endDate ?? new Date()
+            const periodEnd = period.endDate ?? new Date()
 
             // 1. Close revenue accounts → Income Summary
             if (revenueAccounts.length > 0) {
@@ -784,10 +785,10 @@ export class AccountingRepository {
                 }
                 revLines.push({ accountId: incomeSummary.id, debit: 0, credit: revTotal, description: 'Revenue to Income Summary' })
                 await createAndPostJE(tx, {
-                    workspaceId: (period as any).workspaceId,
+                    workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Revenue (${(period as any).name})`,
+                    description: `Closing entry – Revenue (${period.name})`,
                     createdById: userId,
                     lines: revLines,
                 })
@@ -805,10 +806,10 @@ export class AccountingRepository {
                 }
                 expLines.push({ accountId: incomeSummary.id, debit: expTotal, credit: 0, description: 'Expenses to Income Summary' })
                 await createAndPostJE(tx, {
-                    workspaceId: (period as any).workspaceId,
+                    workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Expenses (${(period as any).name})`,
+                    description: `Closing entry – Expenses (${period.name})`,
                     createdById: userId,
                     lines: expLines,
                 })
@@ -820,10 +821,10 @@ export class AccountingRepository {
             if (Math.abs(isBal) > 0.001) {
                 const isDebitNormal = isBal > 0 // net income → credit retained earnings
                 await createAndPostJE(tx, {
-                    workspaceId: (period as any).workspaceId,
+                    workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Net Income to Retained Earnings (${(period as any).name})`,
+                    description: `Closing entry – Net Income to Retained Earnings (${period.name})`,
                     createdById: userId,
                     lines: [
                         {
@@ -844,7 +845,7 @@ export class AccountingRepository {
 
             return tx.accountingPeriod.update({
                 where: { id: periodId },
-                data: { status: 'CLOSED', closedAt: new Date(), isClosed: true } as any,
+                data: { status: 'CLOSED', closedAt: new Date(), isClosed: true },
             })
         })
     }
@@ -868,7 +869,7 @@ export class AccountingRepository {
             })
 
             for (const original of closingEntries) {
-                const reversedLines = (original.lines ?? []).map((line: any) => ({
+                const reversedLines = (original.lines ?? []).map((line) => ({
                     accountId: line.accountId,
                     debit: Number(line.credit),
                     credit: Number(line.debit),
@@ -891,7 +892,7 @@ export class AccountingRepository {
 
             return tx.accountingPeriod.update({
                 where: { id: periodId },
-                data: { status: 'OPEN', closedAt: null, isClosed: false } as any,
+                data: { status: 'OPEN', closedAt: null, isClosed: false },
             })
         })
     }
@@ -927,7 +928,7 @@ export class AccountingRepository {
 
             return accounts.map(a => {
                 const sums = balanceMap.get(a.id) ?? { debit: 0, credit: 0 }
-                const ns = a.normalSide ?? (a.type as any)?.normalSide ?? 'DEBIT'
+                const ns = a.normalSide ?? a.type?.normalSide ?? 'DEBIT'
                 const balance = ns === 'DEBIT'
                     ? sums.debit - sums.credit
                     : sums.credit - sums.debit
@@ -935,8 +936,8 @@ export class AccountingRepository {
                     accountId: a.id,
                     code: a.code,
                     name: a.name,
-                    type: (a.type as any)?.name,
-                    category: (a.type as any)?.category,
+                    type: a.type?.name,
+                    category: a.type?.category,
                     normalSide: ns,
                     balance,
                     debit: ns === 'DEBIT' ? Math.max(0, balance) : 0,
@@ -947,13 +948,13 @@ export class AccountingRepository {
 
         // Default: use current balance snapshot
         return accounts.map(a => {
-            const ns = a.normalSide ?? (a.type as any)?.normalSide ?? 'DEBIT'
+            const ns = a.normalSide ?? a.type?.normalSide ?? 'DEBIT'
             return {
                 accountId: a.id,
                 code: a.code,
                 name: a.name,
-                type: (a.type as any)?.name,
-                category: (a.type as any)?.category,
+                type: a.type?.name,
+                category: a.type?.category,
                 normalSide: ns,
                 balance: a.balance,
                 debit: ns === 'DEBIT' ? a.balance : 0,

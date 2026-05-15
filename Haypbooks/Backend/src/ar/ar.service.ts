@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { ArRepository } from './ar.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
@@ -139,7 +140,7 @@ export class ArService {
             where: {
                 workspaceId,
                 isActive: true,
-                type: mapped.type as any,
+                type: mapped.type as Prisma.PaymentMethodType,
                 ...(mapped.type === 'OTHER' ? { name: mapped.name } : {}),
             },
             select: { id: true },
@@ -150,7 +151,7 @@ export class ArService {
             data: {
                 workspaceId,
                 name: mapped.name,
-                type: mapped.type as any,
+                type: mapped.type as Prisma.PaymentMethodType,
                 isActive: true,
             },
             select: { id: true },
@@ -826,7 +827,7 @@ export class ArService {
         if (!data.lines?.length) throw new BadRequestException('At least one line item is required')
         const quote = await this.repo.createQuote({ workspaceId, companyId, ...data })
         this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Quote', recordId: (quote as any).id, changes: { customerId: data.customerId, total: (quote as any).totalAmount } },
+            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Quote', recordId: quote.id, changes: { customerId: data.customerId, total: quote.totalAmount } },
         }).catch(() => {})
         return this.normalizeQuote(quote)
     }
@@ -851,7 +852,7 @@ export class ArService {
         const invoice = await this.repo.convertQuoteToInvoice(companyId, workspaceId, quoteId, userId)
         if (!invoice) throw new BadRequestException('Conversion failed')
         this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'CONVERT', tableName: 'Quote', recordId: quoteId, changes: { invoiceId: (invoice as any).id } },
+            data: { workspaceId, companyId, userId, action: 'CONVERT', tableName: 'Quote', recordId: quoteId, changes: { invoiceId: invoice.id } },
         }).catch(() => {})
         return invoice
     }
@@ -983,7 +984,7 @@ export class ArService {
             lines: normalizedLines,
         })
         this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Invoice', recordId: result.id, changes: { invoiceNumber: (result as any).invoiceNumber, customerId: data.customerId, total: (result as any).totalAmount } },
+            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Invoice', recordId: result.id, changes: { invoiceNumber: result.invoiceNumber, customerId: data.customerId, total: result.totalAmount } },
         }).catch(() => {})
         return this.normalizeInvoice(result)
     }
@@ -1014,7 +1015,7 @@ export class ArService {
                 recordId: result.id,
                 changes: {
                     sourceInvoiceId: invoiceId,
-                    invoiceNumber: (result as any).invoiceNumber,
+                    invoiceNumber: result.invoiceNumber,
                     status: 'DRAFT',
                 },
             },
@@ -1801,7 +1802,7 @@ export class ArService {
         const recurring = await this.repo.findRecurringInvoiceById(wid, id)
         if (!recurring) throw new NotFoundException('Recurring invoice not found')
         // Create invoice from template
-        const template = recurring.templateData as any
+        const template: any = recurring.templateData
         const invoiceNumber = await this.repo.generateInvoiceNumber(companyId)
         const invoice = await this.prisma.invoice.create({
             data: {
@@ -1809,7 +1810,7 @@ export class ArService {
                 companyId,
                 customerId: recurring.customerId,
                 invoiceNumber,
-                status: 'DRAFT' as any,
+                status: 'DRAFT',
                 date: new Date(),
                 dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 totalAmount: template?.totalAmount ?? 0,
@@ -2034,7 +2035,7 @@ export class ArService {
         const levelMap: Record<number, string> = { 1: 'REMINDER', 2: 'WARNING', 3: 'FINAL_NOTICE' }
         await this.prisma.invoice.update({
             where: { id: invoiceId },
-            data: { dunningLevel: level, dunningLastSentAt: new Date() } as any,
+            data: { dunningLevel: level, dunningLastSentAt: new Date() },
         }).catch(() => {}) // field may not exist — non-critical
         this.prisma.auditLog.create({
             data: { workspaceId: wid, companyId, userId, action: 'SEND', tableName: 'Invoice', recordId: invoiceId, changes: { dunningLevel: level, type: levelMap[level] ?? 'REMINDER' } },

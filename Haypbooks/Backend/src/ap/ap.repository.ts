@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
+import { encryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
 export class ApRepository {
@@ -91,7 +92,9 @@ export class ApRepository {
                 data: {
                     workspaceId, type: 'VENDOR', displayName: data.displayName,
                     ...(data.email ? { contactEmails: { create: [{ email: data.email, type: 'WORK', isPrimary: true }] } } : {}),
-                    ...(data.phone ? { contactPhones: { create: [{ phone: data.phone, type: 'WORK', isPrimary: true }] } } : {}),
+                    ...(data.phone ? {
+                        contactPhones: { create: [{ phone: data.phone, phoneEncrypted: encryptField(data.phone), type: 'WORK', isPrimary: true }] },
+                    } : {}),
                 },
             })
             const vendor = await tx.vendor.create({
@@ -126,12 +129,12 @@ export class ApRepository {
 
     // ─── Bills ────────────────────────────────────────────────────────────────
 
-    async findBills(companyId: string, opts: { vendorId?: string; status?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+    async findBills(companyId: string, opts: { vendorId?: string; status?: Prisma.BillStatus; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.bill.findMany({
             where: {
                 companyId, deletedAt: null,
                 ...(opts.vendorId ? { vendorId: opts.vendorId } : {}),
-                ...(opts.status ? { status: opts.status as any } : {}),
+                ...(opts.status ? { status: opts.status } : {}),
                 ...(opts.from || opts.to ? { issuedAt: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },
             include: {
@@ -246,7 +249,7 @@ export class ApRepository {
                             }))
                         },
                     } : {}),
-                } as any,
+                },
                 include: { lines: true },
             })
         })
@@ -344,7 +347,7 @@ export class ApRepository {
                 if (bill) {
                     const newBalance = Math.max(0, Number(bill.balance) - Number(app.amount))
                     const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIALLY_PAID'
-                    await tx.bill.update({ where: { id: app.billId }, data: { balance: newBalance, status: newStatus as any, paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any } })
+                    await tx.bill.update({ where: { id: app.billId }, data: { balance: newBalance, status: newStatus, paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' } })
                 }
             }
 
@@ -382,7 +385,7 @@ export class ApRepository {
                 const bill = await tx.bill.findUnique({ where: { id: app.billId } })
                 if (bill && bill.status !== 'CANCELLED' && bill.status !== 'VOIDED') {
                     const restoredBalance = Number(bill.balance) + Number(app.amount)
-                    await tx.bill.update({ where: { id: app.billId }, data: { balance: restoredBalance, status: 'APPROVED' as any, paymentStatus: 'PARTIAL' as any } })
+                    await tx.bill.update({ where: { id: app.billId }, data: { balance: restoredBalance, status: 'APPROVED', paymentStatus: 'PARTIAL' } })
                 }
                 await tx.billPaymentApplication.delete({ where: { id: app.id } })
             }
@@ -398,12 +401,12 @@ export class ApRepository {
 
     // ─── Purchase Requests ────────────────────────────────────────────────────
 
-    async findPurchaseRequests(companyId: string, opts: { requesterId?: string; status?: string; limit?: number; offset?: number } = {}) {
+    async findPurchaseRequests(companyId: string, opts: { requesterId?: string; status?: Prisma.PurchaseRequestStatus; limit?: number; offset?: number } = {}) {
         return this.prisma.purchaseRequest.findMany({
             where: {
                 companyId,
                 ...(opts.requesterId ? { requesterId: opts.requesterId } : {}),
-                ...(opts.status ? { status: opts.status as any } : {}),
+                ...(opts.status ? { status: opts.status } : {}),
             },
             include: {
                 lines: { include: { item: true } },
@@ -428,9 +431,10 @@ export class ApRepository {
     async updatePurchaseRequest(companyId: string, id: string, data: Prisma.PurchaseRequestUpdateInput) {
         const pr = await this.prisma.purchaseRequest.findFirst({ where: { id, companyId } })
         if (!pr) return null
-        const payload = { ...data } as any
-        if ((data as any).lines) {
-            payload.lines = { create: (data as any).lines.map((l: any) => ({
+        const payload = { ...data }
+        if (data.lines) {
+            const requestLines: any[] = data.lines
+            payload.lines = { create: requestLines.map((l: any) => ({
                 purchaseRequestId: id,
                 itemId: l.itemId ?? null,
                 accountId: l.accountId ?? null,
@@ -444,7 +448,7 @@ export class ApRepository {
             })) }
         }
         return this.prisma.$transaction(async (tx) => {
-            if ((data as any).lines) {
+            if (data.lines) {
                 await tx.purchaseRequestLine.deleteMany({ where: { purchaseRequestId: id } })
             }
             return tx.purchaseRequest.update({ where: { id }, data: payload })
@@ -460,12 +464,12 @@ export class ApRepository {
 
     // ─── Vendor Credits ──────────────────────────────────────────────────────
 
-    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: Prisma.VendorCreditStatus; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.vendorCredit.findMany({
             where: {
                 companyId,
                 ...(opts.vendorId ? { vendorId: opts.vendorId } : {}),
-                ...(opts.status ? { status: opts.status as any } : {}),
+                ...(opts.status ? { status: opts.status } : {}),
                 ...(opts.from || opts.to ? { issuedAt: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },
             include: {
@@ -492,9 +496,10 @@ export class ApRepository {
     async updateVendorCredit(companyId: string, id: string, data: Prisma.VendorCreditUpdateInput) {
         const vc = await this.prisma.vendorCredit.findFirst({ where: { id, companyId } })
         if (!vc) return null
-        const payload = { ...data } as any
-        if ((data as any).lines) {
-            payload.lines = { create: (data as any).lines.map((l: any) => ({
+        const payload = { ...data }
+        if (data.lines) {
+            const creditLines: any[] = data.lines
+            payload.lines = { create: creditLines.map((l: any) => ({
                 vendorCreditId: id,
                 accountId: l.accountId ?? null,
                 description: l.description ?? '',
@@ -504,7 +509,7 @@ export class ApRepository {
             })) }
         }
         return this.prisma.$transaction(async (tx) => {
-            if ((data as any).lines) {
+            if (data.lines) {
                 await tx.vendorCreditLine.deleteMany({ where: { vendorCreditId: id } })
             }
             return tx.vendorCredit.update({ where: { id }, data: payload })
@@ -585,8 +590,7 @@ export class ApRepository {
     // ─── Per Diem Claims ──────────────────────────────────────────────────────────────
 
     async findPerDiemClaims(companyId: string, opts: { status?: string; limit?: number; offset?: number } = {}) {
-        const db = this.prisma as any
-        return db.perDiemClaim.findMany({
+        return this.prisma.perDiemClaim.findMany({
             where: {
                 companyId,
                 ...(opts.status ? { status: opts.status } : {}),
@@ -599,30 +603,26 @@ export class ApRepository {
     }
 
     async findPerDiemClaimById(companyId: string, id: string) {
-        const db = this.prisma as any
-        return db.perDiemClaim.findFirst({ where: { id, companyId }, include: { employee: true } })
+        return this.prisma.perDiemClaim.findFirst({ where: { id, companyId }, include: { employee: true } })
     }
 
     async createPerDiemClaim(data: any) {
-        const db = this.prisma as any
-        return db.perDiemClaim.create({ data })
+        return this.prisma.perDiemClaim.create({ data })
     }
 
     async updatePerDiemClaim(companyId: string, id: string, data: any) {
-        const db = this.prisma as any
-        const claim = await db.perDiemClaim.findFirst({ where: { id, companyId } })
+        const claim = await this.prisma.perDiemClaim.findFirst({ where: { id, companyId } })
         if (!claim) return null
-        return db.perDiemClaim.update({ where: { id }, data })
-    }
+        return this.prisma.perDiemClaim.update({ where: { id }, data })
 
     // ─── Purchase Orders ──────────────────────────────────────────────────────────────
 
-    async findPurchaseOrders(companyId: string, opts: { vendorId?: string; status?: string; limit?: number; offset?: number } = {}) {
+    async findPurchaseOrders(companyId: string, opts: { vendorId?: string; status?: Prisma.PurchaseOrderStatus; limit?: number; offset?: number } = {}) {
         return this.prisma.purchaseOrder.findMany({
             where: {
                 companyId, deletedAt: null,
                 ...(opts.vendorId ? { vendorId: opts.vendorId } : {}),
-                ...(opts.status ? { status: opts.status as any } : {}),
+                ...(opts.status ? { status: opts.status } : {}),
             },
             include: {
                 vendor: { include: { contact: { select: { displayName: true } } } },
@@ -667,7 +667,7 @@ export class ApRepository {
     }
 
     async updatePoStatus(companyId: string, poId: string, status: string) {
-        return this.prisma.purchaseOrder.update({ where: { id: poId }, data: { status: status as any } })
+        return this.prisma.purchaseOrder.update({ where: { id: poId }, data: { status } })
     }
 
     async convertPoToBill(companyId: string, workspaceId: string, poId: string, createdById: string) {
@@ -699,7 +699,7 @@ export class ApRepository {
 
     async getApAging(companyId: string) {
         const bills = await this.prisma.bill.findMany({
-            where: { companyId, deletedAt: null, status: { in: ['APPROVED', 'PARTIALLY_PAID', 'OVERDUE'] as any }, balance: { gt: 0 } },
+            where: { companyId, deletedAt: null, status: { in: ['APPROVED', 'PARTIALLY_PAID', 'OVERDUE'] as Prisma.BillStatus[] }, balance: { gt: 0 } },
             select: {
                 id: true, billNumber: true, issuedAt: true, dueAt: true, total: true, balance: true,
                 vendor: { select: { contact: { select: { id: true, displayName: true } } } },

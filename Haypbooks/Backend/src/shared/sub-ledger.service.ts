@@ -1,8 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common'
 import fs from 'fs'
 import path from 'path'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { createAndPostJE, resolveAccount, SYSTEM_ACCOUNTS } from './gl-integration'
+
+type InvoiceWithLinesAndTaxes = Prisma.InvoiceGetPayload<{
+  include: { lines: { include: { LineTax: true } } }
+}>
+
+type BillWithLinesAndTaxes = Prisma.BillGetPayload<{
+  include: { lines: { include: { LineTax: true } } }
+}>
+
+type JournalEntryWithLines = Prisma.JournalEntryGetPayload<{ include: { lines: true } }>
 
 /**
  * SubLedgerService — the bridge between the AR/AP sub-ledgers and the General Ledger.
@@ -204,7 +215,7 @@ export class SubLedgerService {
         return
       }
 
-      const lines = invoice.lines as any[]
+      const lines = invoice.lines ?? []
       const grossTotal = this.roundMoney(Number(invoice.totalAmount ?? 0))
 
       // Build credit lines — one per invoice line
@@ -218,7 +229,7 @@ export class SubLedgerService {
 
         const lineTaxAmount = this.roundMoney(
           Array.isArray(line.LineTax)
-            ? line.LineTax.reduce((sum: number, tax: any) => sum + Number(tax.amount ?? 0), 0)
+            ? line.LineTax.reduce((sum, tax) => sum + Number(tax.amount ?? 0), 0)
             : 0,
         )
         const lineNetRevenue = Math.max(0, this.roundMoney(lineAmount - lineTaxAmount))
@@ -266,8 +277,8 @@ export class SubLedgerService {
         const je = await this.createPostedJE(tx, {
           workspaceId: invoice.workspaceId,
           companyId: invoice.companyId,
-          date: (invoice as any).issuedAt ?? (invoice as any).date ?? new Date(),
-          description: `Invoice ${(invoice as any).invoiceNumber ?? invoiceId}`,
+          date: invoice.issuedAt ?? invoice.date ?? new Date(),
+          description: `Invoice ${invoice.invoiceNumber ?? invoiceId}`,
           currency: invoice.currency ?? undefined,
           createdById: postedById,
           entryNumber,
@@ -278,7 +289,7 @@ export class SubLedgerService {
         })
 
         if (je) {
-          await tx.invoice.update({ where: { id: invoiceId }, data: { journalEntryId: je.id, postingStatus: 'POSTED' as any } })
+          await tx.invoice.update({ where: { id: invoiceId }, data: { journalEntryId: je.id, postingStatus: 'POSTED' } })
         }
       })
     } catch (err: any) {
@@ -330,7 +341,7 @@ export class SubLedgerService {
         })
 
         if (je) {
-          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' as any } })
+          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' } })
           await tx.invoice.update({ where: { id: invoiceId }, data: { journalEntryId: null } })
         }
       })
@@ -351,26 +362,32 @@ export class SubLedgerService {
     try {
       const payment = await this.prisma.paymentReceived.findUnique({ where: { id: paymentId } })
       if (!payment) return
-      if ((payment as any).journalEntryId) return
+      if (payment.journalEntryId) return
 
-      const arAccountId = await this.findAccountByCode((payment as any).companyId, '1100')
-      const cashAccountId = await this.resolveAccount((payment as any).companyId, null, '1010')
+      const companyId = payment.companyId
+      if (!companyId) {
+        this.logger.warn(`[SubLedger] Payment ${paymentId} has no companyId — skipping GL post`)
+        return
+      }
+
+      const arAccountId = await this.findAccountByCode(companyId, '1100')
+      const cashAccountId = await this.resolveAccount(companyId, null, '1010')
 
       if (!arAccountId || !cashAccountId) {
         this.logger.warn(`[SubLedger] Cannot post payment ${paymentId}: required accounts not found`)
         return
       }
 
-      const amount = Number((payment as any).amount ?? 0)
+      const amount = Number(payment.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
-        const entryNumber = await this.nextEntryNumber((payment as any).companyId, 'RCP')
+        const entryNumber = await this.nextEntryNumber(companyId, 'RCP')
         const je = await this.createPostedJE(tx, {
-          workspaceId: (payment as any).workspaceId,
-          companyId: (payment as any).companyId,
-          date: (payment as any).paymentDate ?? new Date(),
-          description: `Receipt ${(payment as any).referenceNumber ?? paymentId}`,
-          currency: (payment as any).currency,
+          workspaceId: payment.workspaceId,
+          companyId,
+          date: payment.paymentDate ?? new Date(),
+          description: `Receipt ${payment.referenceNumber ?? paymentId}`,
+          currency: payment.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -401,15 +418,15 @@ export class SubLedgerService {
     try {
       const payment = await this.prisma.paymentReceived.findUnique({ where: { id: paymentId } })
       if (!payment) return
-      if (!(payment as any).journalEntryId) return
+      if (!payment.journalEntryId) return
 
       const originalJE = await this.prisma.journalEntry.findUnique({
-        where: { id: (payment as any).journalEntryId },
+        where: { id: payment.journalEntryId },
         include: { lines: true },
       })
       if (!originalJE || !originalJE.lines.length) return
 
-      const reversalLines = originalJE.lines.map((line: any) => ({
+      const reversalLines = originalJE.lines.map((line) => ({
         accountId: line.accountId,
         debit: Number(line.credit ?? 0),
         credit: Number(line.debit ?? 0),
@@ -417,20 +434,25 @@ export class SubLedgerService {
       }))
 
       await this.prisma.$transaction(async (tx) => {
-        const entryNumber = await this.nextEntryNumber((payment as any).companyId, 'RVP')
+        const companyId = payment.companyId
+        if (!companyId) {
+          this.logger.warn(`[SubLedger] Cannot reverse payment ${paymentId}: missing companyId`)
+          return
+        }
+        const entryNumber = await this.nextEntryNumber(companyId, 'RVP')
         const je = await this.createPostedJE(tx, {
-          workspaceId: (payment as any).workspaceId,
-          companyId: (payment as any).companyId,
+          workspaceId: payment.workspaceId,
+          companyId,
           date: new Date(),
-          description: `Payment reversal ${(payment as any).referenceNumber ?? paymentId}`,
-          currency: (payment as any).currency,
+          description: `Payment reversal ${payment.referenceNumber ?? paymentId}`,
+          currency: payment.currency,
           createdById: postedById,
           entryNumber,
           lines: reversalLines,
         })
 
         if (je) {
-          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' as any } })
+          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' } })
           await tx.paymentReceived.update({ where: { id: paymentId }, data: { journalEntryId: null } })
         }
       })
@@ -478,7 +500,7 @@ export class SubLedgerService {
         return
       }
 
-      const lines = bill.lines as any[]
+      const lines = bill.lines ?? []
       const debitLines: Array<{ accountId: string; debit: number; credit: number; memo?: string }> = []
       let totalVatInput = 0
 
@@ -486,7 +508,7 @@ export class SubLedgerService {
         const line = lines[index]
         const amount = Number(line.amount ?? 0)
         const lineTaxAmount = Array.isArray(line.LineTax)
-          ? line.LineTax.reduce((sum: number, tax: any) => sum + Number(tax.amount ?? 0), 0)
+          ? line.LineTax.reduce((sum, tax) => sum + Number(tax.amount ?? 0), 0)
           : 0
         const netExpense = Math.max(0, amount - lineTaxAmount)
 
@@ -511,7 +533,7 @@ export class SubLedgerService {
         debitLines.push({ accountId: vatInputAccountId, debit: totalVatInput, credit: 0, memo: 'Input VAT' })
       }
 
-      const ewtAmount = Number((bill as any).ewtAmount ?? 0)
+      const ewtAmount = Number(bill.ewtAmount ?? 0)
       const totalDebits = debitLines.reduce((s, l) => s + l.debit, 0)
       const apCredit = totalDebits - ewtAmount
 
@@ -529,8 +551,8 @@ export class SubLedgerService {
         const je = await createAndPostJE(tx, {
           workspaceId: bill.workspaceId,
           companyId: bill.companyId,
-          date: (bill as any).issuedAt ?? (bill as any).date ?? new Date(),
-          description: `Bill ${(bill as any).billNumber ?? billId}`,
+          date: bill.issuedAt ?? bill.date ?? new Date(),
+          description: `Bill ${bill.billNumber ?? billId}`,
           currency: bill.currency ?? undefined,
           createdById: postedById,
           entryNumber,
@@ -548,8 +570,8 @@ export class SubLedgerService {
           const je = await createAndPostJE(txClient, {
             workspaceId: bill.workspaceId,
             companyId: bill.companyId,
-            date: (bill as any).issuedAt ?? (bill as any).date ?? new Date(),
-            description: `Bill ${(bill as any).billNumber ?? billId}`,
+            date: bill.issuedAt ?? bill.date ?? new Date(),
+            description: `Bill ${bill.billNumber ?? billId}`,
             currency: bill.currency ?? undefined,
             createdById: postedById,
             entryNumber,
@@ -602,11 +624,11 @@ export class SubLedgerService {
         where: { id: bill.journalEntryId },
         include: { lines: true },
       })
-      if (!originalJE || !(originalJE as any).lines?.length) return
+      if (!originalJE || !originalJE.lines?.length) return
 
       const runReversal = async (txClient: any) => {
         const entryNumber = await this.nextEntryNumber(bill.companyId, 'REV', txClient)
-        const reversalLines = (originalJE as any).lines.map((l: any) => ({
+        const reversalLines = originalJE.lines.map((l) => ({
           accountId: l.accountId,
           debit: Number(l.credit ?? 0),
           credit: Number(l.debit ?? 0),
@@ -706,13 +728,9 @@ export class SubLedgerService {
     try {
       const deposit = await this.prisma.bankDeposit.findUnique({ where: { id: depositId } })
       if (!deposit) return
-      if ((deposit as any).journalEntryId) return
+      if (deposit.journalEntryId) return
 
-      const cashAccountId = await this.resolveAccount(
-        deposit.companyId,
-        (deposit as any).bankAccountId,
-        '1010',
-      )
+      const cashAccountId = await this.resolveAccount(deposit.companyId, deposit.bankAccountId, '1010')
       const undepositedFundsId = await this.findAccountByCode(deposit.companyId, '1050')
 
       if (!cashAccountId || !undepositedFundsId) {
@@ -720,16 +738,16 @@ export class SubLedgerService {
         return
       }
 
-      const amount = Number((deposit as any).amount ?? 0)
+      const amount = Number(deposit.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
         const entryNumber = await this.nextEntryNumber(deposit.companyId, 'BD')
         const je = await this.createPostedJE(tx, {
           workspaceId: deposit.workspaceId,
           companyId: deposit.companyId,
-          date: (deposit as any).depositDate ?? (deposit as any).date ?? new Date(),
-          description: `Bank Deposit ${(deposit as any).referenceNumber ?? depositId}`,
-          currency: (deposit as any).currency,
+          date: deposit.depositDate ?? deposit.date ?? new Date(),
+          description: `Bank Deposit ${deposit.referenceNumber ?? depositId}`,
+          currency: deposit.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -755,7 +773,7 @@ export class SubLedgerService {
         where: { id: refundId },
       })
       if (!refund) return
-      if ((refund as any).journalEntryId) return
+      if (refund.journalEntryId) return
 
       const arAccountId = await this.findAccountByCode(refund.companyId, '1100')
       const revenueAccountId = await this.findAccountByCode(refund.companyId, '4010')
@@ -765,16 +783,16 @@ export class SubLedgerService {
         return
       }
 
-      const amount = Number((refund as any).amount ?? 0)
+      const amount = Number(refund.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
         const entryNumber = await this.nextEntryNumber(refund.companyId, 'CRF')
         const je = await this.createPostedJE(tx, {
           workspaceId: refund.workspaceId,
           companyId: refund.companyId,
-          date: (refund as any).refundDate ?? new Date(),
-          description: `Customer Refund ${(refund as any).referenceNumber ?? refundId}`,
-          currency: (refund as any).currency,
+          date: refund.refundDate ?? new Date(),
+          description: `Customer Refund ${refund.referenceNumber ?? refundId}`,
+          currency: refund.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -800,7 +818,7 @@ export class SubLedgerService {
         where: { id: refundId },
       })
       if (!refund) return
-      if ((refund as any).journalEntryId) return
+      if (refund.journalEntryId) return
 
       const apAccount = await resolveAccount(this.prisma, refund.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
       const apAccountId = apAccount?.id ?? null
@@ -812,16 +830,16 @@ export class SubLedgerService {
         return
       }
 
-      const amount = Number((refund as any).amount ?? 0)
+      const amount = Number(refund.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
         const entryNumber = await this.nextEntryNumber(refund.companyId, 'VRF')
         const je = await this.createPostedJE(tx, {
           workspaceId: refund.workspaceId,
           companyId: refund.companyId,
-          date: (refund as any).refundDate ?? new Date(),
-          description: `Vendor Refund ${(refund as any).referenceNumber ?? refundId}`,
-          currency: (refund as any).currency,
+          date: refund.refundDate ?? new Date(),
+          description: `Vendor Refund ${refund.referenceNumber ?? refundId}`,
+          currency: refund.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -1060,7 +1078,7 @@ export class SubLedgerService {
       if (!company) return
 
       const salesReturnsId = await this.findAccountByCode(refund.companyId, '4040')
-      const cashAccountId = await this.resolveAccount(refund.companyId, (refund as any).bankAccountId, '1000')
+      const cashAccountId = await this.resolveAccount(refund.companyId, refund.bankAccountId, '1000')
 
       if (!salesReturnsId || !cashAccountId) {
         this.logger.warn(`[SubLedger] Cannot post refund ${refundId}: Sales Returns (4040) or Cash (1000) account not found`)
@@ -1107,7 +1125,7 @@ export class SubLedgerService {
       if (!company) return
 
       const salesReturnsId = await this.findAccountByCode(refund.companyId, '4040')
-      const cashAccountId = await this.resolveAccount(refund.companyId, (refund as any).bankAccountId, '1000')
+      const cashAccountId = await this.resolveAccount(refund.companyId, refund.bankAccountId, '1000')
       if (!salesReturnsId || !cashAccountId) return
 
       const amount = Number(refund.amount ?? 0)
@@ -1473,8 +1491,8 @@ export class SubLedgerService {
     const run = async (t: any) => {
       const apAcct = await resolveAccount(t, vc.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
 
-      const jeLines: any[] = []
-      for (const line of (vc.lines as any[])) {
+      const jeLines: Array<{ accountId: string; debit: number; credit: number; description: string }> = []
+      for (const line of vc.lines ?? []) {
         const expAcct = line.accountId
           ? await t.account.findUnique({ where: { id: line.accountId }, select: { id: true, normalSide: true } })
           : await resolveAccount(t, vc.companyId, SYSTEM_ACCOUNTS.OPERATING_EXPENSES)

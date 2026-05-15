@@ -43,7 +43,7 @@ export class PrismaAuthService {
       normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone)
       try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { this.logServiceError('phone HMAC normalization failed', e, 'debug'); phoneHmac = undefined }
     } catch (e) { throw e }
-    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub, phone: normalizedPhone, phoneHmac } as any)
+    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub, phone: normalizedPhone, phoneHmac })
 
     // Log successful signup
     await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })
@@ -63,8 +63,8 @@ export class PrismaAuthService {
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
       // Per-hub flags
-      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
-      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      ownerOnboardingCompleted: user.ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: user.accountantOnboardingComplete ?? false,
       preferredHub: user.preferredHub ?? null,
       // If the user has both roles and hasn't chosen a preferred hub, the frontend should show the Hub Selection modal
       requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
@@ -130,9 +130,9 @@ export class PrismaAuthService {
     // Enforce verification: require at least ONE verified contact method.
     // If a phone exists, either email verification OR phone verification is sufficient.
     // If no phone exists, email verification is required.
-    const hasPhone = !!(user as any).phone
+    const hasPhone = !!user.phone
     const emailVerified = !!user.isEmailVerified
-    const phoneVerified = !!(user as any).isPhoneVerified
+    const phoneVerified = !!user.isPhoneVerified
     const verifiedOk = hasPhone ? (emailVerified || phoneVerified) : emailVerified
 
     // Debug logging to help diagnose verification issues
@@ -163,7 +163,7 @@ export class PrismaAuthService {
     await this.sessionRepo.create({
       userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date(),
       deviceName: this.parseDeviceName(userAgent), tokenFamily,
-    } as any)
+    })
 
     // Return consistent user object structure for frontend
     const userResponse = {
@@ -176,8 +176,8 @@ export class PrismaAuthService {
       onboardingComplete: user.onboardingComplete ?? false, // Both formats for compatibility
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
-      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
-      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      ownerOnboardingCompleted: user.ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: user.accountantOnboardingComplete ?? false,
       preferredHub: user.preferredHub ?? null,
       requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
     }
@@ -221,7 +221,7 @@ export class PrismaAuthService {
       await this.sessionRepo.create({
         userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date(),
         deviceName: this.parseDeviceName(userAgent), tokenFamily,
-      } as any)
+      })
       sessionSaved = true
     } catch (e) {
       // Session DB write failed — the access token will still work for its 2h lifetime,
@@ -246,8 +246,8 @@ export class PrismaAuthService {
       onboardingComplete: user.onboardingComplete ?? false,
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
-      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
-      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      ownerOnboardingCompleted: user.ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: user.accountantOnboardingComplete ?? false,
       preferredHub: user.preferredHub ?? null,
       requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
     }
@@ -280,21 +280,21 @@ export class PrismaAuthService {
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
     // Optional: rotate refresh token
     // Inherit tokenFamily from old session for replay-attack detection
-    const tokenFamily = (session as any).tokenFamily ?? randomUUID()
+    const tokenFamily = session.tokenFamily ?? randomUUID()
     const newRefresh = this.jwtService.sign({ sub: user.id, nonce: randomUUID(), family: tokenFamily }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     // Revoke old session with reason, create new one in the same family
     try {
-      await this.sessionRepo.update(session.id, { revoked: true, revokedReason: 'REFRESHED' } as any)
+      await this.sessionRepo.update(session.id, { revoked: true, revokedReason: 'REFRESHED' })
     } catch (e) {
       this.logServiceError('[refresh] failed to revoke old session', e, 'debug')
     }
     await this.sessionRepo.create({
       userId: user.id, refreshToken: newRefresh, expiresAt,
       ipAddress: session.ipAddress, userAgent: session.userAgent, lastUsedAt: new Date(),
-      deviceName: (session as any).deviceName ?? this.parseDeviceName(session.userAgent ?? ''),
+      deviceName: session.deviceName ?? this.parseDeviceName(session.userAgent ?? ''),
       tokenFamily,
-    } as any)
+    })
 
     try { this.logger.debug(`[auth:refresh] success for user=${user.id} newRefreshPrefix=${String(newRefresh).slice(0, 12)}`) } catch (e) { this.logServiceError('failed to log refresh success', e, 'debug') }
 
@@ -309,8 +309,8 @@ export class PrismaAuthService {
       onboardingComplete: user.onboardingComplete ?? false,
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
-      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
-      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      ownerOnboardingCompleted: user.ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: user.accountantOnboardingComplete ?? false,
       preferredHub: user.preferredHub ?? null,
       requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
     }
@@ -350,14 +350,14 @@ export class PrismaAuthService {
     // On successful verification: decide whether to consume (delete) OTP.
     // For password reset flows we'll only delete when explicitly asked to consume (so reset can still use it).
     try {
-      if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
+      if (consume || row.purpose === 'VERIFY_EMAIL' || row.purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
     } catch (e) { this.logServiceError('failed to delete consumed email OTP row', e, 'debug') }
 
     // If this OTP was used to VERIFY an email, mark user as verified
     try {
-      if ((row as any).purpose === 'VERIFY_EMAIL') {
+      if (row.purpose === 'VERIFY_EMAIL') {
         const user = await this.userRepo.findByEmail(email)
         if (user) await this.userRepo.update(user.id, { isEmailVerified: true })
       }
@@ -380,7 +380,7 @@ export class PrismaAuthService {
     }
 
     try {
-      if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
+      if (consume || row.purpose === 'VERIFY_EMAIL' || row.purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
     } catch (e) { this.logServiceError('failed to delete consumed phone OTP row', e, 'debug') }
@@ -410,14 +410,14 @@ export class PrismaAuthService {
     const session = await this.sessionRepo.findById(sessionId)
     if (!session) throw new NotFoundException('Session not found')
     if (session.userId !== requestingUserId) throw new ForbiddenException('Not your session')
-    await this.sessionRepo.update(sessionId, { revoked: true, revokedReason: 'USER_REVOKED' } as any)
+    await this.sessionRepo.update(sessionId, { revoked: true, revokedReason: 'USER_REVOKED' })
     await this.logSecurityEvent({ userId: requestingUserId, type: 'SESSION_REVOKED' })
     return { success: true, sessionId }
   }
 
   async updateSessionCompany(sessionId: string, activeCompanyId: string) {
     try {
-      await this.sessionRepo.update(sessionId, { activeCompanyId } as any)
+      await this.sessionRepo.update(sessionId, { activeCompanyId })
     } catch (e) {
       // non-blocking — don't fail request if session context update fails
       this.logServiceError('[updateSessionCompany] failed to update session company context', e, 'debug')

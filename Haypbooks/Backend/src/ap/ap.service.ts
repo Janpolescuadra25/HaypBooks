@@ -1090,7 +1090,7 @@ export class ApService {
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
         })
-        return (logs as any[]).map((log: any) => ({
+        return logs.map((log) => ({
             ...log,
             date: log.logDate?.toISOString(),
             route: [log.fromLocation, log.toLocation].filter(Boolean).join(' → '),
@@ -1150,24 +1150,23 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const existing = await this.repo.findMileageLogById(companyId, logId)
         if (!existing) throw new NotFoundException('Mileage log not found')
-        const existingAny = existing as any
         const payload: any = {
-            employeeId: data.employeeId ?? existingAny.employeeId,
-            userId: data.userId ?? existingAny.userId,
-            logNumber: data.logNumber ?? existingAny.logNumber,
-            logDate: data.logDate ? new Date(data.logDate) : existingAny.logDate,
-            tripDate: data.tripDate ? new Date(data.tripDate) : existingAny.tripDate,
-            fromLocation: data.fromLocation ?? data.startLocation ?? existingAny.fromLocation,
-            toLocation: data.toLocation ?? data.endLocation ?? existingAny.toLocation,
-            miles: data.miles !== undefined ? Number(data.miles) : (data.distance !== undefined ? Number(data.distance) : Number(existingAny.miles)),
-            ratePerMile: data.ratePerMile !== undefined ? Number(data.ratePerMile) : (data.rate !== undefined ? Number(data.rate) : Number(existingAny.ratePerMile)),
-            amount: data.amount !== undefined ? Number(data.amount) : Number(existingAny.amount),
-            purpose: data.purpose ?? existingAny.purpose,
-            isBillable: data.isBillable ?? data.billable ?? existingAny.isBillable,
-            distanceUnit: data.distanceUnit ?? existingAny.distanceUnit,
-            vehicle: data.vehicle ?? existingAny.vehicle,
-            personalVehicle: data.personalVehicle ?? existingAny.personalVehicle,
-            accountId: data.accountId ?? existingAny.accountId,
+            employeeId: data.employeeId ?? existing.employeeId,
+            userId: data.userId ?? existing.userId,
+            logNumber: data.logNumber ?? existing.logNumber,
+            logDate: data.logDate ? new Date(data.logDate) : existing.logDate,
+            tripDate: data.tripDate ? new Date(data.tripDate) : existing.tripDate,
+            fromLocation: data.fromLocation ?? data.startLocation ?? existing.fromLocation,
+            toLocation: data.toLocation ?? data.endLocation ?? existing.toLocation,
+            miles: data.miles !== undefined ? Number(data.miles) : (data.distance !== undefined ? Number(data.distance) : Number(existing.miles)),
+            ratePerMile: data.ratePerMile !== undefined ? Number(data.ratePerMile) : (data.rate !== undefined ? Number(data.rate) : Number(existing.ratePerMile)),
+            amount: data.amount !== undefined ? Number(data.amount) : Number(existing.amount),
+            purpose: data.purpose ?? existing.purpose,
+            isBillable: data.isBillable ?? data.billable ?? existing.isBillable,
+            distanceUnit: data.distanceUnit ?? existing.distanceUnit,
+            vehicle: data.vehicle ?? existing.vehicle,
+            personalVehicle: data.personalVehicle ?? existing.personalVehicle,
+            accountId: data.accountId ?? existing.accountId,
             projectId: data.projectId ?? existingAny.projectId,
             notes: data.notes ?? existingAny.notes,
             status: data.status ?? existingAny.status,
