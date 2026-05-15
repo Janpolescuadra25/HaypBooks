@@ -981,7 +981,27 @@ export class AccountingService {
 
     async reopenPeriod(userId: string, companyId: string, periodId: string) {
         await this.assertCompanyAccess(userId, companyId)
-        return this.repo.reopenPeriod(companyId, periodId)
+        const period = await this.prisma.accountingPeriod.findFirst({
+            where: { id: periodId, workspace: { companies: { some: { id: companyId } } } },
+        })
+        if (!period) throw new NotFoundException('Accounting period not found')
+
+        const result = await this.repo.reopenPeriod(companyId, periodId)
+        if (!result) throw new NotFoundException('Accounting period not found')
+
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId: period.workspaceId,
+                companyId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'AccountingPeriod',
+                recordId: periodId,
+                changes: { status: 'OPEN', reopenedAt: new Date().toISOString() },
+            },
+        }).catch(() => { /* non-critical */ })
+
+        return result
     }
 
     async completeCloseWorkflow(userId: string, companyId: string) {

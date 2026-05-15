@@ -850,9 +850,49 @@ export class AccountingRepository {
     }
 
     async reopenPeriod(companyId: string, periodId: string) {
-        return this.prisma.accountingPeriod.update({
-            where: { id: periodId },
-            data: { status: 'OPEN', closedAt: null } as any,
+        const period = await this.prisma.accountingPeriod.findFirst({
+            where: { id: periodId, workspace: { companies: { some: { id: companyId } } } },
+        })
+        if (!period) return null
+
+        return this.prisma.$transaction(async (tx) => {
+            const closingEntries = await tx.journalEntry.findMany({
+                where: {
+                    companyId,
+                    workspaceId: period.workspaceId,
+                    date: period.endDate,
+                    postingStatus: 'POSTED',
+                    description: { startsWith: 'Closing entry –' },
+                },
+                include: { lines: true },
+            })
+
+            for (const original of closingEntries) {
+                const reversedLines = (original.lines ?? []).map((line: any) => ({
+                    accountId: line.accountId,
+                    debit: Number(line.credit),
+                    credit: Number(line.debit),
+                    description: `Reversal: ${line.description ?? ''}`,
+                }))
+
+                if (reversedLines.length > 0) {
+                    await createAndPostJE(tx, {
+                        workspaceId: original.workspaceId,
+                        companyId,
+                        date: new Date(),
+                        description: `Reopening period reversal – ${original.description}`,
+                        createdById: 'system',
+                        transactionSource: 'PERIOD_REOPEN',
+                        sourceReferenceId: original.id,
+                        lines: reversedLines,
+                    })
+                }
+            }
+
+            return tx.accountingPeriod.update({
+                where: { id: periodId },
+                data: { status: 'OPEN', closedAt: null, isClosed: false } as any,
+            })
         })
     }
 
