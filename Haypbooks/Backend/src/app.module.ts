@@ -88,7 +88,7 @@ const RepositoriesModule = PrismaRepositoriesModule
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(CompanyContextMiddleware)
+      .apply(RequestIdMiddleware, CompanyContextMiddleware)
       .forRoutes('*')
   }
 }
