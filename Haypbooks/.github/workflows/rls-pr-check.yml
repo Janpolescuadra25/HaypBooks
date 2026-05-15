@@ -16,7 +16,7 @@ jobs:
         image: postgres:14
         env:
           POSTGRES_DB: haypbooks_test
-          POSTGRES_PASSWORD: Ninetails45
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports:
           - 5432:5432
         options: >-

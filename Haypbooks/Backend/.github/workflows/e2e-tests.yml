@@ -14,7 +14,7 @@ jobs:
         image: postgres:18.1
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: Ninetails45
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -46,7 +46,7 @@ jobs:
       - name: Run migrations & seed
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
         run: |
           npm run migrate:init
           node ./scripts/migrate/run-sql.js
@@ -55,7 +55,7 @@ jobs:
       - name: Run pre-signup DB-backed unit tests 🧪
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
           ENFORCE_PRE_SIGNUP: 'true'
           NODE_ENV: 'test'
         run: npm run test:unit -- src/auth/pending-signup.db.integration.spec.ts src/auth/auth.controller.spec.ts
@@ -63,13 +63,13 @@ jobs:
       - name: Verify subscription schema
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
         run: npm run db:verify:subscription-schema
 
       - name: Run e2e tests
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
           NODE_ENV: 'test'
           ALLOW_TEST_ENDPOINTS: 'true'
         run: npm run test:e2e

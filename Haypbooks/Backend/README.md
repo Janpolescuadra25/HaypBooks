@@ -72,7 +72,7 @@ We include a GitHub Actions workflow that runs the full onboarding → Owner Wor
 
 Before enabling it in Actions, **add the required secret** to your repository:
 
-- `E2E_DB_PASSWORD` — password for the `postgres` test user used by the workflow (example: `Ninetails45`).
+- `E2E_DB_PASSWORD` — password for the `postgres` test user used by the workflow (do not commit real passwords).
 
 Optional:
 - `REDIS_URL` — if you prefer to point the backend at a managed Redis instance.
@@ -100,7 +100,7 @@ To reproduce the onboarding → Owner Workspace E2E locally (mirrors CI):
    - `E2E_FULL_AUTH=true npx playwright test e2e/onboarding.ui-and-hub.spec.ts --project=chromium`
 
 Notes:
-- When running locally, you can use `Ninetails45` as the test DB password for convenience, but **do not check secrets into source control**.
+- When running locally, configure a secure test DB password and do not check secrets into source control.
 - If you want the test to strictly fail when the backend doesn't auto-create the company, set `E2E_ASSERT_COMPANY=true` in your environment before running the test.
 
 CI tips:

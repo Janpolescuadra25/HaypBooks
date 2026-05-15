@@ -15,7 +15,7 @@ jobs:
         image: postgres:18.1
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: Ninetails45
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -51,7 +51,7 @@ jobs:
       - name: Start backend (pre-signup mode with Redis)
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
           ENFORCE_PRE_SIGNUP: 'true'
           ALLOW_TEST_ENDPOINTS: 'true'
           NODE_ENV: 'test'

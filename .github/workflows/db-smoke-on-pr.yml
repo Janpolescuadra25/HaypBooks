@@ -16,7 +16,7 @@ jobs:
         image: postgres:18.1
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: Ninetails45
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -37,7 +37,7 @@ jobs:
       - name: Run migrations and seed (with retries)
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
         run: |
           node ./scripts/migrate/init-db.js --recreate
           node ./scripts/migrate/run-sql.js
@@ -46,14 +46,14 @@ jobs:
       - name: CI sanity check (seed verification)
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
         run: |
           node ./scripts/db/ci-sanity-check.js
 
       - name: Run smoke e2e (subset)
         working-directory: ./Haypbooks/Backend
         env:
-          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/haypbooks_test
           NODE_ENV: 'test'
         run: |
           # Run a focused subset (contacts + payroll smoke) to validate migrations and seeds
