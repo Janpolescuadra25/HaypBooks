@@ -957,6 +957,18 @@ export class ArService {
             }
         }).filter((line) => line.description.length > 0)
         if (!normalizedLines.length) throw new BadRequestException('At least one invoice line with a description is required')
+
+        const customer = await this.repo.findCustomerById(workspaceId, data.customerId)
+        if (!customer) throw new NotFoundException('Customer not found')
+
+        const newInvoiceTotal = normalizedLines.reduce((sum, line) => sum + Number(line.amount ?? 0), 0)
+        const openInvoices = await this.repo.findInvoices(companyId, { customerId: data.customerId, openOnly: true })
+        const openBalance = openInvoices.reduce((sum, inv) => sum + Number(inv.balance ?? 0), 0)
+        const creditLimit = Number(customer.creditLimit ?? 0)
+        if (creditLimit > 0 && openBalance + newInvoiceTotal > creditLimit) {
+            throw new BadRequestException(`Customer credit limit exceeded: open balance ${openBalance}, credit limit ${creditLimit}, new invoice total ${newInvoiceTotal}`)
+        }
+
         const result = await this.repo.createInvoice({
             workspaceId,
             companyId,
