@@ -1612,6 +1612,7 @@ export class ArService {
             customerId: cn.customerId ?? '',
             date: cn.issuedAt ?? cn.date ?? null,
             amount: Number(cn.totalAmount ?? 0),
+            balance: Number(cn.balance ?? 0),
             status: cn.status ?? 'DRAFT',
             memo: cn.reason ?? '',
             invoiceId: cn.invoiceId ?? null,
@@ -1801,8 +1802,7 @@ export class ArService {
         if (!recurring) throw new NotFoundException('Recurring invoice not found')
         // Create invoice from template
         const template = recurring.templateData as any
-        const invCount = await this.prisma.invoice.count({ where: { companyId } })
-        const invoiceNumber = `INV-${String(invCount + 1).padStart(6, '0')}`
+        const invoiceNumber = await this.repo.generateInvoiceNumber(companyId)
         const invoice = await this.prisma.invoice.create({
             data: {
                 workspaceId: wid,

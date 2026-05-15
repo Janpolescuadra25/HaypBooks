@@ -1128,6 +1128,7 @@ model Workspace {
   RecurringInvoice            RecurringInvoice[]
   RecurringBill               RecurringBill[]
   InvoicePaymentApplication   InvoicePaymentApplication[]
+  CreditNoteApplication       CreditNoteApplication[] @relation("CreditNoteApplication_Workspace")
   BillPaymentApplication      BillPaymentApplication[]
   // Billing & usage tracking (migrated from TenantBilling* legacy tables)
   billingInvoices             WorkspaceBillingInvoice[]
@@ -2709,6 +2710,7 @@ enum CreditNoteStatus {
   DRAFT
   ISSUED
   APPLIED
+  PARTIALLY_APPLIED
   VOID
 }
 
@@ -7880,6 +7882,7 @@ model Invoice {
   writeOffs                  WriteOff[]
   // Auto-added opposite relations (generated)
   creditNotes                CreditNote[]
+  creditNoteApplications     CreditNoteApplication[]    @relation("CreditNoteApplication_Invoice")
   dunningNotices             DunningNotice[]
   paymentReminders           PaymentReminder[]
   disputes                   Dispute[]
@@ -7917,6 +7920,7 @@ model CreditNote {
   invoiceId        String?
   reason           String
   totalAmount      Decimal          @db.Decimal(19, 4)
+  balance          Decimal          @db.Decimal(19, 4)
   status           CreditNoteStatus @default(DRAFT)
   issuedAt         DateTime         @default(now())
   journalEntryId   String?
@@ -7925,6 +7929,7 @@ model CreditNote {
   customer     Customer      @relation(fields: [customerId], references: [contactId])
   invoice      Invoice?      @relation(fields: [invoiceId], references: [id])
   journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  applications CreditNoteApplication[] @relation("CreditNoteApplication_CreditNote")
 
   templateId String?
   template   DocumentTemplate? @relation(fields: [templateId], references: [id])
@@ -7933,6 +7938,23 @@ model CreditNote {
   @@index([companyId, customerId])
   @@index([journalEntryId])
   @@index([companyId, templateId])
+}
+
+model CreditNoteApplication {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  creditNoteId String
+  invoiceId    String
+  amount       Decimal   @db.Decimal(19, 4)
+  appliedAt    DateTime  @default(now())
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], name: "CreditNoteApplication_Workspace")
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], name: "CreditNoteApplication_CreditNote")
+  invoice      Invoice    @relation(fields: [invoiceId], references: [id], name: "CreditNoteApplication_Invoice")
+
+  @@index([workspaceId])
+  @@index([creditNoteId])
+  @@index([invoiceId])
 }
 
 model DebitNote {

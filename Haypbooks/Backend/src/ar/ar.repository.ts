@@ -130,6 +130,27 @@ export class ArRepository {
         return `${base}-COPY-${timestampToken}-${entropyToken}`
     }
 
+    private async nextInvoiceNumber(tx: any, companyId: string) {
+        const sequence = await tx.documentSequence.upsert({
+            where: { companyId_documentType: { companyId, documentType: 'INVOICE' } },
+            create: {
+                companyId,
+                documentType: 'INVOICE',
+                prefix: 'INV-',
+                nextNumber: 2,
+                format: 'INV-{number}',
+            },
+            update: {
+                nextNumber: { increment: 1 },
+            },
+        })
+        return `INV-${String(sequence.nextNumber - 1).padStart(6, '0')}`
+    }
+
+    async generateInvoiceNumber(companyId: string) {
+        return this.prisma.$transaction(async (tx) => this.nextInvoiceNumber(tx, companyId))
+    }
+
     async transitionOverdueInvoices(companyId: string) {
         return this.prisma.invoice.updateMany({
             where: {
@@ -719,11 +740,13 @@ export class ArRepository {
         return this.prisma.$transaction(async (tx) => {
             const invoiceDate = new Date()
             const dueDate = quote.expiryDate ?? new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+            const invoiceNumber = await this.nextInvoiceNumber(tx, companyId)
             const invoice = await tx.invoice.create({
                 data: {
                     workspaceId,
                     companyId,
                     customerId: quote.customerId,
+                    invoiceNumber,
                     totalAmount: quote.totalAmount,
                     balance: quote.totalAmount,
                     date: invoiceDate,
@@ -832,11 +855,13 @@ export class ArRepository {
         const totalAmount = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? 0), 0)
         const currency = await this.resolveCurrency(data.companyId, data.currency)
         return this.prisma.$transaction(async (tx) => {
+            const invoiceNumber = await this.nextInvoiceNumber(tx, data.companyId)
             const invoice = await tx.invoice.create({
                 data: {
                     workspaceId: data.workspaceId,
                     companyId: data.companyId,
                     customerId: data.customerId,
+                    invoiceNumber,
                     status: 'DRAFT',
                     postingStatus: 'DRAFT',
                     totalAmount,
@@ -918,9 +943,8 @@ export class ArRepository {
         })
         if (!source) return null
 
-        const invoiceNumber = this.buildDuplicateInvoiceNumber(source.invoiceNumber)
-
         return this.prisma.$transaction(async (tx) => {
+            const invoiceNumber = await this.nextInvoiceNumber(tx, source.companyId)
             const invoice = await tx.invoice.create({
                 data: {
                     workspaceId: source.workspaceId,
@@ -991,10 +1015,12 @@ export class ArRepository {
             include: { lines: true },
         })
         if (!invoice) return null
-        const invoiceNumber = invoice.invoiceNumber ?? `INV-${Date.now()}`
-        return this.prisma.invoice.update({
-            where: { id: invoiceId },
-            data: { status: 'SENT', invoiceNumber },
+        return this.prisma.$transaction(async (tx) => {
+            const invoiceNumber = invoice.invoiceNumber ?? await this.nextInvoiceNumber(tx, companyId)
+            return tx.invoice.update({
+                where: { id: invoiceId },
+                data: { status: 'SENT', invoiceNumber },
+            })
         })
     }
 
@@ -1444,6 +1470,7 @@ export class ArRepository {
                 creditNoteNumber,
                 reason: data.reason,
                 totalAmount: data.totalAmount,
+                balance: data.totalAmount,
                 status: (data.status ?? 'DRAFT') as any,
             },
             include: {
@@ -1468,20 +1495,32 @@ export class ArRepository {
         const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId, deletedAt: null } })
         if (!invoice) return null
 
-        const applyAmt = Math.min(amount, Number(invoice.balance), Number(cn.totalAmount))
+        const applyAmt = Math.min(amount, Number(invoice.balance), Number(cn.balance))
 
         return this.prisma.$transaction(async (tx) => {
-            const newBalance = Math.max(0, Number(invoice.balance) - applyAmt)
+            const newInvoiceBalance = Math.max(0, Number(invoice.balance) - applyAmt)
             await tx.invoice.update({
                 where: { id: invoiceId },
                 data: {
-                    balance: newBalance,
-                    status: newBalance <= 0 ? 'PAID' as any : invoice.status,
+                    balance: newInvoiceBalance,
+                    status: newInvoiceBalance <= 0 ? 'PAID' as any : invoice.status,
                 },
             })
+            const newCreditBalance = Math.max(0, Number(cn.balance) - applyAmt)
             const updated = await tx.creditNote.update({
                 where: { id: creditNoteId },
-                data: { status: 'APPLIED' as any, invoiceId },
+                data: {
+                    status: newCreditBalance <= 0 ? 'APPLIED' as any : 'PARTIALLY_APPLIED' as any,
+                    invoiceId,
+                    balance: newCreditBalance,
+                    applications: {
+                        create: {
+                            workspaceId: invoice.workspaceId,
+                            invoiceId,
+                            amount: applyAmt,
+                        },
+                    },
+                },
                 include: { customer: { include: { contact: { select: { displayName: true } } } }, invoice: { select: { id: true, invoiceNumber: true } } },
             })
             return updated
@@ -1818,10 +1857,9 @@ export class ArRepository {
             },
         })
         if (!order) throw new Error('Sales order not found')
-        const invCount = await this.prisma.invoice.count({ where: { companyId } })
-        const invoiceNumber = `INV-${String(invCount + 1).padStart(6, '0')}`
 
         return this.prisma.$transaction(async (tx) => {
+            const invoiceNumber = await this.nextInvoiceNumber(tx, companyId)
             const invoice = await tx.invoice.create({
                 data: {
                     workspaceId,
