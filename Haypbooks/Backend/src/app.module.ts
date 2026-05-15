@@ -1,6 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common'
 import { ThrottlerModule } from '@nestjs/throttler'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { AuthModule } from './auth/auth.module'
 import { AppThrottlerGuard } from './shared/app-throttler.guard'
 import { UsersModule } from './users/users.module'
@@ -14,6 +14,7 @@ import { TenantsModule } from './tenants/tenants.module'
 import { CompanyContextMiddleware } from './shared/company-context.middleware'
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware'
 import { HealthModule } from './health/health.module'
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor'
 
 // CUTOVER: use Prisma repositories in all environments by default for production readiness.
 // Remove this env-controlled toggle once the mock layer is fully deprecated.
@@ -86,6 +87,8 @@ const RepositoriesModule = PrismaRepositoriesModule
   ],
   controllers: [TestController, OwnerController],
   providers: [
+    // Enforce lightweight request logging for every route.
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     // Enforce throttling globally (per-email when available) to keep the system
     // protected but avoid per-IP rate limiting issues during local E2E runs.
     { provide: APP_GUARD, useClass: AppThrottlerGuard },
