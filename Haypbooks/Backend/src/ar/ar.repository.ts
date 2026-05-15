@@ -33,6 +33,94 @@ export class ArRepository {
         return 'DRAFT'
     }
 
+    private roundMoney(value: number) {
+        return Math.round((Number(value) + Number.EPSILON) * 100) / 100
+    }
+
+    private async resolveInvoiceLineTaxData(tx: any, companyId: string, line: any) {
+        const taxCodeId = line.taxCodeId ?? null
+        let taxRateId = line.taxRateId ?? null
+        let taxRate = line.taxRate != null ? Number(line.taxRate) : null
+        const lineAmount = Number(line.amount ?? line.totalPrice ?? 0)
+        if (!taxCodeId && !taxRateId && taxRate == null) return null
+
+        if (!taxRateId && taxRate != null) {
+            const existingRate = await tx.taxRate.findFirst({ where: { companyId, rate: taxRate } })
+            if (existingRate) taxRateId = existingRate.id
+        }
+
+        if (taxCodeId && !taxRateId && taxRate != null) {
+            const codeRate = await tx.taxCodeRate.findFirst({ where: { companyId, taxCodeId, ratePct: taxRate } })
+            if (codeRate) taxRateId = codeRate.taxRateId
+        }
+
+        if (!taxCodeId && taxRateId) {
+            const codeRate = await tx.taxCodeRate.findFirst({ where: { companyId, taxRateId } })
+            if (codeRate) {
+                line.taxCodeId = codeRate.taxCodeId
+            }
+        }
+
+        if (!taxRateId && taxCodeId && taxRate != null) {
+            const existingRate = await tx.taxRate.findFirst({ where: { companyId, rate: taxRate } })
+            if (existingRate) {
+                taxRateId = existingRate.id
+            } else {
+                const createdRate = await tx.taxRate.create({
+                    data: {
+                        companyId,
+                        name: `Tax ${taxRate}%`,
+                        rate: taxRate,
+                        taxType: 'VAT',
+                        effectiveFrom: new Date(),
+                    },
+                })
+                taxRateId = createdRate.id
+                await tx.taxCodeRate.create({
+                    data: {
+                        companyId,
+                        taxCodeId,
+                        taxRateId: createdRate.id,
+                        sequence: 1,
+                        ratePct: taxRate,
+                    },
+                })
+            }
+        }
+
+        const effectiveTaxCodeId = line.taxCodeId ?? taxCodeId
+        if (!effectiveTaxCodeId || !taxRateId) return null
+        if (taxRate == null) {
+            const rateModel = await tx.taxRate.findUnique({ where: { id: taxRateId } })
+            taxRate = rateModel?.rate != null ? Number(rateModel.rate) : null
+        }
+        if (taxRate == null) return null
+
+        const amount = this.roundMoney(lineAmount * (taxRate / 100))
+        if (amount <= 0) return null
+        return { taxCodeId: effectiveTaxCodeId, taxRateId, amount }
+    }
+
+    private async createLineTaxesForInvoiceLines(tx: any, companyId: string, invoiceLines: any[], sourceLines: any[]) {
+        const taxRecords: Array<{ companyId: string; invoiceLineId: string; taxCodeId: string; taxRateId: string; amount: number }> = []
+        for (let index = 0; index < invoiceLines.length; index += 1) {
+            const sourceLine = sourceLines[index] ?? {}
+            const resolved = await this.resolveInvoiceLineTaxData(tx, companyId, sourceLine)
+            if (resolved) {
+                taxRecords.push({
+                    companyId,
+                    invoiceLineId: invoiceLines[index].id,
+                    taxCodeId: resolved.taxCodeId,
+                    taxRateId: resolved.taxRateId,
+                    amount: resolved.amount,
+                })
+            }
+        }
+        if (taxRecords.length) {
+            await tx.lineTax.createMany({ data: taxRecords })
+        }
+    }
+
     private buildDuplicateInvoiceNumber(sourceInvoiceNumber: string | null | undefined) {
         const source = String(sourceInvoiceNumber ?? '').trim()
         const sanitized = source.replace(/[^A-Za-z0-9-]/g, '').slice(0, 32)
@@ -624,7 +712,7 @@ export class ArRepository {
     async convertQuoteToInvoice(companyId: string, workspaceId: string, quoteId: string, createdById: string) {
         const quote = await this.prisma.quote.findFirst({
             where: { id: quoteId, companyId, deletedAt: null },
-            include: { lines: true },
+            include: { lines: { include: { LineTax: true } } },
         })
         if (!quote) return null
 
@@ -656,6 +744,18 @@ export class ArRepository {
                 },
                 include: { lines: true },
             })
+            const lineTaxes = quote.lines.flatMap((line, index) => {
+                return (line.LineTax ?? []).map((tax: any) => ({
+                    companyId,
+                    invoiceLineId: invoice.lines[index]?.id,
+                    taxCodeId: tax.taxCodeId,
+                    taxRateId: tax.taxRateId,
+                    amount: Number(tax.amount ?? 0),
+                }))
+            }).filter((tax) => tax.invoiceLineId)
+            if (lineTaxes.length) {
+                await tx.lineTax.createMany({ data: lineTaxes })
+            }
             // Mark quote as converted
             await tx.quote.update({
                 where: { id: quoteId },
@@ -730,37 +830,43 @@ export class ArRepository {
         paymentTermId?: string, currency?: string, createdById: string, lines: any[]
     }) {
         const totalAmount = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? 0), 0)
-        return this.prisma.invoice.create({
-            data: {
-                workspaceId: data.workspaceId,
-                companyId: data.companyId,
-                customerId: data.customerId,
-                status: 'DRAFT',
-                postingStatus: 'DRAFT',
-                totalAmount,
-                balance: totalAmount,
-                currency: await this.resolveCurrency(data.companyId, data.currency),
-                date: new Date(),
-                dueDate: data.dueDate ?? null,
-                paymentTermId: data.paymentTermId ?? null,
-                createdById: data.createdById,
-                lines: {
-                    create: data.lines.map((l: any) => ({
-                        companyId: data.companyId,
-                        workspaceId: data.workspaceId,
-                        description: String(l.description ?? ''),
-                        quantity: Number.isFinite(Number(l.quantity ?? 1)) ? Number(l.quantity ?? 1) : 1,
-                        unitPrice: Number.isFinite(Number(l.unitPrice ?? 0)) ? Number(l.unitPrice ?? 0) : 0,
-                        totalPrice: Number.isFinite(Number(l.amount ?? l.totalPrice ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0)))
-                            ? Number(l.amount ?? l.totalPrice ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0))
-                            : 0,
-                        itemId: l.itemId ?? undefined,
-                        discountPercent: l.discountPercent ?? null,
-                        discountAmount: l.discountAmount ?? null,
-                    })),
+        const currency = await this.resolveCurrency(data.companyId, data.currency)
+        return this.prisma.$transaction(async (tx) => {
+            const invoice = await tx.invoice.create({
+                data: {
+                    workspaceId: data.workspaceId,
+                    companyId: data.companyId,
+                    customerId: data.customerId,
+                    status: 'DRAFT',
+                    postingStatus: 'DRAFT',
+                    totalAmount,
+                    balance: totalAmount,
+                    currency,
+                    date: new Date(),
+                    dueDate: data.dueDate ?? null,
+                    paymentTermId: data.paymentTermId ?? null,
+                    createdById: data.createdById,
+                    lines: {
+                        create: data.lines.map((l: any) => ({
+                            companyId: data.companyId,
+                            workspaceId: data.workspaceId,
+                            description: String(l.description ?? ''),
+                            quantity: Number.isFinite(Number(l.quantity ?? 1)) ? Number(l.quantity ?? 1) : 1,
+                            unitPrice: Number.isFinite(Number(l.unitPrice ?? 0)) ? Number(l.unitPrice ?? 0) : 0,
+                            totalPrice: Number.isFinite(Number(l.amount ?? l.totalPrice ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0)))
+                                ? Number(l.amount ?? l.totalPrice ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0))
+                                : 0,
+                            itemId: l.itemId ?? undefined,
+                            discountPercent: l.discountPercent ?? null,
+                            discountAmount: l.discountAmount ?? null,
+                        })),
+                    },
                 },
-            },
-            include: { lines: true },
+                include: { lines: true },
+            })
+
+            await this.createLineTaxesForInvoiceLines(tx, data.companyId, invoice.lines, data.lines)
+            return invoice
         })
     }
 
@@ -808,61 +914,74 @@ export class ArRepository {
     async duplicateInvoice(companyId: string, invoiceId: string, createdById: string) {
         const source = await this.prisma.invoice.findFirst({
             where: { id: invoiceId, companyId, deletedAt: null },
-            include: { lines: true },
+            include: { lines: { include: { LineTax: true } } },
         })
         if (!source) return null
 
         const invoiceNumber = this.buildDuplicateInvoiceNumber(source.invoiceNumber)
 
-        return this.prisma.invoice.create({
-            data: {
-                workspaceId: source.workspaceId,
-                companyId: source.companyId,
-                customerId: source.customerId,
-                invoiceNumber,
-                status: 'DRAFT' as any,
-                paymentStatus: 'DRAFT' as any,
-                postingStatus: 'DRAFT' as any,
-                totalAmount: source.totalAmount,
-                balance: source.totalAmount,
-                currency: source.currency,
-                exchangeRate: source.exchangeRate,
-                baseTotal: source.baseTotal,
-                transactionType: source.transactionType,
-                discountAmount: source.discountAmount,
-                shippingAmount: source.shippingAmount,
-                otherCharges: source.otherCharges,
-                withholdingTaxAmount: source.withholdingTaxAmount,
-                finalTaxAmount: source.finalTaxAmount,
-                date: new Date(),
-                dueDate: source.dueDate,
-                paymentTermId: source.paymentTermId,
-                templateId: source.templateId,
-                invoiceTemplateId: source.invoiceTemplateId,
-                createdById,
-                updatedById: createdById,
-                lines: {
-                    create: source.lines.map((line: any) => ({
-                        companyId: source.companyId,
-                        workspaceId: source.workspaceId,
-                        description: line.description,
-                        quantity: line.quantity,
-                        unitPrice: line.unitPrice,
-                        totalPrice: line.totalPrice,
-                        itemId: line.itemId ?? undefined,
-                        discountPercent: line.discountPercent ?? null,
-                        discountAmount: line.discountAmount ?? null,
-                        classId: line.classId ?? undefined,
-                        locationId: line.locationId ?? undefined,
-                        projectId: line.projectId ?? undefined,
-                    })),
+        return this.prisma.$transaction(async (tx) => {
+            const invoice = await tx.invoice.create({
+                data: {
+                    workspaceId: source.workspaceId,
+                    companyId: source.companyId,
+                    customerId: source.customerId,
+                    invoiceNumber,
+                    status: 'DRAFT' as any,
+                    paymentStatus: 'DRAFT' as any,
+                    postingStatus: 'DRAFT' as any,
+                    totalAmount: source.totalAmount,
+                    balance: source.totalAmount,
+                    currency: source.currency,
+                    exchangeRate: source.exchangeRate,
+                    baseTotal: source.baseTotal,
+                    transactionType: source.transactionType,
+                    discountAmount: source.discountAmount,
+                    shippingAmount: source.shippingAmount,
+                    otherCharges: source.otherCharges,
+                    withholdingTaxAmount: source.withholdingTaxAmount,
+                    finalTaxAmount: source.finalTaxAmount,
+                    date: new Date(),
+                    dueDate: source.dueDate,
+                    paymentTermId: source.paymentTermId,
+                    templateId: source.templateId,
+                    invoiceTemplateId: source.invoiceTemplateId,
+                    createdById,
+                    updatedById: createdById,
+                    lines: {
+                        create: source.lines.map((line: any) => ({
+                            companyId: source.companyId,
+                            workspaceId: source.workspaceId,
+                            description: line.description,
+                            quantity: line.quantity,
+                            unitPrice: line.unitPrice,
+                            totalPrice: line.totalPrice,
+                            itemId: line.itemId ?? undefined,
+                            discountPercent: line.discountPercent ?? null,
+                            discountAmount: line.discountAmount ?? null,
+                            classId: line.classId ?? undefined,
+                            locationId: line.locationId ?? undefined,
+                            projectId: line.projectId ?? undefined,
+                        })),
+                    },
                 },
-            },
-            include: {
-                customer: { include: { contact: { select: { displayName: true } } } },
-                lines: { select: { id: true, description: true, quantity: true, unitPrice: true, totalPrice: true, itemId: true } },
-                createdBy: { select: { id: true, name: true } },
-            },
+                include: { lines: true },
+            })
+
+            const taxRecords = source.lines.flatMap((line: any, index: number) => {
+                return (line.LineTax ?? []).map((tax: any) => ({
+                    companyId: source.companyId,
+                    invoiceLineId: invoice.lines[index]?.id,
+                    taxCodeId: tax.taxCodeId,
+                    taxRateId: tax.taxRateId,
+                    amount: Number(tax.amount ?? 0),
+                }))
+            }).filter((tax) => tax.invoiceLineId)
+
+            if (taxRecords.length) {
+                await tx.lineTax.createMany({ data: taxRecords })
+            }
+            return invoice
         })
     }
 
@@ -1701,35 +1820,42 @@ export class ArRepository {
         if (!order) throw new Error('Sales order not found')
         const invCount = await this.prisma.invoice.count({ where: { companyId } })
         const invoiceNumber = `INV-${String(invCount + 1).padStart(6, '0')}`
-        const invoice = await this.prisma.invoice.create({
-            data: {
-                workspaceId,
-                companyId,
-                customerId: order.customerId,
-                invoiceNumber,
-                status: 'DRAFT' as any,
-                date: new Date(),
-                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                totalAmount: order.totalAmount,
-                balance: order.totalAmount,
-                lines: {
-                    create: order.lines.map((l: any) => ({
-                        companyId,
-                        workspaceId,
-                        description: l.description,
-                        quantity: l.quantity,
-                        unitPrice: l.unitPrice,
-                        totalPrice: l.amount,
-                        itemId: l.itemId ?? undefined,
-                    })),
+
+        return this.prisma.$transaction(async (tx) => {
+            const invoice = await tx.invoice.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    customerId: order.customerId,
+                    invoiceNumber,
+                    status: 'DRAFT' as any,
+                    date: new Date(),
+                    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    totalAmount: order.totalAmount,
+                    balance: order.totalAmount,
+                    lines: {
+                        create: order.lines.map((l: any) => ({
+                            companyId,
+                            workspaceId,
+                            description: l.description,
+                            quantity: l.quantity,
+                            unitPrice: l.unitPrice,
+                            totalPrice: l.amount,
+                            itemId: l.itemId ?? undefined,
+                        })),
+                    },
                 },
-            },
+                include: { lines: true },
+            })
+
+            await this.createLineTaxesForInvoiceLines(tx, companyId, invoice.lines, order.lines)
+
+            await tx.salesOrder.update({
+                where: { id: orderId },
+                data: { status: 'FULFILLED', invoiceId: invoice.id },
+            })
+            return { invoiceId: invoice.id, invoiceNumber }
         })
-        await this.prisma.salesOrder.update({
-            where: { id: orderId },
-            data: { status: 'FULFILLED', invoiceId: invoice.id },
-        })
-        return { invoiceId: invoice.id, invoiceNumber }
     }
 
     // ─── Refunds ──────────────────────────────────────────────────────────────

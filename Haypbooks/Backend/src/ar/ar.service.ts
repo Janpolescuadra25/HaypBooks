@@ -954,6 +954,9 @@ export class ArService {
                 amount: Number.isFinite(amount) ? amount : 0,
                 itemId: l.itemId ?? undefined,
                 accountId: l.accountId ?? null,
+                taxCodeId: l.taxCodeId ?? null,
+                taxRate: l.taxRate != null ? Number(l.taxRate) : null,
+                taxRateId: l.taxRateId ?? null,
             }
         }).filter((line) => line.description.length > 0)
         if (!normalizedLines.length) throw new BadRequestException('At least one invoice line with a description is required')
