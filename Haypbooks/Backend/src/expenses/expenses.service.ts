@@ -3,6 +3,7 @@ import { ApService } from '../ap/ap.service'
 import { AttachmentsService } from '../attachments/attachments.service'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { ExpensePolicyService } from './expense-policy.service'
 
 @Injectable()
 export class ExpensesService {
@@ -11,6 +12,7 @@ export class ExpensesService {
     private readonly prisma: PrismaService,
     private readonly attachmentsService: AttachmentsService,
     private readonly subLedgerService: SubLedgerService,
+    private readonly expensePolicyService: ExpensePolicyService,
   ) {}
 
   private async getWorkspaceId(companyId: string) {
@@ -102,6 +104,21 @@ export class ExpensesService {
     const lines = Array.isArray(data.lines) ? data.lines : []
     if (!lines.length) throw new BadRequestException('At least one reimbursement line is required')
     const totalAmount = lines.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0)
+    const validationLines = lines.map((line: any) => ({
+      category: line.category ?? null,
+      amount: Number(line.amount ?? 0),
+      receiptUrl: line.receiptUrl ?? null,
+      date: line.date ? new Date(line.date) : new Date(),
+    }))
+    const validationMode = data.status === 'APPROVED' || data.status === 'PAID' ? 'approve' : 'create'
+    const policyViolations = await this.expensePolicyService.validateExpenseAgainstPolicy(companyId, {
+      lines: validationLines,
+      submittedAt: new Date(),
+    }, validationMode)
+    if (policyViolations.length) {
+      throw new BadRequestException(policyViolations)
+    }
+
     const record = await this.prisma.expenseClaim.create({
       data: {
         workspaceId,
@@ -118,8 +135,8 @@ export class ExpensesService {
         toDate: data.toDate ? new Date(data.toDate) : null,
         advancePayment: data.advancePayment != null ? Number(data.advancePayment) : null,
         totalAmount,
-        submittedAt: data.status === 'SUBMITTED' ? new Date() : null,
-        approvedAt: data.status === 'APPROVED' ? new Date() : null,
+        submittedAt: ['SUBMITTED', 'APPROVED', 'PAID'].includes(data.status) ? new Date() : null,
+        approvedAt: ['APPROVED', 'PAID'].includes(data.status) ? new Date() : null,
         reimbursedAt: data.status === 'PAID' ? new Date() : null,
         lines: {
           create: lines.map((line: any) => ({
@@ -165,11 +182,26 @@ export class ExpensesService {
 
   async submitExpenseReport(userId: string, companyId: string, expenseId: string) {
     await this.assertAccess(userId, companyId)
-    const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId } })
+    const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId }, include: { lines: true } })
     if (!record) throw new NotFoundException('Expense report not found')
     if (record.status !== 'DRAFT' && record.status !== 'REJECTED') {
       throw new BadRequestException('Only draft or rejected reports can be submitted')
     }
+
+    const validationLines = (record.lines as any[]).map((line) => ({
+      category: line.category ?? null,
+      amount: Number(line.amount ?? 0),
+      receiptUrl: line.receiptUrl ?? null,
+      date: line.date ? new Date(line.date) : new Date(),
+    }))
+    const policyViolations = await this.expensePolicyService.validateExpenseAgainstPolicy(companyId, {
+      lines: validationLines,
+      submittedAt: new Date(),
+    }, 'create')
+    if (policyViolations.length) {
+      throw new BadRequestException(policyViolations)
+    }
+
     return this.prisma.expenseClaim.update({
       where: { id: expenseId },
       data: { status: 'SUBMITTED', submittedAt: new Date() },
@@ -182,6 +214,20 @@ export class ExpensesService {
     if (!record) throw new NotFoundException('Expense report not found')
     if (record.status !== 'SUBMITTED') {
       throw new BadRequestException('Only submitted reports can be approved')
+    }
+
+    const validationLines = (record.lines as any[]).map((line) => ({
+      category: line.category ?? null,
+      amount: Number(line.amount ?? 0),
+      receiptUrl: line.receiptUrl ?? null,
+      date: line.date ? new Date(line.date) : new Date(),
+    }))
+    const policyViolations = await this.expensePolicyService.validateExpenseAgainstPolicy(companyId, {
+      lines: validationLines,
+      submittedAt: record.submittedAt ? new Date(record.submittedAt) : new Date(),
+    }, 'approve')
+    if (policyViolations.length) {
+      throw new BadRequestException(policyViolations)
     }
 
     const workspaceId = (record as any).workspaceId
