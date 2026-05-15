@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { randomUUID } from 'crypto'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
+import { encryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
 export class ArRepository {
@@ -321,7 +322,7 @@ export class ArRepository {
                         contactEmails: { create: [{ email: data.email, type: 'WORK', isPrimary: true }] },
                     } : {}),
                     ...(data.phone ? {
-                        contactPhones: { create: [{ phone: data.phone, type: 'WORK', isPrimary: true }] },
+                        contactPhones: { create: [{ phone: data.phone, phoneEncrypted: encryptField(data.phone), type: 'WORK', isPrimary: true }] },
                     } : {}),
                 },
                 include: { contactEmails: true, contactPhones: true },
@@ -372,7 +373,15 @@ export class ArRepository {
             if (data.phone !== undefined) {
                 await tx.contactPhone.deleteMany({ where: { contactId } })
                 if (data.phone) {
-                    await tx.contactPhone.create({ data: { contactId, phone: data.phone, type: 'WORK', isPrimary: true } })
+                    await tx.contactPhone.create({
+                        data: {
+                            contactId,
+                            phone: data.phone,
+                            phoneEncrypted: encryptField(data.phone),
+                            type: 'WORK',
+                            isPrimary: true,
+                        },
+                    })
                 }
             }
             // Persist address changes

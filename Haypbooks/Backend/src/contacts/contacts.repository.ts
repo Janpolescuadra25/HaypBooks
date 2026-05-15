@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { encryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
 export class ContactsRepository {
@@ -74,7 +75,13 @@ export class ContactsRepository {
 
       if (data.phone) {
         await tx.contactPhone.create({
-          data: { contactId: contact.id, phone: data.phone, type: 'WORK', isPrimary: true },
+          data: {
+            contactId: contact.id,
+            phone: data.phone,
+            phoneEncrypted: encryptField(data.phone),
+            type: 'WORK',
+            isPrimary: true,
+          },
         })
       }
 
@@ -112,9 +119,20 @@ export class ContactsRepository {
       if (data.phone) {
         const existing = await tx.contactPhone.findFirst({ where: { contactId: id, isPrimary: true } })
         if (existing) {
-          await tx.contactPhone.update({ where: { id: existing.id }, data: { phone: data.phone } })
+          await tx.contactPhone.update({
+            where: { id: existing.id },
+            data: { phone: data.phone, phoneEncrypted: encryptField(data.phone) },
+          })
         } else {
-          await tx.contactPhone.create({ data: { contactId: id, phone: data.phone, type: 'WORK', isPrimary: true } })
+          await tx.contactPhone.create({
+            data: {
+              contactId: id,
+              phone: data.phone,
+              phoneEncrypted: encryptField(data.phone),
+              type: 'WORK',
+              isPrimary: true,
+            },
+          })
         }
       }
 
