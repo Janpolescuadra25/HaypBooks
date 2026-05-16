@@ -148,6 +148,23 @@ export class ArRepository {
         return `INV-${String(sequence.nextNumber - 1).padStart(6, '0')}`
     }
 
+    private async nextSalesOrderNumber(tx: any, companyId: string) {
+        const sequence = await tx.documentSequence.upsert({
+            where: { companyId_documentType: { companyId, documentType: 'SALES_ORDER_NUMBER' } },
+            create: {
+                companyId,
+                documentType: 'SALES_ORDER_NUMBER',
+                prefix: 'SO-',
+                nextNumber: 2,
+                format: 'SO-{number}',
+            },
+            update: {
+                nextNumber: { increment: 1 },
+            },
+        })
+        return `SO-${String(sequence.nextNumber - 1).padStart(5, '0')}`
+    }
+
     async generateInvoiceNumber(companyId: string) {
         return this.prisma.$transaction(async (tx) => this.nextInvoiceNumber(tx, companyId))
     }
@@ -1801,32 +1818,33 @@ export class ArRepository {
     }
 
     async createSalesOrder(workspaceId: string, companyId: string, data: any) {
-        const count = await this.prisma.salesOrder.count({ where: { companyId } })
-        const orderNumber = data.orderNumber ?? `SO-${String(count + 1).padStart(6, '0')}-${Date.now().toString(36).toUpperCase()}`
         const totalAmount = (data.lines ?? []).reduce((s: number, l: any) => s + (Number(l.quantity) * Number(l.unitPrice)), 0)
-        const r = await this.prisma.salesOrder.create({
-            data: {
-                workspaceId,
-                companyId,
-                customerId: data.customerId,
-                orderNumber,
-                status: 'DRAFT',
-                orderDate: data.orderDate ? new Date(data.orderDate) : new Date(),
-                shipmentDate: data.shipDate ? new Date(data.shipDate) : null,
-                totalAmount,
-                lines: {
-                    create: (data.lines ?? []).map((l: any) => ({
-                        description: l.description,
-                        quantity: l.quantity,
-                        unitPrice: l.unitPrice,
-                        amount: Number(l.quantity) * Number(l.unitPrice),
-                        itemId: l.itemId ?? undefined,
-                    })),
+        const r = await this.prisma.$transaction(async (tx) => {
+            const orderNumber = data.orderNumber ?? await this.nextSalesOrderNumber(tx, companyId)
+            return tx.salesOrder.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    customerId: data.customerId,
+                    orderNumber,
+                    status: 'DRAFT',
+                    orderDate: data.orderDate ? new Date(data.orderDate) : new Date(),
+                    shipmentDate: data.shipDate ? new Date(data.shipDate) : null,
+                    totalAmount,
+                    lines: {
+                        create: (data.lines ?? []).map((l: any) => ({
+                            description: l.description,
+                            quantity: l.quantity,
+                            unitPrice: l.unitPrice,
+                            amount: Number(l.quantity) * Number(l.unitPrice),
+                            itemId: l.itemId ?? undefined,
+                        })),
+                    },
                 },
-            },
-            include: {
-                customer: { include: { contact: { select: { displayName: true } } } },
-            },
+                include: {
+                    customer: { include: { contact: { select: { displayName: true } } } },
+                },
+            })
         })
         return this.normalizeSalesOrder(r)
     }
