@@ -181,10 +181,11 @@ export default function NewJournalEntryPage() {
       })
       router.push('/accounting/core-accounting/journal-entries')
     } catch (e: unknown) {
+      const error = e as any
       const msg =
-        e instanceof Error
-          ? e.message
-          : (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        (error instanceof Error ? error.message : undefined)
       setError(msg ?? 'Failed to create journal entry')
     } finally {
       setSaving(false)
