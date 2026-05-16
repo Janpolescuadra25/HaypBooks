@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, BadRequestException } from '@nestjs/common'
 import fs from 'fs'
 import path from 'path'
 import { Prisma } from '@prisma/client'
@@ -162,6 +162,36 @@ export class SubLedgerService {
     return created
   }
 
+  private async assertPeriodOpen(companyId: string, date: Date, tx: any): Promise<void> {
+    const period = await tx.accountingPeriod.findFirst({
+      where: {
+        companyId,
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+    })
+
+    if (period && (period.status === 'CLOSED' || period.status === 'LOCKED')) {
+      throw new BadRequestException(
+        `Cannot post to closed accounting period (${period.startDate.toISOString().split('T')[0]} to ${period.endDate.toISOString().split('T')[0]}). Period status: ${period.status}.`,
+      )
+    }
+
+    const lock = await tx.postingLock.findFirst({
+      where: {
+        companyId,
+        isActive: true,
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+    })
+    if (lock) {
+      throw new BadRequestException(
+        `Cannot post while a posting lock is active (${lock.module}). Locked from ${lock.startDate.toISOString().split('T')[0]} to ${lock.endDate.toISOString().split('T')[0]}.`,
+      )
+    }
+  }
+
   private async findExpenseAccount(companyId: string, tx?: any): Promise<string | null> {
     const db = tx ?? this.prisma
     const account = await db.account.findFirst({
@@ -273,6 +303,7 @@ export class SubLedgerService {
 
       // DR Accounts Receivable for the full gross amount
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(invoice.companyId, invoice.issuedAt ?? invoice.date ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(invoice.companyId, 'AR')
         const je = await this.createPostedJE(tx, {
           workspaceId: invoice.workspaceId,
@@ -328,6 +359,7 @@ export class SubLedgerService {
       }))
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(invoice.companyId, new Date(), tx)
         const entryNumber = await this.nextEntryNumber(invoice.companyId, 'ARV')
         const je = await this.createPostedJE(tx, {
           workspaceId: invoice.workspaceId,
@@ -381,6 +413,7 @@ export class SubLedgerService {
       const amount = Number(payment.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(companyId, payment.paymentDate ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(companyId, 'RCP')
         const je = await this.createPostedJE(tx, {
           workspaceId: payment.workspaceId,
@@ -439,6 +472,7 @@ export class SubLedgerService {
           this.logger.warn(`[SubLedger] Cannot reverse payment ${paymentId}: missing companyId`)
           return
         }
+        await this.assertPeriodOpen(companyId, new Date(), tx)
         const entryNumber = await this.nextEntryNumber(companyId, 'RVP')
         const je = await this.createPostedJE(tx, {
           workspaceId: payment.workspaceId,
@@ -547,6 +581,7 @@ export class SubLedgerService {
       }
 
       if (tx) {
+        await this.assertPeriodOpen(bill.companyId, bill.issuedAt ?? bill.date ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(bill.companyId, 'AP')
         const je = await createAndPostJE(tx, {
           workspaceId: bill.workspaceId,
@@ -566,6 +601,7 @@ export class SubLedgerService {
         }
       } else {
         await this.prisma.$transaction(async (txClient) => {
+          await this.assertPeriodOpen(bill.companyId, bill.issuedAt ?? bill.date ?? new Date(), txClient)
           const entryNumber = await this.nextEntryNumber(bill.companyId, 'AP')
           const je = await createAndPostJE(txClient, {
             workspaceId: bill.workspaceId,
@@ -627,6 +663,7 @@ export class SubLedgerService {
       if (!originalJE || !originalJE.lines?.length) return
 
       const runReversal = async (txClient: any) => {
+        await this.assertPeriodOpen(bill.companyId, new Date(), txClient)
         const entryNumber = await this.nextEntryNumber(bill.companyId, 'REV', txClient)
         const reversalLines = originalJE.lines.map((l) => ({
           accountId: l.accountId,
@@ -698,6 +735,7 @@ export class SubLedgerService {
       const amount = Number(payment.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(companyId, payment.paymentDate ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(companyId, 'DIS')
         const je = await this.createPostedJE(tx, {
           workspaceId: payment.workspaceId,
@@ -741,6 +779,7 @@ export class SubLedgerService {
       const amount = Number(deposit.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(deposit.companyId, deposit.depositDate ?? deposit.date ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(deposit.companyId, 'BD')
         const je = await this.createPostedJE(tx, {
           workspaceId: deposit.workspaceId,
@@ -786,6 +825,7 @@ export class SubLedgerService {
       const amount = Number(refund.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(refund.companyId, refund.refundDate ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(refund.companyId, 'CRF')
         const je = await this.createPostedJE(tx, {
           workspaceId: refund.workspaceId,
@@ -833,6 +873,7 @@ export class SubLedgerService {
       const amount = Number(refund.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(refund.companyId, refund.refundDate ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(refund.companyId, 'VRF')
         const je = await this.createPostedJE(tx, {
           workspaceId: refund.workspaceId,
@@ -888,6 +929,7 @@ export class SubLedgerService {
       const amount = Number(cn.totalAmount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(cn.companyId, cn.issuedAt ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(cn.companyId, 'CN')
         const je = await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
@@ -942,6 +984,7 @@ export class SubLedgerService {
       const amount = Number(cn.totalAmount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(cn.companyId, new Date(), tx)
         const entryNumber = await this.nextEntryNumber(cn.companyId, 'CNV')
         await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
@@ -993,6 +1036,7 @@ export class SubLedgerService {
       const amount = Number(writeOff.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(writeOff.companyId, writeOff.writeOffDate ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(writeOff.companyId, 'WO')
         const je = await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
@@ -1036,6 +1080,7 @@ export class SubLedgerService {
       const amount = Number(writeOff.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(writeOff.companyId, new Date(), tx)
         const entryNumber = await this.nextEntryNumber(writeOff.companyId, 'WOV')
         await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
@@ -1088,6 +1133,7 @@ export class SubLedgerService {
       const amount = Number(refund.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(refund.companyId, refund.refundDate ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(refund.companyId, 'RF')
         const je = await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
@@ -1131,6 +1177,7 @@ export class SubLedgerService {
       const amount = Number(refund.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(refund.companyId, new Date(), tx)
         const entryNumber = await this.nextEntryNumber(refund.companyId, 'RFV')
         await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
@@ -1180,6 +1227,7 @@ export class SubLedgerService {
 
       let jeId: string | null = null
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(data.companyId, new Date(), tx)
         const entryNumber = await this.nextEntryNumber(data.companyId, 'RR')
         const je = await this.createPostedJE(tx, {
           workspaceId: data.workspaceId,
@@ -1219,6 +1267,7 @@ export class SubLedgerService {
       if (!deferredRevenueId || !revenueAccountId) return
 
       await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(data.companyId, new Date(), tx)
         const entryNumber = await this.nextEntryNumber(data.companyId, 'RRV')
         await this.createPostedJE(tx, {
           workspaceId: data.workspaceId,
@@ -1275,6 +1324,7 @@ export class SubLedgerService {
         }
 
         const totalDebit = this.roundMoney(debitLines.reduce((s, l) => s + l.debit, 0))
+        await this.assertPeriodOpen(companyId, new Date(), db)
         const entryNumber = await this.nextEntryNumber(companyId, 'EXP', db)
         const jeId = await createAndPostJE(db, {
           workspaceId,
@@ -1340,6 +1390,7 @@ export class SubLedgerService {
         if (existingReimbursement) return
 
         const amt = this.roundMoney(amount)
+        await this.assertPeriodOpen(companyId, new Date(), db)
         const entryNumber = await this.nextEntryNumber(companyId, 'EXR', db)
         await createAndPostJE(db, {
           workspaceId,
@@ -1394,6 +1445,7 @@ export class SubLedgerService {
         expAccountId = expAccountId ?? expenseFallback.id
 
         const amt = this.roundMoney(amount)
+        await this.assertPeriodOpen(companyId, new Date(), db)
         const entryNumber = await this.nextEntryNumber(companyId, 'MIL', db)
         const jeId = await createAndPostJE(db, {
           workspaceId,
@@ -1453,6 +1505,7 @@ export class SubLedgerService {
         expAccountId = expAccountId ?? expenseFallback.id
 
         const amt = this.roundMoney(amount)
+        await this.assertPeriodOpen(companyId, new Date(), db)
         const entryNumber = await this.nextEntryNumber(companyId, 'PER', db)
         const jeId = await createAndPostJE(db, {
           workspaceId,
@@ -1543,7 +1596,10 @@ export class SubLedgerService {
     if (tx) {
       await run(tx)
     } else {
-      await this.prisma.$transaction(run)
+      await this.prisma.$transaction(async (txClient) => {
+        await this.assertPeriodOpen(vc.companyId, new Date(vc.date ?? Date.now()), txClient)
+        await run(txClient)
+      })
     }
   }
 }
