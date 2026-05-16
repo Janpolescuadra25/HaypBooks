@@ -47,7 +47,7 @@ export default function Page() {
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, asOf])
 
   useEffect(() => {
     fetchReport()
@@ -73,8 +73,8 @@ export default function Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Trial Balance</h1>
-          <p className="text-sm text-emerald-600/80">As of {report ? new Date(report.asOf).toLocaleDateString() : new Date(asOf).toLocaleDateString()}</p>
-          <p className="text-sm text-slate-500">Generated: {report ? new Date(report.generatedAt).toLocaleString() : '—'}</p>
+          <p className="text-sm text-emerald-600/80">As of {report?.asOf ? new Date(report.asOf).toLocaleDateString() : new Date(asOf).toLocaleDateString()}</p>
+          <p className="text-sm text-slate-500">Generated: {report?.generatedAt ? new Date(report.generatedAt).toLocaleString() : '—'}</p>
         </div>
         <div className="flex items-center gap-3">
           <div>
@@ -103,7 +103,7 @@ export default function Page() {
             </tr>
           </thead>
           <tbody>
-            {report.accounts.map((row) => (
+            {(report?.accounts ?? []).map((row) => (
               <tr key={row.accountId} className="border-b border-emerald-50 hover:bg-emerald-50/30">
                 <td className="px-4 py-2">{row.accountName}</td>
                 <td className="px-4 py-2 hidden md:table-cell">{row.accountCode}</td>
@@ -117,16 +117,16 @@ export default function Page() {
           <tfoot>
             <tr className="border-t border-emerald-200 font-semibold">
               <td className="px-4 py-2" colSpan={3}>Totals</td>
-              <td className="px-4 py-2 text-right">{fmt(report.totals.totalDebit)}</td>
-              <td className="px-4 py-2 text-right">{fmt(report.totals.totalCredit)}</td>
-              <td className="px-4 py-2 text-right">{fmt(report.totals.netBalance)}</td>
+              <td className="px-4 py-2 text-right">{fmt(report?.totals?.totalDebit ?? 0)}</td>
+              <td className="px-4 py-2 text-right">{fmt(report?.totals?.totalCredit ?? 0)}</td>
+              <td className="px-4 py-2 text-right">{fmt(report?.totals?.netBalance ?? 0)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
-      <div className={`text-sm ${Math.abs(report.totals.netBalance) < 0.005 ? 'text-emerald-700' : 'text-red-600'}`}>
-        Books are {Math.abs(report.totals.netBalance) < 0.005 ? 'balanced' : 'not balanced'}.
+      <div className={`text-sm ${Math.abs(report?.totals?.netBalance ?? 0) < 0.005 ? 'text-emerald-700' : 'text-red-600'}`}>
+        Books are {Math.abs(report?.totals?.netBalance ?? 0) < 0.005 ? 'balanced' : 'not balanced'}.
       </div>
     </div>
   )

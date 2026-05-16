@@ -51,8 +51,10 @@ export default function Page() {
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
-  if (cidLoading) return <div className="p-6 text-center">Loading…</div>
+  if (cidLoading || loading) return <div className="p-6 text-center">Loading…</div>
   if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
+  if (error) return <div className="p-6 text-center text-red-600">{error}</div>
+  if (!report) return <div className="p-6 text-center text-slate-600">No profit and loss data available.</div>
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -110,18 +112,18 @@ export default function Page() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl border border-emerald-100 p-5">
               <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Total Revenue</p>
-              <p className="text-3xl font-black text-emerald-800 mt-2">{fmt(report.totalRevenue)}</p>
+              <p className="text-3xl font-black text-emerald-800 mt-2">{fmt(report?.totalRevenue ?? 0)}</p>
             </div>
             <div className="bg-white rounded-xl border border-rose-100 p-5">
               <p className="text-xs font-bold text-rose-500 uppercase tracking-widest">Total Expenses</p>
-              <p className="text-3xl font-black text-rose-800 mt-2">{fmt(report.totalExpenses)}</p>
+              <p className="text-3xl font-black text-rose-800 mt-2">{fmt(report?.totalExpenses ?? 0)}</p>
             </div>
-            <div className={`bg-white rounded-xl border p-5 ${report.netIncome >= 0 ? 'border-emerald-200' : 'border-red-200'}`}>
-              <p className={`text-xs font-bold uppercase tracking-widest ${report.netIncome >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <div className={`bg-white rounded-xl border p-5 ${((report?.netIncome ?? 0) >= 0) ? 'border-emerald-200' : 'border-red-200'}`}>
+              <p className={`text-xs font-bold uppercase tracking-widest ${((report?.netIncome ?? 0) >= 0) ? 'text-emerald-500' : 'text-red-500'}`}>
                 Net Income
               </p>
-              <p className={`text-3xl font-black mt-2 ${report.netIncome >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
-                {fmt(report.netIncome)}
+              <p className={`text-3xl font-black mt-2 ${((report?.netIncome ?? 0) >= 0) ? 'text-emerald-800' : 'text-red-700'}`}>
+                {fmt(report?.netIncome ?? 0)}
               </p>
             </div>
           </div>
@@ -132,30 +134,30 @@ export default function Page() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-slate-700">
                 <span>Total Revenue</span>
-                <span className="font-semibold text-emerald-700">{fmt(report.totalRevenue)}</span>
+                <span className="font-semibold text-emerald-700">{fmt(report?.totalRevenue ?? 0)}</span>
               </div>
               <div className="flex justify-between text-slate-700">
                 <span>Total Expenses</span>
-                <span className="font-semibold text-rose-700">({fmt(report.totalExpenses)})</span>
+                <span className="font-semibold text-rose-700">({fmt(report?.totalExpenses ?? 0)})</span>
               </div>
               <div className="border-t border-emerald-100 pt-2 flex justify-between font-bold text-sm">
                 <span className="text-slate-800">Net Income</span>
-                <span className={report.netIncome >= 0 ? 'text-emerald-800' : 'text-red-700'}>
-                  {fmt(report.netIncome)}
+                <span className={((report?.netIncome ?? 0) >= 0) ? 'text-emerald-800' : 'text-red-700'}>
+                  {fmt(report?.netIncome ?? 0)}
                 </span>
               </div>
-              {report.totalRevenue > 0 && (
+              {(report?.totalRevenue ?? 0) > 0 && (
                 <div className="flex justify-between text-xs text-slate-500 pt-1">
                   <span>Net Margin</span>
-                  <span>{((report.netIncome / report.totalRevenue) * 100).toFixed(1)}%</span>
+                  <span>{(((report?.netIncome ?? 0) / (report?.totalRevenue ?? 1)) * 100).toFixed(1)}%</span>
                 </div>
               )}
             </div>
           </div>
 
           <p className="text-xs text-slate-400">
-            Generated: {new Date(report.generatedAt).toLocaleString()} — Period:{' '}
-            {new Date(report.from).toLocaleDateString()} – {new Date(report.to).toLocaleDateString()}
+            Generated: {report?.generatedAt ? new Date(report.generatedAt).toLocaleString() : '—'} — Period:{' '}
+            {report?.from ? new Date(report.from).toLocaleDateString() : '—'} – {report?.to ? new Date(report.to).toLocaleDateString() : '—'}
           </p>
         </>
       )}

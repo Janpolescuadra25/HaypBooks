@@ -72,7 +72,7 @@ export default function Page() {
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Balance Sheet</h1>
           <p className="text-sm text-emerald-600/80">As of {new Date(report?.asOf ?? asOf).toLocaleDateString()}</p>
-          <p className="text-xs text-slate-500">Generated: {report ? new Date(report.generatedAt).toLocaleString() : '—'}</p>
+          <p className="text-xs text-slate-500">Generated: {report?.generatedAt ? new Date(report.generatedAt).toLocaleString() : '—'}</p>
         </div>
         <div className="flex items-center gap-3">
           <div>
@@ -89,15 +89,15 @@ export default function Page() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Section title="Assets" total={report.sections.assets.total} fmt={fmt} data={report.sections.assets} />
+        <Section title="Assets" total={report?.sections?.assets?.total ?? 0} fmt={fmt} data={report?.sections?.assets ?? { accounts: [], total: 0 }} />
         <div className="space-y-4">
-          <Section title="Liabilities" total={report.sections.liabilities.total} fmt={fmt} data={report.sections.liabilities} />
-          <EquitySection equity={report.sections.equity} fmt={fmt} />
+          <Section title="Liabilities" total={report?.sections?.liabilities?.total ?? 0} fmt={fmt} data={report?.sections?.liabilities ?? { accounts: [], total: 0 }} />
+          <EquitySection equity={report?.sections?.equity ?? { accounts: [], total: 0 }} fmt={fmt} />
         </div>
       </div>
 
-      <div className={`rounded-lg p-4 text-sm font-semibold ${report.isBalanced ? 'bg-emerald-50 border border-emerald-100 text-emerald-800' : 'bg-red-50 border border-red-100 text-red-700'}`}>
-        {report.isBalanced
+      <div className={`rounded-lg p-4 text-sm font-semibold ${(report?.isBalanced ?? false) ? 'bg-emerald-50 border border-emerald-100 text-emerald-800' : 'bg-red-50 border border-red-100 text-red-700'}`}>
+        {report?.isBalanced
           ? 'Balanced: Assets = Liabilities + Equity'
           : 'Unbalanced: Check GL posting and trial balance values.'}
       </div>

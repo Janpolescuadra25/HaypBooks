@@ -76,8 +76,10 @@ export default function Page() {
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
-  if (cidLoading) return <div className="p-6 text-center">Loading…</div>
+  if (cidLoading || loading) return <div className="p-6 text-center">Loading…</div>
   if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
+  if (error) return <div className="p-6 text-center text-red-600">{error}</div>
+  if (!report) return <div className="p-6 text-center text-slate-600">No cash flow data available.</div>
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -134,30 +136,30 @@ export default function Page() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl border border-emerald-100 p-5">
               <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Operating Activities</p>
-              <p className={`text-2xl font-black mt-2 ${report.operating.total >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
-                {fmt(report.operating.total)}
+              <p className={`text-2xl font-black mt-2 ${((report?.sections?.operating?.total ?? 0) >= 0) ? 'text-emerald-800' : 'text-red-700'}`}>
+                {fmt(report?.sections?.operating?.total ?? 0)}
               </p>
             </div>
             <div className="bg-white rounded-xl border border-slate-100 p-5">
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Investing Activities</p>
-              <p className={`text-2xl font-black mt-2 ${report.investing.total >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
-                {fmt(report.investing.total)}
+              <p className={`text-2xl font-black mt-2 ${((report?.sections?.investing?.total ?? 0) >= 0) ? 'text-emerald-800' : 'text-red-700'}`}>
+                {fmt(report?.sections?.investing?.total ?? 0)}
               </p>
             </div>
             <div className="bg-white rounded-xl border border-slate-100 p-5">
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Financing Activities</p>
-              <p className={`text-2xl font-black mt-2 ${report.financing.total >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
-                {fmt(report.financing.total)}
+              <p className={`text-2xl font-black mt-2 ${((report?.sections?.financing?.total ?? 0) >= 0) ? 'text-emerald-800' : 'text-red-700'}`}>
+                {fmt(report?.sections?.financing?.total ?? 0)}
               </p>
             </div>
           </div>
 
           {/* Net Cash Change */}
-          <div className={`rounded-xl border p-5 ${report.netCashFlow >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+          <div className={`rounded-xl border p-5 ${(report?.netCashFlow ?? 0) >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
             <div className="flex justify-between items-center">
               <p className="text-sm font-bold text-slate-700 uppercase tracking-wide">Net Change in Cash</p>
-              <p className={`text-2xl font-black ${report.netCashFlow >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
-                {fmt(report.netCashFlow)}
+              <p className={`text-2xl font-black ${(report?.netCashFlow ?? 0) >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
+                {fmt(report?.netCashFlow ?? 0)}
               </p>
             </div>
           </div>
@@ -166,8 +168,8 @@ export default function Page() {
           <CashFlowSection
             title="Operating Activities"
             color="emerald"
-            items={report.sections.operating.items}
-            total={report.sections.operating.total}
+            items={report?.sections?.operating?.items ?? []}
+            total={report?.sections?.operating?.total ?? 0}
             totalLabel="Net Cash from Operating Activities"
             fmt={fmt}
           />
@@ -176,8 +178,8 @@ export default function Page() {
           <CashFlowSection
             title="Investing Activities"
             color="blue"
-            items={report.sections.investing.items}
-            total={report.sections.investing.total}
+            items={report?.sections?.investing?.items ?? []}
+            total={report?.sections?.investing?.total ?? 0}
             totalLabel="Net Cash from Investing Activities"
             fmt={fmt}
           />
@@ -186,8 +188,8 @@ export default function Page() {
           <CashFlowSection
             title="Financing Activities"
             color="violet"
-            items={report.sections.financing.items}
-            total={report.sections.financing.total}
+            items={report?.sections?.financing?.items ?? []}
+            total={report?.sections?.financing?.total ?? 0}
             totalLabel="Net Cash from Financing Activities"
             fmt={fmt}
           />
@@ -195,20 +197,20 @@ export default function Page() {
           <div className="bg-white rounded-xl border border-emerald-100 p-5 text-sm space-y-2">
             <div className="flex justify-between text-slate-700">
               <span>Opening Cash</span>
-              <span className="font-semibold">{fmt(report.openingCash)}</span>
+              <span className="font-semibold">{fmt(report?.openingCash ?? 0)}</span>
             </div>
             <div className="flex justify-between text-slate-700">
               <span>Closing Cash</span>
-              <span className="font-semibold">{fmt(report.closingCash)}</span>
+              <span className="font-semibold">{fmt(report?.closingCash ?? 0)}</span>
             </div>
             <div className="flex justify-between text-slate-700">
               <span>Cash Change Variance</span>
-              <span className="font-semibold">{fmt(report.cashChangeVariance)}</span>
+              <span className="font-semibold">{fmt(report?.cashChangeVariance ?? 0)}</span>
             </div>
           </div>
 
           <p className="text-xs text-slate-400">
-            Generated: {new Date(report.generatedAt).toLocaleString()} — Period: {new Date(report.from).toLocaleDateString()} – {new Date(report.to).toLocaleDateString()}
+            Generated: {report?.generatedAt ? new Date(report.generatedAt).toLocaleString() : '—'} — Period: {report?.from ? new Date(report.from).toLocaleDateString() : '—'} – {report?.to ? new Date(report.to).toLocaleDateString() : '—'}
           </p>
         </>
       )}
