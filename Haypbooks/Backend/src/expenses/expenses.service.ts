@@ -4,6 +4,7 @@ import { AttachmentsService } from '../attachments/attachments.service'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
 import { ExpensePolicyService } from './expense-policy.service'
+import { ExpenseStatusTransitionGuard } from './expense-status-transition.guard'
 
 @Injectable()
 export class ExpensesService {
@@ -12,6 +13,7 @@ export class ExpensesService {
     private readonly prisma: PrismaService,
     private readonly attachmentsService: AttachmentsService,
     private readonly subLedgerService: SubLedgerService,
+    private readonly expenseStatusTransitionGuard: ExpenseStatusTransitionGuard,
     private readonly expensePolicyService: ExpensePolicyService,
   ) {}
 
@@ -347,13 +349,21 @@ export class ExpensesService {
     if (!['DRAFT', 'REJECTED'].includes(record.status)) {
       throw new BadRequestException('Only draft or rejected reimbursements can be updated')
     }
+
+    const newStatus = data.status ?? record.status
+    this.expenseStatusTransitionGuard.assertValidTransition(record.status, newStatus)
+
     const lines = Array.isArray(data.lines) ? data.lines : null
     const totalAmount = lines ? lines.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0) : Number(record.totalAmount)
+    const workspaceId = (record as any).workspaceId
+    if (!workspaceId) throw new InternalServerErrorException('workspaceId is required for GL posting')
+
     return this.prisma.$transaction(async (tx) => {
       if (lines) {
         await tx.expenseClaimLine.deleteMany({ where: { expenseClaimId: reimbursementId } })
       }
-      return tx.expenseClaim.update({
+
+      const updatedRecord = await tx.expenseClaim.update({
         where: { id: reimbursementId },
         data: {
           employeeId: data.employeeId ?? record.employeeId,
@@ -367,10 +377,10 @@ export class ExpensesService {
           toDate: data.toDate ? new Date(data.toDate) : record.toDate,
           advancePayment: data.advancePayment != null ? Number(data.advancePayment) : record.advancePayment,
           totalAmount,
-          status: data.status ?? record.status,
-          submittedAt: data.status === 'SUBMITTED' ? new Date() : record.submittedAt,
-          approvedAt: data.status === 'APPROVED' ? new Date() : record.approvedAt,
-          reimbursedAt: data.status === 'PAID' ? new Date() : record.reimbursedAt,
+          status: newStatus,
+          submittedAt: newStatus === 'SUBMITTED' ? new Date() : record.submittedAt,
+          approvedAt: newStatus === 'APPROVED' ? new Date() : record.approvedAt,
+          reimbursedAt: newStatus === 'PAID' ? new Date() : record.reimbursedAt,
           ...(lines ? {
             lines: {
               create: lines.map((line: any) => ({
@@ -389,6 +399,19 @@ export class ExpensesService {
         },
         include: { lines: true },
       })
+
+      if (record.status !== 'APPROVED' && newStatus === 'APPROVED') {
+        await this.expenseStatusTransitionGuard.handleTransitionToApproved(reimbursementId, companyId, workspaceId, tx)
+      }
+
+      if (record.status !== 'PAID' && newStatus === 'PAID') {
+        if (record.status !== 'APPROVED') {
+          await this.expenseStatusTransitionGuard.handleTransitionToApproved(reimbursementId, companyId, workspaceId, tx)
+        }
+        await this.expenseStatusTransitionGuard.handleTransitionToPaid(reimbursementId, companyId, workspaceId, tx)
+      }
+
+      return updatedRecord
     })
   }
 
@@ -409,8 +432,15 @@ export class ExpensesService {
     if (!['DRAFT', 'SUBMITTED', 'REJECTED'].includes(record.status)) {
       throw new BadRequestException('Only draft, submitted, or rejected reports can be updated')
     }
+
+    const newStatus = data.status ?? record.status
+    this.expenseStatusTransitionGuard.assertValidTransition(record.status, newStatus)
+
     const lines = Array.isArray(data.lines) ? data.lines : null
     const totalAmount = lines ? lines.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0) : Number(record.totalAmount)
+    const workspaceId = (record as any).workspaceId
+    if (!workspaceId) throw new InternalServerErrorException('workspaceId is required for GL posting')
+
     return this.prisma.$transaction(async (tx) => {
       if (lines) {
         await tx.expenseClaimLine.deleteMany({ where: { expenseClaimId: expenseId } })
@@ -427,10 +457,10 @@ export class ExpensesService {
         toDate: data.toDate ? new Date(data.toDate) : record.toDate,
         advancePayment: data.advancePayment != null ? Number(data.advancePayment) : record.advancePayment,
         totalAmount,
-        status: data.status ?? record.status,
-        submittedAt: data.status === 'SUBMITTED' ? new Date() : record.submittedAt,
-        approvedAt: data.status === 'APPROVED' ? new Date() : record.approvedAt,
-        reimbursedAt: data.status === 'PAID' ? new Date() : record.reimbursedAt,
+        status: newStatus,
+        submittedAt: newStatus === 'SUBMITTED' ? new Date() : record.submittedAt,
+        approvedAt: newStatus === 'APPROVED' ? new Date() : record.approvedAt,
+        reimbursedAt: newStatus === 'PAID' ? new Date() : record.reimbursedAt,
       }
 
       if (lines) {
@@ -449,7 +479,20 @@ export class ExpensesService {
         }
       }
 
-      return tx.expenseClaim.update({ where: { id: expenseId }, data: updateData, include: { lines: true } })
+      const updatedRecord = await tx.expenseClaim.update({ where: { id: expenseId }, data: updateData, include: { lines: true } })
+
+      if (record.status !== 'APPROVED' && newStatus === 'APPROVED') {
+        await this.expenseStatusTransitionGuard.handleTransitionToApproved(expenseId, companyId, workspaceId, tx)
+      }
+
+      if (record.status !== 'PAID' && newStatus === 'PAID') {
+        if (record.status !== 'APPROVED') {
+          await this.expenseStatusTransitionGuard.handleTransitionToApproved(expenseId, companyId, workspaceId, tx)
+        }
+        await this.expenseStatusTransitionGuard.handleTransitionToPaid(expenseId, companyId, workspaceId, tx)
+      }
+
+      return updatedRecord
     })
   }
 }
