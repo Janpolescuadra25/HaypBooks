@@ -7,31 +7,37 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 
 interface CashFlowRow {
-  accountId: string
-  code: string
-  name: string
-  net: number
+  accountId?: string
+  accountCode: string
+  accountName: string
+  change: number
 }
 
 interface CashFlowResult {
   from: string
   to: string
-  method: string
-  operating: {
-    startingNetIncome: number
-    adjustments: CashFlowRow[]
-    total: number
-  }
-  investing: {
-    items: CashFlowRow[]
-    total: number
-  }
-  financing: {
-    items: CashFlowRow[]
-    total: number
-  }
-  netCashChange: number
   generatedAt: string
+  sections: {
+    operating: {
+      description: string
+      items: CashFlowRow[]
+      total: number
+    }
+    investing: {
+      description: string
+      items: CashFlowRow[]
+      total: number
+    }
+    financing: {
+      description: string
+      items: CashFlowRow[]
+      total: number
+    }
+  }
+  netCashFlow: number
+  openingCash: number
+  closingCash: number
+  cashChangeVariance: number
 }
 
 function toDateInput(d: Date) {
@@ -54,9 +60,7 @@ export default function Page() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(
-        `/companies/${companyId}/reports/cash-flow?from=${from}&to=${to}`
-      )
+      const { data } = await apiClient.get('/reporting/cash-flow', { params: { companyId, from, to } })
       setReport(data)
       setError('')
     } catch (e: any) {
@@ -149,11 +153,11 @@ export default function Page() {
           </div>
 
           {/* Net Cash Change */}
-          <div className={`rounded-xl border p-5 ${report.netCashChange >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+          <div className={`rounded-xl border p-5 ${report.netCashFlow >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
             <div className="flex justify-between items-center">
               <p className="text-sm font-bold text-slate-700 uppercase tracking-wide">Net Change in Cash</p>
-              <p className={`text-2xl font-black ${report.netCashChange >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
-                {fmt(report.netCashChange)}
+              <p className={`text-2xl font-black ${report.netCashFlow >= 0 ? 'text-emerald-800' : 'text-red-700'}`}>
+                {fmt(report.netCashFlow)}
               </p>
             </div>
           </div>
@@ -162,11 +166,8 @@ export default function Page() {
           <CashFlowSection
             title="Operating Activities"
             color="emerald"
-            items={[
-              { name: 'Net Income', code: '', net: report.operating.startingNetIncome },
-              ...report.operating.adjustments,
-            ]}
-            total={report.operating.total}
+            items={report.sections.operating.items}
+            total={report.sections.operating.total}
             totalLabel="Net Cash from Operating Activities"
             fmt={fmt}
           />
@@ -175,8 +176,8 @@ export default function Page() {
           <CashFlowSection
             title="Investing Activities"
             color="blue"
-            items={report.investing.items}
-            total={report.investing.total}
+            items={report.sections.investing.items}
+            total={report.sections.investing.total}
             totalLabel="Net Cash from Investing Activities"
             fmt={fmt}
           />
@@ -185,15 +186,29 @@ export default function Page() {
           <CashFlowSection
             title="Financing Activities"
             color="violet"
-            items={report.financing.items}
-            total={report.financing.total}
+            items={report.sections.financing.items}
+            total={report.sections.financing.total}
             totalLabel="Net Cash from Financing Activities"
             fmt={fmt}
           />
 
+          <div className="bg-white rounded-xl border border-emerald-100 p-5 text-sm space-y-2">
+            <div className="flex justify-between text-slate-700">
+              <span>Opening Cash</span>
+              <span className="font-semibold">{fmt(report.openingCash)}</span>
+            </div>
+            <div className="flex justify-between text-slate-700">
+              <span>Closing Cash</span>
+              <span className="font-semibold">{fmt(report.closingCash)}</span>
+            </div>
+            <div className="flex justify-between text-slate-700">
+              <span>Cash Change Variance</span>
+              <span className="font-semibold">{fmt(report.cashChangeVariance)}</span>
+            </div>
+          </div>
+
           <p className="text-xs text-slate-400">
-            Method: {report.method} — Generated: {new Date(report.generatedAt).toLocaleString()} — Period:{' '}
-            {new Date(report.from).toLocaleDateString()} – {new Date(report.to).toLocaleDateString()}
+            Generated: {new Date(report.generatedAt).toLocaleString()} — Period: {new Date(report.from).toLocaleDateString()} – {new Date(report.to).toLocaleDateString()}
           </p>
         </>
       )}
@@ -211,7 +226,7 @@ function CashFlowSection({
 }: {
   title: string
   color: 'emerald' | 'blue' | 'violet'
-  items: Array<{ accountId?: string; code: string; name: string; net: number }>
+  items: Array<{ accountId?: string; accountCode: string; accountName: string; change: number }>
   total: number
   totalLabel: string
   fmt: (n: number) => string
@@ -228,9 +243,9 @@ function CashFlowSection({
         <div className="space-y-1.5 text-sm">
           {items.map((item, i) => (
             <div key={item.accountId ?? i} className="flex justify-between text-slate-700">
-              <span>{item.name}{item.code ? ` (${item.code})` : ''}</span>
-              <span className={`font-semibold ${item.net >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                {fmt(item.net)}
+              <span>{item.accountName}{item.accountCode ? ` (${item.accountCode})` : ''}</span>
+              <span className={`font-semibold ${item.change >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                {fmt(item.change)}
               </span>
             </div>
           ))}

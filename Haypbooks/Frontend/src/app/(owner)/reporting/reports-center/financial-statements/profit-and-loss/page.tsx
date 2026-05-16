@@ -35,9 +35,7 @@ export default function Page() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(
-        `/companies/${companyId}/reports/profit-and-loss?from=${from}&to=${to}`
-      )
+      const { data } = await apiClient.get('/reporting/profit-and-loss', { params: { companyId, from, to } })
       setReport(data)
       setError('')
     } catch (e: any) {

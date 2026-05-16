@@ -5,7 +5,7 @@ import {
 import { ReportingService } from './reporting.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 
-@Controller('reporting')
+@Controller('api/reporting')
 @UseGuards(JwtAuthGuard)
 export class ReportingController {
     constructor(private readonly svc: ReportingService) { }
