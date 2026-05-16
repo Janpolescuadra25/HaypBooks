@@ -291,7 +291,7 @@ export default function InvoicesPage() {
             }}
             className="font-mono text-sm text-emerald-600 hover:text-emerald-800 hover:underline"
           >
-            {value ?? row.original.id.slice(0, 8)}
+            {value ?? row.original?.id?.slice(0, 8)}
           </button>
         ),
       },
@@ -320,7 +320,7 @@ export default function InvoicesPage() {
         minSize: 100,
         enableSorting: true,
         render: (value, row) => (
-          <span className={row.original.daysOverdue > 0 ? 'text-red-600 font-medium' : 'text-slate-600'}>
+          <span className={row.original?.daysOverdue > 0 ? 'text-red-600 font-medium' : 'text-slate-600'}>
             {fmtDate(value)}
           </span>
         ),
@@ -367,19 +367,19 @@ export default function InvoicesPage() {
       {
         label: 'Send Invoice',
         icon: <Send size={13} />,
-        show: (row) => row.original.status === 'DRAFT',
-        onClick: (id, row) => handleSend(id, row.original.invoiceNumber, 'send'),
+        show: (row) => row.original?.status === 'DRAFT',
+        onClick: (id, row) => handleSend(id, row.original?.invoiceNumber, 'send'),
       },
       {
         label: 'Send Reminder',
         icon: <Send size={13} />,
-        show: (row) => ['SENT', 'OVERDUE'].includes(row.original.status),
-        onClick: (id, row) => handleSend(id, row.original.invoiceNumber, 'reminder'),
+        show: (row) => ['SENT', 'OVERDUE'].includes(row.original?.status ?? ''),
+        onClick: (id, row) => handleSend(id, row.original?.invoiceNumber, 'reminder'),
       },
       {
         label: 'Receive Payment',
         icon: <CreditCard size={13} />,
-        show: (row) => ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(row.original.status),
+        show: (row) => ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(row.original?.status ?? ''),
         onClick: (_id, row) => setViewInvoice(row.original),
       },
       { label: '', divider: true, onClick: () => {} },
@@ -406,7 +406,7 @@ export default function InvoicesPage() {
         label: 'Void',
         icon: <Ban size={13} />,
         danger: true,
-        show: (row) => row.original.status !== 'VOID',
+        show: (row) => (row.original?.status ?? '') !== 'VOID',
         onClick: (id) => handleVoid(id),
       },
       {
