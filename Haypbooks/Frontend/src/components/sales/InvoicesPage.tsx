@@ -287,11 +287,11 @@ export default function InvoicesPage() {
           <button
             onClick={(event) => {
               event.stopPropagation()
-              setViewInvoice(row.original)
+              setViewInvoice(row)
             }}
             className="font-mono text-sm text-emerald-600 hover:text-emerald-800 hover:underline"
           >
-            {value ?? row.original?.id?.slice(0, 8)}
+            {value ?? row?.id?.slice(0, 8)}
           </button>
         ),
       },
@@ -319,11 +319,14 @@ export default function InvoicesPage() {
         size: 110,
         minSize: 100,
         enableSorting: true,
-        render: (value, row) => (
-          <span className={row.original?.daysOverdue > 0 ? 'text-red-600 font-medium' : 'text-slate-600'}>
-            {fmtDate(value)}
-          </span>
-        ),
+        render: (value, invoice) => {
+          const overdueDays = invoice?.daysOverdue ?? 0
+          return (
+            <span className={overdueDays > 0 ? 'text-red-600 font-medium' : 'text-slate-600'}>
+              {fmtDate(value)}
+            </span>
+          )
+        },
       },
       {
         id: 'daysOverdue',
@@ -362,25 +365,25 @@ export default function InvoicesPage() {
       {
         label: 'View / Edit',
         icon: <Eye size={13} />,
-        onClick: (_id, row) => setViewInvoice(row.original),
+        onClick: (_id, row) => setViewInvoice(row),
       },
       {
         label: 'Send Invoice',
         icon: <Send size={13} />,
-        show: (row) => row.original?.status === 'DRAFT',
-        onClick: (id, row) => handleSend(id, row.original?.invoiceNumber, 'send'),
+        show: (row) => row?.status === 'DRAFT',
+        onClick: (id, row) => handleSend(id, row?.invoiceNumber, 'send'),
       },
       {
         label: 'Send Reminder',
         icon: <Send size={13} />,
-        show: (row) => ['SENT', 'OVERDUE'].includes(row.original?.status ?? ''),
-        onClick: (id, row) => handleSend(id, row.original?.invoiceNumber, 'reminder'),
+        show: (row) => ['SENT', 'OVERDUE'].includes(row?.status ?? ''),
+        onClick: (id, row) => handleSend(id, row?.invoiceNumber, 'reminder'),
       },
       {
         label: 'Receive Payment',
         icon: <CreditCard size={13} />,
-        show: (row) => ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(row.original?.status ?? ''),
-        onClick: (_id, row) => setViewInvoice(row.original),
+        show: (row) => ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(row?.status ?? ''),
+        onClick: (_id, row) => setViewInvoice(row),
       },
       { label: '', divider: true, onClick: () => {} },
       {
@@ -399,14 +402,14 @@ export default function InvoicesPage() {
       {
         label: 'Duplicate',
         icon: <Copy size={13} />,
-        onClick: (_id, row) => handleDuplicateFromList(row.original),
+        onClick: (_id, row) => handleDuplicateFromList(row),
       },
       { label: '', divider: true, onClick: () => {} },
       {
         label: 'Void',
         icon: <Ban size={13} />,
         danger: true,
-        show: (row) => (row.original?.status ?? '') !== 'VOID',
+        show: (row) => (row?.status ?? '') !== 'VOID',
         onClick: (id) => handleVoid(id),
       },
       {
@@ -492,7 +495,7 @@ export default function InvoicesPage() {
         onRefresh={fetchInvoices}
         onExport={handleExport}
         onActivityLog={() => router.push('/sales/billing/invoices/activity')}
-        onRowClick={(row) => setViewInvoice(row.original)}
+        onRowClick={(row) => setViewInvoice(row)}
         loading={loading || cidLoading}
         emptyTitle="No invoices yet"
         emptySubtitle="Create your first invoice to get started"

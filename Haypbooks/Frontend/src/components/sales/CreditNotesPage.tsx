@@ -345,20 +345,20 @@ export default function CreditNotesPage() {
     {
       label: 'Edit Credit Note',
       icon: <Eye size={13} />,
-      onClick: (_id, row) => openEditCN(row.original),
+      onClick: (_id, row) => openEditCN(row),
     },
     { label: '', divider: true, onClick: () => {} },
     {
       label: 'Apply to Invoice',
       icon: <Check size={13} />,
-      show: (row) => !['VOID', 'APPLIED'].includes(row.original.status),
-      onClick: (_id, row) => openApplyModal(row.original),
+      show: (row) => !['VOID', 'APPLIED'].includes(row.status),
+      onClick: (_id, row) => openApplyModal(row),
     },
     {
       label: 'Void',
       icon: <Ban size={13} />,
       danger: true,
-      show: (row) => !['VOID', 'APPLIED'].includes(row.original.status),
+      show: (row) => !['VOID', 'APPLIED'].includes(row.status),
       onClick: (id) => handleVoid(id),
     },
   ], [handleVoid])
@@ -684,7 +684,7 @@ export default function CreditNotesPage() {
           onRefresh={fetchData}
           onExport={handleExport}
           onActivityLog={() => router.push('/sales/revenue/credit-notes/activity')}
-          onRowClick={(row) => { setDrawerCN(row.original); setDrawerTab('details'); setCnActivity([]) }}
+          onRowClick={(row) => { setDrawerCN(row); setDrawerTab('details'); setCnActivity([]) }}
           loading={loading}
           emptyTitle="No credit notes yet"
           emptySubtitle="Create your first credit note to get started"
