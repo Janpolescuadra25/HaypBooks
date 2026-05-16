@@ -14,7 +14,7 @@ describe('Contacts e2e', () => {
 
   beforeAll(async () => {
     // Use test DB for e2e
-    process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+    process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
     // Ensure DB exists and run migrations then seed. Retry a few times to mitigate transient DB connection resets.
     const maxAttempts = 3

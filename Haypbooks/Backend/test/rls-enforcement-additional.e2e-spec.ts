@@ -4,7 +4,7 @@ import * as path from 'path'
 import { randomUUID } from 'crypto'
 
 const BACKEND_DIR = path.resolve(__dirname, '..')
-const DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
 async function setup() {
   process.env.DATABASE_URL = DATABASE_URL

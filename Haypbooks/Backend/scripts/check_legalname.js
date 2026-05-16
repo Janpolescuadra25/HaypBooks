@@ -4,7 +4,7 @@ async function main(){
   const prisma = new PrismaClient({
     datasources: {
       db: {
-        url: 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+        url: process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
       }
     }
   })

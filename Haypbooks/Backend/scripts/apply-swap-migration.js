@@ -2,7 +2,7 @@ const { Client } = require('pg')
 const fs = require('fs')
 const path = require('path')
 
-const DEFAULT_DB = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DEFAULT_DB = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
 async function main() {
   const connection = process.env.DATABASE_URL || DEFAULT_DB

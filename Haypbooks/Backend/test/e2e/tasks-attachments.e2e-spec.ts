@@ -13,7 +13,7 @@ describe('Tasks & Attachments API (e2e)', () => {
   let prisma: PrismaClient
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+    process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
     execSync('node ./scripts/migrate/init-db.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
     execSync('node ./scripts/migrate/run-sql.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
     execSync('npm run db:seed:dev', { cwd: BACKEND_DIR, stdio: 'inherit' })

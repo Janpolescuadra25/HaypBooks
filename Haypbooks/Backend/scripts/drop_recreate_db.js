@@ -1,6 +1,6 @@
 const { Client } = require('pg');
 (async () => {
-  const c = new Client({ connectionString: 'postgresql://postgres:Ninetails45@localhost:5432/postgres' });
+  const c = new Client({ connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/postgres' });
   try {
     await c.connect();
     console.log('Killing existing connections to haypbooks_dev...');

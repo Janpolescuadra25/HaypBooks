@@ -4,7 +4,7 @@ import { execSync } from 'child_process'
 
 const prisma = new PrismaClient()
 const BACKEND_DIR = path.resolve(__dirname, '..')
-const DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
 describe('ProAdvisorPerk basic CRUD', () => {
   beforeAll(async () => {

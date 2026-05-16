@@ -1,6 +1,6 @@
 const { Client } = require('pg')
 ;(async function(){
-  const conn = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_dev'
+  const conn = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_dev'
   const client = new Client({ connectionString: conn })
   await client.connect()
   const email = process.argv[2] || 'e2e-created-now@example.com'

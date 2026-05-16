@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { Client } = require('pg')
 
-const DEFAULT_DB = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DEFAULT_DB = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 const schemaPath = path.resolve(__dirname, '../../prisma/schema.prisma')
 const expectedPath = path.resolve(__dirname, './expected_schema.json')
 

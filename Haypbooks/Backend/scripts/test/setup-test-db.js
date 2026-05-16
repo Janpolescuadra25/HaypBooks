@@ -3,7 +3,7 @@ const { execSync } = require('child_process')
 const path = require('path')
 
 const cwd = path.resolve(__dirname, '..', '..')
-const DEFAULT_DB = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DEFAULT_DB = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 const DATABASE_URL = process.env.DATABASE_URL || DEFAULT_DB
 if (!process.env.DATABASE_URL) {
   console.warn('No DATABASE_URL in environment; falling back to default local test DB')

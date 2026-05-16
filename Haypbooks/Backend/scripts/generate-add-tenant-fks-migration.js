@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { Client } = require('pg')
 
-const DEFAULT_DB = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DEFAULT_DB = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 const modelsPath = path.resolve(__dirname, './ci/expected_schema.json')
 
 function timestamp() {

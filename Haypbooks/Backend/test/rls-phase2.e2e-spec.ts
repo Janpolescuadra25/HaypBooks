@@ -3,7 +3,7 @@ import { Client } from 'pg'
 import * as path from 'path'
 
 const BACKEND_DIR = path.resolve(__dirname, '..')
-const DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
 describe('RLS Phase2', () => {
   it('applies tenant RLS to a larger set of tables', async () => {
