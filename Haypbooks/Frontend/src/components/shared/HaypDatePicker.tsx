@@ -25,6 +25,8 @@ export default function HaypDatePicker({
   placeholder = 'Select date',
   className = '',
 }: HaypDatePickerProps) {
+  const normalizedValue = value?.includes('T') ? value.split('T')[0] : value
+
   return (
     <div>
       {label ? (
@@ -35,7 +37,7 @@ export default function HaypDatePicker({
       <input
         id={id}
         type="date"
-        value={value}
+        value={normalizedValue}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         required={required}

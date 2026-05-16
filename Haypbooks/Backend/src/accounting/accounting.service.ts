@@ -802,6 +802,7 @@ export class AccountingService {
     }
 
     async createJournalEntry(userId: string, companyId: string, data: any) {
+        console.log('[JE-CREATE] payload:', JSON.stringify(data, null, 2))
         await this.assertCompanyAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
         try {
@@ -824,6 +825,7 @@ export class AccountingService {
 
             return created
         } catch (e: any) {
+            console.error('[JE-CREATE-ERROR]', e)
             throw new BadRequestException(e.message)
         }
     }
@@ -845,12 +847,14 @@ export class AccountingService {
     }
 
     async postJournalEntry(userId: string, companyId: string, jeId: string) {
+        console.log('[JE-POST] companyId:', companyId, 'jeId:', jeId)
         await this.assertCompanyAccess(userId, companyId)
         try {
             const result = await this.repo.postJournalEntry(companyId, jeId, userId)
             if (!result) throw new NotFoundException('Journal entry not found')
             return result
         } catch (e: any) {
+            console.error('[JE-POST-ERROR]', e)
             if (e.status === 404) throw e
             throw new BadRequestException(e.message)
         }
