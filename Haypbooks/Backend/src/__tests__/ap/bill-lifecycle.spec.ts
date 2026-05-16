@@ -117,7 +117,7 @@ describe('ApService - Bill Lifecycle', () => {
 
     expect(result).not.toBeNull()
     expect(result?.status).toBe('VOIDED')
-    expect(mockRepo.voidBill).toHaveBeenCalledWith('company-1', 'bill-1')
+    expect(mockRepo.voidBill).toHaveBeenCalledWith('company-1', 'bill-1', { userId: 'user-1', workspaceId: 'w1' })
   })
 
   test('prevents paying a PENDING bill', async () => {
