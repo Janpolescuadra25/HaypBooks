@@ -25,3 +25,13 @@ artifacts/
 out_jest.txt
 jest-results.json
 migrate-error.txt
+
+# Sensitive / local config
+*.db
+*.sqlite
+cookies.txt
+temp_reim_history.txt
+UNUSED_EXPORTS.md
+coverage/
+.idea/
+.vscode/
