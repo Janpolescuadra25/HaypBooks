@@ -603,10 +603,7 @@ export class ApService {
         if (b.status === 'CANCELLED' || b.status === 'VOIDED') throw new BadRequestException('Bill is already void')
         if (Number(b.total) - Number(b.balance) > 0) throw new BadRequestException('Cannot void a bill that has payments applied')
         const workspaceId = await this.getWorkspaceId(companyId)
-        await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'VOID', tableName: 'Bill', recordId: billId, changes: { status: 'VOIDED' } },
-        }).catch(() => { /* non-critical */ })
-        return this.repo.voidBill(companyId, billId)
+        return this.repo.voidBill(companyId, billId, { workspaceId, userId })
     }
 
     async getBillActivity(userId: string, companyId: string, billId: string, opts: any) {
@@ -655,8 +652,10 @@ export class ApService {
             const bankAccount = await this.prisma.bankAccount.findFirst({ where: { id: data.bankAccountId, workspaceId, deletedAt: null } })
             if (!bankAccount) throw new BadRequestException('Invalid payment account')
         }
-        const bills = Array.isArray(data.bills) ? data.bills.map((b: any) => ({ billId: b.billId, amount: Number(b.paymentAmount ?? b.amount ?? 0) })) : undefined
-        const applications = data.applications ?? bills ?? []
+        const applicationLines = Array.isArray(data.bills)
+            ? data.bills.map((b: any) => ({ billId: b.billId, amount: Number(b.paymentAmount ?? b.amount ?? 0) }))
+            : undefined
+        const applications = data.applications ?? applicationLines ?? []
         if (!data.billId && applications.length > 0) {
             data.billId = applications[0].billId
         }
@@ -666,6 +665,45 @@ export class ApService {
         const paymentDate = data.paymentDate ?? data.date
         const totalApplied = applications.reduce((s: number, a: any) => s + Number(a.amount ?? 0), 0)
         if (totalApplied > Number(data.amount) + 0.01) throw new BadRequestException(`Applied (${totalApplied}) exceeds payment amount (${data.amount})`)
+        const applicationBillIds = applications.map((a: any) => a.billId).filter(Boolean)
+        const billIds = Array.from(new Set([data.billId, ...applicationBillIds]))
+        if (billIds.length === 0) {
+            throw new BadRequestException('Bill ID is required for payment recording')
+        }
+
+        const bills = await this.prisma.bill.findMany({
+            where: { id: { in: billIds }, companyId, deletedAt: null },
+            select: { id: true, status: true, balance: true, total: true },
+        }) as Array<{ id: string; status: string; balance: any; total: any }>
+
+        if (bills.length !== billIds.length) {
+            throw new NotFoundException('One or more bills referenced by this payment were not found')
+        }
+
+        const billMap = new Map(bills.map((bill) => [bill.id, bill]))
+        const primaryBill = billMap.get(data.billId)
+        if (!primaryBill) {
+            throw new NotFoundException('Primary bill not found')
+        }
+        if (!['APPROVED', 'PARTIALLY_PAID', 'OVERDUE'].includes(primaryBill.status)) {
+            throw new BadRequestException(`Cannot record payment for bills with status ${primaryBill.status}`)
+        }
+
+        for (const application of applications) {
+            const bill = billMap.get(application.billId)
+            if (!bill) continue
+            if (!['APPROVED', 'PARTIALLY_PAID', 'OVERDUE'].includes(bill.status)) {
+                throw new BadRequestException(`Cannot apply payment to a bill with status ${bill.status}`)
+            }
+            const applicationAmount = Number(application.amount ?? 0)
+            if (applicationAmount <= 0) {
+                throw new BadRequestException('Each payment application must be greater than 0')
+            }
+            if (applicationAmount > Number(bill.balance) + 0.01) {
+                throw new BadRequestException(`Payment application for bill ${bill.id} exceeds its outstanding balance`)
+            }
+        }
+
         const result = await this.repo.recordBillPayment({
             workspaceId, companyId, billId: data.billId,
             amount: data.amount, paymentDate: new Date(paymentDate ?? Date.now()),
