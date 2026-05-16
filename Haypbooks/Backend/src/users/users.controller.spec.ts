@@ -8,7 +8,7 @@ describe('UsersController', () => {
     const req: any = { user: { userId: 'u1' } }
     const body = { companyName: ' C ' }
     const res = await controller.updateProfile(req, body as any)
-    expect(mockSvc.updateProfile).toHaveBeenCalledWith('u1', {})
+    expect(mockSvc.updateProfile).toHaveBeenCalledWith('u1', { companyName: ' C ' })
     expect(res.id).toBe('u1')
   })
 })
