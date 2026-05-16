@@ -29,7 +29,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
         : (exceptionResponse as any).message || message
       error = (exceptionResponse as any).error || error
     } else if (exception instanceof Error) {
-      message = exception.message || message
+      if (process.env.NODE_ENV === 'production') {
+        message = 'An internal server error occurred'
+      } else {
+        message = exception.message || message
+      }
     }
 
     this.logger.error(
