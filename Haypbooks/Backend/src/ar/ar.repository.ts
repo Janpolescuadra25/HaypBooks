@@ -1050,11 +1050,12 @@ export class ArRepository {
         })
     }
 
-    async voidInvoice(companyId: string, invoiceId: string) {
-        const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId } })
+    async voidInvoice(companyId: string, invoiceId: string, opts?: { workspaceId?: string; userId?: string; tx?: any }) {
+        const db = opts?.tx ?? this.prisma
+        const invoice = await db.invoice.findFirst({ where: { id: invoiceId, companyId } })
         if (!invoice) return null
 
-        return this.prisma.$transaction(async (tx) => {
+        const execute = async (tx: any) => {
             const applications = await tx.invoicePaymentApplication.findMany({
                 where: { invoiceId },
                 include: {
@@ -1096,7 +1097,7 @@ export class ArRepository {
 
             await tx.invoicePaymentApplication.deleteMany({ where: { invoiceId } })
 
-            return tx.invoice.update({
+            const updatedInvoice = await tx.invoice.update({
                 where: { id: invoiceId },
                 data: {
                     status: 'VOID',
@@ -1107,7 +1108,29 @@ export class ArRepository {
                     journalEntryId: null,
                 },
             })
-        })
+
+            if (opts?.userId && opts?.workspaceId) {
+                await tx.auditLog.create({
+                    data: {
+                        workspaceId: opts.workspaceId,
+                        companyId,
+                        userId: opts.userId,
+                        action: 'VOID',
+                        tableName: 'Invoice',
+                        recordId: invoiceId,
+                        changes: { status: 'VOID' },
+                    },
+                })
+            }
+
+            return updatedInvoice
+        }
+
+        if (opts?.tx) {
+            return execute(opts.tx)
+        }
+
+        return this.prisma.$transaction(async (tx) => execute(tx))
     }
 
     // ─── Payments Received ────────────────────────────────────────────────────

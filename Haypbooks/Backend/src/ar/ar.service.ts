@@ -1049,11 +1049,7 @@ export class ArService {
 
         // Reverse the invoice posting JE before marking the invoice as void.
         await this.subLedger.reverseInvoiceGL(invoiceId, userId)
-        const result = await this.repo.voidInvoice(companyId, invoiceId)
-        this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'VOID', tableName: 'Invoice', recordId: invoiceId, changes: { status: 'VOID' } },
-        }).catch(() => {})
-        return result
+        return this.repo.voidInvoice(companyId, invoiceId, { workspaceId, userId })
     }
 
     // ─── Payments ─────────────────────────────────────────────────────────────
