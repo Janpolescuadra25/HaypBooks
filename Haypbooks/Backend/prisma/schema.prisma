@@ -8399,7 +8399,7 @@ model InvoiceLine {
   quantity        Decimal  @db.Decimal(16, 6)
   unitPrice       Decimal  @map("rate") @db.Decimal(19, 4)
   totalPrice      Decimal  @map("amount") @db.Decimal(19, 4)
-  discountPercent Decimal? @db.Decimal(8, 4)
+  discountPercent Decimal? @db.Decimal(14, 4)
   discountAmount  Decimal? @db.Decimal(19, 4)
 
   invoice                    Invoice                     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -9205,10 +9205,10 @@ model BillLine {
   itemId          String?
   description     String?
   quantity        Decimal  @db.Decimal(16, 6)
-  rate            Decimal  @db.Decimal(8, 4)
+  rate            Decimal  @db.Decimal(14, 4)
   amount          Decimal  @db.Decimal(19, 4)
   taxCodeId       String?
-  discountPercent Decimal? @db.Decimal(8, 4)
+  discountPercent Decimal? @db.Decimal(14, 4)
   discountAmount  Decimal? @db.Decimal(19, 4)
 
   bill       Bill      @relation(fields: [billId], references: [id], onDelete: Cascade)

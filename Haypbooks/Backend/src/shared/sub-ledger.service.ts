@@ -163,9 +163,17 @@ export class SubLedgerService {
   }
 
   private async assertPeriodOpen(companyId: string, date: Date, tx: any): Promise<void> {
+    const company = await tx.company.findUnique({
+      where: { id: companyId },
+      select: { workspaceId: true },
+    })
+    if (!company) {
+      throw new BadRequestException(`Cannot determine workspace for company ${companyId}`)
+    }
+
     const period = await tx.accountingPeriod.findFirst({
       where: {
-        companyId,
+        workspaceId: company.workspaceId,
         startDate: { lte: date },
         endDate: { gte: date },
       },
@@ -179,6 +187,7 @@ export class SubLedgerService {
 
     const lock = await tx.postingLock.findFirst({
       where: {
+        workspaceId: company.workspaceId,
         companyId,
         isActive: true,
         startDate: { lte: date },
