@@ -1013,9 +1013,26 @@ export class AccountingService {
             throw new BadRequestException('Cannot complete close: all checks must pass')
         }
 
-        // Here you would implement period closing actions, ledger lock, etc.
-        // For now we return a success marker.
-        return { success: true, message: 'Period Closed Successfully' }
+        const periods = await this.repo.findPeriods(companyId)
+        const openPeriods = periods
+            .filter((period: any) => period.status === 'OPEN')
+            .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+
+        if (!openPeriods.length) {
+            throw new BadRequestException('No open accounting period found to close')
+        }
+
+        const periodToClose = openPeriods[0]
+        const result = await this.repo.closePeriod(companyId, periodToClose.id, userId)
+        if (!result) {
+            throw new BadRequestException('Failed to complete period close workflow')
+        }
+
+        return {
+            success: true,
+            message: `Accounting period ${periodToClose.id} closed successfully`,
+            periodId: periodToClose.id,
+        }
     }
 
     // ─── Multi-Currency Revaluation ───────────────────────────────────────────────
