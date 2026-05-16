@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, InternalServerErrorException } from '@nestjs/common'
 import { ApService } from '../ap/ap.service'
 import { AttachmentsService } from '../attachments/attachments.service'
 import { PrismaService } from '../repositories/prisma/prisma.service'
@@ -119,59 +119,92 @@ export class ExpensesService {
       throw new BadRequestException(policyViolations)
     }
 
-    const record = await this.prisma.expenseClaim.create({
-      data: {
-        workspaceId,
-        companyId,
-        employeeId: data.employeeId,
-        departmentId: data.departmentId ?? null,
-        reimbursementMethod: data.paymentMethod,
-        status: data.status ?? 'DRAFT',
-        description: data.description ?? null,
-        businessPurpose: data.businessPurpose ?? null,
-        notes: data.notes ?? null,
-        internalNotes: data.internalNotes ?? null,
-        fromDate: data.fromDate ? new Date(data.fromDate) : null,
-        toDate: data.toDate ? new Date(data.toDate) : null,
-        advancePayment: data.advancePayment != null ? Number(data.advancePayment) : null,
-        totalAmount,
-        submittedAt: ['SUBMITTED', 'APPROVED', 'PAID'].includes(data.status) ? new Date() : null,
-        approvedAt: ['APPROVED', 'PAID'].includes(data.status) ? new Date() : null,
-        reimbursedAt: data.status === 'PAID' ? new Date() : null,
-        lines: {
-          create: lines.map((line: any) => ({
-            date: line.date ? new Date(line.date) : new Date(),
-            category: line.category ?? null,
-            description: line.description ?? '',
-            merchant: line.vendor ?? line.merchant ?? null,
-            amount: Number(line.amount ?? 0),
-            accountId: line.accountId ?? null,
-            receiptUrl: line.receiptUrl ?? null,
-            receiptName: line.receiptName ?? null,
-            subCategoryId: line.subCategoryId ?? null,
-          })),
-        },
-      },
-      include: { lines: true },
-    })
-
     const attachments = Array.isArray(data.attachments) ? data.attachments : []
-    if (attachments.length) {
-      await Promise.all(
-        attachments.map((attachment: any) =>
-          this.attachmentsService.create({
+    const record = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.expenseClaim.create({
+        data: {
+          workspaceId,
+          companyId,
+          employeeId: data.employeeId,
+          departmentId: data.departmentId ?? null,
+          reimbursementMethod: data.paymentMethod,
+          status: data.status ?? 'DRAFT',
+          description: data.description ?? null,
+          businessPurpose: data.businessPurpose ?? null,
+          notes: data.notes ?? null,
+          internalNotes: data.internalNotes ?? null,
+          fromDate: data.fromDate ? new Date(data.fromDate) : null,
+          toDate: data.toDate ? new Date(data.toDate) : null,
+          advancePayment: data.advancePayment != null ? Number(data.advancePayment) : null,
+          totalAmount,
+          submittedAt: ['SUBMITTED', 'APPROVED', 'PAID'].includes(data.status) ? new Date() : null,
+          approvedAt: ['APPROVED', 'PAID'].includes(data.status) ? new Date() : null,
+          reimbursedAt: data.status === 'PAID' ? new Date() : null,
+          lines: {
+            create: lines.map((line: any) => ({
+              date: line.date ? new Date(line.date) : new Date(),
+              category: line.category ?? null,
+              description: line.description ?? '',
+              merchant: line.vendor ?? line.merchant ?? null,
+              amount: Number(line.amount ?? 0),
+              accountId: line.accountId ?? null,
+              receiptUrl: line.receiptUrl ?? null,
+              receiptName: line.receiptName ?? null,
+              subCategoryId: line.subCategoryId ?? null,
+            })),
+          },
+        },
+        include: { lines: true },
+      })
+
+      if (attachments.length) {
+        await Promise.all(
+          attachments.map((attachment: any) =>
+            tx.attachment.create({
+              data: {
+                workspaceId,
+                entityType: 'expenseClaim',
+                entityId: created.id,
+                fileUrl: attachment.fileUrl,
+                fileName: attachment.fileName || attachment.fileName || null,
+                mimeType: attachment.mimeType ?? null,
+                fileSize: attachment.fileSize ?? null,
+                uploadedById: userId,
+              },
+            }),
+          ),
+        )
+      }
+
+      if (['APPROVED', 'PAID'].includes(created.status) && !created.journalEntryId) {
+        await this.subLedgerService.postExpenseClaimToGL(
+          {
+            companyId,
             workspaceId,
-            entityType: 'expenseClaim',
-            entityId: record.id,
-            fileUrl: attachment.fileUrl,
-            fileName: attachment.fileName || attachment.fileName || null,
-            mimeType: attachment.mimeType ?? null,
-            fileSize: attachment.fileSize ?? null,
-            uploadedById: userId,
-          }),
-        ),
-      )
-    }
+            expenseClaimId: created.id,
+            lines: created.lines.map((l: any) => ({ accountId: l.accountId ?? null, amount: Number(l.amount ?? 0) })),
+            totalAmount,
+            employeeId: created.employeeId ?? null,
+          },
+          tx,
+        )
+      }
+
+      if (created.status === 'PAID') {
+        await this.subLedgerService.postExpenseReimbursementToGL(
+          {
+            companyId,
+            workspaceId,
+            expenseClaimId: created.id,
+            amount: totalAmount,
+            bankAccountId: data?.bankAccountId ?? null,
+          },
+          tx,
+        )
+      }
+
+      return created
+    })
 
     return record
   }
