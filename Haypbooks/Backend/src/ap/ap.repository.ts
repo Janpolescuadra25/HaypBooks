@@ -272,19 +272,43 @@ export class ApRepository {
         })
     }
 
-    async voidBill(companyId: string, billId: string) {
-        const bill = await this.prisma.bill.findFirst({ where: { id: billId, companyId } })
+    async voidBill(companyId: string, billId: string, opts?: { workspaceId?: string; userId?: string; tx?: any }) {
+        const db = opts?.tx ?? this.prisma
+        const bill = await db.bill.findFirst({ where: { id: billId, companyId } })
         if (!bill) return null
 
-        return this.prisma.$transaction(async (tx) => {
+        const execute = async (tx: any) => {
             if (bill.journalEntryId) {
                 await createReversingJE(tx, companyId, bill.journalEntryId, `Void bill ${bill.billNumber ?? billId}`)
             }
-            return tx.bill.update({
+
+            const updatedBill = await tx.bill.update({
                 where: { id: billId },
                 data: { status: 'VOIDED', postingStatus: 'VOIDED', deletedAt: new Date() },
             })
-        })
+
+            if (opts?.userId && opts?.workspaceId) {
+                await tx.auditLog.create({
+                    data: {
+                        workspaceId: opts.workspaceId,
+                        companyId,
+                        userId: opts.userId,
+                        action: 'VOID',
+                        tableName: 'Bill',
+                        recordId: billId,
+                        changes: { status: 'VOIDED' },
+                    },
+                })
+            }
+
+            return updatedBill
+        }
+
+        if (opts?.tx) {
+            return execute(opts.tx)
+        }
+
+        return this.prisma.$transaction(async (tx) => execute(tx))
     }
 
     // ─── Bill Payments ────────────────────────────────────────────────────────
@@ -385,7 +409,25 @@ export class ApRepository {
                 const bill = await tx.bill.findUnique({ where: { id: app.billId } })
                 if (bill && bill.status !== 'CANCELLED' && bill.status !== 'VOIDED') {
                     const restoredBalance = Number(bill.balance) + Number(app.amount)
-                    await tx.bill.update({ where: { id: app.billId }, data: { balance: restoredBalance, status: 'APPROVED', paymentStatus: 'PARTIAL' } })
+                    const totalAmount = Number(bill.total ?? 0)
+                    const isFullyUnpaid = Math.abs(restoredBalance - totalAmount) < 0.01
+                    const nextStatus = restoredBalance <= 0
+                        ? 'PAID'
+                        : bill.status === 'OVERDUE'
+                            ? 'OVERDUE'
+                            : isFullyUnpaid
+                                ? 'APPROVED'
+                                : 'PARTIALLY_PAID'
+                    const nextPaymentStatus = restoredBalance <= 0
+                        ? 'PAID'
+                        : isFullyUnpaid
+                            ? 'DRAFT'
+                            : 'PARTIAL'
+
+                    await tx.bill.update({
+                        where: { id: app.billId },
+                        data: { balance: restoredBalance, status: nextStatus, paymentStatus: nextPaymentStatus },
+                    })
                 }
                 await tx.billPaymentApplication.delete({ where: { id: app.id } })
             }
