@@ -475,7 +475,8 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const bill = await this.repo.findBillById(companyId, billId)
         if (!bill) throw new NotFoundException('Bill not found')
-        if (!['DRAFT', 'PENDING'].includes(bill.status)) throw new BadRequestException('Only draft or pending bills can be approved')
+        if (bill.status === 'DRAFT') throw new BadRequestException('Bill must be submitted (PENDING) before approval')
+        if (bill.status !== 'PENDING') throw new BadRequestException('Only pending bills can be approved')
 
         const result = await this.prisma.$transaction(async (tx) => {
             await this.subLedger.postBillToGL(billId, userId, tx)
