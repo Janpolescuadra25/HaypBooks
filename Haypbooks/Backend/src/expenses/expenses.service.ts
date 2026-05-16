@@ -283,10 +283,7 @@ export class ExpensesService {
           )
           return updatedRecord
         })
-      : await this.prisma.expenseClaim.update({
-          where: { id: expenseId },
-          data: { status: 'APPROVED', approvedAt: new Date() },
-        })
+      : await Promise.reject(new InternalServerErrorException('workspaceId is required for GL posting'))
 
     await this.prisma.auditLog.create({
       data: { workspaceId: workspaceId ?? null, companyId, userId, action: 'UPDATE', tableName: 'ExpenseClaim', recordId: expenseId, changes: { status: 'APPROVED', approvedAt: new Date().toISOString() } },
@@ -326,14 +323,7 @@ export class ExpensesService {
           )
           return updatedRecord
         })
-      : await this.prisma.expenseClaim.update({
-          where: { id: expenseId },
-          data: {
-            status: 'PAID',
-            reimbursedAt: new Date(),
-            reimbursementMethod: data?.method ?? record.reimbursementMethod,
-          },
-        })
+      : await Promise.reject(new InternalServerErrorException('workspaceId is required for GL posting'))
 
     await this.prisma.auditLog.create({
       data: { workspaceId: workspaceId ?? null, companyId, userId, action: 'UPDATE', tableName: 'ExpenseClaim', recordId: expenseId, changes: { status: 'PAID', reimbursedAt: new Date().toISOString(), reimbursementMethod: data?.method ?? record.reimbursementMethod } },
