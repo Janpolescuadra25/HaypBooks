@@ -26,8 +26,11 @@ export class ReportingService {
         const now = new Date()
         const from = opts.from ? new Date(opts.from) : new Date(now.getFullYear(), 0, 1) // YTD start
         const to = opts.to ? new Date(opts.to) : now
+        if (opts.from && Number.isNaN(from.getTime())) throw new BadRequestException('Invalid from date')
+        if (opts.to && Number.isNaN(to.getTime())) throw new BadRequestException('Invalid to date')
         if (from > to) throw new BadRequestException('from date must be before to date')
-        return this.repo.getProfitAndLoss(companyId, from, to)
+
+        return this._calculateProfitAndLoss(companyId, from, to)
     }
 
     async getBalanceSheet(userId: string, companyId: string, opts: { asOf?: string }) {
@@ -42,8 +45,114 @@ export class ReportingService {
         const now = new Date()
         const from = opts.from ? new Date(opts.from) : new Date(now.getFullYear(), 0, 1)
         const to = opts.to ? new Date(opts.to) : now
+        if (opts.from && Number.isNaN(from.getTime())) throw new BadRequestException('Invalid from date')
+        if (opts.to && Number.isNaN(to.getTime())) throw new BadRequestException('Invalid to date')
         if (from > to) throw new BadRequestException('from date must be before to date')
-        return this.repo.getCashFlow(companyId, from, to)
+
+        const pnl = await this._calculateProfitAndLoss(companyId, from, to)
+        const openingAsOf = new Date(from)
+        openingAsOf.setDate(openingAsOf.getDate() - 1)
+
+        const openingSheet = await this._buildBalanceSheet(companyId, openingAsOf)
+        const closingSheet = await this._buildBalanceSheet(companyId, to)
+
+        const openingMap = new Map<string, any>()
+        const openingAccounts = [
+            ...openingSheet.sections.assets.accounts,
+            ...openingSheet.sections.liabilities.accounts,
+            ...openingSheet.sections.equity.accounts,
+        ]
+        for (const account of openingAccounts) {
+            openingMap.set(account.accountId, account)
+        }
+
+        const closingAccounts = [
+            ...closingSheet.sections.assets.accounts,
+            ...closingSheet.sections.liabilities.accounts,
+            ...closingSheet.sections.equity.accounts,
+        ]
+
+        const operating: any[] = []
+        const investing: any[] = []
+        const financing: any[] = []
+        let openingCash = 0
+        let closingCash = 0
+
+        const classify = (accountType: string, accountSubtype?: string) => {
+            const subtype = accountSubtype?.toUpperCase() ?? ''
+            if (subtype.includes('CASH') || subtype.includes('CASH_EQUIVALENT')) return 'CASH'
+            if (accountType === 'EQUITY') return 'FINANCING'
+            if (accountType === 'LIABILITY') {
+                if (subtype.includes('CURRENT')) return 'OPERATING'
+                if (subtype.includes('LONG') || subtype.includes('NON_CURRENT') || subtype.includes('NONCURRENT') || subtype.includes('FIXED')) return 'FINANCING'
+                return 'OPERATING'
+            }
+            if (accountType === 'ASSET') {
+                if (subtype.includes('FIXED') || subtype.includes('LONG') || subtype.includes('NON_CURRENT') || subtype.includes('NONCURRENT')) return 'INVESTING'
+                return 'OPERATING'
+            }
+            return 'OPERATING'
+        }
+
+        for (const closing of closingAccounts) {
+            const opening = openingMap.get(closing.accountId)
+            const openingBalance = opening ? opening.balance : 0
+            const change = this._roundMoney(closing.balance - openingBalance)
+            const section = classify(closing.accountType, closing.accountSubtype)
+
+            if (section === 'CASH') {
+                if (closing.accountType === 'ASSET') {
+                    openingCash = this._roundMoney(openingCash + openingBalance)
+                    closingCash = this._roundMoney(closingCash + closing.balance)
+                }
+                continue
+            }
+
+            const item = {
+                accountId: closing.accountId,
+                accountCode: closing.accountCode,
+                accountName: closing.accountName,
+                change,
+            }
+
+            if (section === 'INVESTING') investing.push(item)
+            else if (section === 'FINANCING') financing.push(item)
+            else operating.push(item)
+        }
+
+        const totalOperating = this._roundMoney(pnl.netIncome + operating.reduce((sum, row) => sum + row.change, 0))
+        const totalInvesting = this._roundMoney(investing.reduce((sum, row) => sum + row.change, 0))
+        const totalFinancing = this._roundMoney(financing.reduce((sum, row) => sum + row.change, 0))
+        const netCashFlow = this._roundMoney(totalOperating + totalInvesting + totalFinancing)
+        const cashChangeVariance = this._roundMoney(netCashFlow - this._roundMoney(closingCash - openingCash))
+
+        return {
+            companyId,
+            from,
+            to,
+            generatedAt: new Date(),
+            sections: {
+                operating: {
+                    description: 'Operating cash flow from current assets, current liabilities, and net income',
+                    items: operating.sort((a, b) => a.accountCode.localeCompare(b.accountCode)),
+                    total: totalOperating,
+                },
+                investing: {
+                    description: 'Investing cash flow from non-current asset changes',
+                    items: investing.sort((a, b) => a.accountCode.localeCompare(b.accountCode)),
+                    total: totalInvesting,
+                },
+                financing: {
+                    description: 'Financing cash flow from equity and long-term liability changes',
+                    items: financing.sort((a, b) => a.accountCode.localeCompare(b.accountCode)),
+                    total: totalFinancing,
+                },
+            },
+            netCashFlow,
+            openingCash,
+            closingCash,
+            cashChangeVariance,
+        }
     }
 
     async getTrialBalance(userId: string, companyId: string, opts: { asOf?: string } = {}) {
@@ -90,6 +199,83 @@ export class ReportingService {
         })
     }
 
+    private async _getAccountBalancesForPeriod(companyId: string, from: Date, to: Date) {
+        const accounts = await this.prisma.account.findMany({
+            where: { companyId, deletedAt: null, isActive: true, isHeader: false },
+            include: {
+                type: { select: { name: true, category: true, normalSide: true } },
+                AccountSubType: { select: { name: true } },
+                journalLines: {
+                    where: { journal: { postingStatus: 'POSTED', deletedAt: null, date: { gte: from, lte: to } } },
+                    select: { debit: true, credit: true },
+                },
+            },
+            orderBy: { code: 'asc' },
+        })
+
+        return accounts.map((account) => {
+            const totalDebit = account.journalLines.reduce((sum, line) => sum + Number(line.debit ?? 0), 0)
+            const totalCredit = account.journalLines.reduce((sum, line) => sum + Number(line.credit ?? 0), 0)
+            const accountType = account.type?.category ?? 'ASSET'
+            const netBalance = this._roundMoney(totalDebit - totalCredit)
+            return {
+                accountId: account.id,
+                accountCode: account.code,
+                accountName: account.name,
+                accountType,
+                accountSubtype: account.AccountSubType?.name ?? undefined,
+                totalDebit: this._roundMoney(totalDebit),
+                totalCredit: this._roundMoney(totalCredit),
+                netBalance,
+            }
+        })
+    }
+
+    private async _calculateProfitAndLoss(companyId: string, from: Date, to: Date) {
+        const balances = await this._getAccountBalancesForPeriod(companyId, from, to)
+        const revenueRows = balances
+            .filter((row) => row.accountType?.toUpperCase().includes('REVENUE'))
+            .map((row) => ({
+                accountId: row.accountId,
+                accountCode: row.accountCode,
+                accountName: row.accountName,
+                totalDebit: row.totalDebit,
+                totalCredit: row.totalCredit,
+                netBalance: this._roundMoney(-row.netBalance),
+            }))
+            .sort((a, b) => a.accountCode.localeCompare(b.accountCode))
+
+        const expenseRows = balances
+            .filter((row) => row.accountType?.toUpperCase().includes('EXPENSE'))
+            .map((row) => ({
+                accountId: row.accountId,
+                accountCode: row.accountCode,
+                accountName: row.accountName,
+                totalDebit: row.totalDebit,
+                totalCredit: row.totalCredit,
+                netBalance: this._roundMoney(row.netBalance),
+            }))
+            .sort((a, b) => a.accountCode.localeCompare(b.accountCode))
+
+        const totalRevenue = this._roundMoney(revenueRows.reduce((sum, row) => sum + row.netBalance, 0))
+        const totalExpenses = this._roundMoney(expenseRows.reduce((sum, row) => sum + row.netBalance, 0))
+        const netIncome = this._roundMoney(totalRevenue - totalExpenses)
+
+        return {
+            companyId,
+            from,
+            to,
+            generatedAt: new Date(),
+            sections: {
+                revenue: { accounts: revenueRows, total: totalRevenue },
+                expenses: { accounts: expenseRows, total: totalExpenses },
+            },
+            totalRevenue,
+            totalExpenses,
+            netIncome,
+        }
+    }
+
     private async _buildTrialBalance(companyId: string, asOf: Date) {
         const accounts = await this._getAccountBalances(companyId, asOf)
         const totals = {
@@ -115,11 +301,11 @@ export class ReportingService {
 
         for (const row of balances) {
             if (row.accountType === 'ASSET') {
-                assets.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, balance: row.netBalance })
+                assets.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, accountType: row.accountType, accountSubtype: row.accountSubtype, balance: row.netBalance })
             } else if (row.accountType === 'LIABILITY') {
-                liabilities.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, balance: this._roundMoney(-row.netBalance) })
+                liabilities.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, accountType: row.accountType, accountSubtype: row.accountSubtype, balance: this._roundMoney(-row.netBalance) })
             } else if (row.accountType === 'EQUITY') {
-                equity.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, balance: this._roundMoney(-row.netBalance) })
+                equity.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, accountType: row.accountType, accountSubtype: row.accountSubtype, balance: this._roundMoney(-row.netBalance) })
             }
         }
 
