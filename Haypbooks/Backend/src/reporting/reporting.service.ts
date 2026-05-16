@@ -33,7 +33,8 @@ export class ReportingService {
     async getBalanceSheet(userId: string, companyId: string, opts: { asOf?: string }) {
         await this.assertAccess(userId, companyId)
         const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
-        return this.repo.getBalanceSheet(companyId, asOf)
+        if (opts.asOf && Number.isNaN(asOf.getTime())) throw new BadRequestException('Invalid asOf date')
+        return this._buildBalanceSheet(companyId, asOf)
     }
 
     async getCashFlow(userId: string, companyId: string, opts: { from?: string; to?: string }) {
@@ -45,9 +46,102 @@ export class ReportingService {
         return this.repo.getCashFlow(companyId, from, to)
     }
 
-    async getTrialBalance(userId: string, companyId: string) {
+    async getTrialBalance(userId: string, companyId: string, opts: { asOf?: string } = {}) {
         await this.assertAccess(userId, companyId)
-        return this.repo.getTrialBalance(companyId)
+        const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
+        if (opts.asOf && Number.isNaN(asOf.getTime())) throw new BadRequestException('Invalid asOf date')
+        return this._buildTrialBalance(companyId, asOf)
+    }
+
+    private _roundMoney(value: number, decimals = 2): number {
+        const factor = Math.pow(10, decimals)
+        return Math.round((value + Number.EPSILON) * factor) / factor
+    }
+
+    private async _getAccountBalances(companyId: string, asOf: Date) {
+        const accounts = await this.prisma.account.findMany({
+            where: { companyId, deletedAt: null, isActive: true, isHeader: false },
+            include: {
+                type: { select: { name: true, category: true, normalSide: true } },
+                AccountSubType: { select: { name: true } },
+                journalLines: {
+                    where: { journal: { postingStatus: 'POSTED', deletedAt: null, date: { lte: asOf } } },
+                    select: { debit: true, credit: true },
+                },
+            },
+            orderBy: { code: 'asc' },
+        })
+
+        return accounts.map((account) => {
+            const totalDebit = account.journalLines.reduce((sum, line) => sum + Number(line.debit ?? 0), 0)
+            const totalCredit = account.journalLines.reduce((sum, line) => sum + Number(line.credit ?? 0), 0)
+            const accountType = account.type?.category ?? 'ASSET'
+            const netBalance = this._roundMoney(totalDebit - totalCredit)
+            return {
+                accountId: account.id,
+                accountCode: account.code,
+                accountName: account.name,
+                accountType,
+                accountSubtype: account.AccountSubType?.name ?? undefined,
+                totalDebit: this._roundMoney(totalDebit),
+                totalCredit: this._roundMoney(totalCredit),
+                netBalance,
+            }
+        })
+    }
+
+    private async _buildTrialBalance(companyId: string, asOf: Date) {
+        const accounts = await this._getAccountBalances(companyId, asOf)
+        const totals = {
+            totalDebit: this._roundMoney(accounts.reduce((sum, account) => sum + account.totalDebit, 0)),
+            totalCredit: this._roundMoney(accounts.reduce((sum, account) => sum + account.totalCredit, 0)),
+            netBalance: this._roundMoney(accounts.reduce((sum, account) => sum + account.netBalance, 0)),
+        }
+
+        return {
+            companyId,
+            asOf,
+            generatedAt: new Date(),
+            accounts,
+            totals,
+        }
+    }
+
+    private async _buildBalanceSheet(companyId: string, asOf: Date) {
+        const balances = await this._getAccountBalances(companyId, asOf)
+        const assets: any[] = []
+        const liabilities: any[] = []
+        const equity: any[] = []
+
+        for (const row of balances) {
+            if (row.accountType === 'ASSET') {
+                assets.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, balance: row.netBalance })
+            } else if (row.accountType === 'LIABILITY') {
+                liabilities.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, balance: this._roundMoney(-row.netBalance) })
+            } else if (row.accountType === 'EQUITY') {
+                equity.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, balance: this._roundMoney(-row.netBalance) })
+            }
+        }
+
+        const totalAssets = this._roundMoney(assets.reduce((sum, account) => sum + account.balance, 0))
+        const totalLiabilities = this._roundMoney(liabilities.reduce((sum, account) => sum + account.balance, 0))
+        const totalEquity = this._roundMoney(equity.reduce((sum, account) => sum + account.balance, 0))
+        const isBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01
+
+        return {
+            companyId,
+            asOf,
+            generatedAt: new Date(),
+            sections: {
+                assets: { accounts: assets, total: totalAssets },
+                liabilities: { accounts: liabilities, total: totalLiabilities },
+                equity: { accounts: equity, total: totalEquity },
+            },
+            totalAssets,
+            totalLiabilities,
+            totalEquity,
+            isBalanced,
+        }
     }
 
     // ─── Snapshots ───────────────────────────────────────────────────────────
