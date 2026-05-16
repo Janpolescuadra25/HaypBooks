@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import * as crypto from 'crypto'
 
 const KEY_ENV = 'FIELD_ENCRYPTION_KEY'
 const ALGORITHM = 'aes-256-gcm'

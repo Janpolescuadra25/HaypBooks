@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
+import { Prisma, BillStatus, PurchaseOrderStatus } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
 import { encryptField } from '../common/utils/field-encryption.util'
@@ -129,7 +129,7 @@ export class ApRepository {
 
     // ─── Bills ────────────────────────────────────────────────────────────────
 
-    async findBills(companyId: string, opts: { vendorId?: string; status?: Prisma.BillStatus; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+    async findBills(companyId: string, opts: { vendorId?: string; status?: BillStatus; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.bill.findMany({
             where: {
                 companyId, deletedAt: null,
@@ -401,7 +401,7 @@ export class ApRepository {
 
     // ─── Purchase Requests ────────────────────────────────────────────────────
 
-    async findPurchaseRequests(companyId: string, opts: { requesterId?: string; status?: Prisma.PurchaseRequestStatus; limit?: number; offset?: number } = {}) {
+    async findPurchaseRequests(companyId: string, opts: { requesterId?: string; status?: string; limit?: number; offset?: number } = {}) {
         return this.prisma.purchaseRequest.findMany({
             where: {
                 companyId,
@@ -433,7 +433,7 @@ export class ApRepository {
         if (!pr) return null
         const payload = { ...data }
         if (data.lines) {
-            const requestLines: any[] = data.lines
+            const requestLines: any[] = (data as any).lines
             payload.lines = { create: requestLines.map((l: any) => ({
                 purchaseRequestId: id,
                 itemId: l.itemId ?? null,
@@ -464,7 +464,7 @@ export class ApRepository {
 
     // ─── Vendor Credits ──────────────────────────────────────────────────────
 
-    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: Prisma.VendorCreditStatus; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.vendorCredit.findMany({
             where: {
                 companyId,
@@ -498,7 +498,7 @@ export class ApRepository {
         if (!vc) return null
         const payload = { ...data }
         if (data.lines) {
-            const creditLines: any[] = data.lines
+            const creditLines: any[] = (data as any).lines
             payload.lines = { create: creditLines.map((l: any) => ({
                 vendorCreditId: id,
                 accountId: l.accountId ?? null,
@@ -614,10 +614,11 @@ export class ApRepository {
         const claim = await this.prisma.perDiemClaim.findFirst({ where: { id, companyId } })
         if (!claim) return null
         return this.prisma.perDiemClaim.update({ where: { id }, data })
+    }
 
     // ─── Purchase Orders ──────────────────────────────────────────────────────────────
 
-    async findPurchaseOrders(companyId: string, opts: { vendorId?: string; status?: Prisma.PurchaseOrderStatus; limit?: number; offset?: number } = {}) {
+    async findPurchaseOrders(companyId: string, opts: { vendorId?: string; status?: PurchaseOrderStatus; limit?: number; offset?: number } = {}) {
         return this.prisma.purchaseOrder.findMany({
             where: {
                 companyId, deletedAt: null,
@@ -666,7 +667,7 @@ export class ApRepository {
         })
     }
 
-    async updatePoStatus(companyId: string, poId: string, status: string) {
+    async updatePoStatus(companyId: string, poId: string, status: PurchaseOrderStatus) {
         return this.prisma.purchaseOrder.update({ where: { id: poId }, data: { status } })
     }
 
@@ -699,7 +700,7 @@ export class ApRepository {
 
     async getApAging(companyId: string) {
         const bills = await this.prisma.bill.findMany({
-            where: { companyId, deletedAt: null, status: { in: ['APPROVED', 'PARTIALLY_PAID', 'OVERDUE'] as Prisma.BillStatus[] }, balance: { gt: 0 } },
+            where: { companyId, deletedAt: null, status: { in: ['APPROVED', 'PARTIALLY_PAID', 'OVERDUE'] as BillStatus[] }, balance: { gt: 0 } },
             select: {
                 id: true, billNumber: true, issuedAt: true, dueAt: true, total: true, balance: true,
                 vendor: { select: { contact: { select: { id: true, displayName: true } } } },
