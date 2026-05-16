@@ -1330,6 +1330,15 @@ export class SubLedgerService {
           : null
         const cashAccountId = cashAccountRaw ?? (await resolveAccount(db, companyId, SYSTEM_ACCOUNTS.CASH)).id
 
+        const existingReimbursement = await db.journalEntry.findFirst({
+          where: {
+            companyId,
+            sourceReferenceId: expenseClaimId,
+            transactionSource: 'Expense Reimbursement',
+          },
+        })
+        if (existingReimbursement) return
+
         const amt = this.roundMoney(amount)
         const entryNumber = await this.nextEntryNumber(companyId, 'EXR', db)
         await createAndPostJE(db, {
