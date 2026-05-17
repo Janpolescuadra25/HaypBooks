@@ -164,25 +164,28 @@ export default function NewJournalEntryPage() {
 
   const handleSave = async (status: 'DRAFT' | 'POSTED') => {
     if (!balanced) { setError('Debits must equal credits.'); return }
-    const validLines = lines.filter(l => l.accountId)
+    const validLines = lines.filter(l => l.accountId && (Number(l.debit) !== 0 || Number(l.credit) !== 0))
     if (validLines.length < 2) { setError('At least 2 account lines are required.'); return }
+    const payload = {
+      date,
+      description: memo,
+      reference,
+      postingStatus: status,
+      recurrenceSchedule: isRecurring ? `${recurrenceInterval} / ${nextRunDate}` : undefined,
+      attachmentCount: attachmentCount > 0 ? attachmentCount : undefined,
+      lines: validLines.map(l => ({
+        accountId: l.accountId,
+        debit: Number(l.debit) || 0,
+        credit: Number(l.credit) || 0,
+        description: l.description,
+      })),
+    }
+    console.log('[JE-SUBMIT] lines state:', JSON.stringify(lines, null, 2))
+    console.log('[JE-SUBMIT] payload:', JSON.stringify(payload, null, 2))
     setSaving(true)
     setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/accounting/journal-entries`, {
-        date,
-        description: memo,
-        reference,
-        postingStatus: status,
-        recurrenceSchedule: isRecurring ? `${recurrenceInterval} / ${nextRunDate}` : undefined,
-        attachmentCount: attachmentCount > 0 ? attachmentCount : undefined,
-        lines: validLines.map(l => ({
-          accountId: l.accountId,
-          debit: Number(l.debit) || 0,
-          credit: Number(l.credit) || 0,
-          description: l.description,
-        })),
-      })
+      await apiClient.post(`/companies/${companyId}/accounting/journal-entries`, payload)
       router.push('/accounting/core-accounting/journal-entries')
     } catch (e: unknown) {
       const error = e as any
@@ -349,17 +352,9 @@ export default function NewJournalEntryPage() {
 
         {/* Lines table */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Line Items</h2>
-              <p className="text-xs text-gray-400 mt-1">Add at least two lines for a balanced journal entry.</p>
-            </div>
-            <button
-              onClick={addLine}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
-            >
-              <Plus size={13} /> Add Line
-            </button>
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Line Items</h2>
+            <p className="text-xs text-gray-400 mt-1">Add at least two lines for a balanced journal entry.</p>
           </div>
 
           <div className="overflow-x-auto">
