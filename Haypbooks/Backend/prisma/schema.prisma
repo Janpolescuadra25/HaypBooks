@@ -9451,6 +9451,7 @@ model BillPayment {
   BillPaymentApplication BillPaymentApplication[]
   refunds                VendorRefund[]
   journalEntryId         String?
+  postingStatus          PostingStatus            @default(DRAFT)
   journalEntry           JournalEntry?            @relation("JournalEntry_BillPayments", fields: [journalEntryId], references: [id])
 
   createdById        String?

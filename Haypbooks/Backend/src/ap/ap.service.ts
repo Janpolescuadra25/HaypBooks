@@ -999,6 +999,9 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const existing = await this.repo.findVendorCreditById(companyId, creditId)
         if (!existing) throw new NotFoundException('Vendor credit not found')
+        if (existing.postingStatus === 'POSTED') {
+            throw new BadRequestException('Posted vendor credit cannot be deleted')
+        }
         const workspaceId = await this.getWorkspaceId(companyId)
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'DELETE', tableName: 'VendorCredit', recordId: creditId, changes: {} },

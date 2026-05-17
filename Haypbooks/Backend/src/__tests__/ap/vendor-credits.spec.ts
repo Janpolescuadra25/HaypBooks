@@ -14,6 +14,7 @@ describe('ApService - Vendor Credits', () => {
       findVendorCreditById: jest.fn(),
       createVendorCredit: jest.fn(),
       updateVendorCredit: jest.fn(),
+      deleteVendorCredit: jest.fn(),
     }
 
     mockPrisma = {
@@ -57,6 +58,23 @@ describe('ApService - Vendor Credits', () => {
     mockRepo.findVendorCreditById.mockResolvedValue({ id: 'credit-1', companyId: 'company-1', status: 'APPLIED' })
 
     await expect(service.applyVendorCredit('user-1', 'company-1', 'credit-1')).rejects.toThrow(BadRequestException)
+  })
+
+  test('deletes an unposted vendor credit', async () => {
+    mockRepo.findVendorCreditById.mockResolvedValue({ id: 'credit-1', companyId: 'company-1', postingStatus: 'DRAFT' })
+    mockRepo.deleteVendorCredit.mockResolvedValue({ id: 'credit-1' })
+
+    const result = await service.deleteVendorCredit('user-1', 'company-1', 'credit-1')
+
+    expect(mockRepo.deleteVendorCredit).toHaveBeenCalledWith('company-1', 'credit-1')
+    expect(result).toEqual({ id: 'credit-1' })
+  })
+
+  test('rejects deletion of a posted vendor credit', async () => {
+    mockRepo.findVendorCreditById.mockResolvedValue({ id: 'credit-1', companyId: 'company-1', postingStatus: 'POSTED' })
+
+    await expect(service.deleteVendorCredit('user-1', 'company-1', 'credit-1')).rejects.toThrow(BadRequestException)
+    expect(mockRepo.deleteVendorCredit).not.toHaveBeenCalled()
   })
 
   test('creates vendor credit inside the transaction flow by default', async () => {
