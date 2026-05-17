@@ -319,8 +319,8 @@ export default function InvoicesPage() {
         size: 110,
         minSize: 100,
         enableSorting: true,
-        render: (value, invoice) => {
-          const overdueDays = invoice?.daysOverdue ?? 0
+        render: (value, row) => {
+          const overdueDays = row?.daysOverdue ?? 0
           return (
             <span className={overdueDays > 0 ? 'text-red-600 font-medium' : 'text-slate-600'}>
               {fmtDate(value)}
