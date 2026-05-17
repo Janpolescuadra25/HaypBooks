@@ -1,32 +1,17 @@
--- Step 1: Drop existing trigger and function completely
+-- Drop existing trigger and function
 DROP TRIGGER IF EXISTS je_balance_check ON "JournalEntryLine";
 DROP FUNCTION IF EXISTS check_je_balance() CASCADE;
 
--- Step 2: Verify they are gone
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'je_balance_check') THEN
-    RAISE NOTICE 'WARNING: Trigger still exists!';
-  ELSE
-    RAISE NOTICE 'Trigger dropped successfully';
-  END IF;
-  
-  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'check_je_balance') THEN
-    RAISE NOTICE 'WARNING: Function still exists!';
-  ELSE
-    RAISE NOTICE 'Function dropped successfully';
-  END IF;
-END $$;
-
--- Step 3: Recreate function with EXPLICIT UUID casting
+-- Recreate function — cast COLUMN to UUID in WHERE clause, not the variable
 CREATE OR REPLACE FUNCTION check_je_balance()
 RETURNS TRIGGER AS $$
 DECLARE
-  je_id UUID;
+  je_id TEXT;
   total_debit NUMERIC;
   total_credit NUMERIC;
 BEGIN
-  je_id := NEW."journalId"::UUID;
+  -- Get journalId as TEXT (matches the actual column type)
+  je_id := NEW."journalId";
   
   SELECT 
     COALESCE(SUM("debit"), 0)::NUMERIC,
@@ -43,28 +28,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Step 4: Recreate trigger
+-- Recreate trigger
 CREATE TRIGGER je_balance_check
 AFTER INSERT OR UPDATE ON "JournalEntryLine"
 FOR EACH ROW
 EXECUTE FUNCTION check_je_balance();
 
--- Step 5: Verify the fix
+-- Verify
 DO $$
 DECLARE
   func_text TEXT;
 BEGIN
   SELECT prosrc INTO func_text FROM pg_proc WHERE proname = 'check_je_balance';
+  RAISE NOTICE 'Function source: %', func_text;
   
-  IF func_text LIKE '%::UUID%' AND func_text LIKE '%je_id UUID%' THEN
-    RAISE NOTICE 'SUCCESS: Function has correct UUID type and casting';
+  IF func_text LIKE '%je_id TEXT%' THEN
+    RAISE NOTICE 'SUCCESS: je_id is now TEXT type — matches column type';
   ELSE
-    RAISE EXCEPTION 'FAILED: Function does not have correct UUID type. Source: %', func_text;
+    RAISE EXCEPTION 'FAILED: je_id is not TEXT';
   END IF;
   
   IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'je_balance_check') THEN
-    RAISE NOTICE 'SUCCESS: Trigger exists on JournalEntryLine';
+    RAISE NOTICE 'SUCCESS: Trigger exists';
   ELSE
-    RAISE EXCEPTION 'FAILED: Trigger does not exist';
+    RAISE EXCEPTION 'FAILED: Trigger missing';
   END IF;
 END $$;
