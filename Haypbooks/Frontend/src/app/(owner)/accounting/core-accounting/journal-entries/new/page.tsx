@@ -40,10 +40,8 @@ export default function NewJournalEntryPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [memo, setMemo] = useState('')
   const [reference, setReference] = useState('')
-  const [lines, setLines] = useState<JELine[]>([
-    { accountId: '', customerId: '', debit: '', credit: '', description: '' },
-    { accountId: '', customerId: '', debit: '', credit: '', description: '' },
-  ])
+  const emptyLine: JELine = { accountId: '', customerId: '', debit: '', credit: '', description: '' }
+  const [lines, setLines] = useState<JELine[]>([emptyLine, emptyLine])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [saving, setSaving] = useState(false)
@@ -108,6 +106,12 @@ export default function NewJournalEntryPage() {
     const timer = setTimeout(() => setCopyBanner(false), 4000)
     return () => clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    if (lines.length < 2) {
+      setLines(prev => [...prev, ...Array.from({ length: 2 - prev.length }, () => emptyLine)])
+    }
+  }, [lines])
 
   useEffect(() => {
     if (!companyId) return
@@ -345,8 +349,17 @@ export default function NewJournalEntryPage() {
 
         {/* Lines table */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Line Items</h2>
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Line Items</h2>
+              <p className="text-xs text-gray-400 mt-1">Add at least two lines for a balanced journal entry.</p>
+            </div>
+            <button
+              onClick={addLine}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+            >
+              <Plus size={13} /> Add Line
+            </button>
           </div>
 
           <div className="overflow-x-auto">
