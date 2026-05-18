@@ -18,12 +18,12 @@ export class ExpenseStatusTransitionGuard {
     const oldIndex = ordered.indexOf(oldNorm)
     const newIndex = ordered.indexOf(newNorm)
 
-    if (oldNorm === 'PAID' && newNorm !== 'PAID') {
-      throw new BadRequestException('Cannot change status after a report has been paid')
-    }
-
     if (newNorm === 'VOIDED' && ['APPROVED', 'PAID'].includes(oldNorm)) {
       return
+    }
+
+    if (oldNorm === 'PAID' && newNorm !== 'PAID') {
+      throw new BadRequestException('Cannot change status after a report has been paid')
     }
 
     if (oldIndex >= 0 && newIndex >= 0 && newIndex < oldIndex) {
@@ -33,6 +33,10 @@ export class ExpenseStatusTransitionGuard {
     if (oldNorm === 'REJECTED' && !['REJECTED', 'DRAFT', 'SUBMITTED', 'APPROVED'].includes(newNorm)) {
       throw new BadRequestException('Invalid status transition')
     }
+  }
+
+  canTransition(oldStatus: string, newStatus: string) {
+    return this.assertValidTransition(oldStatus, newStatus)
   }
 
   async handleTransitionToApproved(expenseClaimId: string, companyId: string, workspaceId: string, tx: PrismaTransactionClient) {

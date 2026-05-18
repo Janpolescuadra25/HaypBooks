@@ -1374,26 +1374,38 @@ export class ApService {
         return this.prisma.$transaction(async (tx) => {
             const existing = await tx.mileageLog.findFirst({ where: { id: mileageId, companyId } })
             if (!existing) throw new NotFoundException('Mileage log not found')
+      if (existing.status === 'VOIDED' || existing.postingStatus === 'VOIDED') {
+        throw new BadRequestException('Mileage log is already voided')
+      }
+      if (existing.postingStatus !== 'POSTED') {
+        throw new BadRequestException('Only posted mileage logs can be voided')
+      }
 
-            const voided = await tx.mileageLog.update({ where: { id: mileageId }, data: { status: 'VOIDED' } })
-            await this.subLedger.postMileageReversalToGL(mileageId, tx)
-            return voided
-        })
-    }
+      const voided = await tx.mileageLog.update({ where: { id: mileageId }, data: { status: 'VOIDED' } })
+      await this.subLedger.postMileageReversalToGL(mileageId, tx)
+      return voided
+    })
+  }
 
-    async voidPerDiem(userId: string, companyId: string, perDiemId: string) {
-        await this.assertAccess(userId, companyId)
-        return this.prisma.$transaction(async (tx) => {
-            const existing = await tx.perDiemClaim.findFirst({ where: { id: perDiemId, companyId } })
-            if (!existing) throw new NotFoundException('Per diem claim not found')
+  async voidPerDiem(userId: string, companyId: string, perDiemId: string) {
+    await this.assertAccess(userId, companyId)
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.perDiemClaim.findFirst({ where: { id: perDiemId, companyId } })
+      if (!existing) throw new NotFoundException('Per diem claim not found')
+      if (existing.status === 'VOIDED' || existing.postingStatus === 'VOIDED') {
+        throw new BadRequestException('Per diem claim is already voided')
+      }
+      if (existing.postingStatus !== 'POSTED') {
+        throw new BadRequestException('Only posted per diem claims can be voided')
+      }
 
-            const voided = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: { status: 'VOIDED' } })
-            await this.subLedger.postPerDiemReversalToGL(perDiemId, tx)
-            return voided
-        })
-    }
+      const voided = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: { status: 'VOIDED' } })
+      await this.subLedger.postPerDiemReversalToGL(perDiemId, tx)
+      return voided
+    })
+  }
 
-    async deletePerDiem(userId: string, companyId: string, id: string) {
+  async deletePerDiem(userId: string, companyId: string, id: string) {
         await this.assertAccess(userId, companyId)
         const existing = await this.prisma.perDiemClaim.findUnique({ where: { id } })
         if (!existing || existing.companyId !== companyId) throw new NotFoundException('Per diem not found')

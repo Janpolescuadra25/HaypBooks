@@ -6,6 +6,8 @@
  * Uses the Prisma transaction client directly for atomicity.
  */
 
+import { BadRequestException } from '@nestjs/common'
+
 /** Normal side by AccountType ID (matches seed.ts) */
 const NORMAL_SIDE_BY_TYPE: Record<number, 'DEBIT' | 'CREDIT'> = {
     1: 'DEBIT',   // ASSET
@@ -199,6 +201,7 @@ export async function createReversingJE(
             workspaceId: true,
             createdById: true,
             currency: true,
+            postingStatus: true,
             lines: {
                 select: {
                     accountId: true,
@@ -210,6 +213,9 @@ export async function createReversingJE(
         },
     })
     if (!origJe) return null
+    if (origJe.postingStatus === 'VOIDED') {
+        throw new BadRequestException('Journal entry is already voided')
+    }
 
     const reversedLines = origJe.lines.map((l: any) => ({
         accountId: l.accountId,

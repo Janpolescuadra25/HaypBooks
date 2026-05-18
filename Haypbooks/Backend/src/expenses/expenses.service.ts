@@ -339,6 +339,9 @@ export class ExpensesService {
     return this.prisma.$transaction(async (tx) => {
       const claim = await tx.expenseClaim.findUnique({ where: { id: claimId, companyId } })
       if (!claim) throw new NotFoundException('Expense claim not found')
+      if (claim.status === 'VOIDED' || claim.postingStatus === 'VOIDED') {
+        throw new BadRequestException('Expense claim is already voided')
+      }
       if (!['APPROVED', 'PAID'].includes(claim.status)) {
         throw new BadRequestException('Only approved or paid expense claims can be voided')
       }

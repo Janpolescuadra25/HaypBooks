@@ -388,6 +388,9 @@ export class ApRepository {
     async voidBillPayment(companyId: string, paymentId: string) {
         const payment = await this.prisma.billPayment.findFirst({ where: { id: paymentId, companyId, deletedAt: null } })
         if (!payment) return null
+        if (!payment.journalEntryId) {
+            throw new BadRequestException('Only posted bill payments can be voided')
+        }
 
         return this.prisma.$transaction(async (tx) => {
             const apps = await tx.billPaymentApplication.findMany({ where: { paymentId } })
