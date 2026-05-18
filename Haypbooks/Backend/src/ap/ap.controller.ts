@@ -232,6 +232,12 @@ export class ApController {
         return this.svc.applyVendorCredit(req.user.userId, cid, creditId)
     }
 
+    @Post('vendor-credits/:creditId/void')
+    @HttpCode(HttpStatus.OK)
+    voidVendorCredit(@Req() req: any, @Param('companyId') cid: string, @Param('creditId') creditId: string) {
+        return this.svc.voidVendorCredit(req.user.userId, cid, creditId)
+    }
+
     // ─── Receipts ────────────────────────────────────────────────────────────
 
     @Get('receipts')
@@ -281,6 +287,12 @@ export class ApController {
         return this.svc.updateMileageLog(req.user.userId, cid, logId, body)
     }
 
+    @Post('mileage/:logId/void')
+    @HttpCode(HttpStatus.OK)
+    voidMileage(@Req() req: any, @Param('companyId') cid: string, @Param('logId') logId: string) {
+        return this.svc.voidMileage(req.user.userId, cid, logId)
+    }
+
     @Delete('mileage/:logId')
     deleteMileageLog(@Req() req: any, @Param('companyId') cid: string, @Param('logId') logId: string) {
         return this.svc.deleteMileageLog(req.user.userId, cid, logId)
@@ -307,7 +319,11 @@ export class ApController {
     updatePerDiem(@Req() req: any, @Param('companyId') cid: string, @Param('id') id: string, @Body() body: any) {
         return this.svc.updatePerDiem(req.user.userId, cid, id, body)
     }
-
+    @Post('per-diem/:id/void')
+    @HttpCode(HttpStatus.OK)
+    voidPerDiem(@Req() req: any, @Param('companyId') cid: string, @Param('id') id: string) {
+        return this.svc.voidPerDiem(req.user.userId, cid, id)
+    }
     // ─── AP Aging Report ──────────────────────────────────────────────────────
 
     @Get('reports/aging')

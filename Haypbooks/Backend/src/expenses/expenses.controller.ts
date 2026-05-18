@@ -101,6 +101,12 @@ export class ExpensesController {
     return this.expensesService.reimburseExpenseReport(req.user.userId, companyId, id, body)
   }
 
+  @Post('expenses/:id/void')
+  @HttpCode(HttpStatus.OK)
+  voidExpenseClaim(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.expensesService.voidExpenseClaim(req.user.userId, companyId, id)
+  }
+
   @Patch('expenses/:expenseId')
   updateExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('expenseId') expenseId: string, @Body() body: any) {
     return this.expensesService.updateExpenseReport(req.user.userId, companyId, expenseId, body)
