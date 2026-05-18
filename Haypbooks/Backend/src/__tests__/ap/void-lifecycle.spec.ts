@@ -54,6 +54,7 @@ describe('Void Lifecycle', () => {
       postPerDiemReversalToGL: jest.fn().mockResolvedValue(undefined),
       postExpenseClaimReversalToGL: jest.fn().mockResolvedValue(undefined),
       postExpenseReimbursementReversalToGL: jest.fn().mockResolvedValue(undefined),
+      postBillPaymentReversalToGL: jest.fn().mockResolvedValue(undefined),
     }
 
     apService = new ApService(mockRepo as any, mockPrisma as any, mockSubLedger as any)
@@ -74,19 +75,30 @@ describe('Void Lifecycle', () => {
       mockPrisma.billPaymentApplication.findMany.mockResolvedValue([{ id: 'app-1', billId: 'bill-1', amount: 500 }])
       mockPrisma.bill.findUnique.mockResolvedValue({ id: 'bill-1', balance: 0, total: 500, status: 'PAID' })
       mockPrisma.bill.update.mockResolvedValue({ id: 'bill-1' })
-      mockPrisma.billPayment.update.mockResolvedValue({ id: 'payment-1', deletedAt: new Date() })
+      mockPrisma.billPayment.update.mockResolvedValue({ id: 'payment-1', status: 'VOIDED', postingStatus: 'VOIDED' })
 
       const result = await apRepo.voidBillPayment('company-1', 'payment-1')
 
-      expect(glIntegration.createReversingJE).toHaveBeenCalledWith(mockPrisma, 'company-1', 'je-100', 'Void bill payment payment-1')
-      expect(mockPrisma.billPayment.update).toHaveBeenCalledWith({ where: { id: 'payment-1' }, data: { deletedAt: expect.any(Date) } })
-      expect(result).toEqual({ id: 'payment-1', deletedAt: expect.any(Date) })
+      expect(glIntegration.createReversingJE).not.toHaveBeenCalled()
+      expect(mockPrisma.billPayment.update).toHaveBeenCalledWith({ where: { id: 'payment-1' }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
+      expect(result).toEqual({ id: 'payment-1', status: 'VOIDED', postingStatus: 'VOIDED' })
     })
 
     it('should reject voiding a draft bill payment', async () => {
       mockPrisma.billPayment.findFirst.mockResolvedValue({ id: 'payment-1', companyId: 'company-1' })
 
       await expect(apRepo.voidBillPayment('company-1', 'payment-1')).rejects.toThrow(BadRequestException)
+    })
+
+    it('should void a posted bill payment through the service and reverse GL via subledger', async () => {
+      mockPrisma.billPayment.findUnique.mockResolvedValue({ id: 'payment-1', companyId: 'company-1', postingStatus: 'POSTED' })
+      mockRepo.voidBillPayment.mockResolvedValue({ id: 'payment-1', status: 'VOIDED', postingStatus: 'VOIDED' })
+
+      const result = await apService.voidBillPayment('user-1', 'company-1', 'payment-1')
+
+      expect(mockSubLedger.postBillPaymentReversalToGL).toHaveBeenCalledWith('payment-1', mockPrisma)
+      expect(mockRepo.voidBillPayment).toHaveBeenCalledWith('company-1', 'payment-1', mockPrisma)
+      expect(result).toEqual({ id: 'payment-1', status: 'VOIDED', postingStatus: 'VOIDED' })
     })
   })
 

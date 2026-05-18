@@ -18,7 +18,7 @@ export class ExpenseStatusTransitionGuard {
     const oldIndex = ordered.indexOf(oldNorm)
     const newIndex = ordered.indexOf(newNorm)
 
-    if (newNorm === 'VOIDED' && ['APPROVED', 'PAID'].includes(oldNorm)) {
+    if (newNorm === 'VOIDED' && ['DRAFT', 'SUBMITTED', 'APPROVED', 'PAID'].includes(oldNorm)) {
       return
     }
 

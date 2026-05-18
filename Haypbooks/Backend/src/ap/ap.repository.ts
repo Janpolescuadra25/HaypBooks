@@ -385,17 +385,18 @@ export class ApRepository {
         return executor.billPayment.update({ where: { id }, data })
     }
 
-    async voidBillPayment(companyId: string, paymentId: string) {
-        const payment = await this.prisma.billPayment.findFirst({ where: { id: paymentId, companyId, deletedAt: null } })
+    async voidBillPayment(companyId: string, paymentId: string, tx?: any) {
+        const executor = tx ?? this.prisma
+        const payment = await executor.billPayment.findFirst({ where: { id: paymentId, companyId, deletedAt: null } })
         if (!payment) return null
         if (!payment.journalEntryId) {
             throw new BadRequestException('Only posted bill payments can be voided')
         }
 
-        return this.prisma.$transaction(async (tx) => {
-            const apps = await tx.billPaymentApplication.findMany({ where: { paymentId } })
+        const run = async (db: any) => {
+            const apps = await db.billPaymentApplication.findMany({ where: { paymentId } })
             for (const app of apps) {
-                const bill = await tx.bill.findUnique({ where: { id: app.billId } })
+                const bill = await db.bill.findUnique({ where: { id: app.billId } })
                 if (bill && bill.status !== 'CANCELLED' && bill.status !== 'VOIDED') {
                     const restoredBalance = Number(bill.balance) + Number(app.amount)
                     const totalAmount = Number(bill.total ?? 0)
@@ -413,20 +414,23 @@ export class ApRepository {
                             ? 'DRAFT'
                             : 'PARTIAL'
 
-                    await tx.bill.update({
+                    await db.bill.update({
                         where: { id: app.billId },
                         data: { balance: restoredBalance, status: nextStatus, paymentStatus: nextPaymentStatus },
                     })
                 }
-                await tx.billPaymentApplication.delete({ where: { id: app.id } })
+                await db.billPaymentApplication.delete({ where: { id: app.id } })
             }
 
-            // Reverse the JE
-            if (payment.journalEntryId) {
-                await createReversingJE(tx, companyId, payment.journalEntryId, `Void bill payment ${paymentId}`)
-            }
+            return db.billPayment.update({ where: { id: paymentId }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
+        }
 
-            return tx.billPayment.update({ where: { id: paymentId }, data: { deletedAt: new Date() } })
+        if (tx) {
+            return run(tx)
+        }
+
+        return this.prisma.$transaction(async (txClient) => {
+            return run(txClient)
         })
     }
 

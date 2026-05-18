@@ -1461,6 +1461,8 @@ export class SubLedgerService {
     }
 
     await this.assertPeriodOpen(claim.companyId, new Date(), executor)
+    // Note: postingStatus update is handled by postExpenseClaimReversalToGL
+    // which is always called after this method in voidExpenseClaim()
     await createReversingJE(executor, claim.companyId, reimbursementJe.id, `Void expense reimbursement ${reimbursementId}`)
   }
 
@@ -1498,6 +1500,18 @@ export class SubLedgerService {
     await this.assertPeriodOpen(vc.companyId, new Date(), executor)
     await createReversingJE(executor, vc.companyId, vc.journalEntryId, `Void vendor credit ${vendorCreditId}`)
     await executor.vendorCredit.update({ where: { id: vendorCreditId }, data: { postingStatus: 'VOIDED' } })
+  }
+
+  async postBillPaymentReversalToGL(billPaymentId: string, tx?: any): Promise<void> {
+    const executor = tx ?? this.prisma
+    const payment = await executor.billPayment.findUnique({ where: { id: billPaymentId } })
+    if (!payment?.journalEntryId) {
+      throw new BadRequestException('Bill payment has no journal entry to reverse')
+    }
+
+    await this.assertPeriodOpen(payment.companyId, new Date(), executor)
+    await createReversingJE(executor, payment.companyId, payment.journalEntryId, `Void bill payment ${billPaymentId}`)
+    await executor.billPayment.update({ where: { id: billPaymentId }, data: { postingStatus: 'VOIDED' } })
   }
 
   // ─── Expenses: Mileage Log Approved ────────────────────────────────────────

@@ -17,6 +17,7 @@ describe('SubLedgerService Reversal Methods', () => {
   beforeEach(() => {
     jest.resetAllMocks()
     mockPrisma = {
+      billPayment: { findUnique: jest.fn(), update: jest.fn() },
       expenseClaim: { findUnique: jest.fn(), update: jest.fn() },
       journalEntry: { findFirst: jest.fn() },
       mileageLog: { findUnique: jest.fn(), update: jest.fn() },
@@ -73,6 +74,22 @@ describe('SubLedgerService Reversal Methods', () => {
     mockPrisma.vendorCredit.findUnique.mockResolvedValue({ id: 'vc1', companyId: 'company-1' })
 
     await expect(service.postVendorCreditReversalToGL('vc1', mockPrisma)).rejects.toThrow(BadRequestException)
+  })
+
+  it('postBillPaymentReversalToGL should reverse and mark VOIDED', async () => {
+    mockPrisma.billPayment.findUnique.mockResolvedValue({ id: 'bp1', companyId: 'company-1', journalEntryId: 'je-6' })
+    mockPrisma.billPayment.update.mockResolvedValue({ id: 'bp1', postingStatus: 'VOIDED' })
+
+    await service.postBillPaymentReversalToGL('bp1', mockPrisma)
+
+    expect(glIntegration.createReversingJE).toHaveBeenCalledWith(mockPrisma, 'company-1', 'je-6', 'Void bill payment bp1')
+    expect(mockPrisma.billPayment.update).toHaveBeenCalledWith({ where: { id: 'bp1' }, data: { postingStatus: 'VOIDED' } })
+  })
+
+  it('postBillPaymentReversalToGL should throw if no journalEntryId exists', async () => {
+    mockPrisma.billPayment.findUnique.mockResolvedValue({ id: 'bp1', companyId: 'company-1' })
+
+    await expect(service.postBillPaymentReversalToGL('bp1', mockPrisma)).rejects.toThrow(BadRequestException)
   })
 
   it('postExpenseClaimReversalToGL should reverse and mark VOIDED', async () => {

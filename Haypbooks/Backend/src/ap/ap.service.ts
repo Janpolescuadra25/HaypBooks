@@ -765,9 +765,18 @@ export class ApService {
 
     async voidBillPayment(userId: string, companyId: string, paymentId: string) {
         await this.assertAccess(userId, companyId)
-        const result = await this.repo.voidBillPayment(companyId, paymentId)
-        if (!result) throw new NotFoundException('Bill payment not found')
-        return result
+        const payment = await this.prisma.billPayment.findFirst({ where: { id: paymentId, companyId } })
+        if (!payment) throw new NotFoundException('Bill payment not found')
+        if (payment.postingStatus !== 'POSTED') {
+            throw new BadRequestException('Only posted bill payments can be voided')
+        }
+
+        return this.prisma.$transaction(async (tx) => {
+            await this.subLedger.postBillPaymentReversalToGL(paymentId, tx)
+            const result = await this.repo.voidBillPayment(companyId, paymentId, tx)
+            if (!result) throw new NotFoundException('Bill payment not found')
+            return result
+        })
     }
 
     // ─── Purchase Orders ──────────────────────────────────────────────────────
