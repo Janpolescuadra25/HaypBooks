@@ -102,17 +102,6 @@ export default function NewJournalEntryPage() {
     }
   }, [lines])
 
-  if (!companyLoading && !companyId) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white border border-red-200 rounded-xl p-6 text-center shadow-sm">
-          <p className="text-sm text-red-600 font-semibold">Please select or create a company before creating a journal entry.</p>
-          {companyError && <p className="text-xs text-red-500 mt-2">{companyError}</p>}
-        </div>
-      </div>
-    )
-  }
-
   useEffect(() => {
     if (!companyId) return
     apiClient
@@ -125,6 +114,17 @@ export default function NewJournalEntryPage() {
       .then(({ data }) => setCustomers(Array.isArray(data) ? data : (data.items ?? data.customers ?? [])))
       .catch(() => {})
   }, [companyId])
+
+  if (!companyLoading && !companyId) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white border border-red-200 rounded-xl p-6 text-center shadow-sm">
+          <p className="text-sm text-red-600 font-semibold">Please select or create a company before creating a journal entry.</p>
+          {companyError && <p className="text-xs text-red-500 mt-2">{companyError}</p>}
+        </div>
+      </div>
+    )
+  }
 
   const addLine = () =>
     setLines(prev => [...prev, { accountId: '', customerId: '', debit: '', credit: '', description: '' }])
