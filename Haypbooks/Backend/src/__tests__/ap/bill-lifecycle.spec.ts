@@ -14,6 +14,7 @@ describe('ApService - Bill Lifecycle', () => {
       createBill: jest.fn(),
       findBillById: jest.fn(),
       recordBillPayment: jest.fn(),
+      updateBillPayment: jest.fn(),
       voidBill: jest.fn(),
     }
 
@@ -30,6 +31,7 @@ describe('ApService - Bill Lifecycle', () => {
     mockSubLedger = {
       postBillToGL: jest.fn().mockResolvedValue(undefined),
       postBillReversalToGL: jest.fn().mockResolvedValue(undefined),
+      postBillPaymentToGL: jest.fn().mockResolvedValue(undefined),
     }
 
     service = new ApService(mockRepo as any, mockPrisma as any, mockSubLedger as any)
@@ -78,16 +80,20 @@ describe('ApService - Bill Lifecycle', () => {
     expect(mockSubLedger.postBillToGL).toHaveBeenCalledWith('bill-1', 'user-1', mockPrisma)
   })
 
-  test('records a full payment for an approved bill', async () => {
+  test('records a full payment for an approved bill and posts it to GL', async () => {
     mockRepo.findBillById.mockResolvedValue({ id: 'bill-1', companyId: 'company-1', status: 'APPROVED', balance: 1000 })
-    mockRepo.recordBillPayment.mockResolvedValue({ id: 'payment-1', billId: 'bill-1', journalEntryId: 'je-1' })
+    mockRepo.recordBillPayment.mockResolvedValue({ id: 'payment-1', billId: 'bill-1' })
+    mockRepo.updateBillPayment.mockResolvedValue({ id: 'payment-1', billId: 'bill-1', journalEntryId: 'je-1', postingStatus: 'POSTED' })
 
     const result = await service.recordPayment('user-1', 'company-1', 'bill-1', { amount: 1000 })
 
     expect(result.id).toBe('payment-1')
     expect(result.billId).toBe('bill-1')
     expect(result.journalEntryId).toBe('je-1')
+    expect(result.postingStatus).toBe('POSTED')
     expect(mockRepo.recordBillPayment).toHaveBeenCalledWith(expect.objectContaining({ billId: 'bill-1', amount: 1000, applications: [{ billId: 'bill-1', amount: 1000 }] }))
+    expect(mockSubLedger.postBillPaymentToGL).toHaveBeenCalledWith('payment-1', 'user-1')
+    expect(mockRepo.updateBillPayment).toHaveBeenCalledWith('payment-1', { postingStatus: 'POSTED' })
   })
 
   test('rejects a pending bill with a reason', async () => {

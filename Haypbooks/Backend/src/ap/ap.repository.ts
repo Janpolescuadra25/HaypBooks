@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { Prisma, BillStatus, PurchaseOrderStatus } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
-import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
+import { resolveAccount, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
 import { encryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
@@ -376,27 +376,13 @@ export class ApRepository {
             }
 
             // GL: Dr Accounts Payable, Cr Bank/Cash
-            const apAcct   = await resolveAccount(tx, data.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
-            const cashAcct = data.bankAccountId
-                ? await tx.account.findUnique({ where: { id: data.bankAccountId }, select: { id: true } })
-                : null
-            const bankAccountId = cashAcct?.id ?? (await resolveAccount(tx, data.companyId, SYSTEM_ACCOUNTS.CASH)).id
-
-            const jeId = await createAndPostJE(tx, {
-                workspaceId: data.workspaceId,
-                companyId: data.companyId,
-                date: data.paymentDate,
-                description: `Bill payment – ${data.referenceNumber ?? payment.id}`,
-                createdById: data.createdById,
-                transactionSource: 'Bill Payment',
-                sourceReferenceId: payment.id,
-                lines: [
-                    { accountId: apAcct.id, debit: data.amount, credit: 0, description: 'AP settled' },
-                    { accountId: bankAccountId, debit: 0, credit: data.amount, description: 'Bank/Cash paid' },
-                ],
-            })
-            return tx.billPayment.update({ where: { id: payment.id }, data: { journalEntryId: jeId } })
+            return payment
         })
+    }
+
+    async updateBillPayment(id: string, data: Prisma.BillPaymentUpdateInput, tx?: any) {
+        const executor = tx ?? this.prisma
+        return executor.billPayment.update({ where: { id }, data })
     }
 
     async voidBillPayment(companyId: string, paymentId: string) {

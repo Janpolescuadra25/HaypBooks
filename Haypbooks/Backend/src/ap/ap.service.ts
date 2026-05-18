@@ -91,6 +91,12 @@ export class ApService {
         }
     }
 
+    private async postBillPaymentAndReturn(payment: any, userId: string) {
+        await this.subLedger.postBillPaymentToGL(payment.id, userId)
+        const updatedPayment = await this.repo.updateBillPayment(payment.id, { postingStatus: 'POSTED' })
+        return this.normalizeBillPayment(updatedPayment)
+    }
+
     // ─── Vendors ──────────────────────────────────────────────────────────────
 
     async listVendors(userId: string, companyId: string, opts: any) {
@@ -711,7 +717,7 @@ export class ApService {
             bankAccountId: data.bankAccountId, currency: data.currency,
             createdById: userId, applications,
         })
-        return this.normalizeBillPayment(result)
+        return this.postBillPaymentAndReturn(result, userId)
     }
 
     async recordPayment(userId: string, companyId: string, billId: string, data: any) {
@@ -744,6 +750,8 @@ export class ApService {
             applications: [{ billId, amount }],
         })
 
+        const postedResult = await this.postBillPaymentAndReturn(result, userId)
+
         await this.prisma.auditLog.create({
             data: {
                 workspaceId, companyId, userId,
@@ -752,7 +760,7 @@ export class ApService {
             },
         }).catch(() => { /* non-critical */ })
 
-        return this.normalizeBillPayment(result)
+        return postedResult
     }
 
     async voidBillPayment(userId: string, companyId: string, paymentId: string) {

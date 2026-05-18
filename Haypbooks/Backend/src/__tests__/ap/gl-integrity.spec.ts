@@ -32,12 +32,7 @@ describe('ApRepository - GL Integrity', () => {
     repo = new ApRepository(mockPrisma as any)
   })
 
-  test('recordBillPayment creates a single GL journal entry with AP debit and cash credit', async () => {
-    ;(glIntegration.resolveAccount as jest.Mock)
-      .mockResolvedValueOnce({ id: 'ap-2010' })
-      .mockResolvedValueOnce({ id: 'cash-1010' })
-    ;(glIntegration.createAndPostJE as jest.Mock).mockResolvedValue('je-1')
-
+  test('recordBillPayment stores the payment and updates the related bill without direct GL posting', async () => {
     await repo.recordBillPayment({
       workspaceId: 'w1',
       companyId: 'company-1',
@@ -49,14 +44,9 @@ describe('ApRepository - GL Integrity', () => {
       applications: [{ billId: 'bill-1', amount: 1000 }],
     })
 
-    expect(glIntegration.createAndPostJE).toHaveBeenCalledTimes(1)
-    expect((glIntegration.createAndPostJE as jest.Mock).mock.calls[0][1]).toEqual(expect.objectContaining({
-      companyId: 'company-1',
-      lines: [
-        { accountId: 'ap-2010', debit: 1000, credit: 0, description: 'AP settled' },
-        { accountId: 'cash-1010', debit: 0, credit: 1000, description: 'Bank/Cash paid' },
-      ],
-    }))
+    expect(glIntegration.createAndPostJE).not.toHaveBeenCalled()
+    expect(mockPrisma.billPayment.create).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.billPaymentApplication.create).toHaveBeenCalledTimes(1)
     expect(mockPrisma.bill.update).toHaveBeenCalledWith({
       where: { id: 'bill-1' },
       data: { balance: 0, status: 'PAID', paymentStatus: 'PAID' },
@@ -74,10 +64,7 @@ describe('ApRepository - GL Integrity', () => {
     expect(mockPrisma.bill.update).toHaveBeenCalledWith({ where: { id: 'bill-1' }, data: { status: 'VOIDED', postingStatus: 'VOIDED', deletedAt: expect.any(Date) } })
   })
 
-  test('recordBillPayment only posts one journal entry to prevent duplicate GL entries', async () => {
-    ;(glIntegration.resolveAccount as jest.Mock).mockResolvedValue({ id: 'ap-2010' })
-    ;(glIntegration.createAndPostJE as jest.Mock).mockResolvedValue('je-1')
-
+  test('recordBillPayment does not post directly to GL in the repository path', async () => {
     await repo.recordBillPayment({
       workspaceId: 'w1',
       companyId: 'company-1',
@@ -89,6 +76,6 @@ describe('ApRepository - GL Integrity', () => {
       applications: [{ billId: 'bill-1', amount: 500 }],
     })
 
-    expect(glIntegration.createAndPostJE).toHaveBeenCalledTimes(1)
+    expect(glIntegration.createAndPostJE).not.toHaveBeenCalled()
   })
 })
