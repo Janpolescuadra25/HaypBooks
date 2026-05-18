@@ -334,6 +334,24 @@ export class ExpensesService {
     return updated
   }
 
+  async voidExpenseClaim(userId: string, companyId: string, claimId: string) {
+    await this.assertAccess(userId, companyId)
+    return this.prisma.$transaction(async (tx) => {
+      const claim = await tx.expenseClaim.findUnique({ where: { id: claimId, companyId } })
+      if (!claim) throw new NotFoundException('Expense claim not found')
+      if (!['APPROVED', 'PAID'].includes(claim.status)) {
+        throw new BadRequestException('Only approved or paid expense claims can be voided')
+      }
+
+      if (claim.status === 'PAID') {
+        await this.subLedgerService.postExpenseReimbursementReversalToGL(claimId, tx)
+      }
+
+      await this.subLedgerService.postExpenseClaimReversalToGL(claimId, tx)
+      return tx.expenseClaim.update({ where: { id: claimId }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
+    })
+  }
+
   async listExpenseReports(userId: string, companyId: string, query: any) {
     return this.listReimbursements(userId, companyId, query)
   }

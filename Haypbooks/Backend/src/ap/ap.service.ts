@@ -1035,6 +1035,20 @@ export class ApService {
         return result
     }
 
+    async voidVendorCredit(userId: string, companyId: string, creditId: string) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.repo.findVendorCreditById(companyId, creditId)
+        if (!existing) throw new NotFoundException('Vendor credit not found')
+        if (existing.postingStatus !== 'POSTED') {
+            throw new BadRequestException('Only posted vendor credits can be voided')
+        }
+
+        return this.prisma.$transaction(async (tx) => {
+            await this.subLedger.postVendorCreditReversalToGL(creditId, tx)
+            return tx.vendorCredit.update({ where: { id: creditId }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
+        })
+    }
+
     // ─── Receipts ────────────────────────────────────────────────────────────
 
     async listReceipts(userId: string, companyId: string, opts: any) {
@@ -1353,6 +1367,30 @@ export class ApService {
             data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'PerDiemClaim', recordId: perDiemId, changes: payload },
         }).catch(() => { /* non-critical */ })
         return result
+    }
+
+    async voidMileage(userId: string, companyId: string, mileageId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.$transaction(async (tx) => {
+            const existing = await tx.mileageLog.findFirst({ where: { id: mileageId, companyId } })
+            if (!existing) throw new NotFoundException('Mileage log not found')
+
+            const voided = await tx.mileageLog.update({ where: { id: mileageId }, data: { status: 'VOIDED' } })
+            await this.subLedger.postMileageReversalToGL(mileageId, tx)
+            return voided
+        })
+    }
+
+    async voidPerDiem(userId: string, companyId: string, perDiemId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.$transaction(async (tx) => {
+            const existing = await tx.perDiemClaim.findFirst({ where: { id: perDiemId, companyId } })
+            if (!existing) throw new NotFoundException('Per diem claim not found')
+
+            const voided = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: { status: 'VOIDED' } })
+            await this.subLedger.postPerDiemReversalToGL(perDiemId, tx)
+            return voided
+        })
     }
 
     async deletePerDiem(userId: string, companyId: string, id: string) {

@@ -22,6 +22,10 @@ export class ExpenseStatusTransitionGuard {
       throw new BadRequestException('Cannot change status after a report has been paid')
     }
 
+    if (newNorm === 'VOIDED' && ['APPROVED', 'PAID'].includes(oldNorm)) {
+      return
+    }
+
     if (oldIndex >= 0 && newIndex >= 0 && newIndex < oldIndex) {
       throw new BadRequestException('Invalid status transition')
     }

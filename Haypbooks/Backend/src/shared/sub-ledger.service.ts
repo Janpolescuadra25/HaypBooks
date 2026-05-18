@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
-import { createAndPostJE, resolveAccount, SYSTEM_ACCOUNTS } from './gl-integration'
+import { createAndPostJE, createReversingJE, resolveAccount, SYSTEM_ACCOUNTS } from './gl-integration'
 
 type InvoiceWithLinesAndTaxes = Prisma.InvoiceGetPayload<{
   include: { lines: { include: { LineTax: true } } }
@@ -1427,6 +1427,77 @@ export class SubLedgerService {
       this.logger.error(`[SubLedger] Failed to post expense reimbursement ${params.expenseClaimId} to GL: ${err?.message}`)
       throw err
     }
+  }
+
+  async postExpenseClaimReversalToGL(expenseClaimId: string, tx?: any): Promise<void> {
+    const executor = tx ?? this.prisma
+    const claim = await executor.expenseClaim.findUnique({ where: { id: expenseClaimId } })
+    if (!claim?.journalEntryId) {
+      throw new BadRequestException('Expense claim has no journal entry to reverse')
+    }
+
+    await this.assertPeriodOpen(claim.companyId, new Date(), executor)
+    await createReversingJE(executor, claim.companyId, claim.journalEntryId, `Void expense claim ${expenseClaimId}`)
+    await executor.expenseClaim.update({ where: { id: expenseClaimId }, data: { postingStatus: 'VOIDED' } })
+  }
+
+  async postExpenseReimbursementReversalToGL(reimbursementId: string, tx?: any): Promise<void> {
+    const executor = tx ?? this.prisma
+    const claim = await executor.expenseClaim.findUnique({ where: { id: reimbursementId } })
+    if (!claim) {
+      throw new BadRequestException('Expense claim not found for reimbursement reversal')
+    }
+
+    const reimbursementJe = await executor.journalEntry.findFirst({
+      where: {
+        companyId: claim.companyId,
+        transactionSource: 'Expense Reimbursement',
+        sourceReferenceId: reimbursementId,
+      },
+      select: { id: true },
+    })
+    if (!reimbursementJe?.id) {
+      throw new BadRequestException('Expense reimbursement has no journal entry to reverse')
+    }
+
+    await this.assertPeriodOpen(claim.companyId, new Date(), executor)
+    await createReversingJE(executor, claim.companyId, reimbursementJe.id, `Void expense reimbursement ${reimbursementId}`)
+  }
+
+  async postMileageReversalToGL(mileageId: string, tx?: any): Promise<void> {
+    const executor = tx ?? this.prisma
+    const mileage = await executor.mileageLog.findUnique({ where: { id: mileageId } })
+    if (!mileage?.journalEntryId) {
+      throw new BadRequestException('Mileage has no journal entry to reverse')
+    }
+
+    await this.assertPeriodOpen(mileage.companyId, new Date(), executor)
+    await createReversingJE(executor, mileage.companyId, mileage.journalEntryId, `Void mileage log ${mileageId}`)
+    await executor.mileageLog.update({ where: { id: mileageId }, data: { postingStatus: 'VOIDED' } })
+  }
+
+  async postPerDiemReversalToGL(perDiemId: string, tx?: any): Promise<void> {
+    const executor = tx ?? this.prisma
+    const claim = await executor.perDiemClaim.findUnique({ where: { id: perDiemId } })
+    if (!claim?.journalEntryId) {
+      throw new BadRequestException('Per diem has no journal entry to reverse')
+    }
+
+    await this.assertPeriodOpen(claim.companyId, new Date(), executor)
+    await createReversingJE(executor, claim.companyId, claim.journalEntryId, `Void per diem ${perDiemId}`)
+    await executor.perDiemClaim.update({ where: { id: perDiemId }, data: { postingStatus: 'VOIDED' } })
+  }
+
+  async postVendorCreditReversalToGL(vendorCreditId: string, tx?: any): Promise<void> {
+    const executor = tx ?? this.prisma
+    const vc = await executor.vendorCredit.findUnique({ where: { id: vendorCreditId } })
+    if (!vc?.journalEntryId) {
+      throw new BadRequestException('Vendor credit has no journal entry to reverse')
+    }
+
+    await this.assertPeriodOpen(vc.companyId, new Date(), executor)
+    await createReversingJE(executor, vc.companyId, vc.journalEntryId, `Void vendor credit ${vendorCreditId}`)
+    await executor.vendorCredit.update({ where: { id: vendorCreditId }, data: { postingStatus: 'VOIDED' } })
   }
 
   // ─── Expenses: Mileage Log Approved ────────────────────────────────────────
