@@ -7,6 +7,8 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useToast } from '@/components/ToastProvider'
+import HaypSelect from '@/components/shared/HaypSelect'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypColumn, HaypActionItem, HaypBulkAction, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -18,25 +20,24 @@ interface BillPayment {
   date: string
   method?: string
   status?: string
+  postingStatus?: string
   amount: number
 }
 
 const STATUSES = ['ALL', 'PENDING', 'COMPLETED', 'FAILED', 'VOIDED'] as const
+const POSTING_STATUSES = ['ALL', 'DRAFT', 'POSTED', 'VOIDED'] as const
 
 export default function BillPaymentsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [rows, setRows] = useState<BillPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>('ALL')
-  const [toast, setToast] = useState('')
-
-  const showToast = useCallback((message: string) => {
-    setToast(message)
-    setTimeout(() => setToast(''), 3000)
-  }, [])
+  const [postingStatusFilter, setPostingStatusFilter] = useState<(typeof POSTING_STATUSES)[number]>('ALL')
+  const [isVoiding, setIsVoiding] = useState(false)
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -48,15 +49,18 @@ export default function BillPaymentsPage() {
 
     setLoading(true)
     try {
-      const res = await expensesService.listBillPayments(companyId)
+      const res = await expensesService.listBillPayments(companyId, {
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        postingStatus: postingStatusFilter !== 'ALL' ? postingStatusFilter : undefined,
+      })
       const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.payments ?? [])
     } catch {
-      showToast('Failed to load payments')
+      toast.error('Failed to load payments')
     } finally {
       setLoading(false)
     }
-  }, [companyId, showToast])
+  }, [companyId, postingStatusFilter, statusFilter, toast])
 
   useEffect(() => {
     fetchPayments()
@@ -64,19 +68,43 @@ export default function BillPaymentsPage() {
 
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
+    if (!confirm('Are you sure you want to void this payment? This will reverse the GL journal entries and cannot be undone.')) return
 
+    setIsVoiding(true)
     try {
       await expensesService.voidBillPayment(companyId, id)
-      setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: 'VOIDED' } : row)))
-      showToast('Payment voided')
+      await fetchPayments()
+      toast.success('Payment voided')
     } catch {
-      showToast('Failed to void payment')
+      toast.error('Failed to void payment')
+    } finally {
+      setIsVoiding(false)
     }
-  }, [companyId, showToast])
+  }, [companyId, fetchPayments, toast])
+
+  const renderCell = useCallback((value: any, key: string) => {
+    switch (key) {
+      case 'paymentNumber':
+        return <span className="font-semibold text-gray-800">{value ?? '—'}</span>
+      case 'vendorName':
+        return <span className="text-gray-700 truncate">{value ?? '—'}</span>
+      case 'date':
+        return <span className="text-gray-500">{fmtDate(value)}</span>
+      case 'method':
+        return <span className="text-gray-600">{value ?? '—'}</span>
+      case 'postingStatus':
+        return <StatusPill status={value ?? 'DRAFT'} type="posting" />
+      case 'status':
+        return <StatusPill status={value ?? 'COMPLETED'} />
+      case 'amount':
+        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(value)}</span>
+      default:
+        return <span className="truncate">{value ?? '—'}</span>
+    }
+  }, [fmt])
 
   const filtered = useMemo(() => {
     let list = rows
-    if (statusFilter !== 'ALL') list = list.filter((row) => row.status === statusFilter)
     if (search) {
       const q = search.toLowerCase()
       list = list.filter((row) =>
@@ -85,7 +113,7 @@ export default function BillPaymentsPage() {
       )
     }
     return list
-  }, [rows, statusFilter, search])
+  }, [rows, search])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -135,6 +163,16 @@ export default function BillPaymentsPage() {
       render: (value) => renderCell(value, 'method'),
     },
     {
+      id: 'postingStatus',
+      accessorKey: 'postingStatus',
+      header: 'Posting',
+      size: 110,
+      minSize: 100,
+      enableSorting: true,
+      align: 'left',
+      render: (value) => <StatusPill status={value ?? 'DRAFT'} type="posting" />,
+    },
+    {
       id: 'status',
       accessorKey: 'status',
       header: 'Status',
@@ -154,7 +192,7 @@ export default function BillPaymentsPage() {
       align: 'right',
       render: (value) => renderCell(value, 'amount'),
     },
-  ], [fmt])
+  ], [fmt, renderCell])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -168,13 +206,14 @@ export default function BillPaymentsPage() {
       divider: true,
     },
     {
-      label: 'Void Payment',
+      label: isVoiding ? 'Voiding...' : 'Void Payment',
       icon: <Ban size={14} />,
       danger: true,
-      show: (row) => row.status === 'PENDING',
+      show: (row) => (row.postingStatus ?? '').toUpperCase() === 'POSTED',
       onClick: (_rowId, row) => handleVoid(row.id),
+      disabled: isVoiding,
     },
-  ], [handleVoid, router])
+  ], [handleVoid, router, isVoiding])
 
   const bulkActions = useMemo<HaypBulkAction[]>(() => [
     {
@@ -186,10 +225,10 @@ export default function BillPaymentsPage() {
           ['Payment #', 'Vendor', 'Date', 'Method', 'Status', 'Amount'],
           selectedRows.map((row) => [row.paymentNumber ?? '', row.vendorName ?? '', row.date, row.method ?? '', row.status ?? '', String(row.amount)]),
         )
-        showToast('Selected payments exported')
+        toast.success('Selected payments exported')
       },
     },
-  ], [showToast])
+  ], [toast])
 
   const filterLabel = statusFilter === 'ALL' ? 'Status' : statusFilter.toLowerCase().replace(/_/g, ' ')
 
@@ -198,8 +237,8 @@ export default function BillPaymentsPage() {
       ['Payment #', 'Vendor', 'Date', 'Method', 'Status', 'Amount'],
       filtered.map((row) => [row.paymentNumber ?? '', row.vendorName ?? '', row.date, row.method ?? '', row.status ?? '', String(row.amount)]),
     )
-    showToast('CSV exported')
-  }, [filtered, showToast])
+    toast.success('CSV exported')
+  }, [filtered, toast])
 
   const stats = useMemo(() => [
     { icon: ListOrdered, label: 'Total Payments', value: rows.length, color: 'blue' },
@@ -207,25 +246,6 @@ export default function BillPaymentsPage() {
     { icon: CheckCircle, label: 'Completed Payments', value: rows.filter((row) => row.status === 'COMPLETED').length, color: 'amber' },
     { icon: Banknote, label: 'Total Paid', value: formatCurrency(rows.reduce((sum, row) => sum + Number(row.amount || 0), 0), currency), color: 'rose' },
   ], [rows, currency])
-
-  const renderCell = useCallback((value: any, key: string) => {
-    switch (key) {
-      case 'paymentNumber':
-        return <span className="font-semibold text-gray-800">{value ?? '—'}</span>
-      case 'vendorName':
-        return <span className="text-gray-700 truncate">{value ?? '—'}</span>
-      case 'date':
-        return <span className="text-gray-500">{fmtDate(value)}</span>
-      case 'method':
-        return <span className="text-gray-600">{value ?? '—'}</span>
-      case 'status':
-        return <StatusPill status={value ?? 'COMPLETED'} />
-      case 'amount':
-        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(value)}</span>
-      default:
-        return <span className="truncate">{value ?? '—'}</span>
-    }
-  }, [fmt])
 
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
@@ -238,13 +258,22 @@ export default function BillPaymentsPage() {
         description="Track all payments made to vendors and manage payment history."
         stats={stats}
         headerActions={
-          <button
-            onClick={() => router.push('/expenses/bills-payments/new')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            <Plus size={18} />
-            Record Payment
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <HaypSelect
+              label="Posting Status"
+              value={postingStatusFilter}
+              onChange={(value) => setPostingStatusFilter(String(value) as (typeof POSTING_STATUSES)[number])}
+              options={POSTING_STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All Posting Statuses' : status }))}
+              className="min-w-[220px]"
+            />
+            <button
+              onClick={() => router.push('/expenses/bills-payments/new')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Plus size={18} />
+              Record Payment
+            </button>
+          </div>
         }
         loading={loading || cidLoading}
         globalFilter={search}
@@ -264,7 +293,6 @@ export default function BillPaymentsPage() {
         emptySubtitle="Adjust your search or filter to see results"
       />
       </div>
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>
   )
 }

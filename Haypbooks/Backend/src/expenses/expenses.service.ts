@@ -62,6 +62,7 @@ export class ExpensesService {
     await this.assertAccess(userId, companyId)
     const where: any = { companyId }
     if (query?.status) where.status = query.status
+    if (query?.postingStatus) where.postingStatus = query.postingStatus
     const reimbursements = await this.prisma.expenseClaim.findMany({
       where,
       include: { employee: { select: { id: true, firstName: true, lastName: true } }, lines: true },

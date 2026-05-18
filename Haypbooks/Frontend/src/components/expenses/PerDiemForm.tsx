@@ -2,7 +2,7 @@
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Ban } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -204,6 +204,23 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
         setSubmitting(false)
       }
     }, [companyId, perDiemId, validate, employeeId, destination, purpose, startDate, endDate, days, dailyRate, totalAmount, currency, accountId, departmentId, attachments, notes, toast, onSaved, onClose])
+
+    const handleVoid = useCallback(async () => {
+      if (!companyId || !perDiemId) return
+      if (!confirm('Are you sure you want to void this per diem claim? This will reverse the GL journal entries and cannot be undone.')) return
+      setSubmitting(true)
+      try {
+        await expensesService.voidPerDiem(companyId, perDiemId)
+        setStatus('VOIDED')
+        toast.success('Per diem claim voided')
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Unable to void per diem claim'
+        setError(msg)
+        toast.error(msg)
+      } finally {
+        setSubmitting(false)
+      }
+    }, [companyId, perDiemId, toast])
 
     return (
       <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
@@ -445,6 +462,17 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                 >
                   <CheckCircle size={16} />
                   {submitting ? 'Approving...' : 'Approve'}
+                </button>
+              )}
+              {mode === 'edit' && status === 'APPROVED' && (
+                <button
+                  type="button"
+                  onClick={handleVoid}
+                  disabled={submitting}
+                  className="h-10 px-6 rounded-xl bg-rose-600 text-sm font-semibold text-white hover:bg-rose-700 transition-all shadow-sm shadow-rose-600/20 flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Ban size={16} />
+                  {submitting ? 'Voiding...' : 'Void'}
                 </button>
               )}
             </div>

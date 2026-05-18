@@ -8,6 +8,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
+import HaypSelect from '@/components/shared/HaypSelect'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { StatusPill } from '@/components/expenses/_helpers'
@@ -18,9 +19,12 @@ interface ExpenseReport {
   employeeName?: string
   description?: string
   status?: string
+  postingStatus?: string
   totalAmount: number
   submittedAt?: string
 }
+
+const POSTING_STATUSES: Array<'ALL' | 'DRAFT' | 'POSTED' | 'VOIDED'> = ['ALL', 'DRAFT', 'POSTED', 'VOIDED']
 
 type StatusFilter = 'ALL' | 'DRAFT' | 'PENDING' | 'APPROVED' | 'PAID' | 'REJECTED'
 
@@ -39,6 +43,7 @@ export default function ExpensesPage() {
   const [reports, setReports] = useState<ExpenseReport[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [postingStatusFilter, setPostingStatusFilter] = useState<'ALL' | 'DRAFT' | 'POSTED' | 'VOIDED'>('ALL')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -47,7 +52,11 @@ export default function ExpensesPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await expensesService.listExpenseReports(companyId, { limit: 100 })
+      const res = await expensesService.listExpenseReports(companyId, {
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        postingStatus: postingStatusFilter !== 'ALL' ? postingStatusFilter : undefined,
+        limit: 100,
+      })
       const data = res.data || []
       setReports(
         (data as any[]).map((item) => ({
@@ -56,6 +65,7 @@ export default function ExpensesPage() {
           employeeName: item.employeeName as string | undefined,
           description: item.description as string | undefined,
           status: item.status as string | undefined,
+          postingStatus: item.postingStatus as string | undefined,
           totalAmount: Number(item.totalAmount ?? 0),
           submittedAt: item.submittedAt as string | undefined,
         })),
@@ -66,7 +76,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, toast])
+  }, [companyId, postingStatusFilter, statusFilter, toast])
 
   useEffect(() => {
     fetchReports()
@@ -75,13 +85,12 @@ export default function ExpensesPage() {
   const filtered = useMemo(() => {
     const searchValue = search.toLowerCase()
     return reports
-      .filter((report) => statusFilter === 'ALL' || report.status === statusFilter)
       .filter((report) =>
         report.expenseNumber?.toLowerCase().includes(searchValue) ||
         report.employeeName?.toLowerCase().includes(searchValue) ||
         report.description?.toLowerCase().includes(searchValue),
       )
-  }, [reports, search, statusFilter])
+  }, [reports, search])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -128,6 +137,14 @@ export default function ExpensesPage() {
       size: 120,
       minSize: 110,
       render: (value) => <StatusPill status={value ?? 'DRAFT'} />,
+    },
+    {
+      id: 'postingStatus',
+      header: 'Posting',
+      accessorKey: 'postingStatus',
+      size: 110,
+      minSize: 100,
+      render: (value) => <StatusPill status={value ?? 'DRAFT'} type="posting" />,
     },
     {
       id: 'totalAmount',
@@ -201,21 +218,22 @@ export default function ExpensesPage() {
     {
       label: 'Void selected',
       variant: 'danger',
-      onClick: (_ids, selectedRows) => {
-        const voidable = selectedRows.filter((row) => row.status !== 'DRAFT' && row.status !== 'VOID')
+      onClick: async (_ids, selectedRows) => {
+        const voidable = selectedRows.filter((row) => row.status !== 'DRAFT' && row.status !== 'VOID' && row.status !== 'VOIDED')
         if (voidable.length === 0) {
           toast.error('No expense reports selected to void')
           return
         }
         if (!confirm(`Void ${voidable.length} selected expense report${voidable.length !== 1 ? 's' : ''}?`)) return
-        Promise.all(voidable.map((row) => expensesService.updateExpenseReport(companyId ?? '', row.id, { status: 'VOID' })))
-          .then(() => {
-            setReports((prev) => prev.map((row) => voidable.some((selected) => selected.id === row.id) ? { ...row, status: 'VOID' } : row))
-            toast.success(`${voidable.length} selected expense report${voidable.length !== 1 ? 's' : ''} voided`)
-          })
-          .catch(() => toast.error('Failed to void selected expense reports'))
+        try {
+          await Promise.all(voidable.map((row) => expensesService.voidExpenseReport(companyId ?? '', row.id)))
+          setReports((prev) => prev.map((row) => voidable.some((selected) => selected.id === row.id) ? { ...row, status: 'VOID' } : row))
+          toast.success(`${voidable.length} selected expense report${voidable.length !== 1 ? 's' : ''} voided`)
+        } catch {
+          toast.error('Failed to void selected expense reports')
+        }
       },
-      disabled: (selectedIds, selectedRows) => selectedRows.length === 0 || selectedRows.every((row) => row.status === 'DRAFT' || row.status === 'VOID'),
+      disabled: (selectedIds, selectedRows) => selectedRows.length === 0 || selectedRows.every((row) => row.status === 'DRAFT' || row.status === 'VOID' || row.status === 'VOIDED'),
     },
   ], [companyId, toast])
 
@@ -234,6 +252,14 @@ export default function ExpensesPage() {
           description="Track and manage all business expenses in one place."
           stats={stats}
           headerActions={
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <HaypSelect
+              label="Posting Status"
+              value={postingStatusFilter}
+              onChange={(value) => setPostingStatusFilter(String(value) as 'ALL' | 'DRAFT' | 'POSTED' | 'VOIDED')}
+              options={POSTING_STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All Posting Statuses' : status }))}
+              className="min-w-[220px]"
+            />
             <button
               onClick={() => router.push('/expenses/new')}
               className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
@@ -241,7 +267,8 @@ export default function ExpensesPage() {
               <Plus size={18} />
               New Expense
             </button>
-          }
+          </div>
+        }
           globalFilter={search}
           onGlobalFilterChange={setSearch}
           onActivityLog={() => router.push('/expenses/employee-expenses/expenses/activity')}

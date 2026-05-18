@@ -313,10 +313,12 @@ export class ApRepository {
 
     // ─── Bill Payments ────────────────────────────────────────────────────────
 
-    async findBillPayments(companyId: string, opts: { vendorId?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+    async findBillPayments(companyId: string, opts: { vendorId?: string; status?: string; postingStatus?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.billPayment.findMany({
             where: {
                 companyId, deletedAt: null,
+                ...(opts.status ? { status: opts.status } : {}),
+                ...(opts.postingStatus ? { postingStatus: opts.postingStatus as any } : {}),
                 ...(opts.vendorId ? { bill: { vendorId: opts.vendorId } } : {}),
                 ...(opts.from || opts.to ? { paymentDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },
@@ -499,12 +501,13 @@ export class ApRepository {
 
     // ─── Vendor Credits ──────────────────────────────────────────────────────
 
-    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: string; postingStatus?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.vendorCredit.findMany({
             where: {
                 companyId,
                 ...(opts.vendorId ? { vendorId: opts.vendorId } : {}),
                 ...(opts.status ? { status: opts.status } : {}),
+                ...(opts.postingStatus ? { postingStatus: opts.postingStatus as any } : {}),
                 ...(opts.from || opts.to ? { issuedAt: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },
             include: {
@@ -592,10 +595,12 @@ export class ApRepository {
 
     // ─── Mileage Logs ────────────────────────────────────────────────────────
 
-    async findMileageLogs(companyId: string, opts: { from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+    async findMileageLogs(companyId: string, opts: { status?: string; postingStatus?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
         return this.prisma.mileageLog.findMany({
             where: {
                 companyId,
+                ...(opts.status ? { status: opts.status } : {}),
+                ...(opts.postingStatus ? { postingStatus: opts.postingStatus as any } : {}),
                 ...(opts.from || opts.to ? { logDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },
             orderBy: { logDate: 'desc' },
@@ -624,11 +629,12 @@ export class ApRepository {
 
     // ─── Per Diem Claims ──────────────────────────────────────────────────────────────
 
-    async findPerDiemClaims(companyId: string, opts: { status?: string; limit?: number; offset?: number } = {}) {
+    async findPerDiemClaims(companyId: string, opts: { status?: string; postingStatus?: string; limit?: number; offset?: number } = {}) {
         return this.prisma.perDiemClaim.findMany({
             where: {
                 companyId,
                 ...(opts.status ? { status: opts.status } : {}),
+                ...(opts.postingStatus ? { postingStatus: opts.postingStatus as any } : {}),
             },
             include: { employee: true },
             orderBy: { createdAt: 'desc' },

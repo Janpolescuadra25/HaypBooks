@@ -636,6 +636,8 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const payments = await this.repo.findBillPayments(companyId, {
             vendorId: opts.vendorId,
+            status: opts.status,
+            postingStatus: opts.postingStatus,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
@@ -932,6 +934,7 @@ export class ApService {
         return this.repo.findVendorCredits(companyId, {
             vendorId: opts.vendorId,
             status: opts.status,
+            postingStatus: opts.postingStatus,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
@@ -1158,6 +1161,8 @@ export class ApService {
     async listMileageLogs(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
         const logs = await this.repo.findMileageLogs(companyId, {
+            status: opts.status,
+            postingStatus: opts.postingStatus,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
@@ -1269,10 +1274,9 @@ export class ApService {
 
     async listPerDiem(userId: string, companyId: string, query: any) {
         await this.assertAccess(userId, companyId)
-        const where: any = { companyId }
-        if (query?.status) where.status = query.status
         const claims = await this.repo.findPerDiemClaims(companyId, {
             status: query?.status,
+            postingStatus: query?.postingStatus,
             limit: query?.limit ? parseInt(query.limit) : 100,
             offset: query?.offset ? parseInt(query.offset) : 0,
         })

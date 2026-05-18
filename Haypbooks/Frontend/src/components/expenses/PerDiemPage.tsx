@@ -8,6 +8,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
+import HaypSelect from '@/components/shared/HaypSelect'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -23,7 +24,10 @@ interface PerDiem {
   dailyRate?: number
   total: number
   status?: string
+  postingStatus?: string
 }
+
+const POSTING_STATUSES = ['ALL', 'DRAFT', 'POSTED', 'VOIDED'] as const
 
 type StatusFilter = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
 const STATUSES: StatusFilter[] = ['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED']
@@ -38,6 +42,7 @@ export default function PerDiemPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [postingStatusFilter, setPostingStatusFilter] = useState<(typeof POSTING_STATUSES)[number]>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
@@ -46,7 +51,10 @@ export default function PerDiemPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await expensesService.listPerDiem(companyId)
+      const res = await expensesService.listPerDiem(companyId, {
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        postingStatus: postingStatusFilter !== 'ALL' ? postingStatusFilter : undefined,
+      })
       const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.perDiem ?? [])
     } catch {
@@ -55,7 +63,7 @@ export default function PerDiemPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, toast])
+  }, [companyId, postingStatusFilter, statusFilter, toast])
 
   useEffect(() => { fetchRows() }, [fetchRows])
 
@@ -81,13 +89,12 @@ export default function PerDiemPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return dateFiltered
-      .filter((row) => statusFilter === 'ALL' || row.status === statusFilter)
       .filter((row) => (
         row.perDiemNumber?.toLowerCase().includes(q) ||
         row.employee?.toLowerCase().includes(q) ||
         row.destination?.toLowerCase().includes(q)
       ))
-  }, [dateFiltered, statusFilter, search])
+  }, [dateFiltered, search])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -193,6 +200,14 @@ export default function PerDiemPage() {
       minSize: 110,
       render: (value) => <StatusPill status={value ?? 'DRAFT'} />,
     },
+    {
+      id: 'postingStatus',
+      header: 'Posting',
+      accessorKey: 'postingStatus',
+      size: 110,
+      minSize: 100,
+      render: (value) => <StatusPill status={value ?? 'DRAFT'} type="posting" />,
+    },
   ], [currency])
 
   const handleExportCSV = useCallback(() => {
@@ -249,7 +264,16 @@ export default function PerDiemPage() {
       <div className="min-h-full min-w-0 overflow-visible">
         <HaypDataTable
         headerActions={
-          <button onClick={() => router.push('/expenses/employee-expenses/per-diem/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <HaypSelect
+              label="Posting Status"
+              value={postingStatusFilter}
+              onChange={(value) => setPostingStatusFilter(String(value) as (typeof POSTING_STATUSES)[number])}
+              options={POSTING_STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All Posting Statuses' : status }))}
+              className="min-w-[220px]"
+            />
+            <button onClick={() => router.push('/expenses/employee-expenses/per-diem/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
+          </div>
         }
         data={filtered}
         columns={columns}

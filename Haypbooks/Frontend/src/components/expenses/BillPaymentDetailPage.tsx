@@ -14,6 +14,7 @@ interface BillPaymentDetail {
   paymentNumber?: string
   referenceNumber?: string
   status?: string
+  postingStatus?: string
   paymentDate?: string
   method?: string
   bankAccountName?: string
@@ -50,6 +51,7 @@ export default function BillPaymentDetailPage({ paymentId: paymentIdProp }: { pa
   const [payment, setPayment] = useState<BillPaymentDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isVoiding, setIsVoiding] = useState(false)
 
   useEffect(() => {
     if (!companyId || !paymentId) return
@@ -127,15 +129,42 @@ export default function BillPaymentDetailPage({ paymentId: paymentIdProp }: { pa
     },
   }
 
+  const actions = [
+    {
+      label: isVoiding ? 'Voiding...' : 'Void Payment',
+      icon: <CreditCard size={14} />,
+      variant: 'danger' as const,
+      onClick: async () => {
+        if (!companyId || !payment?.id) return
+        if (!confirm('Are you sure you want to void this payment? This will reverse the GL journal entries and cannot be undone.')) return
+
+        setIsVoiding(true)
+        try {
+          await expensesService.voidBillPayment(companyId, payment.id)
+          setPayment((prev) => prev ? { ...prev, status: 'VOIDED', postingStatus: 'VOIDED' } : prev)
+          toast.success('Payment voided')
+        } catch {
+          toast.error('Failed to void payment')
+        } finally {
+          setIsVoiding(false)
+        }
+      },
+      disabled: isVoiding || !payment || (payment.status ?? '').toUpperCase() === 'VOIDED' || (payment.status ?? '').toUpperCase() === 'VOID',
+    },
+  ]
+
   return (
     <ExpenseDetailLayout
       title={payment?.referenceNumber ?? payment?.paymentNumber ?? 'Payment Details'}
       subtitle={payment?.method ?? ''}
       status={status}
       statusColor={statusColor}
-      metadata={[{ label: 'Payment ID', value: payment?.id ?? '—' }]}
+      metadata={[
+        { label: 'Payment ID', value: payment?.id ?? '—' },
+        ...(payment?.postingStatus ? [{ label: 'Posting Status', value: payment?.postingStatus }] : []),
+      ]}
       sections={[paymentSection, financialSection, billsPaidSection]}
-      actions={[]}
+      actions={actions}
       backUrl="/expenses/bills-payments/bill-payments"
       loading={loading || cidLoading}
       error={error}

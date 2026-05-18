@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Edit2, CheckCircle, CreditCard } from 'lucide-react'
+import { Edit2, CheckCircle, CreditCard, Ban } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -25,6 +25,7 @@ interface ExpenseReportDetail {
   id: string
   expenseNumber?: string
   status?: string
+  postingStatus?: string
   description?: string
   businessPurpose?: string
   notes?: string
@@ -66,6 +67,7 @@ export default function ExpenseReportDetailPage({ expenseId: expenseIdProp }: { 
   const [error, setError] = useState('')
   const [approving, setApproving] = useState(false)
   const [reimbursing, setReimbursing] = useState(false)
+  const [isVoiding, setIsVoiding] = useState(false)
 
   useEffect(() => {
     if (!companyId || !expenseId) return
@@ -205,8 +207,30 @@ export default function ExpenseReportDetailPage({ expenseId: expenseIdProp }: { 
       })
     }
 
+    if (status !== 'VOID' && status !== 'VOIDED') {
+      result.push({
+        label: isVoiding ? 'Voiding...' : 'Void Report',
+        icon: <Ban size={14} />,
+        onClick: async () => {
+          if (!companyId) return
+          if (!confirm('Are you sure you want to void this expense report? This will reverse the GL journal entries and cannot be undone.')) return
+
+          setIsVoiding(true)
+          try {
+            await expensesService.voidExpenseReport(companyId, expenseId)
+            setReport((prev) => prev ? { ...prev, status: 'VOIDED', postingStatus: 'VOIDED' } : prev)
+            toast.success('Expense report voided')
+          } catch {
+            toast.error('Failed to void expense report')
+          } finally {
+            setIsVoiding(false)
+          }
+        },
+        variant: 'danger' as const,
+        disabled: isVoiding,
+
     return result
-  }, [router, expenseId, status, approving, reimbursing, companyId, toast])
+  }, [router, expenseId, status, approving, reimbursing, companyId, isVoiding, toast])
 
   return (
     <ExpenseDetailLayout
@@ -217,6 +241,7 @@ export default function ExpenseReportDetailPage({ expenseId: expenseIdProp }: { 
       metadata={[
         { label: 'Report ID', value: report?.id ?? '—' },
         { label: 'Employee', value: report?.employeeName ?? '—' },
+        ...(report?.postingStatus ? [{ label: 'Posting Status', value: report.postingStatus }] : []),
       ]}
       sections={[overviewSection, financialSection, datesSection, notesSection, linesSection]}
       actions={actions}

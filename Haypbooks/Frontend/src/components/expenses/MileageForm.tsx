@@ -2,7 +2,7 @@
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Ban } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -211,6 +211,24 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
       setSubmitting(false)
     }
   }, [companyId, logId, validate, payload, toast, onSaved, router])
+
+  const handleVoid = useCallback(async () => {
+    if (!companyId || !logId) return
+    if (!confirm('Are you sure you want to void this mileage log? This will reverse the GL journal entries and cannot be undone.')) return
+    setSubmitting(true)
+    try {
+      await expensesService.voidMileageLog(companyId, logId)
+      setStatus('VOIDED')
+      toast.success('Mileage log voided')
+      if (onSaved) onSaved()
+      else router.push('/expenses/employee-expenses/mileage')
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Unable to void mileage log')
+      toast.error('Unable to void mileage log')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [companyId, logId, onSaved, router, toast])
 
   const handleCancel = useCallback(() => {
     if (onClose) onClose()
@@ -542,6 +560,17 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
               >
                 <CheckCircle size={16} />
                 {submitting ? 'Approving...' : 'Approve'}
+              </button>
+            )}
+            {mode === 'edit' && status === 'APPROVED' && (
+              <button
+                type="button"
+                onClick={handleVoid}
+                disabled={submitting}
+                className="h-10 px-6 rounded-xl bg-rose-600 text-sm font-semibold text-white hover:bg-rose-700 transition-all shadow-sm shadow-rose-600/20 flex items-center gap-2 disabled:opacity-50"
+              >
+                <Ban size={16} />
+                {submitting ? 'Voiding...' : 'Void'}
               </button>
             )}
             <button type="submit" disabled={submitting} className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20">{submitting ? 'Saving...' : mode === 'new' ? 'Save Mileage' : 'Update Mileage'}</button>

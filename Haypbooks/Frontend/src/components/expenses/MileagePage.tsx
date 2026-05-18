@@ -8,6 +8,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
+import HaypSelect from '@/components/shared/HaypSelect'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -22,7 +23,10 @@ interface MileageLog {
   rate?: number
   amount: number
   status?: string
+  postingStatus?: string
 }
+
+const POSTING_STATUSES = ['ALL', 'DRAFT', 'POSTED', 'VOIDED'] as const
 
 export default function MileagePage() {
   const router = useRouter()
@@ -33,6 +37,7 @@ export default function MileagePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [postingStatusFilter, setPostingStatusFilter] = useState<(typeof POSTING_STATUSES)[number]>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
@@ -41,7 +46,9 @@ export default function MileagePage() {
     setLoading(true)
     setError('')
     try {
-      const res = await expensesService.listMileageLogs(companyId)
+      const res = await expensesService.listMileageLogs(companyId, {
+        postingStatus: postingStatusFilter !== 'ALL' ? postingStatusFilter : undefined,
+      })
       const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.mileageLogs ?? [])
     } catch {
@@ -50,7 +57,7 @@ export default function MileagePage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, toast])
+  }, [companyId, postingStatusFilter, toast])
 
   useEffect(() => { fetchMileage() }, [fetchMileage])
 
@@ -82,11 +89,12 @@ export default function MileagePage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return dateFiltered.filter((row) => (
-      row.employee?.toLowerCase().includes(q) ||
-      row.purpose?.toLowerCase().includes(q) ||
-      row.route?.toLowerCase().includes(q)
-    ))
+    return dateFiltered
+      .filter((row) => (
+        row.employee?.toLowerCase().includes(q) ||
+        row.purpose?.toLowerCase().includes(q) ||
+        row.route?.toLowerCase().includes(q)
+      ))
   }, [dateFiltered, search])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
@@ -186,6 +194,14 @@ export default function MileagePage() {
       minSize: 110,
       render: (value) => <StatusPill status={value ?? 'DRAFT'} />,
     },
+    {
+      id: 'postingStatus',
+      header: 'Posting',
+      accessorKey: 'postingStatus',
+      size: 110,
+      minSize: 100,
+      render: (value) => <StatusPill status={value ?? 'DRAFT'} type="posting" />,
+    },
   ], [currency])
 
   const handleExportCSV = useCallback(() => {
@@ -245,7 +261,16 @@ export default function MileagePage() {
         title="Mileage"
         description="Track mileage logs with amount totals."
         headerActions={
-          <button onClick={openNewMileage} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Log Mileage</button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <HaypSelect
+              label="Posting Status"
+              value={postingStatusFilter}
+              onChange={(value) => setPostingStatusFilter(String(value) as (typeof POSTING_STATUSES)[number])}
+              options={POSTING_STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All Posting Statuses' : status }))}
+              className="min-w-[220px]"
+            />
+            <button onClick={openNewMileage} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Log Mileage</button>
+          </div>
         }
         globalFilter={search}
         onGlobalFilterChange={setSearch}

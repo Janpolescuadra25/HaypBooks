@@ -20,11 +20,13 @@ interface VendorCredit {
   vendorName?: string
   issueDate: string
   status?: string
+  postingStatus?: string
   amount: number
   availableAmount?: number
 }
 
 const STATUSES = ['ALL', 'OPEN', 'PARTIALLY_USED', 'APPLIED', 'VOID'] as const
+const POSTING_STATUSES = ['ALL', 'DRAFT', 'POSTED', 'VOIDED'] as const
 
 export default function VendorCreditsPage() {
   const router = useRouter()
@@ -36,8 +38,10 @@ export default function VendorCreditsPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>('ALL')
+  const [postingStatusFilter, setPostingStatusFilter] = useState<(typeof POSTING_STATUSES)[number]>('ALL')
   const [vendorFilter, setVendorFilter] = useState('ALL')
   const [vendors, setVendors] = useState<Array<{ id: string; name: string }>>([])
+  const [isVoiding, setIsVoiding] = useState(false)
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -50,7 +54,10 @@ export default function VendorCreditsPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await expensesService.listVendorCredits(companyId)
+      const res = await expensesService.listVendorCredits(companyId, {
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        postingStatus: postingStatusFilter !== 'ALL' ? postingStatusFilter : undefined,
+      })
       const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.vendorCredits ?? [])
     } catch {
@@ -59,7 +66,7 @@ export default function VendorCreditsPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, toast])
+  }, [companyId, postingStatusFilter, statusFilter, toast])
 
   useEffect(() => {
     fetchCredits()
@@ -93,7 +100,7 @@ export default function VendorCreditsPage() {
     if (!companyId) return
     try {
       await expensesService.applyVendorCredit(companyId, id)
-      setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: 'APPLIED', availableAmount: 0 } : row)))
+      setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: 'APPLIED', postingStatus: 'POSTED', availableAmount: 0 } : row)))
       toast.success('Credit applied')
     } catch {
       toast.error('Failed to apply credit')
@@ -102,15 +109,38 @@ export default function VendorCreditsPage() {
 
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
-    if (!confirm('Void this vendor credit? This will preserve the audit trail.')) return
+    if (!confirm('Are you sure you want to void this vendor credit? This will reverse the GL journal entries and cannot be undone.')) return
+
+    setIsVoiding(true)
     try {
-      await expensesService.updateVendorCredit(companyId, id, { status: 'VOID' })
-      setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: 'VOID', availableAmount: 0 } : row)))
+      await expensesService.voidVendorCredit(companyId, id)
+      await fetchCredits()
       toast.success('Credit voided')
     } catch {
       toast.error('Failed to void credit')
+    } finally {
+      setIsVoiding(false)
     }
-  }, [companyId, toast])
+  }, [companyId, fetchCredits, toast])
+
+  const renderCell = useCallback((value: any, key: string) => {
+    switch (key) {
+      case 'creditNumber':
+        return <span className="font-semibold text-gray-800">{value ?? '—'}</span>
+      case 'vendorName':
+        return <span className="text-gray-700 truncate">{value ?? '—'}</span>
+      case 'issueDate':
+        return <span className="text-gray-500">{fmtDate(value)}</span>
+      case 'status':
+        return <StatusPill status={value ?? 'OPEN'} />
+      case 'amount':
+        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(value)}</span>
+      case 'availableAmount':
+        return <span className={`font-semibold tabular-nums ${(value ?? 0) > 0 ? 'text-blue-700' : 'text-gray-400'}`}>{fmt(value ?? 0)}</span>
+      default:
+        return <span className="truncate">{value ?? '—'}</span>
+    }
+  }, [fmt])
 
   const handleDeleteCredit = useCallback(async (id: string) => {
     if (!companyId) return
@@ -126,7 +156,6 @@ export default function VendorCreditsPage() {
 
   const filtered = useMemo(() => {
     let list = rows
-    if (statusFilter !== 'ALL') list = list.filter((row) => row.status === statusFilter)
     if (vendorFilter !== 'ALL') {
       const selectedVendor = vendors.find((vendor) => vendor.id === vendorFilter)?.name
       list = list.filter((row) => row.vendorId === vendorFilter || row.vendorName === selectedVendor)
@@ -139,7 +168,7 @@ export default function VendorCreditsPage() {
       )
     }
     return list
-  }, [rows, statusFilter, search, vendorFilter, vendors])
+  }, [rows, search, vendorFilter, vendors])
 
   const columns = useMemo<HaypColumn<VendorCredit>[]>(() => [
     {
@@ -183,6 +212,16 @@ export default function VendorCreditsPage() {
       render: (value) => renderCell(value, 'status'),
     },
     {
+      id: 'postingStatus',
+      accessorKey: 'postingStatus',
+      header: 'Posting',
+      size: 110,
+      minSize: 100,
+      enableSorting: true,
+      align: 'left',
+      render: (value) => <StatusPill status={value ?? 'DRAFT'} type="posting" />,
+    },
+    {
       id: 'amount',
       accessorKey: 'amount',
       header: 'Amount',
@@ -202,7 +241,7 @@ export default function VendorCreditsPage() {
       align: 'right',
       render: (value) => renderCell(value, 'availableAmount'),
     },
-  ], [fmt])
+  ], [fmt, renderCell])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -228,20 +267,24 @@ export default function VendorCreditsPage() {
       onClick: (_rowId, row) => handleApply(row.id),
     },
     {
-      label: 'Void Credit',
+      label: isVoiding ? 'Voiding...' : 'Void Credit',
       icon: <Ban size={14} />,
       danger: true,
-      show: (row) => (row.status ?? 'OPEN') !== 'VOID',
+      show: (row) => (row.postingStatus ?? '').toUpperCase() === 'POSTED',
       onClick: (_rowId, row) => handleVoid(row.id),
+      disabled: isVoiding,
     },
     {
       label: 'Delete Credit',
       icon: <X size={14} />,
       danger: true,
-      show: (row) => (row.status ?? 'OPEN') === 'VOID',
+      show: (row) => {
+        const status = (row.status ?? '').toUpperCase()
+        return status === 'VOID' || status === 'VOIDED'
+      },
       onClick: (_rowId, row) => handleDeleteCredit(row.id),
     },
-  ], [handleApply, handleDeleteCredit, handleVoid, router])
+  ], [handleApply, handleDeleteCredit, handleVoid, isVoiding, router])
 
   const bulkActions = useMemo<HaypBulkAction[]>(() => [
     {
@@ -249,26 +292,32 @@ export default function VendorCreditsPage() {
       variant: 'danger',
       onClick: (_selectedIds, selectedRows) => {
         if (!companyId || selectedRows.length === 0) return
-        const voidable = selectedRows.filter((row) => row.id != null && (row.status ?? 'OPEN') !== 'VOID') as VendorCredit[]
+        const voidable = selectedRows.filter((row) => {
+          const status = (row.status ?? 'OPEN').toUpperCase()
+          return row.id != null && status !== 'VOID' && status !== 'VOIDED'
+        }) as VendorCredit[]
         if (voidable.length === 0) {
           toast.error('No selected credits can be voided')
           return
         }
         if (!confirm(`Void ${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''}?`)) return
-        voidable.forEach(async (row) => {
-          try {
-            await expensesService.updateVendorCredit(companyId, row.id, { status: 'VOID' })
-          } catch {
-            toast.error('Failed to void selected credits')
-          }
-        })
-        setRows((prev) => prev.map((row) =>
-          voidable.some((selected) => selected.id === row.id)
-            ? { ...row, status: 'VOID', availableAmount: 0 }
-            : row,
-        ))
-        toast.success(`${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''} voided`)
+        setIsVoiding(true)
+        Promise.all(voidable.map((row) => expensesService.voidVendorCredit(companyId, row.id)))
+          .then(() => {
+            setRows((prev) => prev.map((row) =>
+              voidable.some((selected) => selected.id === row.id)
+                ? { ...row, status: 'VOIDED', postingStatus: 'VOIDED', availableAmount: 0 }
+                : row,
+            ))
+            toast.success(`${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''} voided`)
+          })
+          .catch(() => toast.error('Failed to void selected credits'))
+          .finally(() => setIsVoiding(false))
       },
+      disabled: (_selectedIds, selectedRows) => isVoiding || selectedRows.length === 0 || selectedRows.every((row) => {
+        const status = (row.status ?? 'OPEN').toUpperCase()
+        return status === 'VOID' || status === 'VOIDED'
+      }),
     },
     {
       label: 'Export Selected',
@@ -282,7 +331,7 @@ export default function VendorCreditsPage() {
         toast.success('Selected credits exported')
       },
     },
-  ], [companyId, toast])
+  ], [companyId, isVoiding, toast])
 
   const filterLabel = statusFilter === 'ALL' ? 'Status' : statusFilter.toLowerCase().replace(/_/g, ' ')
 
@@ -301,25 +350,6 @@ export default function VendorCreditsPage() {
     { icon: Banknote, label: 'Total Credit Value', value: formatCurrency(rows.reduce((sum, row) => sum + Number(row.amount || 0), 0), currency), color: 'rose' },
   ], [rows, currency])
 
-  const renderCell = useCallback((value: any, key: string) => {
-    switch (key) {
-      case 'creditNumber':
-        return <span className="font-semibold text-gray-800">{value ?? '—'}</span>
-      case 'vendorName':
-        return <span className="text-gray-700 truncate">{value ?? '—'}</span>
-      case 'issueDate':
-        return <span className="text-gray-500">{fmtDate(value)}</span>
-      case 'status':
-        return <StatusPill status={value ?? 'OPEN'} />
-      case 'amount':
-        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(value)}</span>
-      case 'availableAmount':
-        return <span className={`font-semibold tabular-nums ${(value ?? 0) > 0 ? 'text-blue-700' : 'text-gray-400'}`}>{fmt(value ?? 0)}</span>
-      default:
-        return <span className="truncate">{value ?? '—'}</span>
-    }
-  }, [fmt])
-
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
       <div className="min-h-full min-w-0 overflow-visible">
@@ -332,17 +362,28 @@ export default function VendorCreditsPage() {
         stats={stats}
         headerActions={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <div className="w-full sm:w-64">
-              <HaypSelect
-                value={vendorFilter}
-                onChange={setVendorFilter}
-                options={[
-                  { value: 'ALL', label: 'All Vendors' },
-                  ...vendors.map((vendor) => ({ value: vendor.id, label: vendor.name })),
-                ]}
-                placeholder="All vendors"
-                className="w-full"
-              />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 w-full">
+              <div className="w-full sm:w-64">
+                <HaypSelect
+                  value={vendorFilter}
+                  onChange={setVendorFilter}
+                  options={[
+                    { value: 'ALL', label: 'All Vendors' },
+                    ...vendors.map((vendor) => ({ value: vendor.id, label: vendor.name })),
+                  ]}
+                  placeholder="All vendors"
+                  className="w-full"
+                />
+              </div>
+              <div className="w-full sm:w-64">
+                <HaypSelect
+                  label="Posting Status"
+                  value={postingStatusFilter}
+                  onChange={(value) => setPostingStatusFilter(String(value) as (typeof POSTING_STATUSES)[number])}
+                  options={POSTING_STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All Posting Statuses' : status }))}
+                  className="w-full"
+                />
+              </div>
             </div>
             <button
               onClick={() => router.push('/expenses/bills-payments/vendor-credits/new')}
