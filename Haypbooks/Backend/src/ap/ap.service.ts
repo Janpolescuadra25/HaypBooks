@@ -1030,7 +1030,7 @@ export class ApService {
         }).catch(() => { /* non-critical */ })
         const result = await this.prisma.$transaction(async (tx) => {
             await this.subLedger.postVendorCreditToGL(creditId, userId, tx)
-            return tx.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED' } })
+            return tx.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED', postingStatus: 'POSTED' } })
         })
         return result
     }
@@ -1225,7 +1225,7 @@ export class ApService {
         const shouldPost = data.status && String(data.status).toUpperCase() === 'APPROVED' && String(existingAny.status ?? '').toUpperCase() !== 'APPROVED'
         const result = shouldPost
             ? await this.prisma.$transaction(async (tx) => {
-                const updatedLog = await tx.mileageLog.update({ where: { id: logId }, data: payload })
+                const updatedLog = await tx.mileageLog.update({ where: { id: logId }, data: { ...payload, postingStatus: 'POSTED' } })
                 await this.subLedger.postMileageToGL({
                     companyId,
                     workspaceId,
@@ -1336,7 +1336,7 @@ export class ApService {
         const shouldPost = data.status === 'APPROVED' && existing.status !== 'APPROVED'
         const result = shouldPost
             ? await this.prisma.$transaction(async (tx) => {
-                const updatedPerDiem = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: payload })
+                const updatedPerDiem = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: { ...payload, postingStatus: 'POSTED' } })
                 await this.subLedger.postPerDiemToGL({
                     companyId,
                     workspaceId,

@@ -46,12 +46,14 @@ describe('ApService - Vendor Credits', () => {
 
   test('applies a vendor credit and posts it to GL in a transaction', async () => {
     mockRepo.findVendorCreditById.mockResolvedValue({ id: 'credit-1', companyId: 'company-1', status: 'DRAFT' })
-    mockPrisma.vendorCredit.update.mockResolvedValue({ id: 'credit-1', status: 'APPLIED' })
+    mockPrisma.vendorCredit.update.mockResolvedValue({ id: 'credit-1', status: 'APPLIED', postingStatus: 'POSTED' })
 
     const result = await service.applyVendorCredit('user-1', 'company-1', 'credit-1')
 
     expect(mockSubLedger.postVendorCreditToGL).toHaveBeenCalledWith('credit-1', 'user-1', mockPrisma)
+    expect(mockPrisma.vendorCredit.update).toHaveBeenCalledWith({ where: { id: 'credit-1' }, data: { status: 'APPLIED', postingStatus: 'POSTED' } })
     expect(result.status).toBe('APPLIED')
+    expect(result.postingStatus).toBe('POSTED')
   })
 
   test('does not apply an already applied credit', async () => {
