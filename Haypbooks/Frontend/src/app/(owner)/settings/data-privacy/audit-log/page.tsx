@@ -1,10 +1,7 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+'use client'
+
+import AuditLogPage from '@/components/audit/AuditLogPage'
 
 export default function Page() {
-  return (
-    <ComingSoon
-      featureName="Audit Log"
-      estimatedTime="Q2 2026"
-    />
-  )
+  return <AuditLogPage />
 }
