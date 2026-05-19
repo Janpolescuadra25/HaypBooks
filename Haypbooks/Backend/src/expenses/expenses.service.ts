@@ -338,7 +338,7 @@ export class ExpensesService {
   async voidExpenseClaim(userId: string, companyId: string, claimId: string) {
     await this.assertAccess(userId, companyId)
     return this.prisma.$transaction(async (tx) => {
-      const claim = await tx.expenseClaim.findUnique({ where: { id: claimId, companyId } })
+      const claim = await tx.expenseClaim.findFirst({ where: { id: claimId, companyId } })
       if (!claim) throw new NotFoundException('Expense claim not found')
       if (claim.status === 'VOIDED' || claim.postingStatus === 'VOIDED') {
         throw new BadRequestException('Expense claim is already voided')
