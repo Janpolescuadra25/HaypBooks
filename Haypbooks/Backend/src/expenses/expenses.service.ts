@@ -343,6 +343,13 @@ export class ExpensesService {
       if (claim.status === 'VOIDED' || claim.postingStatus === 'VOIDED') {
         throw new BadRequestException('Expense claim is already voided')
       }
+      if (['DRAFT', 'SUBMITTED'].includes(claim.status)) {
+        await tx.expenseClaim.update({
+          where: { id: claimId },
+          data: { status: 'VOIDED', postingStatus: 'VOIDED' },
+        })
+        return claim
+      }
       if (!['APPROVED', 'PAID'].includes(claim.status)) {
         throw new BadRequestException('Only approved or paid expense claims can be voided')
       }

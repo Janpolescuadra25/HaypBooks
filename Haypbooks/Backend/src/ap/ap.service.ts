@@ -1387,18 +1387,18 @@ export class ApService {
         return this.prisma.$transaction(async (tx) => {
             const existing = await tx.mileageLog.findFirst({ where: { id: mileageId, companyId } })
             if (!existing) throw new NotFoundException('Mileage log not found')
-      if (existing.status === 'VOIDED' || existing.postingStatus === 'VOIDED') {
-        throw new BadRequestException('Mileage log is already voided')
-      }
-      if (existing.postingStatus !== 'POSTED') {
-        throw new BadRequestException('Only posted mileage logs can be voided')
-      }
+            if (existing.status === 'VOIDED' || existing.postingStatus === 'VOIDED') {
+                throw new BadRequestException('Mileage log is already voided')
+            }
+            if (existing.postingStatus !== 'POSTED') {
+                throw new BadRequestException('Only posted mileage logs can be voided')
+            }
 
-      const voided = await tx.mileageLog.update({ where: { id: mileageId }, data: { status: 'VOIDED' } })
-      await this.subLedger.postMileageReversalToGL(mileageId, tx)
-      return voided
-    })
-  }
+            await this.subLedger.postMileageReversalToGL(mileageId, tx)
+            const voided = await tx.mileageLog.update({ where: { id: mileageId }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
+            return voided
+        })
+    }
 
   async voidPerDiem(userId: string, companyId: string, perDiemId: string) {
     await this.assertAccess(userId, companyId)
@@ -1412,8 +1412,8 @@ export class ApService {
         throw new BadRequestException('Only posted per diem claims can be voided')
       }
 
-      const voided = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: { status: 'VOIDED' } })
       await this.subLedger.postPerDiemReversalToGL(perDiemId, tx)
+      const voided = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
       return voided
     })
   }
