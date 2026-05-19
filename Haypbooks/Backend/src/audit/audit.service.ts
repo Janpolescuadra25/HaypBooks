@@ -26,7 +26,7 @@ export class AuditService {
         action: params.action,
         tableName: params.entityType,
         recordId: params.entityId ?? null,
-        changes: params.oldValue || params.newValue || params.metadata
+        changes: (params.oldValue != null || params.newValue != null || params.metadata != null)
           ? JSON.parse(JSON.stringify({ oldValue: params.oldValue, newValue: params.newValue, metadata: params.metadata }))
           : null,
       },
@@ -34,15 +34,20 @@ export class AuditService {
   }
 
   async getEntityHistory(companyId: string, entityType: string, entityId: string) {
-    return this.prisma.auditLog.findMany({
-      where: { companyId, tableName: entityType, recordId: entityId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
+    try {
+      return this.prisma.auditLog.findMany({
+        where: { companyId, tableName: entityType, recordId: entityId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-    })
+      })
+    } catch (error) {
+      console.error('Audit entity history query failed:', error)
+      return []
+    }
   }
 
   async getCompanyLogs(companyId: string, filters?: {
@@ -64,21 +69,26 @@ export class AuditService {
       if (filters.endDate) where.createdAt.lte = filters.endDate
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          user: {
-            select: { id: true, name: true, email: true },
+    try {
+      const [items, total] = await Promise.all([
+        this.prisma.auditLog.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
           },
-        },
-        skip: filters?.skip || 0,
-        take: filters?.take || 50,
-      }),
-      this.prisma.auditLog.count({ where }),
-    ])
+          skip: filters?.skip || 0,
+          take: filters?.take || 50,
+        }),
+        this.prisma.auditLog.count({ where }),
+      ])
 
-    return { items, total }
+      return { items, total }
+    } catch (error) {
+      console.error('Audit log query failed:', error)
+      return { items: [], total: 0 }
+    }
   }
 }

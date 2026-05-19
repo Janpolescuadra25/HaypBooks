@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
+import { Controller, Get, Query, Param, UseGuards } from '@nestjs/common'
 import { AuditService } from './audit.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
@@ -9,7 +9,6 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get('audit-logs')
-  @HttpCode(HttpStatus.OK)
   async getCompanyAuditLogs(
     @Param('companyId') companyId: string,
     @Query('entityType') entityType?: string,
@@ -20,19 +19,23 @@ export class AuditController {
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
+    const parsedSkip = skip ? parseInt(skip, 10) : 0
+    const parsedTake = Math.min(take ? parseInt(take, 10) : 50, 100)
+    const skipValue = Number.isNaN(parsedSkip) ? 0 : parsedSkip
+    const takeValue = Number.isNaN(parsedTake) ? 50 : parsedTake
+
     return this.auditService.getCompanyLogs(companyId, {
       entityType,
       action,
       userId,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
-      skip: skip ? parseInt(skip, 10) : undefined,
-      take: take ? parseInt(take, 10) : undefined,
+      skip: skipValue,
+      take: takeValue,
     })
   }
 
   @Get('audit-logs/:entityType/:entityId')
-  @HttpCode(HttpStatus.OK)
   async getEntityHistory(
     @Param('companyId') companyId: string,
     @Param('entityType') entityType: string,
