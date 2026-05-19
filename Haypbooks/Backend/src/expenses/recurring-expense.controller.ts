@@ -1,12 +1,16 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { RecurringExpenseService } from './recurring-expense.service'
+import { RecurringExpenseScheduler } from './recurring-expense.scheduler'
 
 @Controller('api/companies/:companyId')
 @UseGuards(JwtAuthGuard, CompanyAccessGuard)
 export class RecurringExpenseController {
-  constructor(private readonly recurringExpenseService: RecurringExpenseService) {}
+  constructor(
+    private readonly recurringExpenseService: RecurringExpenseService,
+    private readonly scheduler: RecurringExpenseScheduler,
+  ) {}
 
   @Get('recurring-expenses')
   listRecurringExpenses(
@@ -43,5 +47,11 @@ export class RecurringExpenseController {
   @Post('recurring-expenses/:id/cancel')
   cancelRecurringExpense(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
     return this.recurringExpenseService.cancel(companyId, id, req.user.userId)
+  }
+
+  @Post('recurring-expenses/generate')
+  @HttpCode(HttpStatus.OK)
+  async triggerGeneration(@Param('companyId') companyId: string) {
+    return this.scheduler.generateRecurringExpenses()
   }
 }

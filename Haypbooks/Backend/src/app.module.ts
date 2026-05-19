@@ -1,4 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common'
+import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { AuthModule } from './auth/auth.module'
@@ -29,6 +30,7 @@ const RepositoriesModule = PrismaRepositoriesModule
     // Forgot PW:     3 req/min  (spam prevention)
     // Refresh:       10 req/min (normal usage)
     // ─────────────────────────────────────────────────────────
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 60,
