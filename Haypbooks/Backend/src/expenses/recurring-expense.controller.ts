@@ -1,8 +1,11 @@
 import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { RolesGuard } from '../auth/guards/roles.guard'
+import { Roles } from '../auth/decorators/roles.decorator'
 import { RecurringExpenseService } from './recurring-expense.service'
 import { RecurringExpenseScheduler } from './recurring-expense.scheduler'
+import { CreateRecurringExpenseDto, UpdateRecurringExpenseDto } from './dto/recurring-expense.dto'
 
 @Controller('api/companies/:companyId')
 @UseGuards(JwtAuthGuard, CompanyAccessGuard)
@@ -35,12 +38,12 @@ export class RecurringExpenseController {
   }
 
   @Post('recurring-expenses')
-  createRecurringExpense(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
-    return this.recurringExpenseService.create(req.user.userId, companyId, body)
+  createRecurringExpense(@Req() req: any, @Param('companyId') companyId: string, @Body() body: CreateRecurringExpenseDto) {
+    return this.recurringExpenseService.create(companyId, req.user.userId, body)
   }
 
   @Patch('recurring-expenses/:id')
-  updateRecurringExpense(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string, @Body() body: any) {
+  updateRecurringExpense(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string, @Body() body: UpdateRecurringExpenseDto) {
     return this.recurringExpenseService.update(companyId, id, req.user.userId, body)
   }
 
@@ -50,6 +53,8 @@ export class RecurringExpenseController {
   }
 
   @Post('recurring-expenses/generate')
+  @Roles('owner', 'admin', 'accountant')
+  @UseGuards(RolesGuard)
   @HttpCode(HttpStatus.OK)
   async triggerGeneration(@Param('companyId') companyId: string) {
     return this.scheduler.generateRecurringExpenses()

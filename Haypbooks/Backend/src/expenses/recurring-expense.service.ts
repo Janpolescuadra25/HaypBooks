@@ -63,6 +63,9 @@ export class RecurringExpenseService {
       where: { id, companyId },
     })
     if (!existing) throw new NotFoundException('Recurring expense not found')
+    if (['CANCELLED', 'COMPLETED'].includes(existing.status)) {
+      throw new BadRequestException(`Cannot update a ${existing.status} recurring expense`)
+    }
 
     const updateData: any = { ...data }
     if (data.startDate) updateData.startDate = new Date(data.startDate)

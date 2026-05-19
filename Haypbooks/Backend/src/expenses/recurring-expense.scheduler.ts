@@ -44,6 +44,19 @@ export class RecurringExpenseScheduler {
             continue
           }
 
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const existingGeneration = await this.prisma.expenseClaim.findFirst({
+            where: {
+              recurringExpenseId: recurring.id,
+              fromDate: { gte: today },
+            },
+          })
+          if (existingGeneration) {
+            this.logger.log(`Skipping ${recurring.id} — already generated today`)
+            continue
+          }
+
           const company = await this.prisma.company.findUnique({
             where: { id: recurring.companyId },
             select: { workspaceId: true },
