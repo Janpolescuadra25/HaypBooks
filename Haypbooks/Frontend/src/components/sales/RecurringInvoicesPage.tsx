@@ -12,6 +12,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { useToast } from '@/components/ToastProvider'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 

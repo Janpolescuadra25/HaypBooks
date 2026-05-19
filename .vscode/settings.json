@@ -47,5 +47,6 @@
     "Codegeex.CompletionDelay": 1,
     "postman.settings.dotenv-detection-notification-visibility": false,
     "Codegeex.RepoIndex": true,
-    "Codegeex.GenerationPreference": "line by line"
+    "Codegeex.GenerationPreference": "block",
+    "Codegeex.CommitMessageStyle": "Auto"
 }

@@ -17,13 +17,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Loader2, AlertCircle, X, ChevronLeft, ChevronRight,
-  Download, Search, RefreshCw, CheckCircle2, ExternalLink,
-  Activity, ArrowUp, ArrowDown, ArrowUpDown,
+  Search, RefreshCw, CheckCircle2,
+  Activity,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useCompany } from '@/hooks/use-company'
 import { HaypReportTable, HaypReportColumn } from '@/components/shared/HaypReportTable'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ interface Account {
   id: string
   code: string
   name: string
-  type: string
+  type?: { category?: string; normalSide?: string }
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -125,8 +126,20 @@ export default function GeneralLedgerPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
+  const { company } = useCompany()
   const { currency } = useCompanyCurrency()
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+  const currencySymbol = useMemo(() => {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        currencyDisplay: 'symbol',
+      }).formatToParts(0).find(part => part.type === 'currency')?.value ?? '$'
+    } catch {
+      return '$'
+    }
+  }, [currency])
   const searchRef = useRef<HTMLInputElement>(null)
 
   // ── Filter state ───────────────────────────────────────────────────────────
@@ -145,21 +158,54 @@ export default function GeneralLedgerPage() {
   })
   const [to, setTo] = useState(new Date().toISOString().split('T')[0])
   const [page, setPage] = useState(1)
+  const [showCustomize, setShowCustomize] = useState(false)
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return ['amount']
+    try {
+      const saved = localStorage.getItem('gl-hidden-columns')
+      return saved ? JSON.parse(saved) : ['amount']
+    } catch {
+      return ['amount']
+    }
+  })
+
+  const handleHiddenColumnsChange = (cols: string[]) => {
+    setHiddenColumns(cols)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gl-hidden-columns', JSON.stringify(cols))
+    }
+  }
 
   // ── Sort state ────────────────────────────────────────────────────────────
   type SortField = 'date' | 'entryNumber' | 'sourceType' | 'accountName' | 'debit' | 'credit'
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const sortFieldRef = useRef<SortField>('date')
+  const sortDirRef = useRef<'asc' | 'desc'>('desc')
+
+  useEffect(() => {
+    sortFieldRef.current = sortField
+  }, [sortField])
+
+  useEffect(() => {
+    sortDirRef.current = sortDir
+  }, [sortDir])
 
   const handleSort = (field: SortField) => {
-    setSortField(prev => {
-      if (prev === field) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); return field }
-      setSortDir('asc'); return field
-    })
+    console.log('[GL-SORT] handleSort called:', field, 'current:', sortField, sortDir)
+    if (sortField === field) {
+      setSortDir((currentDir) => currentDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
   }
 
   // ── Data state ─────────────────────────────────────────────────────────────
   const [glData, setGlData] = useState<GlResponse | null>(null)
+  const [accountBalances, setAccountBalances] = useState<Record<string, { openingBalance: number; normalSide?: string }>>({})
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set())
+  const [isBalancesLoading, setIsBalancesLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -183,6 +229,37 @@ export default function GeneralLedgerPage() {
       .catch(() => {})
   }, [companyId])
 
+  useEffect(() => {
+    if (!companyId || !from) return
+    let cancelled = false
+    setIsBalancesLoading(true)
+    apiClient.get(`/companies/${companyId}/general-ledger/account-balances`, {
+      params: { asOf: from },
+    })
+      .then(({ data }) => {
+        if (cancelled) return
+        const map: Record<string, { openingBalance: number; normalSide?: string }> = {}
+        if (Array.isArray(data)) {
+          for (const item of data) {
+            if (item?.accountId) {
+              map[item.accountId] = {
+                openingBalance: item.openingBalance,
+                normalSide: item.normalSide,
+              }
+            }
+          }
+        }
+        setAccountBalances(map)
+      })
+      .catch(() => {
+        if (!cancelled) setAccountBalances({})
+      })
+      .finally(() => {
+        if (!cancelled) setIsBalancesLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [companyId, from])
+
   // ── Load GL entries ───────────────────────────────────────────────────────
   const fetchEntries = useCallback(async () => {
     if (!companyId) return
@@ -193,9 +270,11 @@ export default function GeneralLedgerPage() {
       if (sourceType !== 'ALL') params.sourceType = sourceType
       if (search.trim()) params.search = search.trim()
       // Send sort params so backend orders the full dataset, not just the current page
-      if (sortField !== 'sourceType') { // sourceType is a computed field — keep as client-side only
-        params.sortBy = sortField
-        params.sortDir = sortDir
+      const currentSortField = sortFieldRef.current
+      const currentSortDir = sortDirRef.current
+      if (currentSortField !== 'sourceType') {
+        params.sortBy = currentSortField
+        params.sortDir = currentSortDir
       }
       const { data } = await apiClient.get(`/companies/${companyId}/general-ledger`, { params })
       setGlData(data)
@@ -205,10 +284,10 @@ export default function GeneralLedgerPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, from, to, page, accountId, sourceType, search, sortField, sortDir])
+  }, [companyId, from, to, page, accountId, sourceType, search])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
-  useEffect(() => { setPage(1) }, [from, to, accountId, sourceType, search, sortField, sortDir])
+  useEffect(() => { setPage(1) }, [from, to, accountId, sourceType, search])
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
@@ -250,6 +329,7 @@ export default function GeneralLedgerPage() {
 
   // sortedEntries must be declared here (before early returns) to satisfy Rules of Hooks
   const sortedEntries = useMemo(() => {
+    console.log('[GL-SORT] sortedEntries computing, sortField:', sortField, 'sortDir:', sortDir, 'entries count:', (glData?.entries ?? []).length)
     const arr = [...(glData?.entries ?? [])]
     const mod = sortDir === 'asc' ? 1 : -1
     arr.sort((a, b) => {
@@ -267,7 +347,40 @@ export default function GeneralLedgerPage() {
   }, [glData?.entries, sortField, sortDir])
 
   const entries = glData?.entries ?? []
-  const showRunningBalance = !!accountId && entries.some(e => e.runningBalance !== undefined)
+
+  const getNormalSide = useCallback((category?: string, explicitNormalSide?: string) => {
+    const normalized = explicitNormalSide?.toUpperCase()
+    if (normalized === 'DEBIT' || normalized === 'CREDIT') return normalized
+    const categoryUpper = category?.toUpperCase() ?? ''
+    return ['ASSET', 'EXPENSE'].includes(categoryUpper) ? 'DEBIT' : 'CREDIT'
+  }, [])
+
+  const groupedAccounts = useMemo(() => {
+    const map = new Map<string, {
+      accountCode: string
+      accountName: string
+      accountCategory?: string
+      normalSide: string
+      rows: GlEntry[]
+    }>()
+
+    for (const entry of sortedEntries) {
+      const existing = map.get(entry.accountId)
+      const accountMeta = accountBalances[entry.accountId]
+      const normalSide = getNormalSide(entry.accountCategory, accountMeta?.normalSide)
+      const group = existing ?? {
+        accountCode: entry.accountCode,
+        accountName: entry.accountName,
+        accountCategory: entry.accountCategory,
+        normalSide,
+        rows: [],
+      }
+      group.rows.push(entry)
+      map.set(entry.accountId, group)
+    }
+
+    return Array.from(map.entries()).sort(([, a], [, b]) => a.accountCode.localeCompare(b.accountCode))
+  }, [sortedEntries, accountBalances, getNormalSide])
 
   const columns = useMemo(() => {
     const cols: HaypReportColumn[] = [
@@ -278,11 +391,16 @@ export default function GeneralLedgerPage() {
       { key: 'description', header: 'Description', align: 'left', className: 'hidden md:table-cell' },
       { key: 'debit', header: 'Debit', align: 'right', sortable: true },
       { key: 'credit', header: 'Credit', align: 'right', sortable: true },
+      { key: 'amount', header: 'Amount', align: 'right' },
+      { key: 'runningBalance', header: 'Balance', align: 'right' },
     ]
-    if (showRunningBalance) cols.push({ key: 'runningBalance', header: 'Balance', align: 'right' })
-    cols.push({ key: 'actions', header: '', align: 'right', className: 'w-10' })
     return cols
-  }, [showRunningBalance])
+  }, [])
+
+  const visibleColumns = useMemo(
+    () => columns.filter((col) => !hiddenColumns.includes(col.key)),
+    [columns, hiddenColumns],
+  )
 
   if (cidLoading) {
     return (
@@ -320,13 +438,6 @@ export default function GeneralLedgerPage() {
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button
-            onClick={handleExport}
-            disabled={entries.length === 0}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition-colors"
-          >
-            <Download size={14} /> Export CSV
-          </button>
         </div>
       </div>
 
@@ -359,7 +470,12 @@ export default function GeneralLedgerPage() {
             <label className="block text-xs font-medium text-slate-600 mb-1">Account</label>
             <select
               value={accountId}
-              onChange={e => { setAccountId(e.target.value); setAccountFilterLabel('') }}
+              onChange={e => {
+                const nextAccount = e.target.value
+                setAccountId(nextAccount)
+                const account = accounts.find((acct) => acct.id === nextAccount)
+                setAccountFilterLabel(account ? `${account.code} — ${account.name}` : '')
+              }}
               title="Filter by account"
               aria-label="Filter by account"
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
@@ -479,74 +595,169 @@ export default function GeneralLedgerPage() {
       ) : (
         <HaypReportTable
           title="General Ledger"
-          companyName="Company Financials"
+          companyName={company?.name ?? 'Company Financials'}
           dateSubtitle={from && to ? `${fmtDate(from)} - ${fmtDate(to)}` : 'All Time'}
           columns={columns}
+          hiddenColumns={hiddenColumns}
+          showCustomize={showCustomize}
+          onToggleCustomize={() => setShowCustomize((prev) => !prev)}
+          onHiddenColumnsChange={handleHiddenColumnsChange}
+          dateFrom={from}
+          dateTo={to}
+          onDateChange={(nextFrom, nextTo) => {
+            setFrom(nextFrom)
+            setTo(nextTo)
+          }}
           sortField={sortField}
           sortDir={sortDir}
-          onSort={(key) => handleSort(key as any)}
+          onSort={(key) => {
+            console.log('[GL] onSort received:', key)
+            handleSort(key as any)
+          }}
           onDownload={handleExport}
+          currencySymbol={currencySymbol}
         >
           {entries.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-14 text-center">
+              <td colSpan={visibleColumns.length} className="px-4 py-14 text-center">
                 <Activity size={32} className="text-slate-200 mx-auto mb-2" />
                 <p className="text-sm font-medium text-slate-400">No transactions found</p>
                 <p className="text-xs text-slate-300 mt-1">Adjust the filters or date range to see results</p>
               </td>
             </tr>
           ) : (
-            sortedEntries.map((e, i) => {
-              const badge = SOURCE_BADGE[e.sourceType] ?? SOURCE_BADGE.ALL
-              const sourceRoute = getSourceRoute(e.sourceType, e.sourceId)
-              return (
-                <tr
-                  key={e.id ?? i}
-                  className={`border-t border-slate-100 transition-colors ${sourceRoute ? 'cursor-pointer hover:bg-emerald-50' : 'hover:bg-slate-50/50'}`}
-                  onClick={() => sourceRoute && router.push(sourceRoute)}
-                  title={sourceRoute ? `View source: ${badge.label}` : undefined}
-                >
-                  <td className="px-4 py-3 text-slate-700 whitespace-nowrap text-xs">{fmtDate(e.date)}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
-                    {e.entryNumber ?? '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${badge.cls}`}>
-                      {badge.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    <span className="font-mono text-xs text-slate-400">{e.accountCode}</span>
-                    <span className="ml-1.5 text-emerald-700 text-xs font-bold">{e.accountName}</span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs max-w-[240px] hidden md:table-cell">
-                    <span className="truncate block">{e.entryDescription ?? e.description ?? '—'}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 text-xs">
-                    {e.debit ? fmt(e.debit) : <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 text-xs">
-                    {e.credit ? fmt(e.credit) : <span className="text-slate-300">—</span>}
-                  </td>
-                  {showRunningBalance && (
-                    <td className="px-4 py-3 text-right tabular-nums font-bold text-emerald-900 text-xs">
-                      {e.runningBalance !== undefined ? fmt(e.runningBalance) : '—'}
-                    </td>
-                  )}
-                  <td className="px-2 py-3 text-slate-300 text-right">
-                    {sourceRoute && <ExternalLink size={12} className="hover:text-emerald-600 inline-block" />}
-                  </td>
-                </tr>
-              )
+            groupedAccounts.flatMap(([accountIdGroup, group]) => {
+              const isExpanded = !collapsedGroups.has(accountIdGroup)
+              const accountMeta = accountBalances[accountIdGroup]
+              const openingBalance = accountMeta?.openingBalance ?? 0
+              const normalSide = getNormalSide(group.accountCategory, accountMeta?.normalSide)
+              let runningBalance = openingBalance
+              let groupDebits = 0
+              let groupCredits = 0
+
+              const rows = group.rows.map((e, i) => {
+                const badge = SOURCE_BADGE[e.sourceType] ?? SOURCE_BADGE.ALL
+                const sourceRoute = getSourceRoute(e.sourceType, e.sourceId)
+                const debit = Number(e.debit ?? 0)
+                const credit = Number(e.credit ?? 0)
+                groupDebits += debit
+                groupCredits += credit
+                runningBalance += normalSide === 'DEBIT' ? debit - credit : credit - debit
+                return (
+                  <tr
+                    key={e.id ?? `${accountIdGroup}-${i}`}
+                    className={`border-t border-slate-100 transition-colors ${sourceRoute ? 'cursor-pointer hover:bg-emerald-50' : 'hover:bg-slate-50/50'}`}
+                    onClick={() => sourceRoute && router.push(sourceRoute)}
+                    title={sourceRoute ? `View source: ${badge.label}` : undefined}
+                  >
+                    {visibleColumns.map((col) => {
+                      switch (col.key) {
+                        case 'date':
+                          return (
+                            <td key={col.key} className="px-4 py-3 text-slate-700 whitespace-nowrap text-xs">
+                              {fmtDate(e.date)}
+                            </td>
+                          )
+                        case 'entryNumber':
+                          return (
+                            <td key={col.key} className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
+                              {e.entryNumber ?? '—'}
+                            </td>
+                          )
+                        case 'sourceType':
+                          return (
+                            <td key={col.key} className="px-4 py-3">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${badge.cls}`}>
+                                {badge.label}
+                              </span>
+                            </td>
+                          )
+                        case 'accountName':
+                          return (
+                            <td key={col.key} className="px-4 py-3 hidden lg:table-cell">
+                              <span className="font-mono text-xs text-slate-400">{e.accountCode}</span>
+                              <span className="ml-1.5 text-emerald-700 text-xs font-bold">{e.accountName}</span>
+                            </td>
+                          )
+                        case 'description':
+                          return (
+                            <td key={col.key} className="px-4 py-3 text-slate-500 text-xs max-w-[240px] hidden md:table-cell">
+                              <span className="truncate block">{e.entryDescription ?? e.description ?? '—'}</span>
+                            </td>
+                          )
+                        case 'debit':
+                          return (
+                            <td key={col.key} className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 text-xs">
+                              {debit ? fmt(debit) : <span className="text-slate-300">—</span>}
+                            </td>
+                          )
+                        case 'credit':
+                          return (
+                            <td key={col.key} className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 text-xs">
+                              {credit ? fmt(credit) : <span className="text-slate-300">—</span>}
+                            </td>
+                          )
+                        case 'amount': {
+                          const signedAmount = normalSide === 'DEBIT' ? debit - credit : credit - debit
+                          return (
+                            <td key={col.key} className="px-4 py-3 text-right font-mono text-xs">
+                              {signedAmount !== 0 ? (
+                                <span className={signedAmount < 0 ? 'text-red-600' : ''}>
+                                  {signedAmount < 0 ? '-' : ''}{fmt(Math.abs(signedAmount))}
+                                </span>
+                              ) : (
+                                <span className="text-slate-300">-</span>
+                              )}
+                            </td>
+                          )
+                        }
+                        case 'runningBalance':
+                          return (
+                            <td key={col.key} className="px-4 py-3 text-right tabular-nums font-bold text-emerald-900 text-xs">
+                              {fmt(runningBalance)}
+                            </td>
+                          )
+                        default:
+                          return null
+                      }
+                    })}
+                  </tr>
+                )
+              })
+
+              return [
+                <HaypReportTable.GroupHeaderRow
+                  key={`group-${accountIdGroup}`}
+                  isExpanded={isExpanded}
+                  onToggle={() => setCollapsedGroups(prev => {
+                    const next = new Set(prev)
+                    if (next.has(accountIdGroup)) next.delete(accountIdGroup)
+                    else next.add(accountIdGroup)
+                    return next
+                  })}
+                  title={`${group.accountCode} - ${group.accountName}`}
+                  colSpan={visibleColumns.length}
+                />,
+                ...(isExpanded ? [
+                  <HaypReportTable.BeginningBalanceRow
+                    key={`opening-${accountIdGroup}`}
+                    label="Beginning Balance"
+                    amount={isBalancesLoading ? undefined : openingBalance}
+                    colSpan={visibleColumns.length}
+                    currencySymbol={currencySymbol}
+                  />,
+                  ...rows,
+                  <HaypReportTable.TotalRow
+                    key={`total-${accountIdGroup}`}
+                    label="Total"
+                    amount={normalSide === 'DEBIT' ? groupDebits - groupCredits : groupCredits - groupDebits}
+                    balance={runningBalance}
+                    colSpan={visibleColumns.length}
+                    currencySymbol={currencySymbol}
+                  />,
+                ] : [])
+              ]
             })
-          )}
-          {entries.length > 0 && (
-            <HaypReportTable.TotalRow
-              label="Totals"
-              amount={totalDebits}
-              balance={totalCredits} // Overloading balance prop to show credit logic side by side easily
-              colSpan={columns.length - (showRunningBalance ? 1 : 0) - 1} // Accounting for the missing columns 
-            />
           )}
         </HaypReportTable>
       )}

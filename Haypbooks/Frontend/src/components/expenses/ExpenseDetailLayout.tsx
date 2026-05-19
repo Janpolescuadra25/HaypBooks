@@ -33,7 +33,7 @@ export interface DetailAction {
   label: string
   icon?: ReactNode
   onClick: () => void
-  variant?: 'primary' | 'danger' | 'default'
+  variant?: 'primary' | 'danger' | 'default' | 'secondary' | 'success' | 'warning'
   disabled?: boolean
 }
 
@@ -53,6 +53,9 @@ export interface ExpenseDetailLayoutProps {
 
 const ACTION_STYLES: Record<string, string> = {
   primary: 'bg-emerald-600 text-white hover:bg-emerald-700 border-transparent',
+  secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200',
+  success: 'bg-emerald-600 text-white hover:bg-emerald-700 border-transparent',
+  warning: 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200',
   danger: 'bg-rose-600 text-white hover:bg-rose-700 border-transparent',
   default: 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200',
 }

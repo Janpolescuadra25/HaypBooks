@@ -74,11 +74,12 @@ export default function VendorCreditsPage() {
 
   useEffect(() => {
     if (!companyId) return
+    const activeCompanyId = companyId
     let active = true
 
     async function fetchVendors() {
       try {
-        const res = await expensesService.listVendors(companyId)
+        const res = await expensesService.listVendors(activeCompanyId)
         const data = res.data ?? res
         const list = Array.isArray(data) ? data : data.data ?? []
         const normalized = list.map((vendor: any) => ({

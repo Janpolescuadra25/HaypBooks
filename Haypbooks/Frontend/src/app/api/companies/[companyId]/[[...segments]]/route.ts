@@ -470,6 +470,41 @@ function routeExpenses(method: string, segments: string[], state: CompanyState, 
   return handleNotFound()
 }
 
+function routeAp(method: string, segments: string[], state: CompanyState, req: Request) {
+  const [resource, id, action, extra] = segments
+  if (!resource) return handleNotFound()
+
+  if (resource === 'expenses' && id === 'reimbursements') {
+    return routeCollection(method, 'ap', 'reimbursements', action, extra, state, req)
+  }
+  if (resource === 'expenses' && id === 'reports') {
+    return routeCollection(method, 'ap', 'expenses', action, extra, state, req)
+  }
+  if (resource === 'expenses' && id === 'receipts') {
+    return routeCollection(method, 'ap', 'receipts', action, extra, state, req)
+  }
+  if (resource === 'reimbursements') {
+    return routeCollection(method, 'ap', 'reimbursements', id, action, state, req)
+  }
+  if (resource === 'reports') {
+    return routeCollection(method, 'ap', 'expenses', id, action, state, req)
+  }
+  if (resource === 'receipts') {
+    return routeCollection(method, 'ap', 'receipts', id, action, state, req)
+  }
+  if (resource === 'expenses' && id === 'mileage') {
+    return routeCollection(method, 'ap', 'mileage', action, extra, state, req)
+  }
+  if (resource === 'expenses' && id === 'per-diem') {
+    return routeCollection(method, 'ap', 'per-diem', action, extra, state, req)
+  }
+  if (resource === 'expenses') {
+    return routeCollection(method, 'ap', 'expenses', id, action, state, req)
+  }
+
+  return handleNotFound()
+}
+
 function routePayroll(method: string, segments: string[], state: CompanyState, req: Request) {
   const [resource, id] = segments
   if (resource !== 'employees') return handleNotFound()

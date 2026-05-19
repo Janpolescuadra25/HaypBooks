@@ -226,8 +226,10 @@ export default function ExpenseReportDetailPage({ expenseId: expenseIdProp }: { 
             setIsVoiding(false)
           }
         },
-        variant: 'danger' as const,
+        variant: 'primary' as const,
         disabled: isVoiding,
+      })
+    }
 
     return result
   }, [router, expenseId, status, approving, reimbursing, companyId, isVoiding, toast])

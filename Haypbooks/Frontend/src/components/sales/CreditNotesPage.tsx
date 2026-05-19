@@ -238,10 +238,10 @@ export default function CreditNotesPage() {
       row.customer,
       row.type === 'refund' ? 'Refund' : 'Credit',
       row.invoiceNumber ?? '',
-      fmtDate(row.date),
-      formatCurrency(row.amount, currency),
-      formatCurrency(row.appliedAmount, currency),
-      formatCurrency(row._unapplied, currency),
+      fmtDate(row.date ?? ''),
+      formatCurrency(row.amount ?? 0, currency),
+      formatCurrency(row.appliedAmount ?? 0, currency),
+      formatCurrency(row._unapplied ?? 0, currency),
       row.reasonCode,
       row.status,
     ])
@@ -746,11 +746,11 @@ export default function CreditNotesPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Date</p>
-                  <p className="font-semibold text-slate-800">{fmtDate(drawerCN.date)}</p>
+                  <p className="font-semibold text-slate-800">{fmtDate(drawerCN.date ?? '')}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Amount</p>
-                  <p className="font-bold text-xl text-slate-900">{formatCurrency(drawerCN.amount, currency)}</p>
+                  <p className="font-bold text-xl text-slate-900">{formatCurrency(drawerCN.amount ?? 0, currency)}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Status</p>
@@ -1011,7 +1011,7 @@ export default function CreditNotesPage() {
                         {appliedInvoices.map((invoice) => (
                           <tr key={invoice.invoiceId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                             <td className="px-3 py-2 truncate">{invoice.invoiceNumber}</td>
-                            <td className="px-3 py-2 text-slate-600">{fmtDate(invoices.find(i => i.id === invoice.invoiceId)?.date ?? null)}</td>
+                            <td className="px-3 py-2 text-slate-600">{fmtDate(invoices.find(i => i.id === invoice.invoiceId)?.date ?? '')}</td>
                             <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
                             <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
                             <td className="px-3 py-2 text-right">

@@ -99,11 +99,12 @@ export default function BillsPage() {
 
   useEffect(() => {
     if (!companyId) return
+    const companyIdValue = companyId
     let active = true
 
     async function fetchVendors() {
       try {
-        const res = await expensesService.listVendors(companyId)
+        const res = await expensesService.listVendors(companyIdValue)
         const data = res.data ?? res
         const list = Array.isArray(data) ? data : data.data ?? []
         const normalized = list.map((vendor: any) => ({
@@ -196,7 +197,7 @@ export default function BillsPage() {
 
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
-    if (!confirm('Are you sure you want to void this bill?')) return
+    if (!confirm('Are you sure you want to void this bill? This will reverse the GL journal entries and cannot be undone.')) return
     try {
       await expensesService.voidBill(companyId, id)
       setRows((p) => p.map((r) => r.id === id ? { ...r, status: 'VOIDED' } : r))
@@ -236,7 +237,7 @@ export default function BillsPage() {
     const voidableRows = rows.filter((row) => selectedIds.includes(row.id) && isVoidableStatus(row.status))
     if (voidableRows.length === 0) return
     const voidCount = voidableRows.length
-    if (!confirm(`Void ${voidCount} selected bill${voidCount !== 1 ? 's' : ''}?`)) return
+    if (!confirm(`Void ${voidCount} selected bill${voidCount !== 1 ? 's' : ''}? This will reverse the GL journal entries and cannot be undone.`)) return
     try {
       await Promise.all(voidableRows.map((row) => expensesService.voidBill(companyId, row.id)))
       setRows((prev) => prev.map((row) => selectedIds.includes(row.id) && isVoidableStatus(row.status) ? { ...row, status: 'VOIDED' } : row))

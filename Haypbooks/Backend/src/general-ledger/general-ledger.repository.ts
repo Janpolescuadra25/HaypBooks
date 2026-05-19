@@ -33,68 +33,6 @@ const JOURNAL_INCLUDE = {
     },
 } as const
 
-function buildWhere(companyId: string, opts: GlQueryDto) {
-    const where: Record<string, any> = {
-        companyId,
-        journal: {
-            postingStatus: 'POSTED',
-            deletedAt: null,
-        },
-    }
-
-    // Date range on journal.date
-    if (opts.from || opts.to) {
-        where['journal'] = {
-            ...where['journal'],
-            date: {
-                ...(opts.from ? { gte: new Date(opts.from) } : {}),
-                ...(opts.to ? { lte: new Date(opts.to) } : {}),
-            },
-        }
-    }
-
-    // entryNumber filter
-    if (opts.entryNumber) {
-        where['journal'] = {
-            ...where['journal'],
-            entryNumber: { contains: opts.entryNumber, mode: 'insensitive' },
-        }
-    }
-
-    // search: OR on journal.description OR line description
-    if (opts.search) {
-        where['OR'] = [
-            { journal: { ...where['journal'], description: { contains: opts.search, mode: 'insensitive' } } },
-            { description: { contains: opts.search, mode: 'insensitive' } },
-        ]
-        // Remove the top-level journal key to avoid conflict — search OR replaces it
-        delete where['journal']
-        // But we must still enforce postingStatus/deletedAt inside both branches
-    }
-
-    // accountId filter
-    if (opts.accountId) {
-        where['accountId'] = opts.accountId
-    }
-
-    // accountCode prefix filter
-    if (opts.accountCode) {
-        where['account'] = {
-            code: { startsWith: opts.accountCode },
-        }
-    }
-
-    // accountCategory filter
-    if (opts.accountCategory) {
-        where['account'] = {
-            ...(where['account'] ?? {}),
-            type: { category: opts.accountCategory },
-        }
-    }
-
-    return where
-}
-
 /** Build a clean where clause using Prisma's nested filter — avoids delete/merge issues */
 function buildCleanWhere(companyId: string, opts: GlQueryDto) {
     const journalFilter: Record<string, any> = {
@@ -329,6 +267,46 @@ export class GeneralLedgerRepository {
             totalDebits: Number(agg._sum.debit ?? 0),
             totalCredits: Number(agg._sum.credit ?? 0),
         }
+    }
+
+    async findAccountBalancesBefore(companyId: string, beforeDate: Date) {
+        const accounts = await this.prisma.account.findMany({
+            where: { companyId, isActive: true, deletedAt: null },
+            select: {
+                id: true,
+                code: true,
+                name: true,
+                normalSide: true,
+                type: { select: { category: true, normalSide: true } },
+            },
+            orderBy: [{ code: 'asc' }],
+        })
+
+        const accountSummaries = await this.prisma.journalEntryLine.groupBy({
+            by: ['accountId'],
+            where: {
+                companyId,
+                journal: {
+                    postingStatus: 'POSTED',
+                    deletedAt: null,
+                    date: { lt: beforeDate },
+                },
+            },
+            _sum: { debit: true, credit: true },
+        })
+
+        const summaryMap = new Map(
+            accountSummaries.map((summary) => [summary.accountId, {
+                totalDebits: Number(summary._sum.debit ?? 0),
+                totalCredits: Number(summary._sum.credit ?? 0),
+            }]),
+        )
+
+        return accounts.map((account) => ({
+            ...account,
+            totalDebits: summaryMap.get(account.id)?.totalDebits ?? 0,
+            totalCredits: summaryMap.get(account.id)?.totalCredits ?? 0,
+        }))
     }
 
     async findActiveAccounts(companyId: string) {

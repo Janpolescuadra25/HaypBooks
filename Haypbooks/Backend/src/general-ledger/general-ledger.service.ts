@@ -181,6 +181,24 @@ export class GeneralLedgerService {
         return this.repo.findActiveAccounts(companyId)
     }
 
+    async getAccountBalances(userId: string, companyId: string, asOf?: string) {
+        await this.assertCompanyAccess(userId, companyId)
+        const effectiveDate = asOf ? new Date(asOf) : new Date()
+
+        const balances = await this.repo.findAccountBalancesBefore(companyId, effectiveDate)
+        return balances.map((balance) => ({
+            accountId: balance.id,
+            accountCode: balance.code,
+            accountName: balance.name,
+            accountCategory: balance.type?.category ?? null,
+            normalSide: balance.normalSide ?? balance.type?.normalSide ?? 'DEBIT',
+            openingBalance:
+                (balance.normalSide ?? balance.type?.normalSide ?? 'DEBIT') === 'DEBIT'
+                    ? balance.totalDebits - balance.totalCredits
+                    : balance.totalCredits - balance.totalDebits,
+        }))
+    }
+
     // ─── Private helpers ─────────────────────────────────────────────────────
 
     private async _calcOpeningBalance(

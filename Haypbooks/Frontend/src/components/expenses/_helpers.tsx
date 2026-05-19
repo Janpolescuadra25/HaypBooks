@@ -69,6 +69,7 @@ const STATUS_LABELS: Record<string, string> = {
   APPROVED:        'Approved',
   OPEN:            'Open',
   PAID:            'Paid',
+  POSTED:          'Posted',
   CLOSED:          'Closed',
   OVERDUE:         'Overdue',
   VOIDED:          'Voided',
@@ -94,6 +95,7 @@ const STATUS_STYLES: Record<string, string> = {
   PAID:            'bg-emerald-100 text-emerald-700 border-emerald-200',
   CLOSED:          'bg-emerald-100 text-emerald-700 border-emerald-200',
   OVERDUE:         'bg-red-100 text-red-700 border-red-200',
+  POSTED:          'bg-emerald-100 text-emerald-700 border-emerald-200',
   VOIDED:          'bg-gray-200 text-gray-500 border-gray-300',
   VOID:            'bg-gray-200 text-gray-500 border-gray-300',
   SUBMITTED:       'bg-blue-100 text-blue-700 border-blue-200',
@@ -102,7 +104,7 @@ const STATUS_STYLES: Record<string, string> = {
   PARTIALLY_PAID:  'bg-amber-100 text-amber-700 border-amber-200',
   PARTIALLY_USED:  'bg-amber-100 text-amber-700 border-amber-200',
   ACTIVE:          'bg-blue-100 text-blue-700 border-blue-200',
-  COMPLETED:       'bg-emerald-100 text-emerald-700 border-emerald-200',
+  COMPLETED:       'bg-emerald-100 text-emerald-700 border-amber-200',
   RECEIVED:        'bg-blue-100 text-blue-700 border-blue-200',
   CANCELLED:       'bg-gray-100 text-gray-500 border-gray-300',
   CANCELED:        'bg-gray-100 text-gray-500 border-gray-300',
@@ -110,10 +112,18 @@ const STATUS_STYLES: Record<string, string> = {
   ENDED:           'bg-gray-100 text-gray-500 border-gray-300',
 }
 
-export function StatusPill({ status }: { status: string }) {
+const POSTING_STATUS_STYLES: Record<string, string> = {
+  DRAFT:   'bg-gray-100 text-gray-700 border-gray-200',
+  POSTED:  'bg-emerald-100 text-emerald-700 border-emerald-200',
+  VOIDED:  'bg-red-100 text-red-700 border-red-200',
+  VOID:    'bg-red-100 text-red-700 border-red-200',
+}
+
+export function StatusPill({ status, type = 'default' }: { status: string; type?: 'default' | 'posting' }) {
   const normalized = String(status ?? 'DRAFT').toUpperCase()
   const label = STATUS_LABELS[normalized] ?? normalized.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, (t) => t.toUpperCase())
-  const style = STATUS_STYLES[normalized] ?? 'bg-gray-100 text-gray-700 border-gray-200'
+  const baseStyle = STATUS_STYLES[normalized] ?? 'bg-gray-100 text-gray-700 border-gray-200'
+  const style = type === 'posting' ? POSTING_STATUS_STYLES[normalized] ?? baseStyle : baseStyle
   const isVoided = normalized === 'VOIDED' || normalized === 'VOID'
   return (
     <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border whitespace-nowrap ${style} ${isVoided ? 'line-through' : ''}`}>

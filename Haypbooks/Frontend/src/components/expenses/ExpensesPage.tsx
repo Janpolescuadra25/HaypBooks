@@ -224,7 +224,7 @@ export default function ExpensesPage() {
           toast.error('No expense reports selected to void')
           return
         }
-        if (!confirm(`Void ${voidable.length} selected expense report${voidable.length !== 1 ? 's' : ''}?`)) return
+        if (!confirm(`Void ${voidable.length} selected expense report${voidable.length !== 1 ? 's' : ''}? This will reverse the GL journal entries and cannot be undone.`)) return
         try {
           await Promise.all(voidable.map((row) => expensesService.voidExpenseReport(companyId ?? '', row.id)))
           setReports((prev) => prev.map((row) => voidable.some((selected) => selected.id === row.id) ? { ...row, status: 'VOID' } : row))

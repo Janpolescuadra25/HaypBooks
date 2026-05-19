@@ -33,6 +33,8 @@ interface BillDetail {
   total?: number
   balanceDue?: number
   currency?: string
+  memo?: string
+  description?: string
   billDate?: string
   dueAt?: string
   createdAt?: string

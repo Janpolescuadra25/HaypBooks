@@ -479,6 +479,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
           </div>
         </div>
       </form>
+      </div>
         )}
 
         {activeTab === 'activity' && (

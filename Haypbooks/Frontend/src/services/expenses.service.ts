@@ -368,6 +368,18 @@ export const expensesService = {
   voidBillPayment: (companyId: string, paymentId: string): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/ap/bill-payments/${paymentId}/void`),
 
+  voidVendorCredit: (companyId: string, creditId: string): Promise<AxiosResponse> =>
+    apiClient.post(`/companies/${companyId}/ap/vendor-credits/${creditId}/void`),
+
+  voidMileageLog: (companyId: string, logId: string): Promise<AxiosResponse> =>
+    apiClient.post(`/companies/${companyId}/ap/mileage/${logId}/void`),
+
+  voidPerDiem: (companyId: string, perDiemId: string): Promise<AxiosResponse> =>
+    apiClient.post(`/companies/${companyId}/ap/per-diem/${perDiemId}/void`),
+
+  voidExpenseReport: (companyId: string, expenseId: string): Promise<AxiosResponse> =>
+    apiClient.post(`/companies/${companyId}/expenses/${expenseId}/void`),
+
   // ─── Purchase Orders ───────────────────────────────────────────────────────
   listPurchaseOrders: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/ap/purchase-orders`, { params: query }),

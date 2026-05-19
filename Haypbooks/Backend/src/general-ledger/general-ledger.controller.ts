@@ -53,4 +53,13 @@ export class GeneralLedgerController {
     ) {
         return this.svc.getAccountList(req.user.userId, companyId)
     }
+
+    @Get('account-balances')
+    async getAccountBalances(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query('asOf') asOf?: string,
+    ) {
+        return this.svc.getAccountBalances(req.user.userId, companyId, asOf)
+    }
 }

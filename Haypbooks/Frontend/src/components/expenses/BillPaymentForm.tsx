@@ -89,6 +89,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
   const [referenceNumber, setReferenceNumber] = useState('')
   const [memo, setMemo] = useState('')
+  const [status, setStatus] = useState('')
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [showOverdue, setShowOverdue] = useState(false)
   const [bills, setBills] = useState<OutstandingBill[]>([])
@@ -206,6 +207,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
         setReferenceNumber(data.referenceNumber ?? '')
         setBankAccountId(data.bankAccountId ?? '')
         setMemo(data.memo ?? '')
+        setStatus(data.status ?? ((data.journalEntryId || data.postingStatus === 'POSTED') ? 'COMPLETED' : 'PENDING'))
         if (Array.isArray(data.applications)) {
           setBills(data.applications.map((app: ApplicationApi) => ({
             id: app.billId,
@@ -309,6 +311,8 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
       : 'Record Bill Payment'
     : 'Bill Payment Details'
 
+  const statusLabel = mode === 'new' ? 'Draft Payment' : status || 'Payment Details'
+
   return (
     <div className="flex h-full flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
@@ -319,8 +323,28 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
             </div>
             <div className="flex items-center gap-2">
               <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
-                {mode === 'edit' ? 'Posted' : 'Draft Payment'}
+                {statusLabel}
               </div>
+              {mode === 'edit' && status && status.toUpperCase() !== 'VOIDED' && status.toUpperCase() !== 'VOID' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!companyId || !paymentId) return
+                    if (!confirm('Are you sure you want to void this payment? This will reverse the GL journal entries and cannot be undone.')) return
+                    try {
+                      await expensesService.voidBillPayment(companyId, paymentId)
+                      setStatus('VOIDED')
+                      toast.success('Payment voided')
+                    } catch {
+                      toast.error('Failed to void payment')
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
+                >
+                  <X size={12} />
+                  Void
+                </button>
+              )}
             </div>
           </div>
         </div>
