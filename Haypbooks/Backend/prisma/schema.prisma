@@ -719,6 +719,7 @@ model User {
   sentWorkspaceInvites  WorkspaceInvite[]   @relation("WorkspaceInviteInvitedBy")
   timesheetApprovals    TimesheetApproval[]
   auditLogs             AuditLog[]
+  recurringExpensesCreated RecurringExpense[] @relation("RecurringExpenseCreator")
   // Tasks relations
   tasksCreated          Task[]
   createdWorkflows      Workflow[]
@@ -1468,6 +1469,7 @@ model Company {
   // Reconciliations & governance
   subledgerReconciliations SubledgerReconciliation[]
   estimates                Estimate[]
+  recurringExpenses        RecurringExpense[]
 
   // Business/profile fields (migrated from Tenant). These are per-Company so
   // different companies under the same Tenant can have independent branding
@@ -5663,6 +5665,7 @@ model Vendor {
   VendorCredit        VendorCredit[]
   VendorPaymentMethod VendorPaymentMethod[]
   recurringBills      RecurringBill[]
+  recurringExpenses   RecurringExpense[]
   // Philippine-specific withholding tax relations
   withholdingTaxes    WithholdingTaxDeduction[]
   finalTaxes          FinalTaxDeduction[]
@@ -8035,6 +8038,38 @@ model RecurringBill {
   @@map("recurring_bills")
 }
 
+model RecurringExpense {
+  id                  String    @id @default(uuid())
+  companyId           String
+  vendorId            String?
+  description         String
+  memo                String?
+  amount              Decimal   @db.Decimal(18, 2)
+  currency            String    @default("USD")
+  expenseAccountId    String?
+  frequency           String
+  interval            Int       @default(1)
+  startDate           DateTime
+  endDate             DateTime?
+  nextExecutionDate   DateTime
+  lastExecutionDate   DateTime?
+  status              String    @default("ACTIVE")
+  createdBy           String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  company    Company  @relation(fields: [companyId], references: [id])
+  vendor     Vendor?  @relation(fields: [vendorId], references: [contactId])
+  creator    User     @relation("RecurringExpenseCreator", fields: [createdBy], references: [id])
+  generatedExpenses ExpenseClaim[] @relation("GeneratedByRecurring")
+
+  @@index([companyId])
+  @@index([status])
+  @@index([nextExecutionDate])
+  @@index([createdBy])
+  @@map("recurring_expenses")
+}
+
 model RecurringSchedule {
   id                String                  @id @default(uuid())
   workspaceId       String
@@ -8112,6 +8147,7 @@ model ExpenseClaim {
   employeeId          String
   paycheckId          String?
   reimbursementMethod String? // SEPARATE_CHECK, ADD_TO_PAYCHECK
+  recurringExpenseId  String?
   status              String    @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, REIMBURSED
   description         String?
   businessPurpose     String?
@@ -8128,6 +8164,7 @@ model ExpenseClaim {
   workspace Workspace          @relation(fields: [workspaceId], references: [id])
   company   Company            @relation(fields: [companyId], references: [id])
   employee    Employee           @relation(fields: [employeeId], references: [id])
+  recurringExpense RecurringExpense? @relation("GeneratedByRecurring", fields: [recurringExpenseId], references: [id])
   departmentId String?
   department   Department?       @relation(fields: [departmentId], references: [id])
   paycheck     Paycheck?          @relation(fields: [paycheckId], references: [id])
