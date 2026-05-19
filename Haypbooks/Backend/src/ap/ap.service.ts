@@ -2,13 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { ApRepository } from './ap.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { AuditService } from '../audit/audit.service'
 
 @Injectable()
 export class ApService {
     private rfqStore = new Map<string, any[]>()
     private paymentRunStore = new Map<string, any[]>()
 
-    constructor(private readonly repo: ApRepository, private readonly prisma: PrismaService, private readonly subLedger: SubLedgerService) { }
+    constructor(private readonly repo: ApRepository, private readonly prisma: PrismaService, private readonly auditService: AuditService, private readonly subLedger: SubLedgerService) { }
 
     private getRfqState(companyId: string) {
         if (!this.rfqStore.has(companyId)) {
@@ -773,6 +774,19 @@ export class ApService {
             throw new BadRequestException('Only posted bill payments can be voided')
         }
 
+        const workspaceId = await this.getWorkspaceId(companyId)
+        this.auditService.log({
+            workspaceId,
+            companyId,
+            userId,
+            entityType: 'BillPayment',
+            entityId: paymentId,
+            action: 'VOIDED',
+            oldValue: { status: payment.status, postingStatus: payment.postingStatus },
+            newValue: { status: 'VOIDED', postingStatus: 'VOIDED' },
+            metadata: { reason: 'void' },
+        }).catch(() => {})
+
         return this.prisma.$transaction(async (tx) => {
             await this.subLedger.postBillPaymentReversalToGL(paymentId, tx)
             const result = await this.repo.voidBillPayment(companyId, paymentId, tx)
@@ -1054,6 +1068,19 @@ export class ApService {
         if (existing.postingStatus !== 'POSTED') {
             throw new BadRequestException('Only posted vendor credits can be voided')
         }
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        this.auditService.log({
+            workspaceId,
+            companyId,
+            userId,
+            entityType: 'VendorCredit',
+            entityId: creditId,
+            action: 'VOIDED',
+            oldValue: { status: existing.status, postingStatus: existing.postingStatus },
+            newValue: { status: 'VOIDED', postingStatus: 'VOIDED' },
+            metadata: { reason: 'void' },
+        }).catch(() => {})
 
         return this.prisma.$transaction(async (tx) => {
             await this.subLedger.postVendorCreditReversalToGL(creditId, tx)
@@ -1394,6 +1421,19 @@ export class ApService {
                 throw new BadRequestException('Only posted mileage logs can be voided')
             }
 
+            const workspaceId = await this.getWorkspaceId(companyId)
+            this.auditService.log({
+                workspaceId,
+                companyId,
+                userId,
+                entityType: 'MileageLog',
+                entityId: mileageId,
+                action: 'VOIDED',
+                oldValue: { status: existing.status, postingStatus: existing.postingStatus },
+                newValue: { status: 'VOIDED', postingStatus: 'VOIDED' },
+                metadata: { reason: 'void' },
+            }).catch(() => {})
+
             await this.subLedger.postMileageReversalToGL(mileageId, tx)
             const voided = await tx.mileageLog.update({ where: { id: mileageId }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
             return voided
@@ -1411,6 +1451,19 @@ export class ApService {
       if (existing.postingStatus !== 'POSTED') {
         throw new BadRequestException('Only posted per diem claims can be voided')
       }
+
+      const workspaceId = await this.getWorkspaceId(companyId)
+      this.auditService.log({
+        workspaceId,
+        companyId,
+        userId,
+        entityType: 'PerDiem',
+        entityId: perDiemId,
+        action: 'VOIDED',
+        oldValue: { status: existing.status, postingStatus: existing.postingStatus },
+        newValue: { status: 'VOIDED', postingStatus: 'VOIDED' },
+        metadata: { reason: 'void' },
+      }).catch(() => {})
 
       await this.subLedger.postPerDiemReversalToGL(perDiemId, tx)
       const voided = await tx.perDiemClaim.update({ where: { id: perDiemId }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })

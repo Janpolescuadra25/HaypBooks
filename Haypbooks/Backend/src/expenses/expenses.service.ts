@@ -3,6 +3,7 @@ import { ApService } from '../ap/ap.service'
 import { AttachmentsService } from '../attachments/attachments.service'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { AuditService } from '../audit/audit.service'
 import { ExpensePolicyService } from './expense-policy.service'
 import { ExpenseStatusTransitionGuard } from './expense-status-transition.guard'
 
@@ -13,6 +14,7 @@ export class ExpensesService {
     private readonly prisma: PrismaService,
     private readonly attachmentsService: AttachmentsService,
     private readonly subLedgerService: SubLedgerService,
+    private readonly auditService: AuditService,
     private readonly expenseStatusTransitionGuard: ExpenseStatusTransitionGuard,
     private readonly expensePolicyService: ExpensePolicyService,
   ) {}
@@ -343,6 +345,20 @@ export class ExpensesService {
       if (claim.status === 'VOIDED' || claim.postingStatus === 'VOIDED') {
         throw new BadRequestException('Expense claim is already voided')
       }
+
+      const workspaceId = await this.getWorkspaceId(companyId)
+      this.auditService.log({
+        workspaceId,
+        companyId,
+        userId,
+        entityType: 'ExpenseClaim',
+        entityId: claimId,
+        action: 'VOIDED',
+        oldValue: { status: claim.status, postingStatus: claim.postingStatus },
+        newValue: { status: 'VOIDED', postingStatus: 'VOIDED' },
+        metadata: { reason: 'void' },
+      }).catch(() => {})
+
       if (['DRAFT', 'SUBMITTED'].includes(claim.status)) {
         await tx.expenseClaim.update({
           where: { id: claimId },
