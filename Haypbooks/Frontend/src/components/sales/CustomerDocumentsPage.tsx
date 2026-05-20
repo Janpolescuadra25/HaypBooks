@@ -1,9 +1,9 @@
 ﻿'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
-import apiClient from '@/lib/api-client'
+import { useMemo, useState } from 'react'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypColumn } from '@/components/shared/HaypDataTable.types'
 
 type DocumentRow = {
   id: string
@@ -15,41 +15,21 @@ type DocumentRow = {
   status: 'Active' | 'Expired' | 'Pending'
 }
 
+const DEFAULT_DOCUMENTS: DocumentRow[] = [
+  { id: 'doc1', name: 'Service Agreement - Acme', customer: 'Acme Corporation', type: 'Contract', uploadedDate: '2026-03-10', uploadedBy: 'Jane C.', status: 'Active' },
+  { id: 'doc2', name: 'Tax Exempt Cert - TechStart', customer: 'TechStart Inc', type: 'ID', uploadedDate: '2026-03-12', uploadedBy: 'Curtis H.', status: 'Active' },
+  { id: 'doc3', name: 'Credit Application - Global', customer: 'Global Logistics', type: 'Agreement', uploadedDate: '2026-03-14', uploadedBy: 'Mia T.', status: 'Pending' },
+]
+
 export default function CustomerDocumentsPage() {
-  const { companyId, loading: companyLoading } = useCompanyId()
-  const { currency } = useCompanyCurrency()
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  const fetchData = useCallback(async () => {
-    if (!companyId) return
-    setLoading(true)
-    setError('')
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/customers`)
-      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load data')
-    } finally {
-      setLoading(false)
-    }
-  }, [companyId])
-
-  useEffect(() => { fetchData() }, [fetchData])
+  const { loading: companyLoading } = useCompanyId()
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
 
-  const docs: DocumentRow[] = [
-    { id: 'doc1', name: 'Service Agreement - Acme', customer: 'Acme Corporation', type: 'Contract', uploadedDate: '2026-03-10', uploadedBy: 'Jane C.', status: 'Active' },
-    { id: 'doc2', name: 'Tax Exempt Cert - TechStart', customer: 'TechStart Inc', type: 'ID', uploadedDate: '2026-03-12', uploadedBy: 'Curtis H.', status: 'Active' },
-    { id: 'doc3', name: 'Credit Application - Global', customer: 'Global Logistics', type: 'Agreement', uploadedDate: '2026-03-14', uploadedBy: 'Mia T.', status: 'Pending' },
-  ]
-
   const filtered = useMemo(() => {
-    if (!search) return docs
+    if (!search) return DEFAULT_DOCUMENTS
     const q = search.toLowerCase()
-    return docs.filter((row) =>
+    return DEFAULT_DOCUMENTS.filter((row) =>
       row.name.toLowerCase().includes(q) ||
       row.customer.toLowerCase().includes(q) ||
       row.type.toLowerCase().includes(q) ||
@@ -58,6 +38,18 @@ export default function CustomerDocumentsPage() {
       row.status.toLowerCase().includes(q)
     )
   }, [search])
+
+  const columns = useMemo<HaypColumn<DocumentRow>[]>(
+    () => [
+      { id: 'name', header: 'Document Name', accessorKey: 'name', size: 220 },
+      { id: 'customer', header: 'Customer', accessorKey: 'customer', size: 180 },
+      { id: 'type', header: 'Type', accessorKey: 'type', size: 120 },
+      { id: 'uploadedDate', header: 'Uploaded Date', accessorKey: 'uploadedDate', size: 140 },
+      { id: 'uploadedBy', header: 'Uploaded By', accessorKey: 'uploadedBy', size: 140 },
+      { id: 'status', header: 'Status', accessorKey: 'status', size: 120 },
+    ],
+    [],
+  )
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -87,50 +79,19 @@ export default function CustomerDocumentsPage() {
 
       <div className="px-6 py-5">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700">
-                <th className="text-left px-4 py-3">Document Name</th>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3">Type</th>
-                <th className="text-left px-4 py-3">Uploaded Date</th>
-                <th className="text-left px-4 py-3">Uploaded By</th>
-                <th className="text-left px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
-                    <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                    Loading...
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center">
-                    <p className="text-rose-500 font-medium">{error}</p>
-                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No documents found.</td>
-                </tr>
-              ) : (
-                filtered.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.customer}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.type}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.uploadedDate}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.uploadedBy}</td>
-                    <td className={`px-4 py-3 text-sm font-semibold ${row.status === 'Active' ? 'text-emerald-700' : row.status === 'Pending' ? 'text-amber-700' : 'text-rose-700'}`}>{row.status}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <HaypDataTable
+            data={filtered}
+            columns={columns}
+            tableId="customer-documents"
+            title="Customer Documents"
+            globalFilter={search}
+            onGlobalFilterChange={setSearch}
+            searchPlaceholder="Search documents..."
+            loading={companyLoading}
+            onRefresh={() => {}}
+            emptyTitle="No documents yet"
+            emptySubtitle="Upload customer documents to keep everything organized."
+          />
         </div>
       </div>
 
@@ -142,7 +103,7 @@ export default function CustomerDocumentsPage() {
               <button onClick={() => setHelpOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
             </div>
             <div className="p-4 text-sm text-slate-700 space-y-3">
-              <p>Store and manage all documents linked to customer accounts and contracts.</p>
+              <p>Store and manage customer-related files linked to customer accounts and contracts.</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Upload contracts, tax IDs, agreements, and more.</li>
                 <li>Search by customer, type, or status.</li>

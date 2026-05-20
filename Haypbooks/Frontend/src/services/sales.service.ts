@@ -2,6 +2,46 @@
 
 import apiClient from '@/lib/api-client'
 
+export type CustomerStatus = 'ACTIVE' | 'INACTIVE'
+
+export interface CustomerGroup {
+  id: string
+  name: string
+}
+
+export interface PaymentTerm {
+  id: string
+  name: string
+  dueDays: number
+}
+
+export interface ArCustomer {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip?: string
+  country?: string
+  paymentTermId?: string | null
+  paymentTermName?: string | null
+  creditLimit?: number | null
+  openBalance?: number
+  totalRevenue?: number
+  invoiceCount?: number
+  status?: CustomerStatus
+  groupId?: string | null
+  groupName?: string | null
+}
+
+export interface ArCustomerQuery {
+  search?: string
+  status?: CustomerStatus
+  groupId?: string
+}
+
 export const salesService = {
   // ─── Customers ────────────────────────────────────────────────────────
   listCustomers: (companyId: string, query?: any) =>
@@ -19,6 +59,52 @@ export const salesService = {
   deleteCustomer: (companyId: string, customerId: string) =>
     apiClient.delete(`/companies/${companyId}/customers/${customerId}`),
 
+  // ─── AR Customers ─────────────────────────────────────────────────────
+  listArCustomers: (companyId: string, query?: ArCustomerQuery) =>
+    apiClient.get<ArCustomer[]>(`/companies/${companyId}/ar/customers`, {
+      params: {
+        search: query?.search || undefined,
+        status: query?.status || undefined,
+        groupId: query?.groupId || undefined,
+      },
+    }),
+
+  getArCustomer: (companyId: string, customerId: string) =>
+    apiClient.get<ArCustomer>(`/companies/${companyId}/ar/customers/${customerId}`),
+
+  createArCustomer: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/customers`, body),
+
+  updateArCustomer: (companyId: string, customerId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/customers/${customerId}`, body),
+
+  deleteArCustomer: (companyId: string, customerId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/customers/${customerId}`),
+
+  batchDeleteArCustomers: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/customers/batch/delete`, { ids }),
+
+  updateArCustomersStatus: (companyId: string, ids: string[], status: CustomerStatus) =>
+    apiClient.patch(`/companies/${companyId}/ar/customers/batch/status`, { ids, status }),
+
+  exportArCustomers: (companyId: string, query?: ArCustomerQuery) =>
+    apiClient.get<string>(`/companies/${companyId}/ar/customers/export`, {
+      params: {
+        search: query?.search || undefined,
+        status: query?.status || undefined,
+        groupId: query?.groupId || undefined,
+      },
+    }),
+
+  getArCustomerActivity: (companyId: string, customerId: string) =>
+    apiClient.get<{ data: any[] }>(`/companies/${companyId}/ar/customers/${customerId}/activity`),
+
+  listArPaymentTerms: (companyId: string) =>
+    apiClient.get<PaymentTerm[]>(`/companies/${companyId}/ar/payment-terms`),
+
+  listArCustomerGroups: (companyId: string) =>
+    apiClient.get<CustomerGroup[]>(`/companies/${companyId}/ar/customer-groups`),
+
   // ─── Invoices ─────────────────────────────────────────────────────────
   listInvoices: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/invoices`, { params: query }),
@@ -34,6 +120,44 @@ export const salesService = {
 
   deleteInvoice: (companyId: string, invoiceId: string) =>
     apiClient.delete(`/companies/${companyId}/invoices/${invoiceId}`),
+
+  // ─── AR Invoices ───────────────────────────────────────────────────────
+  listArInvoices: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/invoices`, { params: query }),
+
+  sendArInvoice: (companyId: string, invoiceId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/send`),
+
+  duplicateArInvoice: (companyId: string, invoiceId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/duplicate`),
+
+  voidArInvoice: (companyId: string, invoiceId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/void`),
+
+  // ─── Credit Notes ──────────────────────────────────────────────────────
+  listCreditNotes: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/credit-notes`, { params: query }),
+
+  createCreditNote: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/credit-notes`, body),
+
+  updateCreditNote: (companyId: string, creditNoteId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/credit-notes/${creditNoteId}`, body),
+
+  voidCreditNote: (companyId: string, creditNoteId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/credit-notes/${creditNoteId}/void`),
+
+  applyCreditNote: (companyId: string, creditNoteId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/credit-notes/${creditNoteId}/apply`, body),
+
+  batchDeleteCreditNotes: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/credit-notes/batch/delete`, { ids }),
+
+  exportCreditNotes: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/credit-notes/export`, { params: query }),
+
+  getCreditNoteActivity: (companyId: string, creditNoteId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/credit-notes/${creditNoteId}/activity`),
 
   // ─── Payments ─────────────────────────────────────────────────────────
   listPayments: (companyId: string, query?: any) =>

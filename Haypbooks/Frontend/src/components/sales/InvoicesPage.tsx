@@ -20,7 +20,8 @@ import {
   Clock,
   CheckCircle2,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { useToast } from '@/components/ToastProvider'
+import { salesService } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -85,34 +86,27 @@ export default function InvoicesPage() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([])
-  const [toast, setToast] = useState('')
-
-  const showToast = useCallback((message: string) => {
-    setToast(message)
-    setTimeout(() => setToast(''), 3000)
-  }, [])
+  const toast = useToast()
 
   const fetchInvoices = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
     setError('')
     try {
-      const response = await apiClient.get(`/companies/${companyId}/ar/invoices`, {
-        params: {
-          search: search || undefined,
-          status: statusFilter !== 'ALL' && statusFilter !== 'DUE_SOON' ? statusFilter : undefined,
-        },
+      const response = await salesService.listArInvoices(companyId, {
+        search: search || undefined,
+        status: statusFilter !== 'ALL' && statusFilter !== 'DUE_SOON' ? statusFilter : undefined,
       })
       const data = response.data?.data ?? response.data ?? []
       setInvoices(Array.isArray(data) ? data : [])
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to load invoices'
       setError(msg)
-      showToast(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
-  }, [companyId, search, statusFilter, showToast])
+  }, [companyId, search, statusFilter, toast])
 
   useEffect(() => {
     fetchInvoices()
@@ -154,25 +148,27 @@ export default function InvoicesPage() {
     async (id: string, invoiceNumber?: string, kind: 'send' | 'reminder' = 'send') => {
       if (!companyId) return
       try {
-        await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`)
+        await salesService.sendArInvoice(companyId, id)
         fetchInvoices()
-        showToast(kind === 'send' ? `Invoice #${invoiceNumber ?? id.slice(-6).toUpperCase()} marked as Sent` : 'Reminder sent')
+        toast.success(kind === 'send' ? `Invoice #${invoiceNumber ?? id.slice(-6).toUpperCase()} marked as Sent` : 'Reminder sent')
       } catch (err: any) {
-        setError(err?.response?.data?.message ?? err?.message ?? 'Failed to send invoice')
+        const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to send invoice'
+        setError(msg)
+        toast.error(msg)
       }
     },
-    [companyId, fetchInvoices, showToast],
+    [companyId, fetchInvoices, toast],
   )
 
   const duplicateInvoice = useCallback(
     async (source: Invoice) => {
       if (!companyId) throw new Error('No company selected')
-      const { data } = await apiClient.post(`/companies/${companyId}/ar/invoices/${source.id}/duplicate`)
+      const { data } = await salesService.duplicateArInvoice(companyId, source.id)
       await fetchInvoices()
-      showToast(`Invoice #${source.invoiceNumber ?? source.id.slice(-6).toUpperCase()} duplicated as #${data?.invoiceNumber ?? String(data?.id ?? '').slice(-6).toUpperCase()}`)
+      toast.success(`Invoice #${source.invoiceNumber ?? source.id.slice(-6).toUpperCase()} duplicated as #${data?.invoiceNumber ?? String(data?.id ?? '').slice(-6).toUpperCase()}`)
       setViewInvoice(data)
     },
-    [companyId, fetchInvoices, showToast],
+    [companyId, fetchInvoices, toast],
   )
 
   const handleDuplicateFromList = useCallback(
@@ -201,20 +197,22 @@ export default function InvoicesPage() {
     async (id: string) => {
       if (!companyId || !confirm('Voiding this invoice will reverse all payment allocations. Continue?')) return
       try {
-        await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`)
+        await salesService.voidArInvoice(companyId, id)
         fetchInvoices()
       } catch (err: any) {
-        setError(err?.response?.data?.message ?? err?.message ?? 'Failed to void invoice')
+        const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to void invoice'
+        setError(msg)
+        toast.error(msg)
       }
     },
-    [companyId, fetchInvoices],
+    [companyId, fetchInvoices, toast],
   )
 
   const handleBulkSend = useCallback(
     async (ids: string[]) => {
       if (!companyId || ids.length === 0) return
       if (!confirm(`Send ${ids.length} invoice(s)?`)) return
-      await Promise.allSettled(ids.map((id) => apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`)))
+      await Promise.allSettled(ids.map((id) => salesService.sendArInvoice(companyId, id)))
       fetchInvoices()
     },
     [companyId, fetchInvoices],
@@ -224,17 +222,17 @@ export default function InvoicesPage() {
     (ids: string[]) => {
       if (ids.length === 0) return
       setInvoices((prev) => prev.map((invoice) => (ids.includes(invoice.id) ? { ...invoice, status: 'SENT' } : invoice)))
-      showToast(`${ids.length} invoice(s) marked as Sent`)
+      toast.success(`${ids.length} invoice(s) marked as Sent`)
     },
-    [showToast],
+    [toast],
   )
 
   const handleBulkPrint = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return
-      showToast(`${ids.length} invoice(s) queued for print`)
+      toast.info(`${ids.length} invoice(s) queued for print`)
     },
-    [showToast],
+    [toast],
   )
 
   const handleConfirmDelete = useCallback((ids: string[]) => {
@@ -247,8 +245,8 @@ export default function InvoicesPage() {
     setInvoices((prev) => prev.filter((invoice) => !deleteTargetIds.includes(invoice.id)))
     setDeleteTargetIds([])
     setDeleteConfirmationOpen(false)
-    showToast('Selected invoices deleted')
-  }, [deleteTargetIds, showToast])
+    toast.success('Selected invoices deleted')
+  }, [deleteTargetIds, toast])
 
   const downloadInvoicesCSV = useCallback(
     (rows: Invoice[]) => {
@@ -263,9 +261,9 @@ export default function InvoicesPage() {
         String(invoice.total),
       ])
       csvDownload(`invoices-${new Date().toISOString().slice(0, 10)}`, headers, formatted)
-      showToast('CSV export ready')
+      toast.success('CSV export ready')
     },
-    [showToast],
+    [toast],
   )
 
   const handleExport = useCallback(() => {
@@ -396,7 +394,7 @@ export default function InvoicesPage() {
         icon: <Share2 size={13} />,
         onClick: (id) => {
           navigator.clipboard?.writeText(`${window.location.origin}/sales/billing/invoices/${id}`)
-          showToast('Link copied!')
+          toast.success('Link copied!')
         },
       },
       {
@@ -418,7 +416,7 @@ export default function InvoicesPage() {
         onClick: (id) => router.push(`/sales/billing/invoices/activity?id=${id}`),
       },
     ],
-    [handleSend, handleDuplicateFromList, handleVoid, router, showToast],
+    [handleSend, handleDuplicateFromList, handleVoid, router, toast],
   )
 
   const bulkActions = useMemo<HaypBulkAction[]>(
@@ -535,11 +533,6 @@ export default function InvoicesPage() {
         </div>
       )}
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

@@ -3,7 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Download, Eye, Check, Ban, X, ListOrdered, Clock, Banknote, Loader2, Trash2 } from 'lucide-react'
+import { useToast } from '@/components/ToastProvider'
 import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -116,7 +118,7 @@ export default function CreditNotesPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [toast, setToast] = useState('')
+  const toast = useToast()
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [exportLoading, setExportLoading] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
@@ -167,8 +169,6 @@ export default function CreditNotesPage() {
   const [applyAmountFocused, setApplyAmountFocused] = useState(false)
   const [newAmountFocused, setNewAmountFocused] = useState(false)
 
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
-
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchData = useCallback(async () => {
@@ -177,15 +177,16 @@ export default function CreditNotesPage() {
     try {
       const params: Record<string, string> = {}
       if (statusFilter) params.status = statusFilter
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/credit-notes`, { params })
-      const raw: any[] = Array.isArray(data) ? data : data?.items || []
+      const response = await salesService.listCreditNotes(companyId, { params })
+      const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.items || []
       setItems(raw.map(normalizeCN))
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to load credit notes')
+      toast.error(err?.response?.data?.message || 'Failed to load credit notes')
     } finally {
       setLoading(false)
     }
-  }, [companyId, statusFilter])
+  }, [companyId, statusFilter, toast])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -196,15 +197,15 @@ export default function CreditNotesPage() {
     if (!window.confirm(`Delete ${ids.length} credit note(s)?`)) return
     setBatchLoading(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/credit-notes/batch/delete`, { ids })
+      await salesService.batchDeleteCreditNotes(companyId, ids)
       fetchData()
-      showToast(`Deleted ${ids.length} credit note(s)`)
+      toast.success(`Deleted ${ids.length} credit note(s)`)
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Batch delete failed')
+      toast.error(err?.response?.data?.message || 'Batch delete failed')
     } finally {
       setBatchLoading(false)
     }
-  }, [companyId, fetchData, showToast])
+  }, [companyId, fetchData, toast])
 
   // ─── Export ───────────────────────────────────────────────────────────────
 
@@ -214,21 +215,21 @@ export default function CreditNotesPage() {
     try {
       const params: Record<string, string> = {}
       if (statusFilter) params.status = statusFilter
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/credit-notes/export`, { params })
-      const blob = new Blob([data], { type: 'text/csv' })
+      const response = await salesService.exportCreditNotes(companyId, { params })
+      const blob = new Blob([response.data], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = 'credit-notes-export.csv'
       a.click()
       URL.revokeObjectURL(url)
-      showToast('Export downloaded')
+      toast.success('Export downloaded')
     } catch {
-      showToast('Export failed')
+      toast.error('Export failed')
     } finally {
       setExportLoading(false)
     }
-  }, [companyId, statusFilter, showToast])
+  }, [companyId, statusFilter, toast])
 
   const handleExportSelected = useCallback((ids: string[], selectedRows: EnrichedCN[]) => {
     if (ids.length === 0) return
@@ -246,8 +247,8 @@ export default function CreditNotesPage() {
       row.status,
     ])
     csvDownload('credit-notes-selected', headers, rows)
-    showToast('Selected credit notes exported')
-  }, [currency, showToast])
+    toast.success('Selected credit notes exported')
+  }, [currency, toast])
 
   const tableData = useMemo<EnrichedCN[]>(() => {
     let list = items.map((cn) => ({ ...cn, _unapplied: Math.max(0, (cn.amount || 0) - (cn.appliedAmount || 0)) }))
@@ -401,12 +402,12 @@ export default function CreditNotesPage() {
     if (!window.confirm('Void this credit note? This will reverse the GL entry.')) return
     setActioningId(cnId)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/credit-notes/${cnId}/void`)
+      await salesService.voidCreditNote(companyId, cnId)
       fetchData()
       setDrawerCN(null)
-      showToast('Credit note voided')
+      toast.success('Credit note voided')
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed to void credit note')
+      toast.error(err?.response?.data?.message || 'Failed to void credit note')
     } finally {
       setActioningId(null)
     }
@@ -428,10 +429,14 @@ export default function CreditNotesPage() {
     if (!companyId || !customerId) return
     setInvoicesLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices`, {
-        params: { customerId, openOnly: true, limit: 50 },
-      })
-      const raw: any[] = Array.isArray(data) ? data : data?.items || []
+      const response = await salesService.listArInvoices(companyId, {
+        search: undefined,
+        status: undefined,
+        customerId,
+        openOnly: true,
+        limit: 50,
+      } as any)
+      const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.items || []
       const openInvoices = raw.map((inv: any) => ({
         id: inv.id,
         invoiceNumber: inv.invoiceNumber ?? inv.id?.slice(0, 8),
@@ -470,15 +475,16 @@ export default function CreditNotesPage() {
     if (!Number.isFinite(applyAmount) || applyAmount <= 0) { setApplyError('Enter a valid amount'); return }
     setApplying(true); setApplyError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/credit-notes/${applyingCN.id}/apply`, {
+      await salesService.applyCreditNote(companyId, applyingCN.id, {
         invoiceId: applyForm.invoiceId,
         amount: applyAmount,
       })
       setApplyOpen(false)
       fetchData()
-      showToast('Credit note applied to invoice')
+      toast.success('Credit note applied to invoice')
     } catch (err: any) {
       setApplyError(err?.response?.data?.message || 'Failed to apply credit note')
+      toast.error(err?.response?.data?.message || 'Failed to apply credit note')
     } finally {
       setApplying(false)
     }
@@ -490,8 +496,8 @@ export default function CreditNotesPage() {
     if (!companyId) return
     setCustLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
-      const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? []
+      const response: any = await salesService.listArCustomers(companyId)
+      const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? response.data?.items ?? []
       setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
     } catch { /* non-blocking */ }
     finally { setCustLoading(false) }
@@ -598,19 +604,20 @@ export default function CreditNotesPage() {
 
     try {
       if (editingId) {
-        await apiClient.put(`/companies/${companyId}/ar/credit-notes/${editingId}`, payload)
+        await salesService.updateCreditNote(companyId, editingId, payload)
         setNewOpen(false)
         fetchData()
-        showToast('Credit note updated')
+        toast.success('Credit note updated')
         setEditingId(null)
       } else {
-        await apiClient.post(`/companies/${companyId}/ar/credit-notes`, payload)
+        await salesService.createCreditNote(companyId, payload)
         setNewOpen(false)
         fetchData()
-        showToast('Credit note created')
+        toast.success('Credit note created')
       }
     } catch (err: any) {
       setSaveError(err?.response?.data?.message || 'Failed to save credit note')
+      toast.error(err?.response?.data?.message || 'Failed to save credit note')
     } finally {
       setSaving(false)
     }
@@ -620,10 +627,6 @@ export default function CreditNotesPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
-      {toast && (
-        <div className="fixed top-4 right-4 z-[100] bg-emerald-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg">{toast}</div>
-      )}
-
       {/* Header */}
       <div className="px-6 py-5 flex-1">
         <HaypDataTable
@@ -710,7 +713,7 @@ export default function CreditNotesPage() {
                   setDrawerTab(tab)
                   if (tab === 'activity' && cnActivity.length === 0 && companyId) {
                     setCnActivityLoading(true)
-                    apiClient.get(`/companies/${companyId}/ar/credit-notes/${drawerCN.id}/activity`)
+                    salesService.getCreditNoteActivity(companyId, drawerCN.id)
                       .then(r => setCnActivity(r.data.data ?? []))
                       .catch(() => {})
                       .finally(() => setCnActivityLoading(false))
