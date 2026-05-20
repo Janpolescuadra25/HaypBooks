@@ -177,7 +177,7 @@ export default function CreditNotesPage() {
     try {
       const params: Record<string, string> = {}
       if (statusFilter) params.status = statusFilter
-      const response = await salesService.listCreditNotes(companyId, { params })
+      const response = await salesService.listCreditNotes(companyId, params)
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.items || []
       setItems(raw.map(normalizeCN))
     } catch (err: any) {
@@ -215,7 +215,7 @@ export default function CreditNotesPage() {
     try {
       const params: Record<string, string> = {}
       if (statusFilter) params.status = statusFilter
-      const response = await salesService.exportCreditNotes(companyId, { params })
+      const response = await salesService.exportCreditNotes(companyId, params)
       const blob = new Blob([response.data], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')

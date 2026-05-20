@@ -15,6 +15,7 @@ type DocumentRow = {
   status: 'Active' | 'Expired' | 'Pending'
 }
 
+// TODO: Replace with API data when backend endpoint exists
 const DEFAULT_DOCUMENTS: DocumentRow[] = [
   { id: 'doc1', name: 'Service Agreement - Acme', customer: 'Acme Corporation', type: 'Contract', uploadedDate: '2026-03-10', uploadedBy: 'Jane C.', status: 'Active' },
   { id: 'doc2', name: 'Tax Exempt Cert - TechStart', customer: 'TechStart Inc', type: 'ID', uploadedDate: '2026-03-12', uploadedBy: 'Curtis H.', status: 'Active' },
@@ -25,19 +26,6 @@ export default function CustomerDocumentsPage() {
   const { loading: companyLoading } = useCompanyId()
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
-
-  const filtered = useMemo(() => {
-    if (!search) return DEFAULT_DOCUMENTS
-    const q = search.toLowerCase()
-    return DEFAULT_DOCUMENTS.filter((row) =>
-      row.name.toLowerCase().includes(q) ||
-      row.customer.toLowerCase().includes(q) ||
-      row.type.toLowerCase().includes(q) ||
-      row.uploadedDate.toLowerCase().includes(q) ||
-      row.uploadedBy.toLowerCase().includes(q) ||
-      row.status.toLowerCase().includes(q)
-    )
-  }, [search])
 
   const columns = useMemo<HaypColumn<DocumentRow>[]>(
     () => [
@@ -65,22 +53,12 @@ export default function CustomerDocumentsPage() {
           </div>
         </div>
 
-        <div className="px-6 pb-4 grid gap-3 sm:grid-cols-3">
-          <input
-            title="Search documents"
-            placeholder="Search documents"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-          <div className="text-xs text-slate-500 sm:col-span-2">Search by document name, customer, type, or status.</div>
-        </div>
       </div>
 
       <div className="px-6 py-5">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <HaypDataTable
-            data={filtered}
+            data={DEFAULT_DOCUMENTS}
             columns={columns}
             tableId="customer-documents"
             title="Customer Documents"

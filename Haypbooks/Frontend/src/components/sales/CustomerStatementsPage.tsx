@@ -16,6 +16,7 @@ type StatementRow = {
   status: 'Sent' | 'Viewed' | 'Paid'
 }
 
+// TODO: Replace with API data when backend endpoint exists
 const DEFAULT_STATEMENTS: StatementRow[] = [
   { id: 'stmt1', statementId: 'STMT-001', customer: 'Acme Corporation', periodStart: '2026-01-01', periodEnd: '2026-01-31', openingBalance: '$1,200.00', closingBalance: '$950.00', status: 'Sent' },
   { id: 'stmt2', statementId: 'STMT-002', customer: 'TechStart Inc', periodStart: '2026-02-01', periodEnd: '2026-02-28', openingBalance: '$450.00', closingBalance: '$300.00', status: 'Viewed' },
@@ -26,20 +27,6 @@ export default function CustomerStatementsPage() {
   const { loading: companyLoading } = useCompanyId()
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
-
-  const filtered = useMemo(() => {
-    if (!search) return DEFAULT_STATEMENTS
-    const q = search.toLowerCase()
-    return DEFAULT_STATEMENTS.filter((row) =>
-      row.statementId.toLowerCase().includes(q) ||
-      row.customer.toLowerCase().includes(q) ||
-      row.periodStart.toLowerCase().includes(q) ||
-      row.periodEnd.toLowerCase().includes(q) ||
-      row.openingBalance.toLowerCase().includes(q) ||
-      row.closingBalance.toLowerCase().includes(q) ||
-      row.status.toLowerCase().includes(q)
-    )
-  }, [search])
 
   const columns = useMemo<HaypColumn<StatementRow>[]>(
     () => [
@@ -68,22 +55,12 @@ export default function CustomerStatementsPage() {
           </div>
         </div>
 
-        <div className="px-6 pb-4 grid gap-3 sm:grid-cols-3">
-          <input
-            title="Search customer statements"
-            placeholder="Search by statement, customer, status"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-          <div className="text-xs text-slate-500 sm:col-span-2">Search by statement ID, customer, or status.</div>
-        </div>
       </div>
 
       <div className="px-6 py-5">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <HaypDataTable
-            data={filtered}
+            data={DEFAULT_STATEMENTS}
             columns={columns}
             tableId="customer-statements"
             title="Customer Statements"
