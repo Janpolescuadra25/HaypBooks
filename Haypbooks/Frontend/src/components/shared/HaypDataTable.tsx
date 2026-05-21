@@ -608,14 +608,26 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
 
   // Auto-close on scroll (only if main window scrolls, not internal lists)
   useEffect(() => {
-    const handleScroll = () => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement
+
+      if (columnsOpen) {
+        const menuEl = document.querySelector('[data-slot="dropdown-menu-content"]')
+        if (menuEl && menuEl.contains(target)) return
+      }
+
+      if (customizeOpen) {
+        const customizeEl = document.querySelector('[data-customize-scroll]')
+        if (customizeEl && customizeEl.contains(target)) return
+      }
+
       setStatusOpen(false)
       setCustomizeOpen(false)
       setColumnsOpen(false)
     }
     window.addEventListener('scroll', handleScroll, true)
     return () => window.removeEventListener('scroll', handleScroll, true)
-  }, [])
+  }, [columnsOpen, customizeOpen])
 
   const statusButton = filters.length > 0 ? (
     <DropdownMenu open={statusOpen} onOpenChange={setStatusOpen}>
@@ -697,7 +709,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
         matchWidth={false}
         className="!z-[9999]"
       >
-        <div className="w-[calc(100vw-2rem)] sm:w-[450px] md:w-[600px] bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 overflow-hidden">
+        <div className="w-[calc(100vw-2rem)] sm:w-[450px] md:w-[600px] !bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 overflow-hidden" data-customize-scroll>
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">

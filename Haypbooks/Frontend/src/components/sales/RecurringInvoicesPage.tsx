@@ -235,7 +235,7 @@ export default function RecurringInvoicesPage() {
         aria-label="Filter by frequency"
         value={freqFilter}
         onChange={(e) => setFreqFilter(e.target.value)}
-        className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-slate-700"
+        className="inline-flex items-center justify-center rounded-xl text-sm font-bold transition-all border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 h-10 gap-2 px-3 cursor-pointer shadow-sm min-w-[140px] outline-none focus:outline-none"
       >
         <option value="ALL">All Frequencies</option>
         {Object.entries(FREQ_LABELS).map(([key, label]) => (
