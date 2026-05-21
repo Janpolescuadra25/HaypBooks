@@ -350,7 +350,7 @@ export default function CustomerPaymentsPage() {
         setInvoices(
           raw
             .filter((i: any) =>
-              ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(i.status)
+              ['SENT', 'PARTIALLY_PAID', 'OVERDUE'].includes(i.status)
             )
             .map((i: any) => ({
               id: i.id,

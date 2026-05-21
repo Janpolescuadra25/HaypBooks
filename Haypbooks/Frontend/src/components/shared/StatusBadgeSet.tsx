@@ -48,7 +48,7 @@ export function getStatusVariant(status: string): StatusVariant {
   const compact = normalized.replace(/[\s_]+/g, '')
 
   if (compact.includes('OVERDUE')) return 'overdue'
-  if (compact.includes('PARTIAL') || compact.includes('INPROGRESS')) return 'partial'
+  if (compact.includes('PARTIALLY_PAID') || compact.includes('INPROGRESS')) return 'partial'
   if (compact.includes('PENDING') || compact.includes('SUBMITTED') || compact.includes('OPEN') || compact.includes('SENT') || compact.includes('ONHOLD')) return 'pending'
   if (compact.includes('APPROVED') || compact.includes('ACTIVE') || compact.includes('PAID') || compact.includes('CONFIRMED') || compact.includes('COMPLETED')) return 'approved'
   if (compact.includes('REJECTED') || compact.includes('VOID') || compact.includes('CLOSED') || compact.includes('ENDED') || compact.includes('FAILED') || compact.includes('CANCELLED')) return 'rejected'

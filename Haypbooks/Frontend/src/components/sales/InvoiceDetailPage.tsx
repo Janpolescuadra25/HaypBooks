@@ -39,7 +39,6 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; Icon: Re
   DRAFT:           { label: 'Draft',          className: 'bg-gray-100 text-gray-600',         Icon: FileText },
   SENT:            { label: 'Sent',            className: 'bg-blue-100 text-blue-700',          Icon: Send },
   PARTIALLY_PAID:  { label: 'Partially Paid',  className: 'bg-yellow-100 text-yellow-700',      Icon: CreditCard },
-  PARTIAL:         { label: 'Partial',         className: 'bg-yellow-100 text-yellow-700',      Icon: CreditCard },
   PAID:            { label: 'Paid',            className: 'bg-emerald-100 text-emerald-700',    Icon: CheckCircle2 },
   OVERDUE:         { label: 'Overdue',         className: 'bg-red-100 text-red-700',            Icon: AlertTriangle },
   VOID:            { label: 'Voided',          className: 'bg-gray-100 text-gray-500 line-through', Icon: Ban },
@@ -105,8 +104,8 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
 
   const outstandingBalance = Number(invoice.amountDue ?? invoice.total ?? 0)
   const canEditInvoice = invoice.status === 'DRAFT'
-  const canVoidInvoice = ['SENT', 'ISSUED', 'PARTIALLY_PAID', 'PARTIAL'].includes(invoice.status as string)
-  const canReceivePayment = invoice.status !== 'VOID' && outstandingBalance > 0 && ['SENT', 'ISSUED', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(invoice.status as string)
+  const canVoidInvoice = ['SENT', 'ISSUED', 'PARTIALLY_PAID'].includes(invoice.status as string)
+  const canReceivePayment = invoice.status !== 'VOID' && outstandingBalance > 0 && ['SENT', 'ISSUED', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status as string)
 
   useEffect(() => {
     if (invoice.status === 'VOID' && activeTab === 'edit') {

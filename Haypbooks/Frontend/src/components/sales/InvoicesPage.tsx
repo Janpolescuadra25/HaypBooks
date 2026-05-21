@@ -38,7 +38,7 @@ export interface Invoice {
   customerName?: string
   date: string
   dueDate: string
-  status: 'DRAFT' | 'SENT' | 'PARTIALLY_PAID' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'VOID'
+  status: 'DRAFT' | 'SENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'VOID'
   total: number
   amountDue?: number
   items?: InvoiceItem[]
@@ -380,7 +380,7 @@ export default function InvoicesPage() {
       {
         label: 'Receive Payment',
         icon: <CreditCard size={13} />,
-        show: (row) => ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(row?.status ?? ''),
+        show: (row) => ['SENT', 'PARTIALLY_PAID', 'OVERDUE'].includes(row?.status ?? ''),
         onClick: (_id, row) => setViewInvoice(row),
       },
       { label: '', divider: true, onClick: () => {} },
@@ -450,7 +450,7 @@ export default function InvoicesPage() {
     () => [
       { icon: ReceiptText, label: 'Total Invoices', value: String(invoices.length), color: 'emerald' },
       { icon: TrendingUp, label: 'Total Amount', value: fmt(invoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0)), color: 'emerald' },
-      { icon: Clock, label: 'Outstanding', value: fmt(invoices.filter((invoice) => ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(invoice.status)).reduce((sum, invoice) => sum + ((invoice.amountDue ?? invoice.total) || 0), 0)), color: 'amber' },
+      { icon: Clock, label: 'Outstanding', value: fmt(invoices.filter((invoice) => ['SENT', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status)).reduce((sum, invoice) => sum + ((invoice.amountDue ?? invoice.total) || 0), 0)), color: 'amber' },
       { icon: AlertTriangle, label: 'Overdue', value: fmt(invoices.filter((invoice) => invoice.status === 'OVERDUE').reduce((sum, invoice) => sum + (invoice.total || 0), 0)), color: 'rose' },
     ],
     [fmt, invoices],

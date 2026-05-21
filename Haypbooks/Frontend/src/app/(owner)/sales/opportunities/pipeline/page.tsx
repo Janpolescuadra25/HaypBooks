@@ -132,7 +132,7 @@ export default function Page() {
       .slice(0, 6)
 
     const receivableSignals = invoices
-      .filter((inv) => ['OVERDUE', 'PARTIAL', 'SENT'].includes(String(inv.status ?? '').toUpperCase()))
+      .filter((inv) => ['OVERDUE', 'PARTIALLY_PAID', 'SENT'].includes(String(inv.status ?? '').toUpperCase()))
       .slice(0, 6)
 
     return {

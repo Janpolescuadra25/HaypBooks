@@ -19,7 +19,7 @@ import { fmtDate, csvDownload, StatusPill } from './_helpers'
 const CREDIT_REASONS = ['Returned Goods', 'Price Adjustment', 'Overpayment', 'Billing Error', 'Discount Applied', 'Writing Off Bad Debt', 'Other']
 const REFUND_METHODS = ['Check', 'ACH', 'Credit Card', 'Cash']
 const STATUS_OPTIONS = ['', 'DRAFT', 'ISSUED', 'APPLIED', 'VOID']
-const OPEN_INVOICE_STATUSES = 'SENT,PARTIAL,PARTIALLY_PAID,OVERDUE'
+const OPEN_INVOICE_STATUSES = 'SENT,PARTIALLY_PAID,OVERDUE'
 
 type CreditNoteType = 'credit' | 'refund'
 
