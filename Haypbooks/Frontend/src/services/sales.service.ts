@@ -99,6 +99,40 @@ export const salesService = {
   getArCustomerActivity: (companyId: string, customerId: string) =>
     apiClient.get<{ data: any[] }>(`/companies/${companyId}/ar/customers/${customerId}/activity`),
 
+  // ─── QUOTES ───────────────────────────────────────────────────────────
+  getQuotes: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/quotes`, { params: query }),
+
+  getQuoteById: (companyId: string, quoteId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/quotes/${quoteId}`),
+
+  getQuoteActivity: (companyId: string, quoteId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/quotes/${quoteId}/activity`),
+
+  createQuote: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/ar/quotes`, data),
+
+  updateQuote: (companyId: string, quoteId: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/ar/quotes/${quoteId}`, data),
+
+  deleteQuote: (companyId: string, quoteId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/quotes/${quoteId}`),
+
+  updateQuoteStatus: (companyId: string, quoteId: string, status: string) =>
+    apiClient.patch(`/companies/${companyId}/ar/quotes/${quoteId}/status`, { status }),
+
+  convertQuote: (companyId: string, quoteId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/quotes/${quoteId}/convert`),
+
+  batchDeleteQuotes: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/quotes/batch/delete`, { ids }),
+
+  batchUpdateQuoteStatus: (companyId: string, ids: string[], status: string) =>
+    apiClient.patch(`/companies/${companyId}/ar/quotes/batch/status`, { ids, status }),
+
+  exportQuotes: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/quotes/export`, { params: query }),
+
   listArPaymentTerms: (companyId: string) =>
     apiClient.get<PaymentTerm[]>(`/companies/${companyId}/ar/payment-terms`),
 
