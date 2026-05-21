@@ -147,6 +147,79 @@ export const salesService = {
   batchDeleteRecurringInvoices: (companyId: string, ids: string[]) =>
     apiClient.post(`/companies/${companyId}/ar/recurring-invoices/batch/delete`, { ids }),
 
+  // ─── AR Write-Offs ─────────────────────────────────────────────────────
+  listArWriteOffs: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/write-offs`),
+
+  createArWriteOff: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/write-offs`, body),
+
+  updateArWriteOff: (companyId: string, writeOffId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/write-offs/${writeOffId}`, body),
+
+  approveArWriteOff: (companyId: string, writeOffId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/write-offs/${writeOffId}/approve`),
+
+  reverseArWriteOff: (companyId: string, writeOffId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/write-offs/${writeOffId}/reverse`),
+
+  deleteArWriteOff: (companyId: string, writeOffId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/write-offs/${writeOffId}`),
+
+  batchDeleteArWriteOffs: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/write-offs/batch/delete`, { ids }),
+
+  getArWriteOffActivity: (companyId: string, writeOffId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/write-offs/${writeOffId}/activity`),
+
+  // ─── AR Refunds ───────────────────────────────────────────────────────
+  listArRefunds: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/refunds`),
+
+  createArRefund: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/refunds`, body),
+
+  updateArRefund: (companyId: string, refundId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/refunds/${refundId}`, body),
+
+  processArRefund: (companyId: string, refundId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/refunds/${refundId}/process`),
+
+  batchDeleteArRefunds: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/refunds/batch/delete`, { ids }),
+
+  getArRefundActivity: (companyId: string, refundId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/refunds/${refundId}/activity`),
+
+  // ─── AR Sales Orders ─────────────────────────────────────────────────
+  listArSalesOrders: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/sales-orders`),
+
+  createArSalesOrder: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/sales-orders`, body),
+
+  updateArSalesOrder: (companyId: string, orderId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/sales-orders/${orderId}`, body),
+
+  deleteArSalesOrder: (companyId: string, orderId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/sales-orders/${orderId}`),
+
+  convertArSalesOrder: (companyId: string, orderId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/sales-orders/${orderId}/convert`),
+
+  batchDeleteArSalesOrders: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/sales-orders/batch/delete`, { ids }),
+
+  getArSalesOrderActivity: (companyId: string, orderId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/sales-orders/${orderId}/activity`),
+
+  // ─── Payment Links ───────────────────────────────────────────────────
+  listPaymentLinks: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/payment-links`),
+
+  createPaymentLink: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/payment-links`, body),
+
   // ─── Inventory Items ───────────────────────────────────────────────────
   listInventoryItems: (companyId: string, query?: { limit?: number; type?: string; search?: string }) =>
     apiClient.get(`/companies/${companyId}/inventory/items`, { params: query }),
