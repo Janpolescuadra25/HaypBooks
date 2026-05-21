@@ -134,6 +134,26 @@ export const salesService = {
   voidArInvoice: (companyId: string, invoiceId: string) =>
     apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/void`),
 
+  // ─── AR Recurring Invoices ─────────────────────────────────────────────
+  listArRecurringInvoices: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/recurring-invoices`),
+
+  generateRecurringInvoice: (companyId: string, id: string) =>
+    apiClient.post(`/companies/${companyId}/ar/recurring-invoices/${id}/generate`),
+
+  updateRecurringInvoice: (companyId: string, id: string, body: { status: string }) =>
+    apiClient.put(`/companies/${companyId}/ar/recurring-invoices/${id}`, body),
+
+  batchDeleteRecurringInvoices: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/recurring-invoices/batch/delete`, { ids }),
+
+  // ─── Inventory Items ───────────────────────────────────────────────────
+  listInventoryItems: (companyId: string, query?: { limit?: number; type?: string; search?: string }) =>
+    apiClient.get(`/companies/${companyId}/inventory/items`, { params: query }),
+
+  deleteInventoryItem: (companyId: string, itemId: string) =>
+    apiClient.delete(`/companies/${companyId}/inventory/items/${itemId}`),
+
   // ─── Credit Notes ──────────────────────────────────────────────────────
   listCreditNotes: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/ar/credit-notes`, { params: query }),

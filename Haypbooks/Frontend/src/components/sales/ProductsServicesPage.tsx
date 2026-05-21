@@ -1,17 +1,15 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Search, Plus, MoreHorizontal, Package, Wrench, Tag,
-  Pencil, Trash2, Loader2, AlertCircle, RefreshCw, Clock,
-  ChevronLeft, ChevronRight, ArrowUpDown,
-} from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { Search, Plus, Package, Wrench, Tag, Pencil, Trash2, Loader2, AlertCircle, RefreshCw, Clock } from 'lucide-react'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import { useToast } from '@/components/ToastProvider'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypColumn, HaypActionItem } from '@/components/shared/HaypDataTable.types'
 import ProductFormModal from './ProductFormModal'
 
 export interface Item {
@@ -28,50 +26,10 @@ export interface Item {
   trackingType: string | null
   deletedAt: string | null
   stockLevels?: { quantity: number }[]
-}
-
-type SortKey = 'name' | 'sku' | 'type' | 'salesPrice' | 'purchaseCost' | 'stock'
-type SortDirection = 'asc' | 'desc'
-
-function compareProducts(a: Item, b: Item, key: SortKey, dir: SortDirection): number {
-  if (key === 'salesPrice' || key === 'purchaseCost') {
-    const av = (a[key] as number | null) ?? -Infinity; const bv = (b[key] as number | null) ?? -Infinity
-    return dir === 'asc' ? av - bv : bv - av
-  }
-  if (key === 'stock') {
-    const av = a.stockLevels?.reduce((s, l) => s + (l.quantity ?? 0), 0) ?? 0
-    const bv = b.stockLevels?.reduce((s, l) => s + (l.quantity ?? 0), 0) ?? 0
-    return dir === 'asc' ? av - bv : bv - av
-  }
-  const as = String(a[key as keyof Item] ?? '').toLowerCase()
-  const bs = String(b[key as keyof Item] ?? '').toLowerCase()
-  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+  [key: string]: any
 }
 
 type FilterType = 'ALL' | 'PRODUCT' | 'SERVICE' | 'INVENTORY' | 'BUNDLE'
-
-const PAGE_SIZE = 20
-
-interface ProdColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
-const DEFAULT_PROD_COLS: ProdColDef[] = [
-  { key: 'name', label: 'Name', visible: true, width: 180, align: 'left' },
-  { key: 'description', label: 'Description', visible: true, width: 200, align: 'left' },
-  { key: 'sku', label: 'SKU', visible: true, width: 110, align: 'left' },
-  { key: 'type', label: 'Type', visible: true, width: 110, align: 'left' },
-  { key: 'salesPrice', label: 'Sales Price', visible: true, width: 120, align: 'right' },
-  { key: 'purchaseCost', label: 'Cost', visible: true, width: 110, align: 'right' },
-  { key: 'stock', label: 'In Stock', visible: true, width: 100, align: 'right' },
-]
-function loadProdCols(): ProdColDef[] {
-  try {
-    const s = localStorage.getItem('products-cols-v1')
-    if (s) {
-      const saved = JSON.parse(s) as ProdColDef[]
-      return DEFAULT_PROD_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
-    }
-  } catch { /* ignore */ }
-  return DEFAULT_PROD_COLS
-}
 
 export const extractItems = (payload: any): Item[] => {
   if (Array.isArray(payload)) return payload
@@ -86,361 +44,228 @@ export const extractTotal = (payload: any): number => {
 }
 
 export default function ProductsServicesPage() {
+  const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number | null) => n == null ? '—' : formatCurrency(n, currency), [currency])
+  const toast = useToast()
 
-  // Table items (filtered + paginated)
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-
-  // Stats items (all items, no type filter — for accurate counts)
-  const [statsData, setStatsData] = useState<Pick<Item, 'type' | 'stockLevels'>[]>([])
-
-  // Filters
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<FilterType>('ALL')
-
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [modalItem, setModalItem] = useState<Item | null | 'new'>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
 
-  const [sortKey, setSortKey] = useState<SortKey>('name')
-  const [sortDir, setSortDir] = useState<SortDirection>('asc')
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
-    else { setSortKey(key); setSortDir('asc') }
-  }
-  const sorted = useMemo(
-    () => [...items].sort((a, b) => compareProducts(a, b, sortKey, sortDir)),
-    [items, sortKey, sortDir]
-  )
-
-  const [prodCols, setProdCols] = useState<ProdColDef[]>(() => loadProdCols())
-  const prodColsRef = useRef(prodCols)
-  useEffect(() => { prodColsRef.current = prodCols }, [prodCols])
-  const saveProdCols = (next: ProdColDef[]) => { setProdCols(next); try { localStorage.setItem('products-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const { containerRef, startResize: startProdResize, isOverflowing: prodIsOverflowing } = useFixedWidthResizableColumns({
-    columns: prodCols,
-    columnsRef: prodColsRef,
-    saveColumns: saveProdCols,
-    fixedWidth: 40,
-  })
-
-  // Debounce search input — waits 300ms after typing stops
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 300)
-    return () => clearTimeout(t)
-  }, [search])
-
-  // Reset to page 0 when filter or debounced search changes
-  useEffect(() => { setPage(0) }, [typeFilter, debouncedSearch])
-
-  const fetchItems = useCallback(async (pg: number) => {
+  const fetchData = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(pg * PAGE_SIZE) })
-      if (typeFilter !== 'ALL') params.set('type', typeFilter)
-      if (debouncedSearch) params.set('search', debouncedSearch)
-      const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?${params}`)
-      const raw = extractItems(data)
-      const total = extractTotal(data)
-      setItems(raw)
-      setHasMore(total > (pg + 1) * PAGE_SIZE)
-    } catch {
-      setError('Failed to load products & services.')
+      const response = await salesService.listInventoryItems(companyId, { limit: 9999 })
+      setItems(extractItems(response.data))
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to load items')
     } finally {
       setLoading(false)
     }
-  }, [companyId, typeFilter, debouncedSearch])
-
-  useEffect(() => { fetchItems(page) }, [fetchItems, page])
-
-  // Separate fetch for global stats (no type filter, no search)
-  const fetchStats = useCallback(async () => {
-    if (!companyId) return
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?limit=1000`)
-      setStatsData(extractItems(data))
-    } catch {
-      // non-blocking
-    }
   }, [companyId])
 
-  useEffect(() => { fetchStats() }, [fetchStats])
-
-  // Close row menu on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const router = useRouter()
+  useEffect(() => { fetchData() }, [fetchData])
 
   const handleDelete = useCallback(async (item: Item) => {
     if (!companyId) return
     if (!window.confirm(`Delete "${item.name}"? This cannot be undone.`)) return
-    setDeletingId(item.id)
+    setLoading(true)
     try {
-      await apiClient.delete(`/companies/${companyId}/inventory/items/${item.id}`)
-      setItems(p => p.filter(i => i.id !== item.id))
-      fetchStats()
-    } catch {
-      alert('Failed to delete item.')
+      await salesService.deleteInventoryItem(companyId, item.id)
+      toast.success('Item deleted')
+      fetchData()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Failed to delete item')
     } finally {
-      setDeletingId(null)
-      setOpenMenuId(null)
+      setLoading(false)
+      setModalItem(null)
     }
-  }, [companyId, fetchStats])
+  }, [companyId, fetchData, toast])
 
-  const handleSaved = useCallback((saved: Item) => {
-    setItems(p => {
-      const idx = p.findIndex(i => i.id === saved.id)
-      return idx >= 0 ? p.map(i => i.id === saved.id ? saved : i) : [saved, ...p]
-    })
+  const handleSaved = useCallback(async (saved: Item) => {
     setModalItem(null)
-    fetchStats()
-  }, [fetchStats])
+    await fetchData()
+  }, [fetchData])
 
-  // Stats always computed from global (unfiltered) data
+  const filteredItems = useMemo(() => {
+    if (typeFilter === 'ALL') return items
+    return items.filter((item) => item.type === typeFilter)
+  }, [items, typeFilter])
+
   const totalStock = useMemo(
-    () => statsData.reduce((s, i) => s + (i.stockLevels?.reduce((ss, l) => ss + (l.quantity ?? 0), 0) ?? 0), 0),
-    [statsData],
+    () => items.reduce((sum, item) => sum + (item.stockLevels?.reduce((s, level) => s + (level.quantity ?? 0), 0) ?? 0), 0),
+    [items],
   )
-  const productCount = statsData.filter(i => i.type === 'PRODUCT' || i.type === 'INVENTORY').length
-  const serviceCount = statsData.filter(i => i.type === 'SERVICE').length
 
-  const typeLabel = (t: string) => {
+  const productCount = useMemo(
+    () => items.filter((i) => i.type === 'PRODUCT' || i.type === 'INVENTORY').length,
+    [items],
+  )
+
+  const serviceCount = useMemo(
+    () => items.filter((i) => i.type === 'SERVICE').length,
+    [items],
+  )
+
+  const typeLabel = useCallback((type: string) => {
     const map: Record<string, string> = { PRODUCT: 'Product', SERVICE: 'Service', INVENTORY: 'Inventory', BUNDLE: 'Bundle' }
-    return map[t] ?? t
-  }
-  const typeColor = (t: string) => {
+    return map[type] ?? type
+  }, [])
+
+  const typeColor = useCallback((type: string) => {
     const map: Record<string, string> = {
       PRODUCT: 'bg-blue-50 text-blue-700 border border-blue-200',
       SERVICE: 'bg-purple-50 text-purple-700 border border-purple-200',
       INVENTORY: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
       BUNDLE: 'bg-amber-50 text-amber-700 border border-amber-200',
     }
-    return map[t] ?? 'bg-slate-50 text-slate-600 border border-slate-200'
-  }
+    return map[type] ?? 'bg-slate-50 text-slate-600 border border-slate-200'
+  }, [])
 
-  return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* ── Sticky Header ──────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Products &amp; Services</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Manage items used in invoices and purchases</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => router.push('/sales/opportunities/products-services/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-100 rounded-lg hover:bg-slate-50 text-slate-700 transition-colors"><Clock size={14} /> Activity Log</button>
-            <button
-              onClick={() => setModalItem('new')}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors"
-            >
-              <Plus size={15} /> New Item
-            </button>
-          </div>
-        </div>
+  const columns = useMemo<HaypColumn<Item>[]>(() => [
+    {
+      id: 'name',
+      header: 'Name',
+      accessorKey: 'name',
+      size: 220,
+    },
+    {
+      id: 'description',
+      header: 'Description',
+      accessorKey: 'description',
+      size: 240,
+      render: (value: any) => value ? <span className="block text-slate-500 text-sm truncate" title={String(value)}>{String(value)}</span> : <span className="text-slate-300">—</span>,
+    },
+    {
+      id: 'sku',
+      header: 'SKU',
+      accessorKey: 'sku',
+      size: 120,
+    },
+    {
+      id: 'type',
+      header: 'Type',
+      accessorKey: 'type',
+      size: 130,
+      render: (_value: any, row: Item) => (
+        <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${typeColor(row.type)}`}>
+          {typeLabel(row.type)}
+        </span>
+      ),
+    },
+    {
+      id: 'salesPrice',
+      header: 'Sales Price',
+      accessorKey: 'salesPrice',
+      size: 120,
+      align: 'right',
+      render: (value: any) => formatCurrency(value, currency),
+    },
+    {
+      id: 'purchaseCost',
+      header: 'Cost',
+      accessorKey: 'purchaseCost',
+      size: 120,
+      align: 'right',
+      render: (value: any) => formatCurrency(value, currency),
+    },
+    {
+      id: 'stock',
+      header: 'In Stock',
+      accessorKey: 'stockLevels',
+      size: 110,
+      align: 'right',
+      render: (_value: any, row: Item) => {
+        const stockQty = row.stockLevels?.reduce((sum, level) => sum + (level.quantity ?? 0), 0) ?? 0
+        return row.type === 'SERVICE' ? <span className="text-xs text-slate-400 italic">N/A</span> : <span className={`font-semibold ${stockQty <= 0 ? 'text-red-500' : 'text-slate-700'}`}>{stockQty}</span>
+      },
+    },
+  ], [currency, typeColor, typeLabel])
 
-        {/* ── Filters bar ── */}
-        <div className="px-6 pb-3 flex flex-wrap items-center gap-3">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              placeholder="Search by name or SKU…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
-            />
-          </div>
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'Edit',
+      icon: <Pencil size={14} />,
+      onClick: (_rowId, row) => setModalItem(row),
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      onClick: async (_rowId, row) => { await handleDelete(row) },
+    },
+  ], [handleDelete])
 
-          {/* Type pills */}
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-            {(['ALL', 'PRODUCT', 'SERVICE', 'INVENTORY', 'BUNDLE'] as FilterType[]).map(t => (
-              <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${typeFilter === t ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                {t === 'ALL' ? 'All' : typeLabel(t)}
-              </button>
-            ))}
-          </div>
+  const stats = useMemo(() => [
+    { icon: Tag, label: 'Total Items', value: items.length, color: 'slate' },
+    { icon: Package, label: 'Products', value: productCount, color: 'blue' },
+    { icon: Wrench, label: 'Services', value: serviceCount, color: 'purple' },
+    { icon: Package, label: 'Units in Stock', value: totalStock, color: 'emerald' },
+  ], [items.length, productCount, serviceCount, totalStock])
 
-          <button onClick={() => { fetchItems(page); fetchStats() }} title="Refresh" className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
-            <RefreshCw size={14} />
+  const headerActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => router.push('/sales/opportunities/products-services/activity')}
+        className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-100 rounded-lg hover:bg-slate-50 text-slate-700 transition-colors"
+      >
+        <Clock size={14} /> Activity Log
+      </button>
+      <div className="flex items-center gap-1 bg-slate-100 rounded-full p-1">
+        {(['ALL', 'PRODUCT', 'SERVICE', 'INVENTORY', 'BUNDLE'] as FilterType[]).map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setTypeFilter(type)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${typeFilter === type ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            {type === 'ALL' ? 'All' : typeLabel(type)}
           </button>
-        </div>
-      </div>
-
-      {/* ── Stats Strip ──────────────────────────────────────────────────────── */}
-      <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Items', value: statsData.length, icon: Tag, color: 'text-slate-700' },
-          { label: 'Products', value: productCount, icon: Package, color: 'text-blue-700' },
-          { label: 'Services', value: serviceCount, icon: Wrench, color: 'text-purple-700' },
-          { label: 'Units in Stock', value: totalStock, icon: Package, color: 'text-emerald-700' },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3">
-            <s.icon size={20} className={s.color} />
-            <div>
-              <div className="text-xl font-bold text-slate-900">{s.value}</div>
-              <div className="text-xs text-slate-500">{s.label}</div>
-            </div>
-          </div>
         ))}
       </div>
+      <button
+        type="button"
+        onClick={() => setModalItem('new')}
+        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+      >
+        <Plus size={14} /> New Item
+      </button>
+    </div>
+  )
 
-      {/* ── Table ────────────────────────────────────────────────────────────── */}
-      <div className="px-6 pb-8">
+  return (
+    <div className="p-4 sm:p-6 space-y-4">
         {error && (
           <div className="mb-3 flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
             <AlertCircle size={14} /> {error}
           </div>
         )}
 
-        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${prodIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-slate-400">
-              <Loader2 size={18} className="animate-spin" /> Loading…
-            </div>
-          ) : (
-            <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
-              <colgroup>
-                {prodCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
-                <col style={{ width: 40 }} />
-              </colgroup>
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  {prodCols.map(c => (
-                    <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none overflow-hidden" style={{ width: c.width, minWidth: c.width, maxWidth: c.width, textAlign: c.align === 'right' ? 'right' : 'left' }} title={c.label}>
-                      <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
-                        <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
-                      </button>
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startProdResize(e, c.key)} />
-                    </th>
-                  ))}
-                  <th className="w-10 px-2 py-2.5"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-16 text-center text-slate-400">
-                      <Package size={32} className="mx-auto mb-3 text-slate-300" />
-                      <p className="font-medium">No items yet</p>
-                      <p className="text-xs mt-1">Click <strong>New Item</strong> to add your first product or service.</p>
-                    </td>
-                  </tr>
-                ) : sorted.map(row => {
-                  const stockQty = row.stockLevels?.reduce((s, l) => s + (l.quantity ?? 0), 0) ?? null
-                  const isDeleting = deletingId === row.id
-                  return (
-                    <tr
-                      key={row.id}
-                      onClick={() => router.push(`/sales/opportunities/products-services/${row.id}`)}
-                      className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer ${isDeleting ? 'opacity-50' : ''}`}
-                    >
-                      <td className="px-4 py-2.5 text-slate-700 truncate border-r border-gray-100 font-medium" title={row.name}>{row.name}</td>
-                      <td className="px-4 py-2.5 border-r border-gray-100 max-w-[220px]">
-                        {row.description
-                          ? <span className="text-slate-500 text-xs block truncate" title={row.description}>{row.description}</span>
-                          : <span className="text-slate-300 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-slate-500 border-r border-gray-100 font-mono text-xs">{row.sku ?? '—'}</td>
-                      <td className="px-4 py-2.5 border-r border-gray-100">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${typeColor(row.type)}`}>
-                          {typeLabel(row.type)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-slate-700 border-r border-gray-100 tabular-nums">{fmt(row.salesPrice)}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500 border-r border-gray-100 tabular-nums">{fmt(row.purchaseCost)}</td>
-                      <td className="px-4 py-2.5 text-right border-r border-gray-100">
-                        {row.type === 'SERVICE' ? (
-                          <span className="text-xs text-slate-400 italic">N/A</span>
-                        ) : (
-                          <span className={`text-sm font-semibold tabular-nums ${(stockQty ?? 0) <= 0 ? 'text-red-500' : 'text-slate-700'}`}>
-                            {stockQty ?? 0}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 relative">
-                        <div ref={openMenuId === row.id ? menuRef : undefined} className="relative inline-block">
-                          <button
-                            onClick={(event) => { event.stopPropagation(); setOpenMenuId(p => p === row.id ? null : row.id) }}
-                            aria-label="Row actions"
-                            className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-opacity duration-150 opacity-40 group-hover:opacity-100"
-                          >
-                            <MoreHorizontal size={14} />
-                          </button>
-                          {openMenuId === row.id && (
-                            <div className="absolute right-2 top-8 z-30 bg-white rounded-xl shadow-xl border border-slate-200 py-1 w-40 text-sm">
-                              <button
-                                onClick={(event) => { event.stopPropagation(); setModalItem(row); setOpenMenuId(null) }}
-                                className="flex items-center gap-2 w-full px-3 py-2 hover:bg-slate-50 text-slate-700"
-                              >
-                                <Pencil size={13} /> Edit
-                              </button>
-                              <button
-                                onClick={(event) => { event.stopPropagation(); handleDelete(row) }}
-                                className="flex items-center gap-2 w-full px-3 py-2 hover:bg-red-50 text-red-600"
-                              >
-                                <Trash2 size={13} /> Delete
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <HaypDataTable
+          data={filteredItems}
+          columns={columns}
+          tableId="products-services"
+          title="Products & Services"
+          description="Create and manage your product, service, inventory, and bundle items."
+          loading={loading}
+          searchPlaceholder="Search products and services..."
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          headerActions={headerActions}
+          stats={stats}
+          onRefresh={fetchData}
+          actions={actions}
+          onRowClick={(row) => router.push(`/sales/opportunities/products-services/${row.id}`)}
+          emptyTitle="No products or services"
+          emptySubtitle="Add your first product or service to get started."
+        />
 
-        {/* Pagination */}
-        {!loading && !error && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">
-              {items.length > 0
-                ? `Showing ${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + items.length}`
-                : 'No results'}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage(p => p - 1)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={14} /> Previous
-              </button>
-              <button
-                disabled={!hasMore}
-                onClick={() => setPage(p => p + 1)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Next <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Create/Edit Modal ─────────────────────────────────────────────────── */}
       {modalItem !== null && (
         <ProductFormModal
           item={modalItem === 'new' ? null : modalItem}
