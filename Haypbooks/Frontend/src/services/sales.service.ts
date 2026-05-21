@@ -151,6 +151,9 @@ export const salesService = {
   listArWriteOffs: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/ar/write-offs`),
 
+  getArWriteOff: (companyId: string, writeOffId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/write-offs/${writeOffId}`),
+
   createArWriteOff: (companyId: string, body: any) =>
     apiClient.post(`/companies/${companyId}/ar/write-offs`, body),
 
@@ -176,6 +179,9 @@ export const salesService = {
   listArRefunds: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/ar/refunds`),
 
+  getArRefund: (companyId: string, refundId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/refunds/${refundId}`),
+
   createArRefund: (companyId: string, body: any) =>
     apiClient.post(`/companies/${companyId}/ar/refunds`, body),
 
@@ -194,6 +200,9 @@ export const salesService = {
   // ─── AR Sales Orders ─────────────────────────────────────────────────
   listArSalesOrders: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/ar/sales-orders`),
+
+  getArSalesOrder: (companyId: string, orderId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/sales-orders/${orderId}`),
 
   createArSalesOrder: (companyId: string, body: any) =>
     apiClient.post(`/companies/${companyId}/ar/sales-orders`, body),
@@ -219,6 +228,32 @@ export const salesService = {
 
   createPaymentLink: (companyId: string, body: any) =>
     apiClient.post(`/companies/${companyId}/payment-links`, body),
+
+  // ── Deferred Revenue ──────────────────────────────
+  listDeferredRevenue: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/deferred-revenue`),
+
+  createDeferredRevenue: (companyId: string, payload: { contractId?: string; description: string; totalDeferredAmount: number; startDate: string; endDate: string; frequency: string }) =>
+    apiClient.post(`/companies/${companyId}/deferred-revenue`, payload),
+
+  recognizeDeferredRevenue: (companyId: string, id: string) =>
+    apiClient.post(`/companies/${companyId}/deferred-revenue/${id}/recognize`),
+
+  getDeferredRevenueActivity: (companyId: string, scheduleId: string) =>
+    apiClient.get(`/companies/${companyId}/deferred-revenue/${scheduleId}/activity`),
+
+  // ── Revenue Recognition ──────────────────────────
+  listRevenueRecognition: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/revenue-recognition`),
+
+  createRevenueRecognition: (companyId: string, payload: { contractId?: string; description: string; totalContractValue: number; startDate: string; endDate: string; method: string }) =>
+    apiClient.post(`/companies/${companyId}/revenue-recognition`, payload),
+
+  recognizeRevenueRecognition: (companyId: string, id: string) =>
+    apiClient.post(`/companies/${companyId}/revenue-recognition/${id}/recognize`),
+
+  getRevenueRecognitionActivity: (companyId: string, contractId: string) =>
+    apiClient.get(`/companies/${companyId}/revenue-recognition/${contractId}/activity`),
 
   // ─── Inventory Items ───────────────────────────────────────────────────
   listInventoryItems: (companyId: string, query?: { limit?: number; type?: string; search?: string }) =>
