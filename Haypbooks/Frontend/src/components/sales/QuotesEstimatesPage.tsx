@@ -1,18 +1,18 @@
 ﻿'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUpDown, ChevronLeft, ChevronRight, Clock, Download, Loader2, Plus, RefreshCw, X } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { Clock, Download, Plus, RefreshCw, X, Edit2, Send, CheckCircle, XCircle, ArrowRight } from 'lucide-react'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import { useToast } from '@/components/ToastProvider'
 import ActivityLog, { type ActivityLogItem } from '@/components/ui/ActivityLog'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypColumn, HaypActionItem, HaypBulkAction } from '@/components/shared/HaypDataTable.types'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
-
-const PAGE_SIZE = 25
 
 const STATUS_FILTERS = ['All', 'DRAFT', 'SENT', 'ACCEPTED', 'EXPIRED', 'REJECTED', 'CONVERTED'] as const
 type StatusFilter = typeof STATUS_FILTERS[number]
@@ -32,36 +32,6 @@ interface QuoteRow {
 
 interface CustomerOption { id: string; name: string; email?: string }
 interface LineItem { description: string; quantity: string; unitPrice: string }
-
-interface ColDef {
-  key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right'
-}
-
-type SortDirection = 'asc' | 'desc'
-type SortKey = 'quoteNumber' | 'customer' | 'date' | 'expiryDate' | 'amount' | 'status'
-
-const DEFAULT_COLS: ColDef[] = [
-  { key: 'quoteNumber', label: 'Quote #', visible: true, width: 120, align: 'left' },
-  { key: 'customer', label: 'Customer', visible: true, width: 200, align: 'left' },
-  { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
-  { key: 'expiryDate', label: 'Expiry', visible: true, width: 110, align: 'left' },
-  { key: 'amount', label: 'Amount', visible: true, width: 120, align: 'right' },
-  { key: 'status', label: 'Status', visible: true, width: 100, align: 'left' },
-]
-
-function loadCols(): ColDef[] {
-  try {
-    const s = localStorage.getItem('quotes-cols-v1')
-    if (s) {
-      const saved = JSON.parse(s) as ColDef[]
-      return DEFAULT_COLS.map(d => {
-        const sc = saved.find(c => c.key === d.key)
-        return sc ? { ...d, visible: sc.visible, width: sc.width } : d
-      })
-    }
-  } catch { /* ignore */ }
-  return DEFAULT_COLS
-}
 
 function normalizeQuote(q: any): QuoteRow {
   return {
@@ -103,43 +73,21 @@ function statusLabel(s: string) {
   return m[s] ?? s
 }
 
-function compareQuotes(a: QuoteRow, b: QuoteRow, key: SortKey, dir: SortDirection): number {
-  const asc = dir === 'asc' ? 1 : -1
-  if (key === 'amount') {
-    return a.amount === b.amount ? 0 : a.amount > b.amount ? asc : -asc
-  }
-  if (key === 'date' || key === 'expiryDate') {
-    const ad = a[key] ? new Date(a[key] as string).getTime() : 0
-    const bd = b[key] ? new Date(b[key] as string).getTime() : 0
-    return ad === bd ? 0 : ad > bd ? asc : -asc
-  }
-  const av = String((a as any)[key] ?? '').toLowerCase()
-  const bv = String((b as any)[key] ?? '').toLowerCase()
-  if (av === bv) return 0
-  return av > bv ? asc : -asc
-}
-
 function emptyLine(): LineItem { return { description: '', quantity: '1', unitPrice: '' } }
 
 export default function QuotesEstimatesPage() {
   const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
 
   const [items, setItems] = useState<QuoteRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All')
-  const [search, setSearch] = useState('')
-  const [toast, setToast] = useState('')
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [exportLoading, setExportLoading] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
-
-  // Selection
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Detail drawer
   const [drawerQuote, setDrawerQuote] = useState<QuoteRow | null>(null)
@@ -155,8 +103,8 @@ export default function QuotesEstimatesPage() {
   useEffect(() => {
     if (drawerTab !== 'activity' || !drawerQuote?.id || !companyId) return
     setDrawerActivityLoading(true)
-    apiClient.get(`/companies/${companyId}/ar/quotes/${drawerQuote.id}/activity`)
-      .then(({ data }) => setDrawerActivity(data.data ?? []))
+    salesService.getQuoteActivity(companyId, drawerQuote.id)
+      .then((response) => setDrawerActivity(response.data.data ?? []))
       .catch(() => setDrawerActivity([]))
       .finally(() => setDrawerActivityLoading(false))
   }, [drawerTab, drawerQuote?.id, companyId])
@@ -171,97 +119,54 @@ export default function QuotesEstimatesPage() {
   const [lines, setLines] = useState<LineItem[]>([emptyLine()])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('date')
-  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
-  // Column defs
-  const [cols, setCols] = useState<ColDef[]>(() => loadCols())
-  const [showColMenu, setShowColMenu] = useState(false)
-  const colsRef = useRef(cols)
-  useEffect(() => { colsRef.current = cols }, [cols])
-
-  const saveCols = (next: ColDef[]) => {
-    setCols(next)
-    try { localStorage.setItem('quotes-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
-  }
-
-  const { containerRef, startResize: onResizeStart, isOverflowing: quotesIsOverflowing } = useFixedWidthResizableColumns({
-    columns: cols,
-    columnsRef: colsRef,
-    saveColumns: saveCols,
-    fixedWidth: 160,
-  })
-
-  const searchRef = useRef(search)
-  useEffect(() => { searchRef.current = search }, [search])
-
-  // ─── Fetch ────────────────────────────────────────────────────────────────
-
-  const fetchQuotes = useCallback(async (pg: number, status: StatusFilter) => {
+  const fetchQuotes = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
     setError('')
     try {
-      const params: Record<string, string | number> = { limit: PAGE_SIZE, offset: pg * PAGE_SIZE }
-      if (status !== 'All') params.status = status
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/quotes`, { params })
+      const response = await salesService.getQuotes(companyId, { limit: 500 })
+      const data = response.data
       const raw: any[] = Array.isArray(data) ? data : data?.items || data?.records || []
       setItems(raw.map(normalizeQuote))
-      setHasMore(raw.length === PAGE_SIZE)
+      setError('')
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load quotes')
+      const message = err?.response?.data?.message ?? 'Failed to load quotes'
+      toast.error(message)
+      setError(message)
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, toast])
 
-  useEffect(() => { fetchQuotes(0, statusFilter) }, [fetchQuotes, statusFilter])
-
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
-
-  // ─── Selection ────────────────────────────────────────────────────────────
-
-  const toggleAll = () => {
-    if (selectedIds.size === filtered.length) setSelectedIds(new Set())
-    else setSelectedIds(new Set(filtered.map(r => r.id)))
-  }
-
-  const toggleOne = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
-  }
+  useEffect(() => { fetchQuotes() }, [fetchQuotes])
 
   // ─── Batch ops ────────────────────────────────────────────────────────────
 
-  async function handleBatchDelete() {
-    if (!companyId || selectedIds.size === 0) return
-    if (!window.confirm(`Delete ${selectedIds.size} quote(s)? This cannot be undone.`)) return
+  async function handleBatchDelete(ids: string[]) {
+    if (!companyId || ids.length === 0) return
+    if (!window.confirm(`Delete ${ids.length} quote(s)? This cannot be undone.`)) return
     setBatchLoading(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/quotes/batch/delete`, { ids: Array.from(selectedIds) })
-      setSelectedIds(new Set())
-      fetchQuotes(page, statusFilter)
-      showToast(`Deleted ${selectedIds.size} quote(s)`)
+      await salesService.batchDeleteQuotes(companyId, ids)
+      toast.success(`Deleted ${ids.length} quote(s)`)
+      await fetchQuotes()
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Batch delete failed')
+      toast.error(err?.response?.data?.message ?? 'Batch delete failed')
     } finally {
       setBatchLoading(false)
     }
   }
 
-  async function handleBatchStatus(status: string) {
-    if (!companyId || selectedIds.size === 0) return
+  async function handleBatchStatus(ids: string[], status: string) {
+    if (!companyId || ids.length === 0) return
     setBatchLoading(true)
     try {
-      await apiClient.patch(`/companies/${companyId}/ar/quotes/batch/status`, { ids: Array.from(selectedIds), status })
-      setSelectedIds(new Set())
-      fetchQuotes(page, statusFilter)
-      showToast(`Updated ${selectedIds.size} quote(s) to ${statusLabel(status)}`)
+      await salesService.batchUpdateQuoteStatus(companyId, ids, status)
+      toast.success(`Updated ${ids.length} quote(s) to ${statusLabel(status)}`)
+      await fetchQuotes()
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Batch update failed')
+      toast.error(err?.response?.data?.message ?? 'Batch update failed')
     } finally {
       setBatchLoading(false)
     }
@@ -275,14 +180,15 @@ export default function QuotesEstimatesPage() {
     try {
       const params: Record<string, string> = {}
       if (statusFilter !== 'All') params.status = statusFilter
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/quotes/export`, { params })
+      const response = await salesService.exportQuotes(companyId, params)
+      const data = response.data
       const blob = new Blob([data], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a'); a.href = url; a.download = 'quotes-export.csv'; a.click()
       URL.revokeObjectURL(url)
-      showToast('Export downloaded')
+      toast.success('Export downloaded')
     } catch {
-      showToast('Export failed')
+      toast.error('Export failed')
     } finally {
       setExportLoading(false)
     }
@@ -295,12 +201,12 @@ export default function QuotesEstimatesPage() {
     if (!window.confirm('Delete this quote? This cannot be undone.')) return
     setActioningId(quoteId)
     try {
-      await apiClient.delete(`/companies/${companyId}/ar/quotes/${quoteId}`)
+      await salesService.deleteQuote(companyId, quoteId)
       setDrawerQuote(null)
-      fetchQuotes(page, statusFilter)
-      showToast('Quote deleted')
+      await fetchQuotes()
+      toast.success('Quote deleted')
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Delete failed')
+      toast.error(err?.response?.data?.message ?? 'Delete failed')
     } finally {
       setActioningId(null)
     }
@@ -312,10 +218,10 @@ export default function QuotesEstimatesPage() {
     if (!companyId) return
     setActioningId(quoteId)
     try {
-      await apiClient.patch(`/companies/${companyId}/ar/quotes/${quoteId}/status`, { status })
-      fetchQuotes(page, statusFilter)
+      await salesService.updateQuoteStatus(companyId, quoteId, status)
+      await fetchQuotes()
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed to update status')
+      toast.error(err?.response?.data?.message ?? 'Failed to update status')
     } finally {
       setActioningId(null)
     }
@@ -328,9 +234,10 @@ export default function QuotesEstimatesPage() {
     if (!window.confirm('Convert this quote to an invoice?')) return
     setActioningId(quoteId)
     try {
-      const { data } = await apiClient.post(`/companies/${companyId}/ar/quotes/${quoteId}/convert`)
-      fetchQuotes(page, statusFilter)
-      showToast('Quote converted to invoice')
+      const response = await salesService.convertQuote(companyId, quoteId)
+      await fetchQuotes()
+      toast.success('Quote converted to invoice')
+      const data = response.data
       const invoiceId = data?.invoiceId ?? data?.id ?? data?.data?.id ?? null
       if (invoiceId) {
         router.push(`/sales/billing/invoices/${invoiceId}`)
@@ -338,7 +245,7 @@ export default function QuotesEstimatesPage() {
         router.push('/sales/billing/invoices')
       }
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed to convert quote')
+      toast.error(err?.response?.data?.message ?? 'Failed to convert quote')
     } finally {
       setActioningId(null)
     }
@@ -350,7 +257,8 @@ export default function QuotesEstimatesPage() {
     if (!companyId) return
     setCustLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const response = await salesService.listArCustomers(companyId)
+      const data = response.data
       const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? []
       setCustomers(raw.map((c: any) => ({
         id: c.id || c.contactId,
@@ -415,333 +323,220 @@ export default function QuotesEstimatesPage() {
         }),
       }
       if (editingId) {
-        await apiClient.put(`/companies/${companyId}/ar/quotes/${editingId}`, payload)
-        showToast('Quote updated')
+        await salesService.updateQuote(companyId, editingId, payload)
+        toast.success('Quote updated')
       } else {
-        await apiClient.post(`/companies/${companyId}/ar/quotes`, payload)
-        showToast('Quote created')
+        await salesService.createQuote(companyId, payload)
+        toast.success('Quote created')
       }
       setModalOpen(false)
-      setPage(0)
-      fetchQuotes(0, statusFilter)
+      await fetchQuotes()
     } catch (err: any) {
-      setSaveError(err?.response?.data?.message || 'Failed to save quote')
+      setSaveError(err?.response?.data?.message ?? 'Failed to save quote')
     } finally {
       setSaving(false)
     }
   }
 
-  // ─── Client-side search ───────────────────────────────────────────────────
+  const statusFiltered = useMemo(
+    () => (statusFilter === 'All' ? items : items.filter((q) => q.status === statusFilter)),
+    [items, statusFilter],
+  )
 
-  const filtered = useMemo(() => {
-    if (!search) return items
-    const q = search.toLowerCase()
-    return items.filter(r =>
-      r.quoteNumber?.toLowerCase().includes(q) ||
-      r.customer?.toLowerCase().includes(q) ||
-      r.status?.toLowerCase().includes(q)
-    )
-  }, [items, search])
+  const columns = useMemo<HaypColumn<QuoteRow>[]>(
+    () => [
+      {
+        id: 'quoteNumber',
+        header: 'Quote #',
+        accessorKey: 'quoteNumber',
+        size: 120,
+        render: (value, row) => (
+          <button
+            type="button"
+            onClick={() => router.push(`/sales/opportunities/quotes/${row.id}`)}
+            className="text-left text-emerald-600 hover:text-emerald-800 hover:underline"
+          >
+            {value || '—'}
+          </button>
+        ),
+      },
+      { id: 'customer', header: 'Customer', accessorKey: 'customer', size: 200 },
+      { id: 'date', header: 'Date', accessorKey: 'date', size: 110, render: (value) => fmtDate(value) },
+      { id: 'expiryDate', header: 'Expiry', accessorKey: 'expiryDate', size: 110, render: (value) => fmtDate(value) },
+      {
+        id: 'amount',
+        header: 'Amount',
+        accessorKey: 'amount',
+        size: 120,
+        align: 'right',
+        render: (value) => (
+          <span className="font-semibold text-slate-800">{formatCurrency(value, currency)}</span>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        accessorKey: 'status',
+        size: 120,
+        render: (value) => (
+          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(value)}`}>
+            {statusLabel(value)}
+          </span>
+        ),
+      },
+    ],
+    [currency, router],
+  )
 
-  const sorted = useMemo(() => {
-    const next = [...filtered]
-    next.sort((a, b) => compareQuotes(a, b, sortKey, sortDir))
-    return next
-  }, [filtered, sortKey, sortDir])
+  const actions = useMemo<HaypActionItem[]>(
+    () => [
+      {
+        label: 'Edit',
+        icon: <Edit2 size={14} />,
+        onClick: (_rowId, row) => openEdit(row),
+      },
+      {
+        label: 'Send',
+        icon: <Send size={14} />,
+        onClick: (rowId) => handleStatusChange(rowId, 'SENT'),
+        show: (row) => row.status === 'DRAFT',
+      },
+      {
+        label: 'Accept',
+        icon: <CheckCircle size={14} />,
+        onClick: (rowId) => handleStatusChange(rowId, 'ACCEPTED'),
+        show: (row) => row.status === 'SENT',
+      },
+      {
+        label: 'Reject',
+        icon: <XCircle size={14} />,
+        onClick: (rowId) => handleStatusChange(rowId, 'REJECTED'),
+        show: (row) => row.status === 'SENT',
+        danger: true,
+      },
+      {
+        label: 'Convert',
+        icon: <ArrowRight size={14} />,
+        onClick: (rowId) => handleConvert(rowId),
+        show: (row) => ['SENT', 'ACCEPTED'].includes(row.status),
+      },
+      {
+        label: 'Delete',
+        icon: <X size={14} />,
+        onClick: (rowId) => handleDelete(rowId),
+        danger: true,
+      },
+    ],
+    [handleConvert, handleDelete, handleStatusChange, openEdit],
+  )
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-      return
-    }
-    setSortKey(key)
-    setSortDir(key === 'date' || key === 'expiryDate' || key === 'amount' ? 'desc' : 'asc')
-  }
+  const bulkActions = useMemo<HaypBulkAction[]>(
+    () => [
+      {
+        label: 'Mark as Sent',
+        icon: <Send size={14} />,
+        onClick: (selectedIds) => handleBatchStatus(selectedIds, 'SENT'),
+      },
+      {
+        label: 'Mark as Accepted',
+        icon: <CheckCircle size={14} />,
+        onClick: (selectedIds) => handleBatchStatus(selectedIds, 'ACCEPTED'),
+      },
+      {
+        label: 'Mark as Expired',
+        icon: <Clock size={14} />,
+        onClick: (selectedIds) => handleBatchStatus(selectedIds, 'EXPIRED'),
+      },
+      {
+        label: 'Delete Selected',
+        icon: <X size={14} />,
+        variant: 'danger',
+        onClick: (selectedIds) => handleBatchDelete(selectedIds),
+      },
+    ],
+    [handleBatchDelete, handleBatchStatus],
+  )
 
-  const visibleCols = cols.filter(c => c.visible)
+  const headerActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={handleExport}
+        disabled={exportLoading}
+        className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+        title="Export CSV"
+      >
+        <Download size={15} /> {exportLoading ? 'Exporting…' : 'Export'}
+      </button>
+      <button
+        type="button"
+        onClick={fetchQuotes}
+        className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+        title="Refresh"
+      >
+        <RefreshCw size={16} />
+      </button>
+      <button
+        type="button"
+        onClick={() => router.push('/sales/opportunities/quotes/activity')}
+        className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+      >
+        <Clock size={15} /> Activity Log
+      </button>
+      <button
+        type="button"
+        onClick={openCreate}
+        className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+      >
+        <Plus size={16} /> New Quote
+      </button>
+    </div>
+  )
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
-      {toast && (
-        <div className="fixed top-4 right-4 z-[100] bg-emerald-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg">
-          {toast}
-        </div>
-      )}
-
-      {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Quotes & Estimates</h1>
             <p className="text-sm text-slate-500 mt-1">Create and manage customer quotes</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExport}
-              disabled={exportLoading}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-              title="Export CSV"
-            >
-              <Download size={15} /> {exportLoading ? 'Exporting…' : 'Export'}
-            </button>
-            <button
-              onClick={() => fetchQuotes(page, statusFilter)}
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
-              title="Refresh"
-            >
-              <RefreshCw size={16} />
-            </button>
-            <button
-              onClick={() => router.push('/sales/opportunities/quotes/activity')}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
-            >
-              <Clock size={15} /> Activity Log
-            </button>
-            {/* Column visibility */}
-            <div className="relative">
-              <button
-                onClick={() => setShowColMenu(v => !v)}
-                className="px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
-              >
-                Columns
-              </button>
-              {showColMenu && (
-                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-40 py-2">
-                  {cols.map(c => (
-                    <label key={c.key} className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={c.visible}
-                        onChange={() => saveCols(cols.map(col => col.key === c.key ? { ...col, visible: !col.visible } : col))}
-                        className="accent-emerald-600"
-                      />
-                      {c.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={openCreate}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
-            >
-              <Plus size={16} /> New Quote
-            </button>
-          </div>
         </div>
 
         {/* Status tabs */}
         <div className="px-6 pb-3 flex gap-1.5 flex-wrap">
-          {STATUS_FILTERS.map(s => (
+          {STATUS_FILTERS.map((s) => (
             <button
               key={s}
-              onClick={() => { setStatusFilter(s); setPage(0); setSelectedIds(new Set()) }}
+              onClick={() => setStatusFilter(s)}
               className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-300 hover:border-emerald-400'}`}
             >
               {s === 'All' ? 'All' : statusLabel(s)}
             </button>
           ))}
         </div>
-
-        {/* Search */}
-        <div className="px-6 pb-4">
-          <input
-            placeholder="Search by quote number, customer…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full max-w-sm px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
       </div>
 
-      {/* Batch bar */}
-      {selectedIds.size > 0 && (
-        <div className="bg-emerald-700 text-white px-6 py-2.5 flex items-center gap-3 text-sm font-medium">
-          <span>{selectedIds.size} selected</span>
-          <button
-            onClick={handleBatchDelete}
-            disabled={batchLoading}
-            className="px-3 py-1 bg-rose-500 hover:bg-rose-600 rounded text-white text-xs font-semibold disabled:opacity-50"
-          >
-            Delete
-          </button>
-          {(['SENT', 'ACCEPTED', 'EXPIRED'] as const).map(s => (
-            <button
-              key={s}
-              onClick={() => handleBatchStatus(s)}
-              disabled={batchLoading}
-              className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold disabled:opacity-50"
-            >
-              Mark {statusLabel(s)}
-            </button>
-          ))}
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto p-1 hover:bg-white/20 rounded">
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${quotesIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
-            <thead>
-              <tr className="bg-slate-100 text-slate-700">
-                <th className="px-3 py-3 w-10 border-r border-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
-                    onChange={toggleAll}
-                    className="accent-emerald-600"
-                  />
-                </th>
-                {visibleCols.map((col, ci) => (
-                  <th
-                    key={col.key}
-                    style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 overflow-hidden ${col.align === 'right' ? 'text-right' : 'text-left'}`}
-                    title={col.label}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleSort(col.key as SortKey)}
-                      className={`inline-flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2 ${col.align === 'right' ? 'justify-end' : ''}`}
-                    >
-                      <span className="truncate">{col.label}</span>
-                      <ArrowUpDown size={11} className={`shrink-0 ${sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'}`} />
-                    </button>
-                    {ci < visibleCols.length - 1 && (
-                      <span
-                        onMouseDown={e => onResizeStart(e, col.key)}
-                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30"
-                      />
-                    )}
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-400">
-                    <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                    Loading…
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
-                    <p className="text-rose-500 font-medium">{error}</p>
-                    <button onClick={() => fetchQuotes(page, statusFilter)} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
-                  </td>
-                </tr>
-              ) : sorted.length === 0 ? (
-                <tr>
-                  <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No quotes found.</td>
-                </tr>
-              ) : (
-                sorted.map(row => (
-                  <tr
-                    key={row.id}
-                    className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}
-                  >
-                    <td className="px-3 py-3 border-r border-slate-100">
-                      <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
-                    </td>
-                    {visibleCols.map(col => (
-                      <td
-                        key={col.key}
-                        className={`px-4 py-3 truncate cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
-                        onClick={() => setDrawerQuote(row)}
-                      >
-                        {col.key === 'quoteNumber' && <span className="font-mono text-xs text-slate-700">{row.quoteNumber}</span>}
-                        {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
-                        {col.key === 'date' && <span className="text-slate-600">{fmtDate(row.date)}</span>}
-                        {col.key === 'expiryDate' && <span className="text-slate-600">{fmtDate(row.expiryDate)}</span>}
-                        {col.key === 'amount' && <span className="font-semibold text-slate-800">{formatCurrency(row.amount, currency)}</span>}
-                        {col.key === 'status' && (
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(row.status)}`}>
-                            {statusLabel(row.status)}
-                          </span>
-                        )}
-                      </td>
-                    ))}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="text-xs font-semibold text-slate-500 hover:text-slate-700 hover:underline"
-                        >
-                          Edit
-                        </button>
-                        <span className="text-slate-300">·</span>
-                        {row.status === 'DRAFT' && (
-                          <>
-                            <button
-                              disabled={actioningId === row.id}
-                              onClick={() => handleStatusChange(row.id, 'SENT')}
-                              className="text-xs font-semibold text-sky-700 hover:underline disabled:opacity-40"
-                            >
-                              Send
-                            </button>
-                            <span className="text-slate-300">·</span>
-                          </>
-                        )}
-                        {row.status === 'SENT' && (
-                          <>
-                            <button disabled={actioningId === row.id} onClick={() => handleStatusChange(row.id, 'ACCEPTED')} className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-40">Accept</button>
-                            <span className="text-slate-300">·</span>
-                            <button disabled={actioningId === row.id} onClick={() => handleStatusChange(row.id, 'REJECTED')} className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40">Reject</button>
-                            <span className="text-slate-300">·</span>
-                          </>
-                        )}
-                        {(row.status === 'SENT' || row.status === 'ACCEPTED') && (
-                          <>
-                            <button disabled={actioningId === row.id} onClick={() => handleConvert(row.id)} className="text-xs font-semibold text-violet-700 hover:underline disabled:opacity-40">Convert</button>
-                            <span className="text-slate-300">·</span>
-                          </>
-                        )}
-                        <button
-                          disabled={actioningId === row.id}
-                          onClick={() => handleDelete(row.id)}
-                          className="text-xs font-semibold text-rose-500 hover:underline disabled:opacity-40"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {!loading && !error && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">Page {page + 1}{hasMore ? '+' : ''} · {filtered.length} shown</p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { const p = page - 1; setPage(p); fetchQuotes(p, statusFilter) }}
-                disabled={page === 0}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={14} /> Prev
-              </button>
-              <button
-                onClick={() => { const p = page + 1; setPage(p); fetchQuotes(p, statusFilter) }}
-                disabled={!hasMore}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Next <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
+        <HaypDataTable
+          data={statusFiltered}
+          columns={columns}
+          tableId="quotes-estimates"
+          title="Quotes & Estimates"
+          description="Create and manage customer quotes"
+          loading={loading}
+          error={error || null}
+          headerActions={headerActions}
+          actions={actions}
+          bulkActions={bulkActions}
+          onRowClick={(row) => setDrawerQuote(row)}
+          onRefresh={fetchQuotes}
+          total={statusFiltered.length}
+          emptyTitle="No quotes found"
+          emptySubtitle="Create a quote to get started"
+        />
       </div>
 
       {/* Detail Drawer */}
@@ -754,7 +549,7 @@ export default function QuotesEstimatesPage() {
                 <h2 className="text-lg font-bold text-slate-900">{drawerQuote.quoteNumber}</h2>
                 <p className="text-sm text-slate-500 mt-0.5">{drawerQuote.customer}</p>
               </div>
-              <button onClick={() => setDrawerQuote(null)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
+              <button aria-label="Close details drawer" onClick={() => setDrawerQuote(null)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
                 <X size={18} />
               </button>
             </div>
@@ -842,7 +637,7 @@ export default function QuotesEstimatesPage() {
           >
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">{editingId ? 'Edit Quote' : 'New Quote'}</h2>
-              <button onClick={() => setModalOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+              <button aria-label="Close quote modal" onClick={() => setModalOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
             </div>
 
             <form onSubmit={handleSave} className="p-4 space-y-4">
@@ -861,6 +656,7 @@ export default function QuotesEstimatesPage() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Expiry Date</label>
                   <input
+                    aria-label="Expiry date"
                     type="date"
                     value={form.expiryDate}
                     onChange={e => setForm(f => ({ ...f, expiryDate: e.target.value }))}
@@ -893,10 +689,10 @@ export default function QuotesEstimatesPage() {
                         return (
                           <tr key={i} className="border-t border-slate-100">
                             <td className="px-2 py-1">
-                              <input value={l.description} onChange={e => setLine(i, 'description', e.target.value)} placeholder="Description" className="w-full px-2 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
+                              <input aria-label="Description" value={l.description} onChange={e => setLine(i, 'description', e.target.value)} placeholder="Description" className="w-full px-2 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
                             </td>
                             <td className="px-2 py-1">
-                              <input type="number" min="0" step="1" value={l.quantity} onChange={e => setLine(i, 'quantity', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
+                              <input aria-label="Quantity" type="number" min="0" step="1" value={l.quantity} onChange={e => setLine(i, 'quantity', e.target.value)} placeholder="0" className="w-full px-2 py-1.5 border border-slate-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
                             </td>
                             <td className="px-2 py-1">
                               <input type="number" min="0" step="0.01" value={l.unitPrice} onChange={e => setLine(i, 'unitPrice', e.target.value)} placeholder="0.00" className="w-full px-2 py-1.5 border border-slate-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
