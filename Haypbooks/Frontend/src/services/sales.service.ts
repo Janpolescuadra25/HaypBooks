@@ -96,8 +96,22 @@ export const salesService = {
       },
     }),
 
-  getArCustomerActivity: (companyId: string, customerId: string) =>
-    apiClient.get<{ data: any[] }>(`/companies/${companyId}/ar/customers/${customerId}/activity`),
+  getArAgingReport: (companyId: string, query?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/ar/reports/aging`, { params: query }),
+
+  getArCustomerActivity: (companyId: string, customerId?: string, params?: Record<string, any>) =>
+    apiClient.get(
+      customerId
+        ? `/companies/${companyId}/ar/customers/${customerId}/activity`
+        : `/companies/${companyId}/ar/customers/activity`,
+      { params },
+    ),
+
+  getChartOfAccounts: (companyId: string, query?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/chart-of-accounts`, { params: query }),
+
+  getAuditLogs: (companyId: string, query?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/integrations/audit-logs`, { params: query }),
 
   // ─── QUOTES ───────────────────────────────────────────────────────────
   getQuotes: (companyId: string, query?: any) =>
