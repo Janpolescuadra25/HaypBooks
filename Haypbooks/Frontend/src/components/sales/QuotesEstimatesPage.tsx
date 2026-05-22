@@ -258,7 +258,7 @@ export default function QuotesEstimatesPage() {
     setCustLoading(true)
     try {
       const response = await salesService.listArCustomers(companyId)
-      const data = response.data
+      const data = response.data as any
       const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? []
       setCustomers(raw.map((c: any) => ({
         id: c.id || c.contactId,
@@ -527,13 +527,11 @@ export default function QuotesEstimatesPage() {
           title="Quotes & Estimates"
           description="Create and manage customer quotes"
           loading={loading}
-          error={error || null}
           headerActions={headerActions}
           actions={actions}
           bulkActions={bulkActions}
           onRowClick={(row) => setDrawerQuote(row)}
           onRefresh={fetchQuotes}
-          total={statusFiltered.length}
           emptyTitle="No quotes found"
           emptySubtitle="Create a quote to get started"
         />

@@ -91,7 +91,7 @@ export default function SalesOrdersPage() {
     setLoading(true)
     try {
       const response = await salesService.listArSalesOrders(companyId)
-      const data = response.data
+      const data = response.data as any
       setItems(Array.isArray(data) ? data : data?.items ?? data?.records ?? [])
       setError('')
     } catch (e: any) {
@@ -108,7 +108,8 @@ export default function SalesOrdersPage() {
     setCustomersLoading(true)
     try {
       const response = await salesService.listArCustomers(companyId)
-      const raw = Array.isArray(response.data) ? response.data : response.data?.items ?? response.data?.records ?? []
+      const data = response.data as any
+      const raw = Array.isArray(data) ? data : data?.items ?? data?.records ?? []
       setCustomers(raw.map((item: any) => ({
         id: item.id ?? item.contactId,
         name: item.name ?? item.displayName ?? item.contact?.displayName ?? '—',

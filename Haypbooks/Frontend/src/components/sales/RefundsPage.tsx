@@ -88,7 +88,7 @@ export default function RefundsPage() {
   }, [items, statusFilter])
 
   const pendingCount = useMemo(() => items.filter((row) => row.status === 'PENDING' || row.approvalStatus === 'PENDING').length, [items])
-  const approvedCount = useMemo(() => items.filter((row) => row.status === 'APPROVED' || row.approvalStatus === 'APPROVED').length, [items])
+  const processedCount = useMemo(() => items.filter((row) => row.status === 'PROCESSED' || row.approvalStatus === 'PROCESSED').length, [items])
   const totalAmount = useMemo(() => items.reduce((sum, row) => sum + Number(row.amount ?? 0), 0), [items])
 
   const fetchItems = useCallback(async () => {
@@ -113,7 +113,8 @@ export default function RefundsPage() {
     setCustomersLoading(true)
     try {
       const response = await salesService.listArCustomers(companyId)
-      const raw = Array.isArray(response.data) ? response.data : response.data?.items ?? response.data?.records ?? []
+      const data = response.data as any
+      const raw = Array.isArray(data) ? data : data?.items ?? data?.records ?? []
       setCustomers(raw.map((item: any) => ({
         id: item.id ?? item.contactId,
         name: item.name ?? item.displayName ?? item.contact?.displayName ?? '—',
@@ -292,8 +293,8 @@ export default function RefundsPage() {
           <div className="flex items-center gap-3 text-slate-900">
             <CheckCircle size={18} />
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Approved</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{approvedCount}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Processed</p>
+              <p className="mt-1 text-xl font-semibold text-slate-900">{processedCount}</p>
             </div>
           </div>
         </div>
