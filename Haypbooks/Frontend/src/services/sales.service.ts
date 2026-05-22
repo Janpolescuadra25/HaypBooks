@@ -330,6 +330,36 @@ export const salesService = {
 
   voidPayment: (companyId: string, paymentId: string) =>
     apiClient.post(`/companies/${companyId}/payments/${paymentId}/void`),
+
+  getArCustomerGroup: (companyId: string, groupId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/customer-groups/${groupId}`),
+
+  createArCustomerGroup: (companyId: string, data: Record<string, any>) =>
+    apiClient.post(`/companies/${companyId}/ar/customer-groups`, data),
+
+  updateArCustomerGroup: (companyId: string, groupId: string, data: Record<string, any>) =>
+    apiClient.put(`/companies/${companyId}/ar/customer-groups/${groupId}`, data),
+
+  deleteArCustomerGroup: (companyId: string, groupId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/customer-groups/${groupId}`),
+
+  batchDeleteArCustomerGroups: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/customer-groups/batch/delete`, { ids }),
+
+  exportArCustomerGroups: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/customer-groups/export`),
+
+  getArCustomerGroupMembers: (companyId: string, groupId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/customer-groups/${groupId}/members`, { params: query }),
+
+  addArCustomerGroupMembers: (companyId: string, groupId: string, customerIds: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/customer-groups/${groupId}/members`, { customerIds }),
+
+  removeArCustomerGroupMembers: (companyId: string, groupId: string, customerIds: string[]) =>
+    apiClient.delete(`/companies/${companyId}/ar/customer-groups/${groupId}/members`, { data: { customerIds } }),
+
+  getArCustomerGroupActivity: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/integrations/audit-logs`, { params: query }),
 }
 
 export const arService = {
