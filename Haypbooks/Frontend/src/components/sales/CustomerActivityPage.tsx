@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Clock, Plus, Pencil, Trash2, AlertCircle,
-  Loader2, ChevronLeft, ChevronRight, Search, X,
+  Loader2, ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypColumn } from '@/components/shared/HaypDataTable.types'
 import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { formatActivityValue } from '@/components/ui/ActivityLog'
@@ -17,6 +19,11 @@ interface ActivityEntry {
   changes: Record<string, any> | null
   createdAt: string
   user: { id: string; name: string | null; email: string } | null
+}
+
+interface ActivityRow extends ActivityEntry {
+  customerName: string
+  userName: string
 }
 
 type ActionFilter = 'ALL' | 'CREATE' | 'UPDATE' | 'DELETE'
@@ -48,13 +55,12 @@ export default function CustomerActivityPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
 
-  const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [activity, setActivity] = useState<ActivityRow[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [actionFilter, setActionFilter] = useState<ActionFilter>('ALL')
   const [search, setSearch] = useState('')
-  const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -69,7 +75,12 @@ export default function CustomerActivityPage() {
       if (search) params.search = search
       const response = await salesService.getArCustomerActivity(companyId, undefined, params)
       const data = response.data
-      setActivity(Array.isArray(data.data) ? data.data : [])
+      const raw: any[] = Array.isArray(data.data) ? data.data : []
+      setActivity(raw.map((entry) => ({
+        ...entry,
+        customerName: getCustomerName(entry),
+        userName: entry.user?.name || entry.user?.email || 'Unknown user',
+      })))
       setTotal(data.total ?? 0)
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to load activity')
@@ -80,8 +91,6 @@ export default function CustomerActivityPage() {
 
   useEffect(() => { fetchActivity() }, [fetchActivity])
 
-  const handleSearch = () => { setSearch(searchInput); setPage(1) }
-  const clearSearch = () => { setSearchInput(''); setSearch(''); setPage(1) }
   const handleActionFilter = (f: ActionFilter) => { setActionFilter(f); setPage(1) }
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -91,6 +100,64 @@ export default function CustomerActivityPage() {
       return next
     })
   }
+
+  const activityColumns = useMemo<HaypColumn<ActivityRow>[]>(() => [
+    {
+      id: 'action',
+      header: 'Action',
+      accessorKey: 'action',
+      size: 120,
+      render: (_value, row) => {
+        const isCreate = row.action === 'CREATE'
+        const isDelete = row.action === 'DELETE'
+        const label = isCreate ? 'Created' : isDelete ? 'Deleted' : 'Updated'
+        const className = isCreate
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+          : isDelete
+            ? 'bg-red-50 text-red-600 border-red-100'
+            : 'bg-blue-50 text-blue-700 border-blue-100'
+        return (
+          <span className={`inline-flex items-center px-2 py-1 rounded-full border text-xs font-semibold ${className}`}>
+            {label}
+          </span>
+        )
+      },
+    },
+    { id: 'customerName', header: 'Customer', accessorKey: 'customerName', size: 200 },
+    { id: 'userName', header: 'User', accessorKey: 'userName', size: 180 },
+    {
+      id: 'createdAt',
+      header: 'Date',
+      accessorKey: 'createdAt',
+      size: 180,
+      render: (_value, row) => fmt(row.createdAt),
+    },
+    {
+      id: 'details',
+      header: 'Details',
+      accessorKey: 'changes',
+      size: 220,
+      render: (_value, row) => {
+        const changeKeys = row.changes && typeof row.changes === 'object'
+          ? Object.keys(row.changes).filter((k) => k !== 'name')
+          : []
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">{changeKeys.length > 0 ? changeKeys.join(', ') : 'No details'}</span>
+            {changeKeys.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); toggleExpanded(row.id) }}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+              >
+                {expanded.has(row.id) ? 'Hide' : 'View'}
+              </button>
+            )}
+          </div>
+        )
+      },
+    },
+  ], [expanded])
 
   const totalPages = Math.ceil(total / pageSize)
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1
@@ -148,33 +215,6 @@ export default function CustomerActivityPage() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="flex flex-1 min-w-0 gap-2">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Search by customer name…"
-              className="w-full pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-            />
-            {searchInput && (
-              <button
-                onClick={clearSearch}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          <button
-            onClick={handleSearch}
-            className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-          >
-            Search
-          </button>
-        </div>
       </div>
 
       {/* Error */}
@@ -202,170 +242,117 @@ export default function CustomerActivityPage() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && !error && activity.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-white rounded-xl border border-gray-200">
-          <Clock size={32} className="mb-3 opacity-40" />
-          {search || actionFilter !== 'ALL' ? (
-            <>
-              <p className="text-sm font-medium text-gray-500">No activity matches your filters</p>
-              <p className="text-xs mt-1 text-gray-400">Try adjusting your search or action filter</p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-gray-500">No customer activity recorded yet</p>
-              <p className="text-xs mt-1 text-gray-400">Actions like creating, editing, or deleting customers will appear here</p>
-            </>
-          )}
+      {/* Activity table */}
+      {!loading && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <HaypDataTable
+            data={activity}
+            columns={activityColumns}
+            tableId="customer-activity"
+            title="Customer activity"
+            description="All customer actions across your workspace"
+            loading={loading}
+            globalFilter={search}
+            onGlobalFilterChange={setSearch}
+            emptyTitle="No activity found"
+            emptySubtitle="Try adjusting your filters or search query"
+          />
         </div>
       )}
 
-      {/* Activity feed */}
-      {!loading && activity.length > 0 && (
-        <>
-          <div className="space-y-3">
-            {activity.map(entry => {
-              const isCreate = entry.action === 'CREATE'
-              const isDelete = entry.action === 'DELETE'
-              const borderColor = isCreate
-                ? 'border-l-emerald-500'
-                : isDelete
-                  ? 'border-l-red-400'
-                  : 'border-l-blue-400'
-              const iconBg = isCreate ? 'bg-emerald-50' : isDelete ? 'bg-red-50' : 'bg-blue-50'
-              const actionLabel = isCreate ? 'Created' : isDelete ? 'Deleted' : 'Updated'
-              const labelStyle = isCreate
-                ? 'bg-emerald-50 text-emerald-700'
-                : isDelete
-                  ? 'bg-red-50 text-red-600'
-                  : 'bg-blue-50 text-blue-700'
+      {total > 0 && (
+        <div className="flex items-center justify-between gap-3 text-sm text-gray-500 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span>Show</span>
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
+              title="Items per page"
+              className="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            >
+              {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <span>per page · Showing {from}–{to} of {total}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              title="Previous page"
+              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="px-3 py-1 text-sm tabular-nums">{page} / {totalPages || 1}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              title="Next page"
+              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
 
-              const customerName = getCustomerName(entry)
-              const userName = entry.user?.name || entry.user?.email || 'Unknown user'
-              const changes = entry.changes && typeof entry.changes === 'object'
-                ? entry.changes as Record<string, any>
-                : null
-              const changeKeys = changes
-                ? Object.keys(changes).filter(k => k !== 'name')
-                : []
-              const hasChanges = changeKeys.length > 0 && !isCreate && !isDelete
-              const isExpanded = expanded.has(entry.id)
+      {expanded.size > 0 && (
+        <div className="space-y-3">
+          {activity.filter((entry) => expanded.has(entry.id)).map((entry) => {
+            const isCreate = entry.action === 'CREATE'
+            const isDelete = entry.action === 'DELETE'
+            const borderColor = isCreate
+              ? 'border-l-emerald-500'
+              : isDelete
+                ? 'border-l-red-400'
+                : 'border-l-blue-400'
+            const iconBg = isCreate ? 'bg-emerald-50' : isDelete ? 'bg-red-50' : 'bg-blue-50'
+            const changes = entry.changes && typeof entry.changes === 'object'
+              ? entry.changes as Record<string, any>
+              : null
+            const changeKeys = changes ? Object.keys(changes).filter((k) => k !== 'name') : []
 
-              return (
-                <div
-                  key={entry.id}
-                  className={`bg-white rounded-xl border border-l-4 border-gray-200 ${borderColor} p-4`}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Action icon */}
-                    <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${iconBg}`}>
-                      {isCreate ? (
-                        <Plus size={14} className="text-emerald-600" />
-                      ) : isDelete ? (
-                        <Trash2 size={14} className="text-red-500" />
-                      ) : (
-                        <Pencil size={14} className="text-blue-600" />
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${labelStyle}`}>
-                            {actionLabel}
-                          </span>
-                          {isDelete ? (
-                            <span className="text-sm text-gray-400 font-medium">
-                              {customerName} <span className="text-xs">(deleted)</span>
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => entry.recordId && router.push(`/sales/customers/${entry.recordId}`)}
-                              className="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
-                            >
-                              {customerName}
-                            </button>
-                          )}
-                          <span className="text-xs text-gray-400">by {userName}</span>
-                        </div>
-                        <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{fmt(entry.createdAt)}</span>
+            return (
+              <div key={entry.id} className={`bg-white rounded-xl border border-l-4 border-gray-200 ${borderColor} p-4`}> 
+                <div className="flex items-start gap-3">
+                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${iconBg}`}>
+                    {isCreate ? (
+                      <Plus size={14} className="text-emerald-600" />
+                    ) : isDelete ? (
+                      <Trash2 size={14} className="text-red-500" />
+                    ) : (
+                      <Pencil size={14} className="text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">
+                          {entry.action}
+                        </span>
+                        <span className="text-sm font-semibold text-emerald-700">{entry.customerName}</span>
+                        <span className="text-xs text-gray-400">by {entry.userName}</span>
                       </div>
-
-                      {hasChanges && (
-                        <div className="mt-2">
-                          <button
-                            onClick={() => toggleExpanded(entry.id)}
-                            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            {isExpanded ? 'Hide changes' : 'View changes'}
-                          </button>
-                          {isExpanded && (
-                            <div className="mt-2 rounded-lg border border-gray-100 overflow-hidden text-xs">
-                              <table className="w-full">
-                                <thead>
-                                  <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="text-left px-3 py-1.5 text-gray-500 font-medium w-32">Field</th>
-                                    <th className="text-left px-3 py-1.5 text-gray-500 font-medium">New value</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {changeKeys.map(k => (
-                                    <tr key={k} className="border-t border-gray-100">
-                                      <td className="px-3 py-1.5 text-gray-400 bg-gray-50 font-medium">{k}</td>
-                                      <td className="px-3 py-1.5 text-gray-700">
-                                        {formatActivityValue(changes![k])}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{fmt(entry.createdAt)}</span>
                     </div>
+                    {changeKeys.length > 0 && (
+                      <div className="mt-4 rounded-lg border border-gray-100 overflow-hidden text-xs">
+                        {changeKeys.map((k) => (
+                          <div key={k} className="flex items-start gap-3 border-t border-gray-100 first:border-t-0">
+                            <div className="w-32 min-w-[8rem] px-3 py-2 text-gray-400 bg-gray-50 font-medium">{k}</div>
+                            <div className="flex-1 px-3 py-2 text-gray-700">
+                              {formatActivityValue(changes![k])}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between gap-3 text-sm text-gray-500 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span>Show</span>
-              <select
-                value={pageSize}
-                onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                title="Items per page"
-                className="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-              >
-                {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <span>per page · Showing {from}–{to} of {total}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                title="Previous page"
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span className="px-3 py-1 text-sm tabular-nums">{page} / {totalPages || 1}</span>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                title="Next page"
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          </div>
-        </>
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
