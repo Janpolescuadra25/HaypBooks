@@ -107,9 +107,11 @@ export const salesService = {
       { params },
     ),
 
+  // TODO: move to domain-specific service (accounting)
   getChartOfAccounts: (companyId: string, query?: Record<string, any>) =>
     apiClient.get(`/companies/${companyId}/chart-of-accounts`, { params: query }),
 
+  // TODO: move to domain-specific service (audit)
   getAuditLogs: (companyId: string, query?: Record<string, any>) =>
     apiClient.get(`/companies/${companyId}/integrations/audit-logs`, { params: query }),
 
