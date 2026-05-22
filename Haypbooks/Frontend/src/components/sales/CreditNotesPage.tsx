@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Download, Eye, Check, Ban, X, ListOrdered, Clock, Banknote, Loader2, Trash2 } from 'lucide-react'
 import { useToast } from '@/components/ToastProvider'
-import apiClient from '@/lib/api-client'
 import { salesService } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -506,7 +505,8 @@ export default function CreditNotesPage() {
   const loadBankAccounts = useCallback(async () => {
     if (!companyId) return
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/chart-of-accounts`, { params: { type: 'bank', limit: 50 } })
+      const response = await salesService.getChartOfAccounts(companyId, { type: 'bank', limit: 50 })
+      const data = response.data
       const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.accounts ?? []
       setBankAccounts(raw.map((account: any) => ({ id: account.id, name: account.name || account.accountNumber || 'Bank Account' })))
     } catch { setBankAccounts([]) }

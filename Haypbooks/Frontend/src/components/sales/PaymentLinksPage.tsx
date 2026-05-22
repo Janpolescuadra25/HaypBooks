@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import apiClient from '@/lib/api-client'
 import { Plus, X, AlertCircle, Loader2, RefreshCw, Copy, Clock } from 'lucide-react'
 import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -88,9 +87,7 @@ export default function PaymentLinksPage() {
     if (!companyId) return
     setActivityLoading(true)
     try {
-      const response = await apiClient.get(`/companies/${companyId}/integrations/audit-logs`, {
-        params: { tableName: 'PaymentLink', limit: 8 },
-      })
+      const response = await salesService.getAuditLogs(companyId, { tableName: 'PaymentLink', limit: 8 })
       const data = response.data
       setActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
     } catch {
