@@ -1,18 +1,16 @@
 ﻿'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Edit2, Trash2, RefreshCw, Download, Users, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { Plus, Edit2, Trash2, RefreshCw, Download, Users, X, Clock } from 'lucide-react'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import HaypModal from '@/components/shared/HaypModal'
-import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
-const PAGE_SIZE = 25
-const LS_WIDTHS = 'sales-customer-groups-col-widths'
 
-type CustomerGroup = {
+type CustomerGroupRow = {
   id: string
   name: string
   description: string
@@ -38,7 +36,7 @@ function GroupFormModal({
   companyId,
 }: {
   mode: 'create' | 'edit'
-  initial?: CustomerGroup
+  initial?: CustomerGroupRow
   onClose: () => void
   onSaved: () => void
   companyId: string
@@ -54,10 +52,10 @@ function GroupFormModal({
     setSaving(true)
     try {
       if (mode === 'create') {
-        await apiClient.post(`/companies/${companyId}/ar/customer-groups`, { name: name.trim(), description: description.trim() })
+        await salesService.createArCustomerGroup(companyId, { name: name.trim(), description: description.trim() })
         toast.success('Group created')
       } else {
-        await apiClient.put(`/companies/${companyId}/ar/customer-groups/${initial!.id}`, { name: name.trim(), description: description.trim() })
+        await salesService.updateArCustomerGroup(companyId, initial!.id, { name: name.trim(), description: description.trim() })
         toast.success('Group updated')
       }
       onSaved()
@@ -115,47 +113,25 @@ export default function CustomerGroupsPage() {
   const router = useRouter()
   const toast = useToast()
 
-  const [groups, setGroups] = useState<CustomerGroup[]>([])
+  const [groups, setGroups] = useState<CustomerGroupRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [page, setPage] = useState(0)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [modal, setModal] = useState<{ mode: 'create' } | { mode: 'edit'; group: CustomerGroup } | null>(null)
+  const [modal, setModal] = useState<{ mode: 'create' } | { mode: 'edit'; group: CustomerGroupRow } | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
   const [activity, setActivity] = useState<ActivityLog[]>([])
   const [activityLoading, setActivityLoading] = useState(true)
 
-  // Resizable columns
-  const defaultWidths = { name: 220, description: 320, count: 120, actions: 100 }
-  const [colWidths, setColWidths] = useState<typeof defaultWidths>(() => {
-    if (typeof window === 'undefined') return defaultWidths
-    try { return { ...defaultWidths, ...JSON.parse(localStorage.getItem(LS_WIDTHS) ?? '{}') } } catch { return defaultWidths }
-  })
-  const colWidthsRef = useRef(colWidths)
-  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
-  const saveColWidths = useCallback((next: typeof defaultWidths) => {
-    setColWidths(next)
-    localStorage.setItem(LS_WIDTHS, JSON.stringify(next))
-  }, [])
-  const { containerRef, startResize, isOverflowing: customerGroupsIsOverflowing } = useFixedWidthResizableMap({
-    widths: colWidths,
-    widthsRef: colWidthsRef,
-    order: ['name', 'description', 'count', 'actions'],
-    saveWidths: saveColWidths,
-    fixedWidth: 40,
-    minWidth: { name: 80, description: 80, count: 80, actions: 100 },
-  })
-
   const fetchGroups = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
     setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customer-groups`)
-      setGroups(Array.isArray(data) ? data : [])
+      const response = await salesService.listArCustomerGroups(companyId)
+      const result = response.data as any
+      setGroups(Array.isArray(result) ? result : [])
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Failed to load groups')
     } finally {
@@ -169,10 +145,9 @@ export default function CustomerGroupsPage() {
     if (!companyId) return
     setActivityLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/integrations/audit-logs`, {
-        params: { tableName: 'CustomerGroup', limit: 8 },
-      })
-      setActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+      const response = await salesService.getArCustomerGroupActivity(companyId, { tableName: 'CustomerGroup', limit: 8 })
+      const result = response.data
+      setActivity(Array.isArray(result) ? result : result?.data ?? result?.items ?? [])
     } catch {
       setActivity([])
     } finally {
@@ -182,35 +157,10 @@ export default function CustomerGroupsPage() {
 
   useEffect(() => { loadActivity() }, [loadActivity])
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return groups
-    const q = search.toLowerCase()
-    return groups.filter(g => g.name.toLowerCase().includes(q) || g.description.toLowerCase().includes(q))
-  }, [groups, search])
-
-  const paginated = useMemo(() => {
-    const start = page * PAGE_SIZE
-    return filtered.slice(start, start + PAGE_SIZE)
-  }, [filtered, page])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-
-  const allSelected = paginated.length > 0 && paginated.every(g => selectedIds.has(g.id))
-  const toggleAll = () => {
-    if (allSelected) {
-      setSelectedIds(prev => { const next = new Set(prev); paginated.forEach(g => next.delete(g.id)); return next })
-    } else {
-      setSelectedIds(prev => { const next = new Set(prev); paginated.forEach(g => next.add(g.id)); return next })
-    }
-  }
-  const toggleOne = (id: string) => {
-    setSelectedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
-  }
-
-  const handleDelete = async (group: CustomerGroup) => {
+  const handleDelete = async (group: CustomerGroupRow) => {
     if (!confirm(`Delete group "${group.name}"? This will unassign all its customers.`)) return
     try {
-      await apiClient.delete(`/companies/${companyId}/ar/customer-groups/${group.id}`)
+      await salesService.deleteArCustomerGroup(companyId!, group.id)
       toast.success('Group deleted')
       fetchGroups()
       loadActivity()
@@ -219,15 +169,13 @@ export default function CustomerGroupsPage() {
     }
   }
 
-  const handleBatchDelete = async () => {
-    const ids = [...selectedIds]
+  const handleBatchDelete = async (ids: string[]) => {
     if (!ids.length) return
     if (!confirm(`Delete ${ids.length} group(s)? This will unassign all their customers.`)) return
     setBatchDeleting(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/customer-groups/batch/delete`, { ids })
+      await salesService.batchDeleteArCustomerGroups(companyId!, ids)
       toast.success(`${ids.length} group(s) deleted`)
-      setSelectedIds(new Set())
       fetchGroups()
       loadActivity()
     } catch (err: any) {
@@ -240,11 +188,16 @@ export default function CustomerGroupsPage() {
   const handleExport = async () => {
     setExporting(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customer-groups/export`)
-      const blob = new Blob([data.csv], { type: 'text/csv' })
+      const response = await salesService.exportArCustomerGroups(companyId!)
+      const result = response.data
+      const csv = typeof result === 'string' ? result : result.csv ?? ''
+      const filename = typeof result === 'string' ? 'customer-groups.csv' : result.filename ?? 'customer-groups.csv'
+      const blob = new Blob([csv], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url; a.download = data.filename; a.click()
+      a.href = url
+      a.download = filename
+      a.click()
       URL.revokeObjectURL(url)
     } catch (err: any) {
       toast.error('Export failed')
@@ -253,11 +206,96 @@ export default function CustomerGroupsPage() {
     }
   }
 
-  const ResizeHandle = ({ col }: { col: keyof typeof defaultWidths }) => (
-    <span
-      className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none hover:bg-blue-400 opacity-0 group-hover:opacity-100"
-      onMouseDown={e => startResize(e, col)}
-    />
+  const columns = useMemo(() => [
+    {
+      id: 'name',
+      accessorKey: 'name',
+      header: 'Group Name',
+      render: (value: any, row: CustomerGroupRow) => (
+        <button
+          type="button"
+          onClick={() => router.push(`/sales/customers/groups/${row.id}`)}
+          className="text-left text-emerald-600 hover:text-emerald-800 hover:underline font-medium"
+        >
+          {value}
+        </button>
+      ),
+    },
+    {
+      id: 'description',
+      accessorKey: 'description',
+      header: 'Description',
+      render: (value: any) => (
+        <span className="text-gray-500">{value || <span className="italic text-gray-300">—</span>}</span>
+      ),
+    },
+    {
+      id: 'customerCount',
+      accessorKey: 'customerCount',
+      header: 'Customers',
+      align: 'right' as const,
+      render: (value: any) => (
+        <span className="text-gray-700 font-medium">{value ?? 0}</span>
+      ),
+    },
+  ], [router])
+
+  const rowActions = useMemo(
+    () => [
+      {
+        label: 'Edit',
+        icon: <Edit2 size={14} />,
+        onClick: (_rowId: string, row: CustomerGroupRow) => setModal({ mode: 'edit', group: row }),
+      },
+      {
+        label: 'Delete',
+        icon: <Trash2 size={14} />,
+        danger: true,
+        onClick: (_rowId: string, row: CustomerGroupRow) => handleDelete(row),
+      },
+    ],
+    [handleDelete],
+  )
+
+  const bulkActions = useMemo(
+    () => [
+      {
+        label: 'Delete Selected',
+        icon: <Trash2 size={14} />,
+        variant: 'danger' as const,
+        onClick: (selectedIds: string[]) => handleBatchDelete(selectedIds),
+      },
+    ],
+    [handleBatchDelete],
+  )
+
+  const headerActions = (
+    <>
+      <button
+        type="button"
+        onClick={() => setModal({ mode: 'create' })}
+        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+      >
+        <Plus size={14} />
+        New Group
+      </button>
+      <button
+        type="button"
+        onClick={handleExport}
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        <Download size={14} />
+        Export
+      </button>
+      <button
+        type="button"
+        onClick={() => setHelpOpen(true)}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        aria-label="Help"
+      >
+        ?
+      </button>
+    </>
   )
 
   const describeActivity = (entry: ActivityLog) => {
@@ -313,164 +351,28 @@ export default function CustomerGroupsPage() {
           </div>
         </div>
 
-        {/* Filter bar */}
-        <div className="px-6 pb-3 flex items-center gap-3">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(0) }}
-              placeholder="Search groups…"
-              className="pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-          <span className="text-xs text-gray-400">{filtered.length} group{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
       </div>
 
-      {/* Batch bar */}
-      {selectedIds.size > 0 && (
-        <div className="bg-emerald-600 text-white px-6 py-2 flex items-center gap-3 text-sm shadow-md">
-          <span className="font-semibold">{selectedIds.size} selected</span>
-          <div className="flex-1" />
-          <button
-            onClick={handleBatchDelete}
-            disabled={batchDeleting}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 disabled:opacity-50 font-medium"
-          >
-            <Trash2 size={13} />
-            {batchDeleting ? 'Deleting…' : 'Delete Selected'}
-          </button>
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="p-1.5 rounded-lg hover:bg-white/20"
-            aria-label="Clear selection"
-            title="Clear selection"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* Table */}
       <div className="px-6 py-5">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div ref={containerRef} className={`${customerGroupsIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
-            <table className="w-full text-sm table-fixed">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="w-10 px-3 py-3">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" aria-label="Select all customer groups" title="Select all customer groups" />
-                  </th>
-                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" title="Name">
-                    <span className="block truncate pr-3">Name</span><ResizeHandle col="name" />
-                  </th>
-                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" title="Description">
-                    <span className="block truncate pr-3">Description</span><ResizeHandle col="description" />
-                  </th>
-                  <th className="relative group text-right px-4 py-3 text-gray-600 font-semibold overflow-hidden" title="Customers">
-                    <span className="block truncate pr-3">Customers</span><ResizeHandle col="count" />
-                  </th>
-                  <th className="text-right px-4 py-3 text-gray-600 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
-                      <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                      Loading groups…
-                    </td>
-                  </tr>
-                ) : error ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center">
-                      <p className="text-red-500 font-medium mb-2">{error}</p>
-                      <button onClick={fetchGroups} className="text-sm text-emerald-600 hover:underline">Try again</button>
-                    </td>
-                  </tr>
-                ) : paginated.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                      {search ? 'No groups match your search.' : 'No customer groups yet. Create your first group.'}
-                    </td>
-                  </tr>
-                ) : (
-                  paginated.map(group => (
-                    <tr
-                      key={group.id}
-                      className={`border-t border-gray-100 hover:bg-blue-50/30 transition-colors ${selectedIds.has(group.id) ? 'bg-blue-50/20' : ''}`}
-                    >
-                      <td className="px-3 py-3 text-center">
-                        <input type="checkbox" checked={selectedIds.has(group.id)} onChange={() => toggleOne(group.id)} className="accent-blue-600" aria-label={`Select group ${group.name}`} title={`Select group ${group.name}`} />
-                      </td>
-                      <td className="px-4 py-3 font-medium truncate">
-                        <button
-                          onClick={() => router.push(`/sales/customers/groups/${group.id}`)}
-                          className="text-emerald-600 hover:text-emerald-800 hover:underline text-left w-full truncate"
-                        >
-                          {group.name}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 truncate">
-                        {group.description || <span className="italic text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-700 font-medium">
-                        {group.customerCount}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => setModal({ mode: 'edit', group })}
-                            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700"
-                            title="Edit"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(group)}
-                            className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600"
-                            title="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {filtered.length > PAGE_SIZE && (
-            <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between text-sm text-gray-600">
-              <span>Showing {page * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE + PAGE_SIZE, filtered.length)} of {filtered.length}</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage(p => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
-                  aria-label="Previous page"
-                  title="Previous page"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="px-2">Page {page + 1} / {totalPages}</span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
-                  aria-label="Next page"
-                  title="Next page"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <HaypDataTable
+          tableId="customer-groups"
+          title="Customer Groups"
+          description="Organize customers into segments for reporting and pricing"
+          data={groups}
+          columns={columns}
+          actions={rowActions}
+          bulkActions={bulkActions}
+          headerActions={headerActions}
+          loading={loading || companyLoading}
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          searchPlaceholder="Search groups…"
+          onRefresh={fetchGroups}
+          onExport={handleExport}
+          exportLabel={exporting ? 'Exporting…' : 'Export'}
+          onRowClick={(row) => router.push(`/sales/customers/groups/${row.id}`)}
+          className="bg-white rounded-xl border border-gray-200"
+        />
 
         <section className="mt-5 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200">
