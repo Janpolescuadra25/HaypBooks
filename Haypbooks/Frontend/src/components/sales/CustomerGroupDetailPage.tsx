@@ -2,10 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Edit2, Trash2, Plus, Search, X, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { ArrowLeft, Users, Edit2, Trash2, Plus, Search, X, RefreshCw } from 'lucide-react'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypActionItem, HaypColumn, HaypBulkAction } from '@/components/shared/HaypDataTable.types'
 
 const PAGE_SIZE = 25
 
@@ -53,7 +55,7 @@ function EditGroupModal({
     if (!name.trim()) { toast.error('Group name is required'); return }
     setSaving(true)
     try {
-      await apiClient.put(`/companies/${companyId}/ar/customer-groups/${group.id}`, {
+      await salesService.updateArCustomerGroup(companyId, group.id, {
         name: name.trim(),
         description: description.trim(),
       })
@@ -130,9 +132,12 @@ function AddMembersModal({
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`, {
-        params: { search: q || undefined, limit: 50, offset: 0 },
+      const response = await salesService.listArCustomers(companyId, {
+        search: q || undefined,
+        status: undefined,
+        groupId: undefined,
       })
+      const data = response.data as any
       const list: AvailableCustomer[] = (Array.isArray(data) ? data : data.data ?? []).filter(
         (c: any) => !existingIds.has(c.id) && c.groupId == null
       )
@@ -157,9 +162,7 @@ function AddMembersModal({
     if (!selected.size) return
     setAdding(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/customer-groups/${groupId}/members`, {
-        customerIds: [...selected],
-      })
+      await salesService.addArCustomerGroupMembers(companyId, groupId, [...selected])
       toast.success(`${selected.size} customer(s) added`)
       onAdded()
       onClose()
@@ -245,15 +248,12 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
   const [groupError, setGroupError] = useState('')
 
   const [members, setMembers] = useState<Member[]>([])
-  const [membersTotal, setMembersTotal] = useState(0)
   const [membersLoading, setMembersLoading] = useState(true)
   const [membersError, setMembersError] = useState('')
   const [memberSearch, setMemberSearch] = useState('')
-  const [memberPage, setMemberPage] = useState(0)
 
   const [editOpen, setEditOpen] = useState(false)
   const [addMembersOpen, setAddMembersOpen] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
 
   const fetchGroup = useCallback(async () => {
@@ -261,8 +261,8 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
     setGroupLoading(true)
     setGroupError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customer-groups/${groupId}`)
-      setGroup(data)
+      const response = await salesService.getArCustomerGroup(companyId, groupId)
+      setGroup(response.data)
     } catch (err: any) {
       setGroupError(err?.response?.data?.message ?? 'Failed to load group')
     } finally {
@@ -270,16 +270,14 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
     }
   }, [companyId, groupId])
 
-  const fetchMembers = useCallback(async (pg = 0, search = '') => {
+  const fetchMembers = useCallback(async (search = '') => {
     if (!companyId) return
     setMembersLoading(true)
     setMembersError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customer-groups/${groupId}/members`, {
-        params: { search: search || undefined, limit: PAGE_SIZE, offset: pg * PAGE_SIZE },
-      })
+      const response = await salesService.getArCustomerGroupMembers(companyId, groupId, { search: search || undefined })
+      const data = response.data as any
       setMembers(Array.isArray(data) ? data : data.data ?? [])
-      setMembersTotal(typeof data.total === 'number' ? data.total : (data.data ?? data).length)
     } catch (err: any) {
       setMembersError(err?.response?.data?.message ?? 'Failed to load members')
     } finally {
@@ -289,39 +287,52 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
 
   useEffect(() => {
     fetchGroup()
-    fetchMembers(0, '')
+    fetchMembers('')
   }, [fetchGroup, fetchMembers])
 
   useEffect(() => {
-    const t = setTimeout(() => { setMemberPage(0); fetchMembers(0, memberSearch) }, 350)
+    const t = setTimeout(() => { fetchMembers(memberSearch) }, 350)
     return () => clearTimeout(t)
-  }, [memberSearch]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const totalPages = Math.max(1, Math.ceil(membersTotal / PAGE_SIZE))
+  }, [memberSearch, fetchMembers])
 
   const existingMemberIds = useMemo(() => new Set(members.map(m => m.id)), [members])
 
-  const allSelected = members.length > 0 && members.every(m => selectedIds.has(m.id))
-  const toggleAll = () => {
-    if (allSelected) {
-      setSelectedIds(prev => { const next = new Set(prev); members.forEach(m => next.delete(m.id)); return next })
-    } else {
-      setSelectedIds(prev => { const next = new Set(prev); members.forEach(m => next.add(m.id)); return next })
-    }
-  }
-  const toggleOne = (id: string) => {
-    setSelectedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
-  }
+  const memberColumns = useMemo<HaypColumn<Member>[]>(() => [
+    {
+      id: 'name',
+      accessorKey: 'name',
+      header: 'Customer',
+      render: (value: any, row: Member) => (
+        <button
+          type="button"
+          onClick={() => router.push(`/sales/customers/${row.id}`)}
+          className="text-left text-emerald-600 hover:text-emerald-800 hover:underline font-medium"
+        >
+          {value}
+        </button>
+      ),
+    },
+    {
+      id: 'email',
+      accessorKey: 'email',
+      header: 'Email',
+      render: (value: any) => value || <span className="italic text-gray-300">—</span>,
+    },
+    {
+      id: 'paymentTermName',
+      accessorKey: 'paymentTermName',
+      header: 'Payment Terms',
+      render: (value: any) => value || <span className="italic text-gray-300">—</span>,
+    },
+  ], [router])
 
   const handleRemoveMember = async (memberId: string) => {
     setRemovingIds(prev => new Set(prev).add(memberId))
     try {
-      await apiClient.delete(`/companies/${companyId}/ar/customer-groups/${groupId}/members`, {
-        data: { customerIds: [memberId] },
-      })
+      await salesService.removeArCustomerGroupMembers(companyId!, groupId, [memberId])
       toast.success('Customer removed from group')
       fetchGroup()
-      fetchMembers(memberPage, memberSearch)
+      fetchMembers(memberSearch)
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Failed to remove member')
     } finally {
@@ -329,28 +340,48 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
     }
   }
 
-  const handleBatchRemove = async () => {
-    const ids = [...selectedIds]
-    if (!ids.length) return
-    if (!confirm(`Remove ${ids.length} customer(s) from this group?`)) return
+  const handleBatchRemove = async (selectedIds: string[]) => {
+    if (!selectedIds.length) return
+    if (!confirm(`Remove ${selectedIds.length} customer(s) from this group?`)) return
     try {
-      await apiClient.delete(`/companies/${companyId}/ar/customer-groups/${groupId}/members`, {
-        data: { customerIds: ids },
-      })
-      toast.success(`${ids.length} customer(s) removed`)
-      setSelectedIds(new Set())
+      await salesService.removeArCustomerGroupMembers(companyId!, groupId, selectedIds)
+      toast.success(`${selectedIds.length} customer(s) removed`)
       fetchGroup()
-      fetchMembers(memberPage, memberSearch)
+      fetchMembers(memberSearch)
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Batch remove failed')
     }
   }
 
+  const rowActions = useMemo<HaypActionItem[]>(
+    () => [
+      {
+        label: 'Remove',
+        icon: <Trash2 size={14} />,
+        danger: true,
+        onClick: (_rowId: string, row: Member) => handleRemoveMember(row.id),
+      },
+    ],
+    [handleRemoveMember],
+  )
+
+  const bulkActions = useMemo<HaypBulkAction[]>(
+    () => [
+      {
+        label: 'Remove Selected',
+        icon: <Trash2 size={14} />,
+        variant: 'danger',
+        onClick: (selectedIds: string[]) => handleBatchRemove(selectedIds),
+      },
+    ],
+    [handleBatchRemove],
+  )
+
   const handleDeleteGroup = async () => {
     if (!group) return
     if (!confirm(`Delete group "${group.name}"? All customers will be unassigned.`)) return
     try {
-      await apiClient.delete(`/companies/${companyId}/ar/customer-groups/${groupId}`)
+      await salesService.deleteArCustomerGroup(companyId!, groupId)
       toast.success('Group deleted')
       router.push('/sales/customers/groups')
     } catch (err: any) {
@@ -439,130 +470,33 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
             />
           </div>
           <button
-            onClick={() => { fetchGroup(); fetchMembers(memberPage, memberSearch) }}
+            onClick={() => { fetchGroup(); fetchMembers(memberSearch) }}
             className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
             title="Refresh"
           >
             <RefreshCw size={13} />
           </button>
-          <span className="text-xs text-gray-400">{membersTotal} member{membersTotal !== 1 ? 's' : ''}</span>
+          <span className="text-xs text-gray-400">{members.length} member{members.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
-      {/* Batch bar */}
-      {selectedIds.size > 0 && (
-        <div className="sticky top-[105px] z-20 bg-emerald-600 text-white px-6 py-2 flex items-center gap-3 text-sm shadow-md">
-          <span className="font-semibold">{selectedIds.size} selected</span>
-          <div className="flex-1" />
-          <button
-            onClick={handleBatchRemove}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 font-medium"
-          >
-            <Trash2 size={13} />
-            Remove from Group
-          </button>
-          <button onClick={() => setSelectedIds(new Set())} className="p-1.5 rounded-lg hover:bg-white/20">
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* Members Table */}
       <div className="px-6 py-5">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="w-10 px-3 py-3">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" />
-                  </th>
-                  <th className="text-left px-4 py-3 text-gray-600 font-semibold">Customer</th>
-                  <th className="text-left px-4 py-3 text-gray-600 font-semibold">Email</th>
-                  <th className="text-left px-4 py-3 text-gray-600 font-semibold">Payment Terms</th>
-                  <th className="text-right px-4 py-3 text-gray-600 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {membersLoading ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
-                      <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                      Loading members…
-                    </td>
-                  </tr>
-                ) : membersError ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center">
-                      <p className="text-red-500 font-medium">{membersError}</p>
-                    </td>
-                  </tr>
-                ) : members.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                      {memberSearch ? 'No members match your search.' : 'No customers in this group yet. Use "Add Customers" to add members.'}
-                    </td>
-                  </tr>
-                ) : (
-                  members.map(member => (
-                    <tr
-                      key={member.id}
-                      className={`border-t border-gray-100 hover:bg-blue-50/30 transition-colors ${selectedIds.has(member.id) ? 'bg-blue-50/20' : ''}`}
-                    >
-                      <td className="px-3 py-3 text-center">
-                        <input type="checkbox" checked={selectedIds.has(member.id)} onChange={() => toggleOne(member.id)} className="accent-blue-600" />
-                      </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        <button
-                          onClick={() => router.push(`/sales/customers/${member.id}`)}
-                          className="text-emerald-600 hover:text-emerald-800 hover:underline text-left"
-                        >
-                          {member.name}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{member.email || <span className="italic text-gray-300">—</span>}</td>
-                      <td className="px-4 py-3 text-gray-500">{member.paymentTermName || <span className="italic text-gray-300">—</span>}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleRemoveMember(member.id)}
-                          disabled={removingIds.has(member.id)}
-                          className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-40"
-                          title="Remove from group"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {membersTotal > PAGE_SIZE && (
-            <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between text-sm text-gray-600">
-              <span>Showing {memberPage * PAGE_SIZE + 1}–{Math.min(memberPage * PAGE_SIZE + PAGE_SIZE, membersTotal)} of {membersTotal}</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => { const p = Math.max(0, memberPage - 1); setMemberPage(p); fetchMembers(p, memberSearch) }}
-                  disabled={memberPage === 0}
-                  className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="px-2">Page {memberPage + 1} / {totalPages}</span>
-                <button
-                  onClick={() => { const p = Math.min(totalPages - 1, memberPage + 1); setMemberPage(p); fetchMembers(p, memberSearch) }}
-                  disabled={memberPage >= totalPages - 1}
-                  className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <HaypDataTable
+          tableId="customer-group-members"
+          title="Group Members"
+          description="Manage customers assigned to this group"
+          data={members}
+          columns={memberColumns}
+          actions={rowActions}
+          bulkActions={bulkActions}
+          loading={membersLoading}
+          emptyTitle={membersError ? 'Unable to load members' : 'No group members'}
+          emptySubtitle={membersError ? membersError : 'Add customers to this group to see members here.'}
+          className="bg-white rounded-xl border border-gray-200"
+          globalFilter={memberSearch}
+          searchPlaceholder="Search members…"
+          onRowClick={(row) => router.push(`/sales/customers/${row.id}`)}
+        />
       </div>
 
       {/* Edit Modal */}
@@ -582,7 +516,7 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
           companyId={companyId!}
           existingIds={existingMemberIds}
           onClose={() => setAddMembersOpen(false)}
-          onAdded={() => { fetchGroup(); fetchMembers(memberPage, memberSearch) }}
+          onAdded={() => { fetchGroup(); fetchMembers(memberSearch) }}
         />
       )}
     </div>
