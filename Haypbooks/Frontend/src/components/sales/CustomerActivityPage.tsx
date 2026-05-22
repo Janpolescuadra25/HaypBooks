@@ -6,7 +6,7 @@ import {
   ArrowLeft, Clock, Plus, Pencil, Trash2, AlertCircle,
   Loader2, ChevronLeft, ChevronRight, Search, X,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { formatActivityValue } from '@/components/ui/ActivityLog'
 
@@ -67,7 +67,8 @@ export default function CustomerActivityPage() {
       const params: Record<string, any> = { take: pageSize, skip: (page - 1) * pageSize }
       if (actionFilter !== 'ALL') params.action = actionFilter
       if (search) params.search = search
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers/activity`, { params })
+      const response = await salesService.getArCustomerActivity(companyId, undefined, params)
+      const data = response.data
       setActivity(Array.isArray(data.data) ? data.data : [])
       setTotal(data.total ?? 0)
     } catch (e: any) {
