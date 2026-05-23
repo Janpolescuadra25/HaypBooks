@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { X, Loader2, AlertCircle, Clock } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { ModalPortal } from '@/components/shared/ModalPortal'
@@ -64,7 +64,7 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
   useEffect(() => {
     if (modalTab === 'activity' && isEdit && item?.id && companyId) {
       setActivityLoading(true)
-      apiClient.get(`/companies/${companyId}/inventory/items/${item.id}/activity`)
+      salesService.getInventoryItemActivity(companyId, item.id)
         .then(r => setActivityLog(r.data.data ?? []))
         .catch(() => {})
         .finally(() => setActivityLoading(false))
@@ -103,10 +103,10 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
 
       let saved: Item
       if (isEdit) {
-        const { data } = await apiClient.put(`/companies/${companyId}/inventory/items/${item.id}`, payload)
+        const { data } = await salesService.updateInventoryItem(companyId, item.id, payload)
         saved = data
       } else {
-        const { data } = await apiClient.post(`/companies/${companyId}/inventory/items`, payload)
+        const { data } = await salesService.createInventoryItem(companyId, payload)
         saved = data
       }
       onSaved(saved)

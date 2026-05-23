@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, Loader2, AlertCircle, UserPlus } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { ModalPortal } from '@/components/shared/ModalPortal'
 
 interface NewCustomer {
@@ -49,7 +49,7 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
         state: form.state.trim() || undefined,
         zip: form.zip.trim() || undefined,
       }
-      const { data } = await apiClient.post(`/companies/${companyId}/ar/customers`, payload)
+      const { data } = await salesService.createArCustomer(companyId, payload)
       onCreated({
         contactId: data.contactId ?? data.id,
         name: data.name ?? data.displayName ?? form.name,

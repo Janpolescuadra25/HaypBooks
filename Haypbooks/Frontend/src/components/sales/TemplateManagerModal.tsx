@@ -6,7 +6,7 @@ import {
   X, Plus, Edit2, Trash2, Star, StarOff, Save,
   Mail, Loader2, AlertCircle, Check, ChevronDown,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { ModalPortal } from '@/components/shared/ModalPortal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ export default function TemplateManagerModal({ companyId, onClose, onTemplatesCh
   const load = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const res = await apiClient.get<EmailTemplate[]>(`/companies/${companyId}/email-templates`)
+      const res = await salesService.getEmailTemplates(companyId)
       const list = res.data ?? []
       setTemplates(list)
       onTemplatesChange?.(list)
@@ -100,9 +100,9 @@ export default function TemplateManagerModal({ companyId, onClose, onTemplatesCh
     setSaving(true); setError('')
     try {
       if (editingId === 'new') {
-        await apiClient.post(`/companies/${companyId}/email-templates`, form)
+        await salesService.createEmailTemplate(companyId, form)
       } else {
-        await apiClient.put(`/companies/${companyId}/email-templates/${editingId}`, form)
+        await salesService.updateEmailTemplate(companyId, editingId, form)
       }
       setEditingId(null)
       setForm(BLANK_FORM)
@@ -117,7 +117,7 @@ export default function TemplateManagerModal({ companyId, onClose, onTemplatesCh
   const handleDelete = async (id: string) => {
     setDeleting(id)
     try {
-      await apiClient.delete(`/companies/${companyId}/email-templates/${id}`)
+      await salesService.deleteEmailTemplate(companyId, id)
       await load()
     } catch {
       setError('Failed to delete template.')
@@ -128,7 +128,7 @@ export default function TemplateManagerModal({ companyId, onClose, onTemplatesCh
 
   const handleSetDefault = async (tpl: EmailTemplate) => {
     try {
-      await apiClient.put(`/companies/${companyId}/email-templates/${tpl.id}`, { isDefault: true })
+      await salesService.updateEmailTemplate(companyId, tpl.id, { isDefault: true })
       await load()
     } catch {
       setError('Failed to set default template.')

@@ -7,7 +7,7 @@ import {
   Mail, User, FileText, Building2, ChevronDown, Check,
   Calendar, CreditCard, CheckCircle2, BookOpen, Settings2,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import type { Invoice } from './InvoicesPage'
@@ -94,7 +94,7 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
 
   // Load saved email templates
   useEffect(() => {
-    apiClient.get<EmailTemplate[]>(`/companies/${companyId}/email-templates`)
+    salesService.getEmailTemplates(companyId)
       .then(res => setTemplates(res.data ?? []))
       .catch(() => {/* non-fatal */})
   }, [companyId])
@@ -102,7 +102,7 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
   const handleSendNow = async () => {
     setSending(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/send`, {
+      await salesService.sendArInvoice(companyId, invoice.id, {
         subject,
         body,
         scheduledAt: scheduleState === 'open' && scheduledAt ? scheduledAt : undefined,
