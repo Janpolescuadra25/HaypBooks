@@ -6,7 +6,8 @@ import {
   Eye, FileText, CreditCard, Download, BookOpen, Clock, CheckSquare,
   Mail, LogIn, AlertCircle, Loader2, Send, Ban, Activity,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
+import HaypModal from '@/components/shared/HaypModal'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { useToast } from '@/components/ToastProvider'
@@ -192,7 +193,7 @@ export default function CustomerPortalPage() {
     setLoadingInvites(true)
     setInviteError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/customers`)
+      const { data } = await salesService.listCustomers(companyId)
       const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.data ?? []
       // Simulate portal status from real customer data
       const statuses: PortalInvitation['portalStatus'][] = ['Active', 'Invited', 'Disabled']
@@ -219,7 +220,7 @@ export default function CustomerPortalPage() {
     if (!companyId) return
     setCustomersLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/customers`)
+      const { data } = await salesService.listCustomers(companyId)
       const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.data ?? []
       setAllCustomers(raw.map((c: any) => ({ id: c.id, name: c.name ?? c.displayName ?? '—', email: c.email ?? '' })))
     } catch { /* non-blocking */ }
@@ -693,67 +694,61 @@ export default function CustomerPortalPage() {
 
       {/* ── Send Invites Modal ────────────────────────────────────────────────── */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col max-h-[80vh]">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
-              <h2 className="text-base font-bold text-slate-900">Send Portal Invitations</h2>
-              <button onClick={() => setShowInviteModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"><X size={16} /></button>
+        <HaypModal open={showInviteModal} onClose={() => setShowInviteModal(false)} title="Send Portal Invitations" size="md">
+          <div className="border-b border-slate-200">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                placeholder="Search customers…"
+                value={customerSearch}
+                onChange={e => setCustomerSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
-            <div className="p-5 border-b border-slate-200 shrink-0">
-              <div className="relative">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <input
-                  placeholder="Search customers…"
-                  value={customerSearch}
-                  onChange={e => setCustomerSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              {selectedCustomerIds.size > 0 && (
-                <p className="text-xs text-emerald-700 mt-2 font-medium">{selectedCustomerIds.size} customer{selectedCustomerIds.size !== 1 ? 's' : ''} selected</p>
-              )}
-            </div>
-            <div className="overflow-y-auto flex-1">
-              {customersLoading ? (
-                <div className="p-6 text-center text-slate-400">
-                  <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />Loading…
-                </div>
-              ) : filteredCustomers.length === 0 ? (
-                <div className="p-6 text-center text-slate-500 text-sm">No customers found.</div>
-              ) : filteredCustomers.map(c => (
-                <label key={c.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0">
-                  <input
-                    type="checkbox"
-                    checked={selectedCustomerIds.has(c.id)}
-                    onChange={() => {
-                      setSelectedCustomerIds(prev => {
-                        const next = new Set(prev)
-                        next.has(c.id) ? next.delete(c.id) : next.add(c.id)
-                        return next
-                      })
-                    }}
-                    className="accent-emerald-600"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{c.name}</p>
-                    {c.email && <p className="text-xs text-slate-500 truncate">{c.email}</p>}
-                  </div>
-                </label>
-              ))}
-            </div>
-            <div className="p-5 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
-              <button onClick={() => setShowInviteModal(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
-              <button
-                onClick={handleSendInvites}
-                disabled={selectedCustomerIds.size === 0}
-                title={portalActionsMessage}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm disabled:opacity-40"
-              >
-                <><Send size={14} /> Send {selectedCustomerIds.size > 0 ? `${selectedCustomerIds.size} ` : ''}Invitation{selectedCustomerIds.size !== 1 ? 's' : ''}</>
-              </button>
-            </div>
+            {selectedCustomerIds.size > 0 && (
+              <p className="text-xs text-emerald-700 mt-2 font-medium">{selectedCustomerIds.size} customer{selectedCustomerIds.size !== 1 ? 's' : ''} selected</p>
+            )}
           </div>
-        </div>
+          <div className="overflow-y-auto flex-1">
+            {customersLoading ? (
+              <div className="p-6 text-center text-slate-400">
+                <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />Loading…
+              </div>
+            ) : filteredCustomers.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-sm">No customers found.</div>
+            ) : filteredCustomers.map(c => (
+              <label key={c.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0">
+                <input
+                  type="checkbox"
+                  checked={selectedCustomerIds.has(c.id)}
+                  onChange={() => {
+                    setSelectedCustomerIds(prev => {
+                      const next = new Set(prev)
+                      next.has(c.id) ? next.delete(c.id) : next.add(c.id)
+                      return next
+                    })
+                  }}
+                  className="accent-emerald-600"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">{c.name}</p>
+                  {c.email && <p className="text-xs text-slate-500 truncate">{c.email}</p>}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+            <button onClick={() => setShowInviteModal(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
+            <button
+              onClick={handleSendInvites}
+              disabled={selectedCustomerIds.size === 0}
+              title={portalActionsMessage}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm disabled:opacity-40"
+            >
+              <><Send size={14} /> Send {selectedCustomerIds.size > 0 ? `${selectedCustomerIds.size} ` : ''}Invitation{selectedCustomerIds.size !== 1 ? 's' : ''}</>
+            </button>
+          </div>
+        </HaypModal>
       )}
     </div>
   )
