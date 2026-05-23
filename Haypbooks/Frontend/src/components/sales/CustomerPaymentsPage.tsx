@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowUpDown, Ban, Plus, RefreshCw, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
@@ -295,9 +295,7 @@ export default function CustomerPaymentsPage() {
     setLoading(true)
     setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/payments`, {
-        params: { limit: PAGE_SIZE, offset: pg * PAGE_SIZE },
-      })
+      const { data } = await salesService.listArPayments(companyId, { limit: PAGE_SIZE, offset: pg * PAGE_SIZE })
       const raw: any[] = Array.isArray(data) ? data : data?.items || data?.records || []
       setItems(raw.map(normalizeRow))
       setHasMore(raw.length === PAGE_SIZE)
@@ -316,7 +314,7 @@ export default function CustomerPaymentsPage() {
     if (!companyId) return
     setCustomersLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const { data } = await salesService.listArCustomers(companyId)
       const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? []
       setCustomers(
         raw.map((c: any) => ({
@@ -341,10 +339,8 @@ export default function CustomerPaymentsPage() {
     }
 
     setInvoicesLoading(true)
-    return apiClient
-      .get(`/companies/${companyId}/ar/invoices`, {
-        params: { customerId, limit: 100 },
-      })
+    return salesService
+      .listArInvoices(companyId, { customerId, limit: 100 })
       .then(({ data }) => {
         const raw: any[] = Array.isArray(data) ? data : data?.items || []
         setInvoices(
@@ -546,11 +542,11 @@ export default function CustomerPaymentsPage() {
     setSaveError('')
     try {
       if (editingPaymentId) {
-        await apiClient.put(`/companies/${companyId}/ar/payments/${editingPaymentId}`, {
+        await salesService.updateArPayment(companyId, editingPaymentId, {
           allocations: payloadAllocations,
         })
       } else {
-        await apiClient.post(`/companies/${companyId}/ar/payments`, {
+        await salesService.createArPayment(companyId, {
           customerId: form.customerId || undefined,
           amount: parsedAmount,
           paymentDate: form.date,
@@ -583,7 +579,7 @@ export default function CustomerPaymentsPage() {
     if (!window.confirm('Void this payment? This cannot be undone.')) return
     setVoidingId(id)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/payments/${id}/void`)
+      await salesService.voidArPayment(companyId, id)
       fetchPayments(page)
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to void payment')
@@ -642,7 +638,7 @@ export default function CustomerPaymentsPage() {
     if (!companyId) return
     setPaymentActivityLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/payments/${paymentId}/activity`)
+      const { data } = await salesService.getArPaymentActivity(companyId, paymentId)
       setPaymentActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
     } catch {
       setPaymentActivity([])
