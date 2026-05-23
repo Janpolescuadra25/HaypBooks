@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Clock, Download, Plus, RefreshCw, X, ArrowUpDown } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import HaypModal from '@/components/shared/HaypModal'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypActionItem, HaypBulkAction, HaypColumn } from '@/components/shared/HaypDataTable.types'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
@@ -178,9 +181,7 @@ export default function CollectionsCenterPage() {
     if (!companyId) return
     setActivityLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/integrations/audit-logs`, {
-        params: { tableName: 'CollectionsCase', limit: 8 },
-      })
+      const { data } = await salesService.getAuditLogs(companyId, { tableName: 'CollectionsCase', limit: 8 })
       setActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
     } catch {
       setActivity([])
@@ -198,7 +199,7 @@ export default function CollectionsCenterPage() {
       const params: Record<string, string> = {}
       if (statusTab !== 'ALL') params.status = statusTab
       if (priorityFilter) params.priority = priorityFilter
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/collections`, { params })
+      const { data } = await salesService.listArCollections(companyId, params)
       const raw: any[] = Array.isArray(data) ? data : data?.items || []
       setItems(raw.map(normalizeCase))
     } catch (err: any) {
@@ -238,16 +239,15 @@ export default function CollectionsCenterPage() {
 
   // ─── Batch ops ────────────────────────────────────────────────────────────
 
-  async function handleBatchDelete() {
-    if (!companyId || selectedIds.size === 0) return
-    if (!window.confirm(`Delete ${selectedIds.size} case(s)?`)) return
+  async function handleBatchDelete(selectedIds: string[]) {
+    if (!companyId || selectedIds.length === 0) return
+    if (!window.confirm(`Delete ${selectedIds.length} case(s)?`)) return
     setBatchLoading(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/collections/batch/delete`, { ids: Array.from(selectedIds) })
-      setSelectedIds(new Set())
+      await salesService.batchDeleteArCollections(companyId, selectedIds)
       fetchData()
       loadActivity()
-      showToast(`Deleted ${selectedIds.size} case(s)`)
+      showToast(`Deleted ${selectedIds.length} case(s)`)
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Batch delete failed')
     } finally {
@@ -255,15 +255,14 @@ export default function CollectionsCenterPage() {
     }
   }
 
-  async function handleBatchStatus(status: CaseStatus) {
-    if (!companyId || selectedIds.size === 0) return
+  async function handleBatchStatus(status: CaseStatus, selectedIds: string[]) {
+    if (!companyId || selectedIds.length === 0) return
     setBatchLoading(true)
     try {
-      await apiClient.patch(`/companies/${companyId}/ar/collections/batch/status`, { ids: Array.from(selectedIds), status })
-      setSelectedIds(new Set())
+      await salesService.batchUpdateArCollectionsStatus(companyId, selectedIds, status)
       fetchData()
       loadActivity()
-      showToast(`Updated ${selectedIds.size} case(s) to ${STATUS_LABELS[status]}`)
+      showToast(`Updated ${selectedIds.length} case(s) to ${STATUS_LABELS[status]}`)
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Batch update failed')
     } finally {
@@ -280,7 +279,7 @@ export default function CollectionsCenterPage() {
       const params: Record<string, string> = {}
       if (statusTab !== 'ALL') params.status = statusTab
       if (priorityFilter) params.priority = priorityFilter
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/collections/export`, { params })
+      const { data } = await salesService.exportArCollections(companyId, params)
       const blob = new Blob([data], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a'); a.href = url; a.download = 'collections-export.csv'; a.click()
@@ -300,7 +299,7 @@ export default function CollectionsCenterPage() {
     if (!window.confirm('Delete this collection case?')) return
     setActioningId(id)
     try {
-      await apiClient.delete(`/companies/${companyId}/ar/collections/${id}`)
+      await salesService.deleteArCollection(companyId, id)
       setDrawerCase(null)
       fetchData()
       loadActivity()
@@ -354,10 +353,10 @@ export default function CollectionsCenterPage() {
         promisedDate: form.promisedDate || undefined,
       }
       if (editingCase) {
-        await apiClient.put(`/companies/${companyId}/ar/collections/${editingCase.id}`, payload)
+        await salesService.updateArCollection(companyId, editingCase.id, payload)
         showToast('Case updated')
       } else {
-        await apiClient.post(`/companies/${companyId}/ar/collections`, payload)
+        await salesService.createArCollection(companyId, payload)
         showToast('Case created')
       }
       setModalOpen(false)
@@ -385,6 +384,59 @@ export default function CollectionsCenterPage() {
     }
     return rows
   }, [items, search])
+
+  const tableColumns: HaypColumn<CaseRow>[] = useMemo(() => cols.filter(c => c.visible).map(c => {
+    const base: HaypColumn<CaseRow> = {
+      id: c.key,
+      header: c.label,
+      accessorKey: c.key as keyof CaseRow,
+      size: c.width,
+      enableSorting: true,
+      align: c.align,
+    }
+    if (c.key === 'caseNumber') {
+      base.render = (value) => <span className="font-mono text-xs text-slate-700">{value}</span>
+    }
+    if (c.key === 'subject') {
+      base.render = (value) => <span className="font-medium text-slate-900">{value}</span>
+    }
+    if (c.key === 'customerId') {
+      base.render = (value) => <span className="text-slate-600 font-mono text-xs">{value ? String(value).slice(0, 12) + '…' : '—'}</span>
+    }
+    if (c.key === 'status') {
+      base.render = (value) => <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${STATUS_COLOR[String(value)]}`}>{STATUS_LABELS[String(value)] ?? value}</span>
+    }
+    if (c.key === 'priority') {
+      base.render = (value) => <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_COLOR[String(value)]}`}>{String(value).charAt(0) + String(value).slice(1).toLowerCase()}</span>
+    }
+    if (c.key === 'promisedAmount') {
+      base.render = (value) => value != null ? formatCurrency(Number(value), currency) : '—'
+    }
+    if (c.key === 'promisedDate' || c.key === 'createdAt') {
+      base.render = (value) => fmtDate(value as string | null)
+    }
+    return base
+  }), [cols, currency])
+
+  const actions: HaypActionItem[] = useMemo(() => [
+    {
+      label: 'Edit',
+      onClick: (_id, row) => openEdit(row),
+    },
+    {
+      label: 'Delete',
+      danger: true,
+      onClick: (_id, row) => handleDelete(row.id),
+    },
+  ], [handleDelete, openEdit])
+
+  const bulkActions: HaypBulkAction[] = useMemo(() => [
+    { label: 'Delete', variant: 'danger', onClick: (ids) => handleBatchDelete(ids) },
+    { label: 'Mark Open', onClick: (ids) => handleBatchStatus('OPEN', ids) },
+    { label: 'Mark In Progress', onClick: (ids) => handleBatchStatus('IN_PROGRESS', ids) },
+    { label: 'Mark Resolved', onClick: (ids) => handleBatchStatus('RESOLVED', ids) },
+    { label: 'Mark Closed', onClick: (ids) => handleBatchStatus('CLOSED', ids) },
+  ], [handleBatchDelete, handleBatchStatus])
 
   const [sortKey, setSortKey] = useState<SortKey>('createdAt')
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
@@ -500,108 +552,32 @@ export default function CollectionsCenterPage() {
         </div>
       </div>
 
-      {/* Batch bar */}
-      {selectedIds.size > 0 && (
-        <div className="bg-emerald-700 text-white px-6 py-2.5 flex items-center gap-3 text-sm font-medium">
-          <span>{selectedIds.size} selected</span>
-          <button onClick={handleBatchDelete} disabled={batchLoading} className="px-3 py-1 bg-rose-500 hover:bg-rose-600 rounded text-white text-xs font-semibold disabled:opacity-50">Delete</button>
-          {(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const).map(s => (
-            <button key={s} onClick={() => handleBatchStatus(s)} disabled={batchLoading} className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold disabled:opacity-50">
-              → {STATUS_LABELS[s]}
-            </button>
-          ))}
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto p-1 hover:bg-white/20 rounded"><X size={14} /></button>
-        </div>
-      )}
-
       {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${collectionsCenterIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
-            <thead>
-              <tr className="bg-slate-100 text-slate-700">
-                <th className="px-3 py-3 w-10 border-r border-slate-200">
-                  <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleAll} className="accent-emerald-600" />
-                </th>
-                {visibleCols.map((col, ci) => (
-                  <th
-                    key={col.key}
-                    style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 overflow-hidden ${col.align === 'right' ? 'text-right' : 'text-left'}`}
-                    title={col.label}
-                  >
-                    <button
-                      onClick={() => toggleSort(col.key as SortKey)}
-                      className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2"
-                      style={{ justifyContent: col.align === 'right' ? 'flex-end' : 'flex-start' }}
-                    >
-                      <span className="truncate">{col.label}</span>
-                      <ArrowUpDown size={11} className={`shrink-0 ${sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'}`} />
-                    </button>
-                    {ci < visibleCols.length - 1 && (
-                      <span onMouseDown={e => onResizeStart(e, col.key)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />
-                    )}
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-400">
-                  <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />Loading…
-                </td></tr>
-              ) : error ? (
-                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
-                  <p className="text-rose-500 font-medium">{error}</p>
-                  <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
-                </td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No collection cases found.</td></tr>
-              ) : (
-                sorted.map(row => (
-                  <tr key={row.id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}>
-                    <td className="px-3 py-3 border-r border-slate-100">
-                      <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
-                    </td>
-                    {visibleCols.map(col => (
-                      <td key={col.key} className={`px-4 py-3 truncate cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCase(row)}>
-                        {col.key === 'caseNumber' && <span className="font-mono text-xs text-slate-700">{row.caseNumber}</span>}
-                        {col.key === 'subject' && <span className="font-medium text-slate-900 truncate max-w-[180px] inline-block" title={row.subject}>{row.subject}</span>}
-                        {col.key === 'customerId' && <span className="text-slate-600 font-mono text-xs">{row.customerId ? row.customerId.slice(0, 12) + '…' : '—'}</span>}
-                        {col.key === 'status' && (
-                          <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${STATUS_COLOR[row.status]}`}>
-                            {STATUS_LABELS[row.status]}
-                          </span>
-                        )}
-                        {col.key === 'priority' && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_COLOR[row.priority]}`}>
-                            {row.priority.charAt(0) + row.priority.slice(1).toLowerCase()}
-                          </span>
-                        )}
-                        {col.key === 'assignedTo' && <span className="text-slate-600">{row.assignedTo ?? '—'}</span>}
-                        {col.key === 'promisedAmount' && (
-                          <span className="font-semibold text-slate-800">
-                            {row.promisedAmount != null ? formatCurrency(row.promisedAmount, currency) : '—'}
-                          </span>
-                        )}
-                        {col.key === 'promisedDate' && <span className="text-slate-600">{fmtDate(row.promisedDate)}</span>}
-                        {col.key === 'createdAt' && <span className="text-slate-600">{fmtDate(row.createdAt)}</span>}
-                      </td>
-                    ))}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => openEdit(row)} className="text-xs font-semibold text-slate-500 hover:text-slate-700 hover:underline">Edit</button>
-                        <span className="text-slate-300">·</span>
-                        <button onClick={() => handleDelete(row.id)} disabled={actioningId === row.id} className="text-xs font-semibold text-rose-500 hover:underline disabled:opacity-40">Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <HaypDataTable
+          data={sorted}
+          columns={tableColumns}
+          tableId="collections-center"
+          title="Collections Center"
+          description="Manage collection cases and payment promises."
+          headerActions={
+            <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">
+              <Plus size={16} /> New Case
+            </button>
+          }
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          actions={actions}
+          bulkActions={bulkActions}
+          onRefresh={fetchData}
+          onExport={handleExport}
+          exportLabel="Export"
+          onRowClick={row => setDrawerCase(row)}
+          emptyTitle="No collection cases found"
+          emptySubtitle="Adjust your filters or search to see results."
+          loading={loading}
+          className="bg-white rounded-xl border border-slate-200 shadow-sm"
+        />
         {!loading && !error && (
           <p className="mt-3 text-sm text-slate-500">{filtered.length} case(s) shown · {items.length} total</p>
         )}
@@ -635,141 +611,151 @@ export default function CollectionsCenterPage() {
 
       {/* Detail Drawer */}
       {drawerCase && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/30" onClick={() => setDrawerCase(null)} />
-          <div className="w-full max-w-md bg-white shadow-2xl flex flex-col overflow-y-auto">
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">{drawerCase.caseNumber}</h2>
-                <p className="text-sm text-slate-500 mt-0.5">{drawerCase.subject}</p>
-              </div>
-              <button onClick={() => setDrawerCase(null)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        <HaypModal
+          open={true}
+          onClose={() => setDrawerCase(null)}
+          title={drawerCase.caseNumber}
+          subtitle={drawerCase.subject}
+          size="xl"
+          footer={
+            <div className="flex gap-2 w-full justify-end">
+              <button
+                onClick={() => { openEdit(drawerCase); setDrawerCase(null) }}
+                className="flex-1 px-4 py-2 text-sm font-semibold border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
+              >
+                Edit Case
+              </button>
+              <button
+                onClick={() => handleDelete(drawerCase.id)}
+                disabled={actioningId === drawerCase.id}
+                className="px-4 py-2 text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-lg disabled:opacity-50"
+              >
+                Delete
+              </button>
             </div>
-            <div className="px-5 py-4 space-y-4 flex-1">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Status</p>
-                  <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${STATUS_COLOR[drawerCase.status]}`}>{STATUS_LABELS[drawerCase.status]}</span>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Priority</p>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_COLOR[drawerCase.priority]}`}>{drawerCase.priority}</span>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Assigned To</p>
-                  <p className="font-semibold text-slate-800">{drawerCase.assignedTo ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Opened</p>
-                  <p className="font-semibold text-slate-800">{fmtDate(drawerCase.createdAt)}</p>
-                </div>
-                {drawerCase.promisedAmount != null && (
-                  <>
-                    <div>
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Promise Amount</p>
-                      <p className="font-bold text-lg text-slate-900">{formatCurrency(drawerCase.promisedAmount, currency)}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Promise Date</p>
-                      <p className="font-semibold text-slate-800">{fmtDate(drawerCase.promisedDate)}</p>
-                    </div>
-                  </>
-                )}
-                {drawerCase.customerId && (
-                  <div className="col-span-2">
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Customer ID</p>
-                    <p className="font-mono text-xs text-slate-700">{drawerCase.customerId}</p>
-                  </div>
-                )}
-                {drawerCase.invoiceId && (
-                  <div className="col-span-2">
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Invoice ID</p>
-                    <p className="font-mono text-xs text-slate-700">{drawerCase.invoiceId}</p>
-                  </div>
-                )}
+          }
+        >
+          <div className="space-y-4 px-5 py-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Status</p>
+                <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${STATUS_COLOR[drawerCase.status]}`}>{STATUS_LABELS[drawerCase.status]}</span>
               </div>
-              {drawerCase.notes && (
-                <div>
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Notes</p>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{drawerCase.notes}</p>
+              <div>
+                <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Priority</p>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_COLOR[drawerCase.priority]}`}>{drawerCase.priority}</span>
+              </div>
+              <div>
+                <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Assigned To</p>
+                <p className="font-semibold text-slate-800">{drawerCase.assignedTo ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Opened</p>
+                <p className="font-semibold text-slate-800">{fmtDate(drawerCase.createdAt)}</p>
+              </div>
+              {drawerCase.promisedAmount != null && (
+                <>
+                  <div>
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Promise Amount</p>
+                    <p className="font-bold text-lg text-slate-900">{formatCurrency(drawerCase.promisedAmount, currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Promise Date</p>
+                    <p className="font-semibold text-slate-800">{fmtDate(drawerCase.promisedDate)}</p>
+                  </div>
+                </>
+              )}
+              {drawerCase.customerId && (
+                <div className="col-span-2">
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Customer ID</p>
+                  <p className="font-mono text-xs text-slate-700">{drawerCase.customerId}</p>
+                </div>
+              )}
+              {drawerCase.invoiceId && (
+                <div className="col-span-2">
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Invoice ID</p>
+                  <p className="font-mono text-xs text-slate-700">{drawerCase.invoiceId}</p>
                 </div>
               )}
             </div>
-            <div className="px-5 py-4 border-t border-slate-200 flex gap-2">
-              <button onClick={() => { openEdit(drawerCase); setDrawerCase(null) }} className="flex-1 px-4 py-2 text-sm font-semibold border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Edit Case</button>
-              <button onClick={() => handleDelete(drawerCase.id)} disabled={actioningId === drawerCase.id} className="px-4 py-2 text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-lg disabled:opacity-50">Delete</button>
-            </div>
+            {drawerCase.notes && (
+              <div>
+                <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Notes</p>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap">{drawerCase.notes}</p>
+              </div>
+            )}
           </div>
-        </div>
+        </HaypModal>
       )}
 
       {/* Create / Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setModalOpen(false)}>
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">{editingCase ? 'Edit Case' : 'New Collection Case'}</h2>
-              <button onClick={() => setModalOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        <HaypModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={editingCase ? 'Edit Case' : 'New Collection Case'}
+          size="lg"
+          footer={
+            <div className="flex justify-end gap-2 w-full">
+              <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="submit" form="collection-case-form" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                {saving ? 'Saving…' : editingCase ? 'Update Case' : 'Create Case'}
+              </button>
             </div>
-            <form onSubmit={handleSave} className="p-4 space-y-4">
+          }
+        >
+          <form id="collection-case-form" onSubmit={handleSave} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Subject *</label>
+              <input
+                required
+                value={form.subject}
+                onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                placeholder="Describe this case…"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Subject *</label>
-                <input
-                  required
-                  value={form.subject}
-                  onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="Describe this case…"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
-                  <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as CasePriority }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
-                  <input value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Collector name" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Customer ID</label>
-                  <input value={form.customerId} onChange={e => setForm(f => ({ ...f, customerId: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono" placeholder="Optional" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Invoice ID</label>
-                  <input value={form.invoiceId} onChange={e => setForm(f => ({ ...f, invoiceId: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono" placeholder="Optional" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Promise Amount</label>
-                  <input type="number" min="0" step="0.01" value={form.promisedAmount} onChange={e => setForm(f => ({ ...f, promisedAmount: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Promise Date</label>
-                  <input type="date" value={form.promisedDate} onChange={e => setForm(f => ({ ...f, promisedDate: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
-                </div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+                <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as CasePriority }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                <textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none" placeholder="Collection notes…" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+                <input value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Collector name" />
               </div>
-              {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
-                  {saving ? 'Saving…' : editingCase ? 'Update Case' : 'Create Case'}
-                </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Customer ID</label>
+                <input value={form.customerId} onChange={e => setForm(f => ({ ...f, customerId: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono" placeholder="Optional" />
               </div>
-            </form>
-          </div>
-        </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Invoice ID</label>
+                <input value={form.invoiceId} onChange={e => setForm(f => ({ ...f, invoiceId: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono" placeholder="Optional" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Promise Amount</label>
+                <input type="number" min="0" step="0.01" value={form.promisedAmount} onChange={e => setForm(f => ({ ...f, promisedAmount: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Promise Date</label>
+                <input type="date" value={form.promisedDate} onChange={e => setForm(f => ({ ...f, promisedDate: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+              <textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none" placeholder="Collection notes…" />
+            </div>
+            {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
+          </form>
+        </HaypModal>
       )}
     </div>
   )
