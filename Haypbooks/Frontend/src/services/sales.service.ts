@@ -212,6 +212,15 @@ export const salesService = {
   getEmailTemplates: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/email-templates`),
 
+  createEmailTemplate: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/email-templates`, body),
+
+  updateEmailTemplate: (companyId: string, templateId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/email-templates/${templateId}`, body),
+
+  deleteEmailTemplate: (companyId: string, templateId: string) =>
+    apiClient.delete(`/companies/${companyId}/email-templates/${templateId}`),
+
   // ─── AR Recurring Invoices ─────────────────────────────────────────────
   listArRecurringInvoices: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/ar/recurring-invoices`),
@@ -346,8 +355,17 @@ export const salesService = {
   getInventoryItem: (companyId: string, itemId: string) =>
     apiClient.get(`/companies/${companyId}/inventory/items/${itemId}`),
 
+  createInventoryItem: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/inventory/items`, body),
+
+  updateInventoryItem: (companyId: string, itemId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/inventory/items/${itemId}`, body),
+
   deleteInventoryItem: (companyId: string, itemId: string) =>
     apiClient.delete(`/companies/${companyId}/inventory/items/${itemId}`),
+
+  getInventoryItemActivity: (companyId: string, itemId: string) =>
+    apiClient.get(`/companies/${companyId}/inventory/items/${itemId}/activity`),
 
   // ─── Credit Notes ──────────────────────────────────────────────────────
   listCreditNotes: (companyId: string, query?: any) =>
