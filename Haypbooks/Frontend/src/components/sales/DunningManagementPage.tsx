@@ -5,7 +5,8 @@ import {
   Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
   Download, Eye, Bell, BellRing, FileX, ChevronDown, ArrowUpDown, Clock,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import HaypModal from '@/components/shared/HaypModal'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
@@ -135,7 +136,7 @@ export default function DunningManagementPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/invoices?status=OVERDUE`)
+      const { data } = await salesService.listArInvoices(companyId, { status: 'OVERDUE' })
       setItems(Array.isArray(data) ? data : data?.items ?? data?.invoices ?? [])
       setError('')
     } catch (e: any) {
@@ -172,7 +173,7 @@ export default function DunningManagementPage() {
   const handleSendReminder = async (invoiceId: string, level: number) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/ar/dunning/send`, { invoiceId, level })
+      await salesService.sendArDunningNotice(companyId, invoiceId, level)
       toast.success(`Level ${level} reminder sent`); fetchItems()
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Send failed') }
   }
@@ -180,7 +181,7 @@ export default function DunningManagementPage() {
   const handleUpdateLevel = async (invoiceId: string, level: number) => {
     if (!companyId) return
     try {
-      await apiClient.patch(`/companies/${companyId}/ar/dunning/${invoiceId}/level`, { level })
+      await salesService.updateArDunningLevel(companyId, invoiceId, level)
       toast.success('Dunning level updated'); fetchItems()
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Update failed') }
   }
@@ -189,7 +190,7 @@ export default function DunningManagementPage() {
     if (!companyId || !selectedIds.size) return
     setBatchLoading(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/dunning/batch/send`, { invoiceIds: [...selectedIds], level: batchLevel })
+      await salesService.sendArDunningBatch(companyId, [...selectedIds], batchLevel)
       toast.success(`Reminders sent to ${selectedIds.size} invoice(s)`); setSelectedIds(new Set()); fetchItems()
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Batch send failed') }
     finally { setBatchLoading(false) }
@@ -212,7 +213,7 @@ export default function DunningManagementPage() {
     if (!companyId) return
     setDunningActivityLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/dunning/${invoiceId}/activity`)
+      const { data } = await salesService.getArDunningActivity(companyId, invoiceId)
       setDunningActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
     } catch {
       setDunningActivity([])
@@ -420,96 +421,91 @@ export default function DunningManagementPage() {
       )}
 
       {drawerInvoice && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/30" onClick={() => setDrawerInvoice(null)} />
-          <div className="flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">{drawerInvoice.invoiceNumber}</h2>
-                <p className="mt-0.5 text-sm text-slate-500">{getCustomer(drawerInvoice)}</p>
-              </div>
-              <button onClick={() => setDrawerInvoice(null)} title="Close details" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        <HaypModal
+          open={true}
+          onClose={() => setDrawerInvoice(null)}
+          title="Invoice Details"
+          size="xl"
+          footer={
+            <div className="flex gap-2 w-full justify-end">
+              <button
+                onClick={() => handleSendReminder(drawerInvoice.id, Math.max(1, getLevel(drawerInvoice)))}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                Send Reminder
+              </button>
+              <button
+                onClick={() => setDrawerInvoice(null)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Close
+              </button>
             </div>
-            <div className="flex border-b border-slate-200 bg-slate-50 px-5">
-              {(['details', 'activity'] as const).map(tab => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => {
-                    setDrawerTab(tab)
-                    if (tab === 'activity' && dunningActivity.length === 0) {
-                      loadDrawerActivity(drawerInvoice.id)
-                    }
-                  }}
-                  className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                >
-                  {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
-                </button>
+          }
+        >
+          <div className="flex border-b border-slate-200 bg-slate-50 px-5 py-3">
+            {(['details', 'activity'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => {
+                  setDrawerTab(tab)
+                  if (tab === 'activity' && dunningActivity.length === 0) {
+                    loadDrawerActivity(drawerInvoice.id)
+                  }
+                }}
+                className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              >
+                {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+              </button>
+            ))}
+          </div>
+          {drawerTab === 'activity' ? (
+            <div className="space-y-3 px-5 py-4">
+              {dunningActivityLoading ? (
+                <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+              ) : dunningActivity.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
+              ) : dunningActivity.map((log: any) => (
+                <div key={log.id} className="flex items-start gap-3 text-sm">
+                  <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                  <div>
+                    <span className="font-semibold text-slate-700">{log.action}</span>
+                    {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                    <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                  </div>
+                </div>
               ))}
             </div>
-            {drawerTab === 'activity' ? (
-              <div className="space-y-3 px-5 py-4">
-                {dunningActivityLoading ? (
-                  <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
-                ) : dunningActivity.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
-                ) : dunningActivity.map((log: any) => (
-                  <div key={log.id} className="flex items-start gap-3 text-sm">
-                    <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
-                    <div>
-                      <span className="font-semibold text-slate-700">{log.action}</span>
-                      {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
-                      <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))}
+          ) : (
+            <div className="space-y-4 px-5 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Due Date</p>
+                  <p className="font-semibold text-slate-800">{new Date(drawerInvoice.dueDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Days Overdue</p>
+                  <p className="font-bold text-xl text-red-600">{calcDaysOverdue(drawerInvoice.dueDate)}d</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Amount Due</p>
+                  <p className="font-semibold text-slate-800">{formatCurrency(getAmount(drawerInvoice), currency)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Status</p>
+                  <p className="font-semibold text-slate-800">{drawerInvoice.status ?? 'OVERDUE'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Dunning Level</p>
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${LEVEL_META[getLevel(drawerInvoice)]?.cls ?? LEVEL_META[0].cls}`}>
+                    {LEVEL_META[getLevel(drawerInvoice)]?.label ?? LEVEL_META[0].label}
+                  </span>
+                </div>
               </div>
-            ) : (
-              <>
-                <div className="flex-1 space-y-4 px-5 py-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Due Date</p>
-                      <p className="font-semibold text-slate-800">{new Date(drawerInvoice.dueDate).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Days Overdue</p>
-                      <p className="font-bold text-xl text-red-600">{calcDaysOverdue(drawerInvoice.dueDate)}d</p>
-                    </div>
-                    <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Amount Due</p>
-                      <p className="font-semibold text-slate-800">{formatCurrency(getAmount(drawerInvoice), currency)}</p>
-                    </div>
-                    <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Status</p>
-                      <p className="font-semibold text-slate-800">{drawerInvoice.status ?? 'OVERDUE'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Dunning Level</p>
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${LEVEL_META[getLevel(drawerInvoice)]?.cls ?? LEVEL_META[0].cls}`}>
-                        {LEVEL_META[getLevel(drawerInvoice)]?.label ?? LEVEL_META[0].label}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2 border-t border-slate-200 px-5 py-4">
-                  <button
-                    onClick={() => handleSendReminder(drawerInvoice.id, Math.max(1, getLevel(drawerInvoice)))}
-                    className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                  >
-                    Send Reminder
-                  </button>
-                  <button
-                    onClick={() => setDrawerInvoice(null)}
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    Close
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
+        </HaypModal>
       )}
     </div>
   )
