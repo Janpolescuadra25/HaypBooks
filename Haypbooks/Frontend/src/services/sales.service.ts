@@ -216,13 +216,16 @@ export const salesService = {
   listArRecurringInvoices: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/ar/recurring-invoices`),
 
+  createArRecurringInvoice: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/recurring-invoices`, body),
+
   getArRecurringInvoice: (companyId: string, id: string) =>
     apiClient.get(`/companies/${companyId}/ar/recurring-invoices/${id}`),
 
   generateRecurringInvoice: (companyId: string, id: string) =>
     apiClient.post(`/companies/${companyId}/ar/recurring-invoices/${id}/generate`),
 
-  updateRecurringInvoice: (companyId: string, id: string, body: { status: string }) =>
+  updateRecurringInvoice: (companyId: string, id: string, body: Record<string, any>) =>
     apiClient.put(`/companies/${companyId}/ar/recurring-invoices/${id}`, body),
 
   batchDeleteRecurringInvoices: (companyId: string, ids: string[]) =>
