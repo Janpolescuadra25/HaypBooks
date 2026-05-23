@@ -175,6 +175,18 @@ export const salesService = {
   listArInvoices: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/ar/invoices`, { params: query }),
 
+  sendArDunningNotice: (companyId: string, invoiceId: string, level: number) =>
+    apiClient.post(`/companies/${companyId}/ar/dunning/send`, { invoiceId, level }),
+
+  updateArDunningLevel: (companyId: string, invoiceId: string, level: number) =>
+    apiClient.patch(`/companies/${companyId}/ar/dunning/${invoiceId}/level`, { level }),
+
+  sendArDunningBatch: (companyId: string, invoiceIds: string[], level: number) =>
+    apiClient.post(`/companies/${companyId}/ar/dunning/batch/send`, { invoiceIds, level }),
+
+  getArDunningActivity: (companyId: string, invoiceId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/dunning/${invoiceId}/activity`),
+
   sendArInvoice: (companyId: string, invoiceId: string) =>
     apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/send`),
 
@@ -349,6 +361,27 @@ export const salesService = {
 
   voidPayment: (companyId: string, paymentId: string) =>
     apiClient.post(`/companies/${companyId}/payments/${paymentId}/void`),
+
+  listArCollections: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/collections`, { params: query }),
+
+  batchDeleteArCollections: (companyId: string, ids: string[]) =>
+    apiClient.post(`/companies/${companyId}/ar/collections/batch/delete`, { ids }),
+
+  batchUpdateArCollectionsStatus: (companyId: string, ids: string[], status: string) =>
+    apiClient.patch(`/companies/${companyId}/ar/collections/batch/status`, { ids, status }),
+
+  exportArCollections: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/collections/export`, { params: query }),
+
+  deleteArCollection: (companyId: string, collectionId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/collections/${collectionId}`),
+
+  createArCollection: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/collections`, body),
+
+  updateArCollection: (companyId: string, collectionId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/collections/${collectionId}`, body),
 
   getArCustomerGroup: (companyId: string, groupId: string) =>
     apiClient.get(`/companies/${companyId}/ar/customer-groups/${groupId}`),
