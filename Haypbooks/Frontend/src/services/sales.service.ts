@@ -309,6 +309,9 @@ export const salesService = {
   listInventoryItems: (companyId: string, query?: { limit?: number; type?: string; search?: string }) =>
     apiClient.get(`/companies/${companyId}/inventory/items`, { params: query }),
 
+  getInventoryItem: (companyId: string, itemId: string) =>
+    apiClient.get(`/companies/${companyId}/inventory/items/${itemId}`),
+
   deleteInventoryItem: (companyId: string, itemId: string) =>
     apiClient.delete(`/companies/${companyId}/inventory/items/${itemId}`),
 
