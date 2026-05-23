@@ -155,22 +155,6 @@ export const salesService = {
   listArCustomerGroups: (companyId: string) =>
     apiClient.get<CustomerGroup[]>(`/companies/${companyId}/ar/customer-groups`),
 
-  // ─── Invoices ─────────────────────────────────────────────────────────
-  listInvoices: (companyId: string, query?: any) =>
-    apiClient.get(`/companies/${companyId}/invoices`, { params: query }),
-
-  getInvoice: (companyId: string, invoiceId: string) =>
-    apiClient.get(`/companies/${companyId}/invoices/${invoiceId}`),
-
-  createInvoice: (companyId: string, body: any) =>
-    apiClient.post(`/companies/${companyId}/invoices`, body),
-
-  updateInvoice: (companyId: string, invoiceId: string, body: any) =>
-    apiClient.put(`/companies/${companyId}/invoices/${invoiceId}`, body),
-
-  deleteInvoice: (companyId: string, invoiceId: string) =>
-    apiClient.delete(`/companies/${companyId}/invoices/${invoiceId}`),
-
   // ─── AR Invoices ───────────────────────────────────────────────────────
   listArInvoices: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/ar/invoices`, { params: query }),
@@ -187,18 +171,53 @@ export const salesService = {
   getArDunningActivity: (companyId: string, invoiceId: string) =>
     apiClient.get(`/companies/${companyId}/ar/dunning/${invoiceId}/activity`),
 
-  sendArInvoice: (companyId: string, invoiceId: string) =>
-    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/send`),
+  sendArInvoice: (companyId: string, invoiceId: string, body?: any) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/send`, body),
 
-  duplicateArInvoice: (companyId: string, invoiceId: string) =>
-    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/duplicate`),
+  getArInvoice: (companyId: string, invoiceId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/invoices/${invoiceId}`),
+
+  getArInvoiceActivity: (companyId: string, invoiceId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/invoices/${invoiceId}/activity`),
+
+  updateArInvoice: (companyId: string, invoiceId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/invoices/${invoiceId}`, body),
+
+  createArInvoice: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices`, body),
 
   voidArInvoice: (companyId: string, invoiceId: string) =>
     apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/void`),
 
+  // ─── AR Payments ──────────────────────────────────────────────────────
+  listArPayments: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ar/payments`, { params: query }),
+
+  createArPayment: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/payments`, body),
+
+  updateArPayment: (companyId: string, paymentId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ar/payments/${paymentId}`, body),
+
+  voidArPayment: (companyId: string, paymentId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/payments/${paymentId}/void`),
+
+  getArPaymentActivity: (companyId: string, paymentId: string) =>
+    apiClient.get(`/companies/${companyId}/ar/payments/${paymentId}/activity`),
+
+  recordInvoicePayment: (companyId: string, invoiceId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/payments`, body),
+
+  // ─── Email Templates ──────────────────────────────────────────────────
+  getEmailTemplates: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/email-templates`),
+
   // ─── AR Recurring Invoices ─────────────────────────────────────────────
   listArRecurringInvoices: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/ar/recurring-invoices`),
+
+  getArRecurringInvoice: (companyId: string, id: string) =>
+    apiClient.get(`/companies/${companyId}/ar/recurring-invoices/${id}`),
 
   generateRecurringInvoice: (companyId: string, id: string) =>
     apiClient.post(`/companies/${companyId}/ar/recurring-invoices/${id}/generate`),
@@ -351,16 +370,6 @@ export const salesService = {
 
   getCreditNoteActivity: (companyId: string, creditNoteId: string) =>
     apiClient.get(`/companies/${companyId}/ar/credit-notes/${creditNoteId}/activity`),
-
-  // ─── Payments ─────────────────────────────────────────────────────────
-  listPayments: (companyId: string, query?: any) =>
-    apiClient.get(`/companies/${companyId}/payments`, { params: query }),
-
-  recordPayment: (companyId: string, body: any) =>
-    apiClient.post(`/companies/${companyId}/payments`, body),
-
-  voidPayment: (companyId: string, paymentId: string) =>
-    apiClient.post(`/companies/${companyId}/payments/${paymentId}/void`),
 
   listArCollections: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/ar/collections`, { params: query }),
