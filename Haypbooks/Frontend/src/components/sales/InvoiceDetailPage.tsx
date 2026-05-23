@@ -10,7 +10,8 @@ import {
   Mail, Eye, Globe, ChevronDown, BookOpen, Settings2,
   Plus, Save, Copy,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
+import HaypModal from '@/components/shared/HaypModal'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useToast } from '@/components/ToastProvider'
@@ -116,7 +117,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   useEffect(() => {
     if (!companyId || !initialInvoice.id) return
     setLoadingInvoice(true)
-    apiClient.get(`/companies/${companyId}/ar/invoices/${initialInvoice.id}`)
+    salesService.getArInvoice(companyId, initialInvoice.id)
       .then(({ data }) => {
         if (data) setInvoice(data)
       })
@@ -130,7 +131,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     if (!companyId || !invoice.id) return
     setLoadingInvoice(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices/${invoice.id}`)
+      const { data } = await salesService.getArInvoice(companyId, invoice.id)
       if (data) setInvoice(data)
     } catch (error) {
       console.error('Failed to refresh invoice details', error)
@@ -152,7 +153,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   useEffect(() => {
     if (!invoice.id) return
     setLoadingPayments(true)
-    apiClient.get(`/companies/${companyId}/ar/payments?invoiceId=${invoice.id}`)
+    salesService.listArPayments(companyId, { invoiceId: invoice.id })
       .then(({ data }) => setPayments(Array.isArray(data) ? data : data.items ?? data.payments ?? []))
       .catch(() => setPayments([]))
       .finally(() => setLoadingPayments(false))
@@ -162,7 +163,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   useEffect(() => {
     if (activeTab !== 'activity' || !invoice.id) return
     setActivityLoading(true)
-    apiClient.get(`/companies/${companyId}/ar/invoices/${invoice.id}/activity`)
+    salesService.getArInvoiceActivity(companyId, invoice.id)
       .then(({ data }) => setActivityLog(data.data ?? []))
       .catch(() => setActivityLog([]))
       .finally(() => setActivityLoading(false))
@@ -192,7 +193,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   // Load email templates when email tab becomes active
   useEffect(() => {
     if (activeTab !== 'email') return
-    apiClient.get<EmailTemplate[]>(`/companies/${companyId}/email-templates`)
+    salesService.getEmailTemplates(companyId)
       .then(res => setEmailTemplates(res.data ?? []))
       .catch(() => {/* non-fatal */})
   }, [activeTab, companyId])
@@ -202,7 +203,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     if (!validLines.length) { setError('Add at least one line item.'); return }
     setEditSaving(true); setError('')
     try {
-      const { data: updated } = await apiClient.put(`/companies/${companyId}/ar/invoices/${invoice.id}`, {
+      const { data: updated } = await salesService.updateArInvoice(companyId, invoice.id, {
         dueDate: editDueDate || undefined,
         lines: validLines.map(l => ({
           description: l.description,
@@ -229,7 +230,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const handleSendEmail = async (scheduledAt?: string) => {
     setSending(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/send`, {
+      await salesService.sendArInvoice(companyId, invoice.id, {
         subject: emailSubject,
         body: emailBody.replace('{amount}', formatCurrency(invoice.total ?? 0, currency)),
         sendCopy,
@@ -250,7 +251,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     if (invoice.status !== 'DRAFT' && invoice.status !== 'SENT') return
     setSending(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/send`)
+      await salesService.sendArInvoice(companyId, invoice.id)
       setInvoice(p => ({ ...p, status: 'SENT' }))
       toast.success(`Invoice #${invoiceDisplayNumber} marked as Sent`)
       onRefresh()
@@ -292,7 +293,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     setError('')
     try {
       const reason = `Credit for invoice #${invoiceDisplayNumber} (negative line-item equivalent)`
-      const { data: created } = await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
+      const { data: created } = await salesService.createCreditNote(companyId, {
         customerId: invoice.customerId,
         invoiceId: invoice.id,
         totalAmount: Number(suggestedAmount.toFixed(2)),
@@ -318,7 +319,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     }
     setVoiding(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/void`)
+      await salesService.voidArInvoice(companyId, invoice.id)
       setInvoice(p => ({ ...p, status: 'VOID' }))
       onRefresh()
       setConfirmVoid(false)
@@ -353,7 +354,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     }
     setPaymentSaving(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/payments`, {
+      await salesService.recordInvoicePayment(companyId, invoice.id, {
         invoiceId: invoice.id,
         amount,
         paymentDate: paymentForm.paymentDate,
@@ -975,34 +976,26 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       </motion.div>
 
       {/* Void confirmation dialog */}
-      <AnimatePresence>
-        {confirmVoid && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-red-100 rounded-lg"><Ban size={18} className="text-red-600" /></div>
-                <h3 className="text-base font-bold text-gray-900">Void Invoice?</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Voiding this invoice will reverse all payment allocations. Continue?
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setConfirmVoid(false)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">
-                  Cancel
-                </button>
-                <button onClick={handleVoid} disabled={voiding}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
-                  {voiding ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
-                  Void Invoice
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <HaypModal open={confirmVoid} onClose={() => setConfirmVoid(false)} title="Void Invoice">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-red-100 rounded-lg"><Ban size={18} className="text-red-600" /></div>
+          <h3 className="text-base font-bold text-gray-900">Void Invoice?</h3>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Voiding this invoice will reverse all payment allocations. Continue?
+        </p>
+        <footer className="flex justify-end gap-3 mt-4">
+          <button onClick={() => setConfirmVoid(false)}
+            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleVoid} disabled={voiding}
+            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
+            {voiding ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
+            Void Invoice
+          </button>
+        </footer>
+      </HaypModal>
 
       {/* Email Preview Modal */}
       <AnimatePresence>
@@ -1028,71 +1021,63 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       </AnimatePresence>
 
       {/* Receive Payment Modal */}
-      <AnimatePresence>
-        {showPaymentModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-emerald-100 rounded-lg"><CreditCard size={18} className="text-emerald-600" /></div>
-                <h3 className="text-base font-bold text-gray-900">Record Payment</h3>
-              </div>
-              {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="payment-amount" className="block text-xs font-semibold text-gray-600 mb-1">Amount *</label>
-                  <input id="payment-amount" type="number" min="0.01" step="0.01"
-                    value={paymentForm.amount}
-                    onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                    placeholder="0.00" />
-                </div>
-                <div>
-                  <label htmlFor="payment-date" className="block text-xs font-semibold text-gray-600 mb-1">Payment Date *</label>
-                  <input id="payment-date" type="date"
-                    value={paymentForm.paymentDate}
-                    onChange={e => setPaymentForm(p => ({ ...p, paymentDate: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
-                </div>
-                <div>
-                  <label htmlFor="payment-method" className="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
-                  <select id="payment-method"
-                    value={paymentForm.method}
-                    onChange={e => setPaymentForm(p => ({ ...p, method: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
-                    <option value="">— Select —</option>
-                    <option value="cash">Cash</option>
-                    <option value="check">Check</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="credit_card">Credit Card</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="payment-reference" className="block text-xs font-semibold text-gray-600 mb-1">Reference #</label>
-                  <input id="payment-reference" type="text"
-                    value={paymentForm.referenceNumber}
-                    onChange={e => setPaymentForm(p => ({ ...p, referenceNumber: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                    placeholder="Check #, transaction ID, etc." />
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end mt-5">
-                <button onClick={() => { setShowPaymentModal(false); setError('') }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">
-                  Cancel
-                </button>
-                <button onClick={handleReceivePayment} disabled={paymentSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
-                  {paymentSaving ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                  Record Payment
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <HaypModal open={showPaymentModal} onClose={() => { setShowPaymentModal(false); setError('') }} title="Record Payment">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-emerald-100 rounded-lg"><CreditCard size={18} className="text-emerald-600" /></div>
+          <h3 className="text-base font-bold text-gray-900">Record Payment</h3>
+        </div>
+        {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="payment-amount" className="block text-xs font-semibold text-gray-600 mb-1">Amount *</label>
+            <input id="payment-amount" type="number" min="0.01" step="0.01"
+              value={paymentForm.amount}
+              onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              placeholder="0.00" />
+          </div>
+          <div>
+            <label htmlFor="payment-date" className="block text-xs font-semibold text-gray-600 mb-1">Payment Date *</label>
+            <input id="payment-date" type="date"
+              value={paymentForm.paymentDate}
+              onChange={e => setPaymentForm(p => ({ ...p, paymentDate: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+          </div>
+          <div>
+            <label htmlFor="payment-method" className="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
+            <select id="payment-method"
+              value={paymentForm.method}
+              onChange={e => setPaymentForm(p => ({ ...p, method: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+              <option value="">— Select —</option>
+              <option value="cash">Cash</option>
+              <option value="check">Check</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="credit_card">Credit Card</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="payment-reference" className="block text-xs font-semibold text-gray-600 mb-1">Reference #</label>
+            <input id="payment-reference" type="text"
+              value={paymentForm.referenceNumber}
+              onChange={e => setPaymentForm(p => ({ ...p, referenceNumber: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              placeholder="Check #, transaction ID, etc." />
+          </div>
+        </div>
+        <footer className="flex justify-end gap-3 mt-4">
+          <button onClick={() => { setShowPaymentModal(false); setError('') }}
+            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleReceivePayment} disabled={paymentSaving}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
+            {paymentSaving ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+            Record Payment
+          </button>
+        </footer>
+      </HaypModal>
     </>
   )
 }
