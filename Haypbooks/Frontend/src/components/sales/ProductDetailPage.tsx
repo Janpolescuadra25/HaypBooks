@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Edit2, Trash2, Tag } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import HaypModal from '@/components/shared/HaypModal'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import ProductFormModal from '@/components/sales/ProductFormModal'
@@ -94,7 +95,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
     setLoading(true)
     setError('')
     try {
-      const response = await apiClient.get(`/companies/${companyId}/inventory/items/${id}`)
+      const response = await salesService.getInventoryItem(companyId, id)
       const raw = response.data ?? {}
       setProduct({
         ...raw,
@@ -115,7 +116,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
     if (!companyId || !product) return
     setDeleting(true)
     try {
-      await apiClient.delete(`/companies/${companyId}/inventory/items/${product.id}`)
+      await salesService.deleteInventoryItem(companyId, product.id)
       toast.success('Item deleted')
       router.push('/sales/opportunities/products-services')
     } catch (err: any) {
@@ -352,24 +353,34 @@ export default function ProductDetailPage({ id }: { id: string }) {
         <ProductFormModal item={product} onSaved={handleSaved} onClose={() => setModalOpen(false)} />
       )}
 
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Item?</h3>
-            <p className="text-sm text-slate-600 mb-5">
-              Are you sure you want to delete <span className="font-semibold">{product.name}</span>? This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteConfirm(false)} disabled={deleting} className="px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-                Cancel
-              </button>
-              <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50">
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <HaypModal
+        open={deleteConfirm}
+        onClose={() => setDeleteConfirm(false)}
+        title="Delete Item?"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => setDeleteConfirm(false)}
+              disabled={deleting}
+              className="px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          Are you sure you want to delete <span className="font-semibold">{product.name}</span>? This cannot be undone.
+        </p>
+      </HaypModal>
     </div>
   )
 }
