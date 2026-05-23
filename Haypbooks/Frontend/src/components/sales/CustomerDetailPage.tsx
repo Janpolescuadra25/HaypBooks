@@ -6,7 +6,8 @@ import {
   ArrowLeft, Edit2, User, Mail, Phone, MapPin, AlertCircle,
   Loader2, FileText, CreditCard, DollarSign, TrendingUp, X, Clock,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import HaypModal from '@/components/shared/HaypModal'
+import { salesService } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -104,8 +105,8 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers/${customerId}`)
-      setCustomer(data)
+      const response = await salesService.getArCustomer(companyId, customerId)
+      setCustomer(response.data as CustomerDetail)
       setError('')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to load customer')
@@ -117,7 +118,8 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   const fetchPaymentTerms = useCallback(async () => {
     if (!companyId) return
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/payment-terms`)
+      const response = await salesService.listArPaymentTerms(companyId)
+      const data = response.data
       setPaymentTerms(Array.isArray(data) ? data : [])
     } catch { /* not critical */ }
   }, [companyId])
@@ -127,7 +129,8 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
     setActivityLoading(true)
     setActivityError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers/${customerId}/activity`)
+      const response = await salesService.getArCustomerActivity(companyId, customerId)
+      const data = response.data
       setActivity(Array.isArray(data.data) ? data.data : [])
       setActivityTotal(data.total ?? 0)
     } catch (e: any) {
@@ -510,7 +513,7 @@ function CustomerEditModal({ companyId, customer, paymentTerms, onClose, onSaved
     if (!form.name.trim()) { setError('Name is required.'); return }
     setSaving(true); setError('')
     try {
-      await apiClient.put(`/companies/${companyId}/ar/customers/${customer.id}`, {
+      await salesService.updateArCustomer(companyId, customer.id, {
         displayName: form.name.trim(),
         email: form.email.trim() || undefined,
         phone: form.phone.trim() || undefined,
@@ -530,82 +533,83 @@ function CustomerEditModal({ companyId, customer, paymentTerms, onClose, onSaved
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-bold text-emerald-900">Edit Customer</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
-        </div>
-        <div className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2">
-              <AlertCircle size={14} /> {error}
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Name *</label>
-            <input value={form.name} onChange={e => set('name', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Email</label>
-              <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Phone</label>
-              <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Street Address</label>
-            <input value={form.address} onChange={e => set('address', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">City</label>
-              <input value={form.city} onChange={e => set('city', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">State</label>
-              <input value={form.state} onChange={e => set('state', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">ZIP</label>
-              <input value={form.zip} onChange={e => set('zip', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Payment Terms</label>
-              <select value={form.paymentTermId} onChange={e => set('paymentTermId', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white">
-                <option value="">— None —</option>
-                {paymentTerms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Credit Limit</label>
-              <input type="number" min="0" step="0.01" value={form.creditLimit} onChange={e => set('creditLimit', e.target.value)}
-                placeholder="0.00"
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-          </div>
-        </div>
-        <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2">
+    <HaypModal
+      open={true}
+      onClose={onClose}
+      title="Edit Customer"
+      size="lg"
+      footer={
+        <>
           <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={saving}
             className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors font-semibold">
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2">
+            <AlertCircle size={14} /> {error}
+          </div>
+        )}
+        <div>
+          <label className="block text-xs font-medium text-emerald-700 mb-1">Name *</label>
+          <input value={form.name} onChange={e => set('name', e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-emerald-700 mb-1">Email</label>
+            <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-emerald-700 mb-1">Phone</label>
+            <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-emerald-700 mb-1">Street Address</label>
+          <input value={form.address} onChange={e => set('address', e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-emerald-700 mb-1">City</label>
+            <input value={form.city} onChange={e => set('city', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-emerald-700 mb-1">State</label>
+            <input value={form.state} onChange={e => set('state', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-emerald-700 mb-1">ZIP</label>
+            <input value={form.zip} onChange={e => set('zip', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-emerald-700 mb-1">Payment Terms</label>
+            <select value={form.paymentTermId} onChange={e => set('paymentTermId', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white">
+              <option value="">— None —</option>
+              {paymentTerms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-emerald-700 mb-1">Credit Limit</label>
+            <input type="number" min="0" step="0.01" value={form.creditLimit} onChange={e => set('creditLimit', e.target.value)}
+              placeholder="0.00"
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
         </div>
       </div>
-    </div>
+    </HaypModal>
   )
 }
