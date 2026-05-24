@@ -385,115 +385,53 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
         taxRate: Number(it.taxRate),
         itemId: it.itemId,
       }))
-      let inv;
+      // Build shared body
+      const body: Record<string, any> = {
+        customerId,
+        date,
+        dueDate,
+        memo,
+        internalNotes,
+        poNumber,
+        paymentTerms,
+        discountType,
+        discountValue: Number(discountValue),
+        billAddress: { contactName: billContact, company: billCompany, ...billAddress },
+        shipAddress: shipSameAsBill ? undefined : shipAddress,
+        items: invoiceLines,
+        lines: invoiceLines,
+      }
+
+      // Add recurring fields when applicable
+      if (isRecurring) {
+        body.isRecurring = true
+        body.templateName = templateName.trim() || memo || 'Recurring Invoice'
+        body.frequency = frequency
+        body.startDate = startDate
+        body.endDate = endDate || null
+        body.maxOccurrences = maxOccurrences ?? null
+        body.daysInAdvance = daysInAdvance ?? null
+        body.templateData = {
+          totalAmount: total,
+          memo,
+          internalNotes,
+          poNumber,
+          paymentTerms,
+          discountType,
+          discountValue: Number(discountValue),
+          billAddress: { contactName: billContact, company: billCompany, ...billAddress },
+          items: invoiceLines,
+        }
+      }
+
+      // Dispatch to the correct service method
+      let inv: any
       if (mode === 'edit' && isRecurringTemplate) {
-        ({ data: inv } = await salesService.updateRecurringInvoice(companyId, invoiceId, {
-          customerId,
-          date,
-          dueDate,
-          memo,
-          internalNotes,
-          poNumber,
-          paymentTerms,
-          discountType,
-          discountValue: Number(discountValue),
-          billAddress: { contactName: billContact, company: billCompany, ...billAddress },
-          shipAddress: shipSameAsBill ? undefined : shipAddress,
-          items: invoiceLines,
-          lines: invoiceLines,
-          ...(isRecurring ? {
-            isRecurring: true,
-            templateName: templateName.trim() || memo || 'Recurring Invoice',
-            frequency,
-            startDate,
-            endDate: endDate || null,
-            maxOccurrences: maxOccurrences ?? null,
-            daysInAdvance: daysInAdvance ?? null,
-            templateData: { 
-              totalAmount: total,
-              memo,
-              internalNotes,
-              poNumber,
-              paymentTerms,
-              discountType,
-              discountValue: Number(discountValue),
-              billAddress: { contactName: billContact, company: billCompany, ...billAddress },
-              items: invoiceLines,
-            },
-          } : {})
-        }))
+        ({ data: inv } = await salesService.updateRecurringInvoice(companyId, invoiceId, body))
       } else if (isRecurring) {
-        ({ data: inv } = await salesService.createArRecurringInvoice(companyId, {
-          customerId,
-          date,
-          dueDate,
-          memo,
-          internalNotes,
-          poNumber,
-          paymentTerms,
-          discountType,
-          discountValue: Number(discountValue),
-          billAddress: { contactName: billContact, company: billCompany, ...billAddress },
-          shipAddress: shipSameAsBill ? undefined : shipAddress,
-          items: invoiceLines,
-          lines: invoiceLines,
-          ...(isRecurring ? {
-            isRecurring: true,
-            templateName: templateName.trim() || memo || 'Recurring Invoice',
-            frequency,
-            startDate,
-            endDate: endDate || null,
-            maxOccurrences: maxOccurrences ?? null,
-            daysInAdvance: daysInAdvance ?? null,
-            templateData: { 
-              totalAmount: total,
-              memo,
-              internalNotes,
-              poNumber,
-              paymentTerms,
-              discountType,
-              discountValue: Number(discountValue),
-              billAddress: { contactName: billContact, company: billCompany, ...billAddress },
-              items: invoiceLines,
-            },
-          } : {})
-        }))
+        ({ data: inv } = await salesService.createArRecurringInvoice(companyId, body))
       } else {
-        ({ data: inv } = await salesService.createArInvoice(companyId, {
-          customerId,
-          date,
-          dueDate,
-          memo,
-          internalNotes,
-          poNumber,
-          paymentTerms,
-          discountType,
-          discountValue: Number(discountValue),
-          billAddress: { contactName: billContact, company: billCompany, ...billAddress },
-          shipAddress: shipSameAsBill ? undefined : shipAddress,
-          items: invoiceLines,
-          lines: invoiceLines,
-          ...(isRecurring ? {
-            isRecurring: true,
-            templateName: templateName.trim() || memo || 'Recurring Invoice',
-            frequency,
-            startDate,
-            endDate: endDate || null,
-            maxOccurrences: maxOccurrences ?? null,
-            daysInAdvance: daysInAdvance ?? null,
-            templateData: { 
-              totalAmount: total,
-              memo,
-              internalNotes,
-              poNumber,
-              paymentTerms,
-              discountType,
-              discountValue: Number(discountValue),
-              billAddress: { contactName: billContact, company: billCompany, ...billAddress },
-              items: invoiceLines,
-            },
-          } : {})
-        }))
+        ({ data: inv } = await salesService.createArInvoice(companyId, body))
       }
 
       if (isRecurring) {
