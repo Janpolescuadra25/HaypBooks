@@ -824,7 +824,7 @@ export class SubLedgerService {
       if (refund.journalEntryId) return
 
       const arAccountId = await this.findAccountByCode(refund.companyId, '1100')
-      const revenueAccountId = await this.findAccountByCode(refund.companyId, '4010')
+      const revenueAccountId = await this.findAccountByCode(refund.companyId, '4040')
 
       if (!arAccountId || !revenueAccountId) {
         this.logger.warn(`[SubLedger] Cannot post customer refund ${refundId}`)
@@ -845,7 +845,7 @@ export class SubLedgerService {
           createdById: postedById,
           entryNumber,
           lines: [
-            { accountId: revenueAccountId, debit: amount, credit: 0, memo: 'Revenue reversal (refund)' },
+            { accountId: revenueAccountId, debit: amount, credit: 0, memo: 'Sales returns (refund)' },
             { accountId: arAccountId, debit: 0, credit: amount, memo: 'AR reduction (refund)' },
           ],
         })
@@ -1035,10 +1035,10 @@ export class SubLedgerService {
       if (!company) return
 
       const arAccountId = await this.findAccountByCode(writeOff.companyId, '1100')
-      const badDebtAccountId = await this.findAccountByCode(writeOff.companyId, '6100')
+      const badDebtAccountId = await this.findAccountByCode(writeOff.companyId, '6130')
 
       if (!arAccountId || !badDebtAccountId) {
-        this.logger.warn(`[SubLedger] Cannot post write-off ${writeOffId}: Bad Debt (6100) or AR (1100) account not found`)
+        this.logger.warn(`[SubLedger] Cannot post write-off ${writeOffId}: Bad Debt (6130) or AR (1100) account not found`)
         return
       }
 
@@ -1083,7 +1083,7 @@ export class SubLedgerService {
       if (!company) return
 
       const arAccountId = await this.findAccountByCode(writeOff.companyId, '1100')
-      const badDebtAccountId = await this.findAccountByCode(writeOff.companyId, '6100')
+      const badDebtAccountId = await this.findAccountByCode(writeOff.companyId, '6130')
       if (!arAccountId || !badDebtAccountId) return
 
       const amount = Number(writeOff.amount ?? 0)

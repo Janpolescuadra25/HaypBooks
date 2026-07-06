@@ -71,6 +71,7 @@ const DEFAULT_COA: Array<{
     { code: '3030', name: 'Retained Earnings', typeKey: 'EQUITY', normalSide: 'CREDIT', isHeader: false, parentCode: '3000' },
     { code: '3040', name: 'Current Year Earnings', typeKey: 'EQUITY', normalSide: 'CREDIT', isHeader: false, parentCode: '3000' },
     { code: '3050', name: 'Opening Balance Equity', typeKey: 'EQUITY', normalSide: 'CREDIT', isHeader: false, parentCode: '3000' },
+    { code: '3200', name: 'Income Summary', typeKey: 'EQUITY', normalSide: 'CREDIT', isHeader: false, parentCode: '3000' },
 
     // ── REVENUE / INCOME ─────────────────────────────────────────────────────
     { code: '4000', name: 'Operating Revenue', typeKey: 'INCOME', normalSide: 'CREDIT', isHeader: true },
@@ -84,6 +85,7 @@ const DEFAULT_COA: Array<{
     { code: '4520', name: 'Rental Income', typeKey: 'INCOME', normalSide: 'CREDIT', isHeader: false, parentCode: '4500' },
     { code: '4530', name: 'Gain on Sale of Assets', typeKey: 'INCOME', normalSide: 'CREDIT', isHeader: false, parentCode: '4500' },
     { code: '4540', name: 'Miscellaneous Income', typeKey: 'INCOME', normalSide: 'CREDIT', isHeader: false, parentCode: '4500' },
+    { code: '4590', name: 'Uncategorized Income', typeKey: 'INCOME', normalSide: 'CREDIT', isHeader: false, parentCode: '4500' },
 
     // ── COST OF GOODS SOLD ───────────────────────────────────────────────────
     { code: '5000', name: 'Cost of Sales', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: true },
@@ -112,6 +114,7 @@ const DEFAULT_COA: Array<{
     { code: '6120', name: 'Representation and Entertainment', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '6000' },
     { code: '6130', name: 'Bad Debts Expense', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '6000' },
     { code: '6140', name: 'Bank Charges', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '6000' },
+    { code: '6190', name: 'Uncategorized Expense', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '6000' },
     { code: '6150', name: 'Taxes and Licenses', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '6000' },
     { code: '6160', name: 'Dues and Subscriptions', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '6000' },
     { code: '6170', name: 'Training and Development', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '6000' },
@@ -121,6 +124,7 @@ const DEFAULT_COA: Array<{
     { code: '9020', name: 'Loss on Sale of Assets', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '9000' },
     { code: '9030', name: 'Foreign Exchange Loss', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '9000' },
     { code: '9040', name: 'Income Tax Expense', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false, parentCode: '9000' },
+    { code: '9990', name: 'Suspense Account', typeKey: 'EXPENSE', normalSide: 'DEBIT', isHeader: false },
 ]
 
 @Injectable()
@@ -233,7 +237,9 @@ export class AccountingService {
                         companyId, code: acct.code, name: acct.name, typeId,
                         normalSide: acct.normalSide as any, isHeader: true,
                         liquidityType: resolveLiquidity(acct.typeKey, acct.liquidityType) as any,
-                        specialType: 'NONE' as any, currency,
+                        specialType: (acct.code === '9990' ? 'SUSPENSE_ACCOUNT' : 'NONE') as any,
+                        isSystem: acct.code === '9990' ? true : undefined,
+                        currency,
                         isFromTemplate: true,
                     } as any,
                 })
@@ -256,7 +262,9 @@ export class AccountingService {
                         normalSide: acct.normalSide as any, isHeader: false,
                         parentId: parentId ?? null,
                         liquidityType: resolveLiquidity(acct.typeKey, acct.liquidityType) as any,
-                        specialType: 'NONE' as any, currency,
+                        specialType: (acct.code === '9990' ? 'SUSPENSE_ACCOUNT' : 'NONE') as any,
+                        isSystem: acct.code === '9990' ? true : undefined,
+                        currency,
                         isFromTemplate: true,
                     } as any,
                 })

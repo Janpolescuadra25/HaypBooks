@@ -39,16 +39,16 @@ async function ensureAccountType(tx: any, typeId: number) {
 
 /** Well-known system account definitions */
 export const SYSTEM_ACCOUNTS = {
-    CASH:                 { code: '1000', name: 'Cash',                typeId: 1 },
-    ACCOUNTS_RECEIVABLE:  { code: '1100', name: 'Accounts Receivable', typeId: 1 },
-    UNDEPOSITED_FUNDS:    { code: '1050', name: 'Undeposited Funds',   typeId: 1 },
-    ACCOUNTS_PAYABLE:     { code: '2010', name: 'Accounts Payable',    typeId: 4 },
-    SERVICE_REVENUE:      { code: '4000', name: 'Service Revenue',     typeId: 3 },
-    OPERATING_EXPENSES:   { code: '5000', name: 'Operating Expenses',  typeId: 2 },
-    RETAINED_EARNINGS:    { code: '3100', name: 'Retained Earnings',   typeId: 5 },
-    INCOME_SUMMARY:       { code: '3200', name: 'Income Summary',      typeId: 5 },
-    OPENING_BALANCE_EQUITY: { code: '3050', name: 'Opening Balance Equity', typeId: 5 },
-    ACCRUED_EXPENSES:        { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 },
+    CASH:                   { code: '1010', name: 'Cash on Hand',              typeId: 1 },
+    ACCOUNTS_RECEIVABLE:    { code: '1100', name: 'Accounts Receivable',       typeId: 1 },
+    UNDEPOSITED_FUNDS:      { code: '1170', name: 'Undeposited Funds',          typeId: 1 },
+    ACCOUNTS_PAYABLE:       { code: '2010', name: 'Accounts Payable',           typeId: 4 },
+    SERVICE_REVENUE:        { code: '4010', name: 'Sales Revenue',             typeId: 3 },
+    OPERATING_EXPENSES:     { code: '6010', name: 'Salaries and Wages',        typeId: 2 },
+    RETAINED_EARNINGS:      { code: '3030', name: 'Retained Earnings',         typeId: 5 },
+    INCOME_SUMMARY:         { code: '3200', name: 'Income Summary',            typeId: 5 },
+    OPENING_BALANCE_EQUITY: { code: '3050', name: 'Opening Balance Equity',    typeId: 5 },
+    ACCRUED_EXPENSES:       { code: '2020', name: 'Accrued Expenses',          typeId: 4 },
 } as const
 
 /**

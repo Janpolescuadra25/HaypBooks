@@ -897,6 +897,10 @@ export class AccountingRepository {
         })
     }
 
+    // TODO: GL8 — Migrate to journalLines-based balance calculation exclusively.
+    // Account.balance can drift from actual journalLines sum if any code path
+    // updates one without the other. Trial Balance should aggregate from
+    // JournalEntryLine records only, not use the Account.balance snapshot.
     // ─── Trial Balance ────────────────────────────────────────────────────────
 
     async getTrialBalance(companyId: string, asOf?: Date) {

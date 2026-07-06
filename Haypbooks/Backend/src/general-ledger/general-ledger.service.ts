@@ -181,6 +181,10 @@ export class GeneralLedgerService {
         return this.repo.findActiveAccounts(companyId)
     }
 
+    // TODO: GL8 — Migrate to journalLines-based balance calculation exclusively.
+    // Account.balance can drift from actual journalLines sum if any code path
+    // updates one without the other. Account balance reports should aggregate
+    // from JournalEntryLine records only, not use the Account.balance snapshot.
     async getAccountBalances(userId: string, companyId: string, asOf?: string) {
         await this.assertCompanyAccess(userId, companyId)
         const effectiveDate = asOf ? new Date(asOf) : new Date()
