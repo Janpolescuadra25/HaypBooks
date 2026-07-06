@@ -6,14 +6,14 @@ import InvoiceCreatePage from './InvoiceCreatePage'
 interface RecurringInvoiceFormProps {
   mode: 'new' | 'edit'
   invoiceId?: string
-  onClose?: () => void
-  onSaved?: () => void
 }
 
-export default function RecurringInvoiceForm({ mode, invoiceId, onClose, onSaved }: RecurringInvoiceFormProps) {
+export default function RecurringInvoiceForm({ mode, invoiceId }: RecurringInvoiceFormProps) {
   return (
     <InvoiceCreatePage
       isRecurringTemplate={true}
+      mode={mode}
+      invoiceId={invoiceId}
     />
   )
 }

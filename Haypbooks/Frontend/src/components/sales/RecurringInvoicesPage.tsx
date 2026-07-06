@@ -55,6 +55,8 @@ export default function RecurringInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [freqFilter, setFreqFilter] = useState('ALL')
   const [detailItem, setDetailItem] = useState<RecurringRow | null>(null)
+  const [generatedInvoices, setGeneratedInvoices] = useState<Record<string, any[]>>({})
+  const [loadingGenerated, setLoadingGenerated] = useState<Record<string, boolean>>({})
 
   const fetchItems = useCallback(async () => {
     if (!companyId) return
@@ -117,6 +119,20 @@ export default function RecurringInvoicesPage() {
       toast.error(e?.response?.data?.message ?? 'Failed to delete templates')
     }
   }, [companyId, fetchItems, toast])
+
+  const loadGeneratedInvoices = useCallback(async (templateId: string) => {
+    if (!companyId || generatedInvoices[templateId]) return
+    setLoadingGenerated(prev => ({ ...prev, [templateId]: true }))
+    try {
+      const { data } = await salesService.listArInvoices(companyId, { recurringTemplateId: templateId })
+      setGeneratedInvoices(prev => ({ ...prev, [templateId]: Array.isArray(data) ? data : data?.items ?? data?.data ?? [] }))
+    } catch (e: any) {
+      console.error('Failed to load generated invoices', e)
+      setGeneratedInvoices(prev => ({ ...prev, [templateId]: [] }))
+    } finally {
+      setLoadingGenerated(prev => ({ ...prev, [templateId]: false }))
+    }
+  }, [companyId, generatedInvoices])
 
   const handleExport = useCallback(() => {
     const headers = ['Template', 'Customer', 'Frequency', 'Amount', 'Next Run', 'Status']
@@ -287,7 +303,7 @@ export default function RecurringInvoicesPage() {
           onClick: handleBatchDelete,
         }]}
         actions={actions}
-        onRowClick={(row) => setDetailItem(row as RecurringRow)}
+        onRowClick={(row) => { void loadGeneratedInvoices((row as RecurringRow).id); setDetailItem(row as RecurringRow) }}
         onRefresh={fetchItems}
         onExport={handleExport}
         emptyTitle="No recurring invoices"
@@ -327,6 +343,37 @@ export default function RecurringInvoicesPage() {
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-sm font-semibold hover:bg-amber-100">
                     {detailItem.status === 'ACTIVE' ? <><Pause size={15} /> Pause</> : <><Play size={15} /> Resume</>}
                   </button>
+                </div>
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Generated invoices</p>
+                      <p className="text-xs text-slate-500">Invoices created from this recurring template.</p>
+                    </div>
+                    {loadingGenerated[detailItem.id] && <span className="text-xs text-slate-500">Loading…</span>}
+                  </div>
+                  {loadingGenerated[detailItem.id] ? (
+                    <div className="rounded-xl bg-gray-50 p-4 text-sm text-slate-500">Loading generated invoices…</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(generatedInvoices[detailItem.id] ?? []).length > 0 ? (
+                        (generatedInvoices[detailItem.id] ?? []).map((inv) => (
+                          <div key={inv.id} className="grid grid-cols-[1fr_auto_auto] gap-3 items-center rounded-2xl bg-gray-50 p-3">
+                            <div>
+                              <div className="font-semibold text-slate-900">{inv.invoiceNumber ?? inv.id}</div>
+                              <div className="text-xs text-slate-500">{inv.customerName ?? inv.customer ?? 'Customer'}</div>
+                            </div>
+                            <div className="text-right text-sm font-semibold text-slate-900">
+                              {formatCurrency(Number(inv.totalAmount ?? inv.total ?? inv.amount ?? 0), currency)}
+                            </div>
+                            <div className="text-right text-xs text-slate-500">{inv.status ?? '—'}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-xl bg-gray-50 p-4 text-sm text-slate-500">No invoices generated yet.</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

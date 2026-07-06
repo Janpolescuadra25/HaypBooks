@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import apiClient from '@/lib/api-client'
+import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
@@ -58,8 +58,8 @@ export default function Page() {
       setError('')
       try {
         const [quotesRes, invoicesRes] = await Promise.all([
-          apiClient.get(`/companies/${companyId}/quotes`),
-          apiClient.get(`/companies/${companyId}/invoices`),
+          salesService.getQuotes(companyId),
+          salesService.listArInvoices(companyId),
         ])
         if (!mounted) return
 
@@ -92,8 +92,8 @@ export default function Page() {
       setActivityLoading(true)
       try {
         const [quoteLogs, invoiceLogs] = await Promise.all([
-          apiClient.get(`/companies/${companyId}/integrations/audit-logs`, { params: { tableName: 'Quote', limit: 8 } }),
-          apiClient.get(`/companies/${companyId}/integrations/audit-logs`, { params: { tableName: 'Invoice', limit: 8 } }),
+          salesService.getAuditLogs(companyId, { tableName: 'Quote', limit: 8 }),
+          salesService.getAuditLogs(companyId, { tableName: 'Invoice', limit: 8 }),
         ])
         if (!mounted) return
 

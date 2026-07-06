@@ -411,8 +411,9 @@ export class ArController {
         @Req() req: any,
         @Param('companyId') companyId: string,
         @Param('invoiceId') invoiceId: string,
+        @Body() body: { reason?: string },
     ) {
-        return this.svc.voidInvoice(req.user.userId, companyId, invoiceId)
+        return this.svc.voidInvoice(req.user.userId, companyId, invoiceId, body)
     }
 
     @Post('invoices/:invoiceId/payments')
@@ -752,8 +753,9 @@ export class ArController {
     getArAging(
         @Req() req: any,
         @Param('companyId') companyId: string,
+        @Query() query: any,
     ) {
-        return this.svc.getArAging(req.user.userId, companyId)
+        return this.svc.getArAging(req.user.userId, companyId, query)
     }
 
     // ─── Recurring Invoices ───────────────────────────────────────────────────

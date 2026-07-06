@@ -102,6 +102,7 @@ export default function TemplateManagerModal({ companyId, onClose, onTemplatesCh
       if (editingId === 'new') {
         await salesService.createEmailTemplate(companyId, form)
       } else {
+        if (!editingId) return
         await salesService.updateEmailTemplate(companyId, editingId, form)
       }
       setEditingId(null)

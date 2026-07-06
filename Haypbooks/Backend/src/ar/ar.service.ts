@@ -30,6 +30,29 @@ export class ArService {
         return member
     }
 
+    private async resolvePaymentTermId(workspaceId: string, input?: string | null) {
+        const normalized = String(input ?? '').trim()
+        if (!normalized) return null
+
+        if (this.uuidPattern.test(normalized)) {
+            const term = await this.prisma.paymentTerm.findFirst({ where: { id: normalized, workspaceId }, select: { id: true } })
+            if (!term) throw new BadRequestException('paymentTermId is invalid')
+            return term.id
+        }
+
+        const existingTerm = await this.prisma.paymentTerm.findFirst({
+            where: { workspaceId, name: normalized },
+            select: { id: true },
+        })
+        if (existingTerm) return existingTerm.id
+
+        const createdTerm = await this.prisma.paymentTerm.create({
+            data: { workspaceId, name: normalized, dueDays: 0 },
+            select: { id: true },
+        })
+        return createdTerm.id
+    }
+
     // ─── Helpers: Normalization ──────────────────────────────────────────────
 
     private normalizeCustomer(c: any) {
@@ -76,6 +99,7 @@ export class ArService {
             status: this.toApiInvoiceStatus(inv.status),
             total: Number(inv.totalAmount ?? inv.total ?? 0),
             amountDue: Number(inv.balance ?? inv.amountDue ?? 0),
+            paymentTerms: inv.paymentTerm?.name ?? inv.paymentTerms ?? '',
             customerName: inv.customer?.contact?.displayName ?? inv.customerName ?? '',
             items: (inv.lines ?? inv.items ?? []).map((l: any) => ({
                 ...l,
@@ -925,6 +949,7 @@ export class ArService {
             search: opts.search,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
+            recurringTemplateId: opts.recurringTemplateId,
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
         })
@@ -962,6 +987,10 @@ export class ArService {
         }).filter((line) => line.description.length > 0)
         if (!normalizedLines.length) throw new BadRequestException('At least one invoice line with a description is required')
 
+        if (data.paymentTermId || data.paymentTerms) {
+            data.paymentTermId = await this.resolvePaymentTermId(workspaceId, data.paymentTermId ?? data.paymentTerms)
+        }
+
         const customer = await this.repo.findCustomerById(workspaceId, data.customerId)
         if (!customer) throw new NotFoundException('Customer not found')
 
@@ -973,6 +1002,10 @@ export class ArService {
             throw new BadRequestException(`Customer credit limit exceeded: open balance ${openBalance}, credit limit ${creditLimit}, new invoice total ${newInvoiceTotal}`)
         }
 
+        const discountAmount = data.discountValue !== undefined
+            ? Number(data.discountValue)
+            : (data.discountAmount !== undefined ? Number(data.discountAmount) : undefined)
+
         const result = await this.repo.createInvoice({
             workspaceId,
             companyId,
@@ -980,6 +1013,13 @@ export class ArService {
             dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
             paymentTermId: data.paymentTermId,
             currency: data.currency,
+            memo: data.memo ?? null,
+            internalNotes: data.internalNotes ?? null,
+            poNumber: data.poNumber ?? null,
+            discountType: data.discountType ?? null,
+            discountAmount: discountAmount ?? null,
+            billAddress: data.billAddress ?? null,
+            shipAddress: data.shipAddress ?? null,
             createdById: userId,
             lines: normalizedLines,
         })
@@ -992,6 +1032,12 @@ export class ArService {
     async updateInvoice(userId: string, companyId: string, invoiceId: string, data: any) {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
+        if (data.paymentTermId || data.paymentTerms) {
+            data.paymentTermId = await this.resolvePaymentTermId(workspaceId, data.paymentTermId ?? data.paymentTerms)
+        }
+        if (data.discountValue !== undefined) {
+            data.discountAmount = Number(data.discountValue)
+        }
         const result = await this.repo.updateInvoice(companyId, invoiceId, data, userId)
         if (!result) throw new BadRequestException('Invoice not found or cannot be edited (only DRAFT invoices can be updated)')
         this.prisma.auditLog.create({
@@ -1040,7 +1086,7 @@ export class ArService {
         return result
     }
 
-    async voidInvoice(userId: string, companyId: string, invoiceId: string) {
+    async voidInvoice(userId: string, companyId: string, invoiceId: string, body?: { reason?: string }) {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
         const inv = await this.repo.findInvoiceById(companyId, invoiceId)
@@ -1049,7 +1095,7 @@ export class ArService {
 
         // Reverse the invoice posting JE before marking the invoice as void.
         await this.subLedger.reverseInvoiceGL(invoiceId, userId)
-        return this.repo.voidInvoice(companyId, invoiceId, { workspaceId, userId })
+        return this.repo.voidInvoice(companyId, invoiceId, { workspaceId, userId, reason: body?.reason })
     }
 
     // ─── Payments ─────────────────────────────────────────────────────────────
@@ -1683,9 +1729,20 @@ export class ArService {
 
     // ─── AR Aging ─────────────────────────────────────────────────────────────
 
-    async getArAging(userId: string, companyId: string) {
+    async getArAging(userId: string, companyId: string, query?: any) {
         await this.assertAccess(userId, companyId)
-        const raw = await this.repo.getArAging(companyId)
+        const raw = await this.repo.getArAging(companyId, query?.asOf)
+
+        const rows = raw.rows ?? []
+        const bucketCounts = { current: 0, days1to30: 0, days31to60: 0, days61to90: 0, over90: 0 }
+        for (const row of rows) {
+            const daysOverdue = Number(row.daysOverdue ?? 0)
+            if (daysOverdue <= 0) bucketCounts.current += 1
+            else if (daysOverdue <= 30) bucketCounts.days1to30 += 1
+            else if (daysOverdue <= 60) bucketCounts.days31to60 += 1
+            else if (daysOverdue <= 90) bucketCounts.days61to90 += 1
+            else bucketCounts.over90 += 1
+        }
 
         // Provide both original bucket names and frontend-expected aliases
         const summary = {
@@ -1718,19 +1775,58 @@ export class ArService {
 
         // Provide bucket array for ArAgingPage
         const buckets = [
-            { label: 'Current', amount: summary.current, count: 0 },
-            { label: '1-30 Days', amount: summary.days1to30, count: 0 },
-            { label: '31-60 Days', amount: summary.days31to60, count: 0 },
-            { label: '61-90 Days', amount: summary.days61to90, count: 0 },
-            { label: 'Over 90 Days', amount: summary.over90, count: 0 },
+            { label: 'Current', amount: summary.current, count: bucketCounts.current },
+            { label: '1-30 Days', amount: summary.days1to30, count: bucketCounts.days1to30 },
+            { label: '31-60 Days', amount: summary.days31to60, count: bucketCounts.days31to60 },
+            { label: '61-90 Days', amount: summary.days61to90, count: bucketCounts.days61to90 },
+            { label: 'Over 90 Days', amount: summary.over90, count: bucketCounts.over90 },
         ]
 
-        return {
+        const result = {
             ...raw,
             summary,
             buckets,
             customers: Array.from(customerMap.values()),
         }
+
+        if (query?.customerId) {
+            const filtered = result.customers.filter(
+                (c: any) => c.customerId === query.customerId
+            )
+            result.customers = filtered
+            result.summary = {
+                current: filtered.reduce((s: number, c: any) => s + (Number(c.current) || 0), 0),
+                days1to30: filtered.reduce((s: number, c: any) => s + (Number(c.days30) || 0), 0),
+                days31to60: filtered.reduce((s: number, c: any) => s + (Number(c.days60) || 0), 0),
+                days61to90: filtered.reduce((s: number, c: any) => s + (Number(c.days90) || 0), 0),
+                over90: filtered.reduce((s: number, c: any) => s + (Number(c.over90) || 0), 0),
+                total: filtered.reduce((s: number, c: any) => s + (Number(c.total) || 0), 0),
+            }
+
+            const customerRows = rows.filter((row: any) =>
+                (row.customer?.contactId ?? row.id) === query.customerId
+            )
+            const customerCounts = { current: 0, days1to30: 0, days31to60: 0, days61to90: 0, over90: 0 }
+            for (const row of customerRows) {
+                const daysOverdue = Number(row.daysOverdue ?? 0)
+                if (daysOverdue <= 0) customerCounts.current += 1
+                else if (daysOverdue <= 30) customerCounts.days1to30 += 1
+                else if (daysOverdue <= 60) customerCounts.days31to60 += 1
+                else if (daysOverdue <= 90) customerCounts.days61to90 += 1
+                else customerCounts.over90 += 1
+            }
+
+            result.buckets = [
+                { label: 'Current', amount: result.summary.current, count: customerCounts.current },
+                { label: '1-30 Days', amount: result.summary.days1to30, count: customerCounts.days1to30 },
+                { label: '31-60 Days', amount: result.summary.days31to60, count: customerCounts.days31to60 },
+                { label: '61-90 Days', amount: result.summary.days61to90, count: customerCounts.days61to90 },
+                { label: 'Over 90 Days', amount: result.summary.over90, count: customerCounts.over90 },
+            ]
+            result.totalOutstanding = result.summary.total
+        }
+
+        return result
     }
 
     // ─── Recurring Invoices ───────────────────────────────────────────────────
@@ -1798,24 +1894,63 @@ export class ArService {
         const recurring = await this.repo.findRecurringInvoiceById(wid, id)
         if (!recurring) throw new NotFoundException('Recurring invoice not found')
         // Create invoice from template
-        const template: any = recurring.templateData
-        const invoiceNumber = await this.repo.generateInvoiceNumber(companyId)
-        const invoice = await this.prisma.invoice.create({
-            data: {
-                workspaceId: wid,
+        const template: any = recurring.templateData ?? {}
+        const paymentTermId = await this.resolvePaymentTermId(wid, template.paymentTermId ?? template.paymentTerms)
+        const normalizedLines = Array.isArray(template.items) ? template.items.map((l: any) => {
+            const quantity = Number(l.quantity ?? 1)
+            const unitPrice = Number(l.unitPrice ?? l.rate ?? 0)
+            return {
                 companyId,
-                customerId: recurring.customerId,
-                invoiceNumber,
-                status: 'DRAFT',
-                date: new Date(),
-                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                totalAmount: template?.totalAmount ?? 0,
-                balance: template?.totalAmount ?? 0,
-            },
-        })
-        await this.prisma.recurringInvoice.update({
-            where: { id },
-            data: { lastRun: new Date(), nextRun: this.computeNextRun(recurring.frequency, new Date()) },
+                workspaceId: wid,
+                description: String(l.description ?? '').trim(),
+                quantity: Number.isFinite(quantity) ? quantity : 1,
+                unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+                totalPrice: Number.isFinite(Number(l.amount ?? l.totalPrice ?? quantity * unitPrice))
+                    ? Number(l.amount ?? l.totalPrice ?? quantity * unitPrice)
+                    : 0,
+                itemId: l.itemId ?? undefined,
+                discountPercent: l.discountPercent ?? null,
+                discountAmount: l.discountAmount ?? null,
+            }
+        }).filter((line: any) => line.description.length > 0) : []
+        const totalAmount = Number(template.totalAmount ?? normalizedLines.reduce((sum: number, line: any) => sum + Number(line.totalPrice ?? 0), 0))
+        const invoice = await this.prisma.$transaction(async (tx) => {
+            const invoiceNumber = await this.repo.nextInvoiceNumber(tx, companyId)
+            const createdInvoice = await tx.invoice.create({
+                data: {
+                    workspaceId: wid,
+                    companyId,
+                    customerId: recurring.customerId,
+                    invoiceNumber,
+                    status: 'DRAFT',
+                    postingStatus: 'DRAFT',
+                    paymentStatus: 'DRAFT',
+                    totalAmount,
+                    balance: totalAmount,
+                    currency: template.currency ?? null,
+                    date: new Date(),
+                    dueDate: template.dueDate ? new Date(template.dueDate) : null,
+                    paymentTermId: paymentTermId ?? null,
+                    memo: template.memo ?? null,
+                    internalNotes: template.internalNotes ?? null,
+                    poNumber: template.poNumber ?? null,
+                    discountType: template.discountType ?? null,
+                    discountAmount: template.discountAmount ?? null,
+                    billAddress: template.billAddress ?? null,
+                    shipAddress: template.shipAddress ?? null,
+                    recurringTemplateId: recurring.id,
+                    lines: normalizedLines.length > 0 ? { create: normalizedLines } : undefined,
+                },
+                include: { lines: { include: { LineTax: true } } },
+            })
+            await tx.recurringInvoice.update({
+                where: { id },
+                data: {
+                    lastRun: new Date(),
+                    nextRun: this.computeNextRun(recurring.frequency, new Date()),
+                },
+            })
+            return createdInvoice
         })
         this.prisma.auditLog.create({
             data: { workspaceId: wid, companyId, userId, action: 'GENERATE', tableName: 'RecurringInvoice', recordId: id, changes: { invoiceId: invoice.id } },

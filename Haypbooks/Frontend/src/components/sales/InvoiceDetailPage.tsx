@@ -58,6 +58,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const [creatingCreditNote, setCreatingCreditNote] = useState(false)
   const [error, setError] = useState('')
   const [confirmVoid, setConfirmVoid] = useState(false)
+  const [voidReason, setVoidReason] = useState('')
   const [showEmailPreview, setShowEmailPreview] = useState(false)
   type ActiveDetailTab = 'edit' | 'email' | 'payor' | 'print' | 'activity'
   const [activeTab, setActiveTab] = useState<ActiveDetailTab>('edit')
@@ -105,7 +106,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
 
   const outstandingBalance = Number(invoice.amountDue ?? invoice.total ?? 0)
   const canEditInvoice = invoice.status === 'DRAFT'
-  const canVoidInvoice = ['SENT', 'ISSUED', 'PARTIALLY_PAID'].includes(invoice.status as string)
+  const canVoidInvoice = ['SENT', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status as string)
   const canReceivePayment = invoice.status !== 'VOID' && outstandingBalance > 0 && ['SENT', 'ISSUED', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status as string)
 
   useEffect(() => {
@@ -319,10 +320,11 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     }
     setVoiding(true); setError('')
     try {
-      await salesService.voidArInvoice(companyId, invoice.id)
+      await salesService.voidArInvoice(companyId, invoice.id, voidReason)
       setInvoice(p => ({ ...p, status: 'VOID' }))
       onRefresh()
       setConfirmVoid(false)
+      setVoidReason('')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to void invoice')
     } finally {
@@ -984,8 +986,15 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
         <p className="text-sm text-gray-600 mb-4">
           Voiding this invoice will reverse all payment allocations. Continue?
         </p>
+        <textarea
+          value={voidReason}
+          onChange={(e) => setVoidReason(e.target.value)}
+          placeholder="Reason for voiding (optional)"
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
+        />
         <footer className="flex justify-end gap-3 mt-4">
-          <button onClick={() => setConfirmVoid(false)}
+          <button onClick={() => { setConfirmVoid(false); setVoidReason('') }}
             className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">
             Cancel
           </button>
@@ -1050,11 +1059,11 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
               onChange={e => setPaymentForm(p => ({ ...p, method: e.target.value }))}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
               <option value="">— Select —</option>
-              <option value="cash">Cash</option>
-              <option value="check">Check</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="credit_card">Credit Card</option>
-              <option value="other">Other</option>
+              <option value="CASH">Cash</option>
+              <option value="CHECK">Check</option>
+              <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="CREDIT_CARD">Credit Card</option>
+              <option value="OTHER">Other</option>
             </select>
           </div>
           <div>

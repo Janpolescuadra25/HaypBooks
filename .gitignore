@@ -53,3 +53,9 @@ cookies.txt
 # Temp files
 temp_*.txt
 tsc-out.txt
+.vercel
+
+.codely-cli/
+logs/
+node_modules/
+docs/erpnext/

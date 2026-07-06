@@ -186,8 +186,11 @@ export const salesService = {
   createArInvoice: (companyId: string, body: any) =>
     apiClient.post(`/companies/${companyId}/ar/invoices`, body),
 
-  voidArInvoice: (companyId: string, invoiceId: string) =>
-    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/void`),
+  voidArInvoice: (companyId: string, invoiceId: string, reason?: string) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/void`, { reason }),
+
+  duplicateArInvoice: (companyId: string, invoiceId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/duplicate`),
 
   // ─── AR Payments ──────────────────────────────────────────────────────
   listArPayments: (companyId: string, query?: any) =>

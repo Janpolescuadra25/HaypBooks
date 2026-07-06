@@ -12,6 +12,7 @@ import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
 import { InvoicePickerField } from './pickers'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import HaypModal from '@/components/shared/HaypModal'
 import type { HaypColumn, HaypActionItem, HaypBulkAction, HaypStat } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
@@ -796,258 +797,246 @@ export default function CreditNotesPage() {
 
       {/* Apply to Invoice Modal */}
       {applyOpen && applyingCN && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setApplyOpen(false)}>
-          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Apply Credit Note</h2>
-              <button onClick={() => setApplyOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={16} /></button>
+        <HaypModal open={applyOpen && !!applyingCN} onClose={() => setApplyOpen(false)} title="Apply Credit Note" size="sm">
+          <form onSubmit={submitApply} className="space-y-4">
+            <p className="text-sm text-slate-600">Applying <strong>{applyingCN.creditNoteNumber}</strong> ({formatCurrency(applyingCN.amount, currency)}) to an invoice.</p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Invoice *</label>
+              <InvoicePickerField
+                companyId={companyId || ''}
+                customerId={applyingCN.customerId}
+                statuses={OPEN_INVOICE_STATUSES}
+                value={applyForm.invoiceId || null}
+                placeholder={invoicesLoading ? 'Loading invoices…' : 'Search open invoices...'}
+                onChange={(id, option) => {
+                  const matched = invoices.find((inv) => inv.id === id)
+                  setApplyForm((f) => ({ ...f, invoiceId: id }))
+                  setApplyInvoiceBalance(
+                    id
+                      ? (matched?.balance ?? parsePickerDueAmount(option.tertiaryLabel))
+                      : null,
+                  )
+                }}
+              />
+              {applyInvoiceBalance != null && (
+                <p className="mt-1 text-xs text-slate-500">Balance due: {formatCurrency(applyInvoiceBalance, currency)}</p>
+              )}
+              {!invoicesLoading && invoices.length === 0 && (
+                <p className="mt-1 text-xs text-slate-500">No open invoices for this customer</p>
+              )}
             </div>
-            <form onSubmit={submitApply} className="p-4 space-y-4">
-              <p className="text-sm text-slate-600">Applying <strong>{applyingCN.creditNoteNumber}</strong> ({formatCurrency(applyingCN.amount, currency)}) to an invoice.</p>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Invoice *</label>
-                <InvoicePickerField
-                  companyId={companyId || ''}
-                  customerId={applyingCN.customerId}
-                  statuses={OPEN_INVOICE_STATUSES}
-                  value={applyForm.invoiceId || null}
-                  placeholder={invoicesLoading ? 'Loading invoices…' : 'Search open invoices...'}
-                  onChange={(id, option) => {
-                    const matched = invoices.find((inv) => inv.id === id)
-                    setApplyForm((f) => ({ ...f, invoiceId: id }))
-                    setApplyInvoiceBalance(
-                      id
-                        ? (matched?.balance ?? parsePickerDueAmount(option.tertiaryLabel))
-                        : null,
-                    )
-                  }}
-                />
-                {applyInvoiceBalance != null && (
-                  <p className="mt-1 text-xs text-slate-500">Balance due: {formatCurrency(applyInvoiceBalance, currency)}</p>
-                )}
-                {!invoicesLoading && invoices.length === 0 && (
-                  <p className="mt-1 text-xs text-slate-500">No open invoices for this customer</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Amount to Apply *</label>
-                <input
-                  required
-                  type="text"
-                  inputMode="decimal"
-                  aria-label="Amount to apply"
-                  value={applyAmountFocused ? applyForm.amount : formatApplyAmount(applyForm.amount)}
-                  onFocus={() => setApplyAmountFocused(true)}
-                  onBlur={() => setApplyAmountFocused(false)}
-                  onChange={e => {
-                    const normalized = e.target.value.replace(/,/g, '').replace(/[^\d.]/g, '')
-                    if ((normalized.match(/\./g) ?? []).length > 1) return
-                    setApplyForm(f => ({ ...f, amount: normalized }))
-                  }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                />
-              </div>
-              {applyError && <p className="text-sm text-rose-500">{applyError}</p>}
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={() => setApplyOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={applying} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
-                  {applying ? 'Applying…' : 'Apply'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Amount to Apply *</label>
+              <input
+                required
+                type="text"
+                inputMode="decimal"
+                aria-label="Amount to apply"
+                value={applyAmountFocused ? applyForm.amount : formatApplyAmount(applyForm.amount)}
+                onFocus={() => setApplyAmountFocused(true)}
+                onBlur={() => setApplyAmountFocused(false)}
+                onChange={e => {
+                  const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
+                  if ((normalized.match(/\./g) ?? []).length > 1) return
+                  setApplyForm(f => ({ ...f, amount: normalized }))
+                }}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              />
+            </div>
+            {applyError && <p className="text-sm text-rose-500">{applyError}</p>}
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setApplyOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="submit" disabled={applying} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                {applying ? 'Applying…' : 'Apply'}
+              </button>
+            </div>
+          </form>
+        </HaypModal>
       )}
 
       {/* Create Modal */}
       {newOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setNewOpen(false)}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">New Credit Note</h2>
-              <button onClick={() => setNewOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
-            </div>
-            <form onSubmit={submitNewCreditNote} className="p-4 space-y-4">
-              <CustomerPickerField
-                label="Customer *"
-                value={nc.customerId}
-                customers={customers}
-                loading={custLoading}
-                placeholder="Select customer..."
-                createLabel="Create New Customer"
-                onOpen={loadCustomers}
-                onChange={(id) => {
-                  setNc((p) => ({ ...p, customerId: id }))
-                  loadInvoicesForCustomer(id)
-                }}
-                onCreateNew={() => setShowQuickAddCustomer(true)}
-              />
+        <HaypModal open={newOpen} onClose={() => setNewOpen(false)} title={editingId ? 'Edit Credit Note' : 'New Credit Note'} size="md">
+          <form onSubmit={submitNewCreditNote} className="space-y-4">
+            <CustomerPickerField
+              label="Customer *"
+              value={nc.customerId}
+              customers={customers}
+              loading={custLoading}
+              placeholder="Select customer..."
+              createLabel="Create New Customer"
+              onOpen={loadCustomers}
+              onChange={(id) => {
+                setNc((p) => ({ ...p, customerId: id }))
+                loadInvoicesForCustomer(id)
+              }}
+              onCreateNew={() => setShowQuickAddCustomer(true)}
+            />
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                <div className="flex items-center gap-2 rounded-full bg-white p-1">
-                  {(['credit', 'refund'] as const).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setNc((prev) => ({ ...prev, creditType: type }))}
-                      className={`flex-1 px-3 py-2 text-sm font-semibold rounded-full transition-colors ${nc.creditType === type ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-                    >
-                      {type === 'credit' ? 'Issue Credit' : 'Issue Refund'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
-                  <select
-                    required
-                    value={nc.reasonCode}
-                    onChange={e => setNc(p => ({ ...p, reasonCode: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center gap-2 rounded-full bg-white p-1">
+                {(['credit', 'refund'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setNc((prev) => ({ ...prev, creditType: type }))}
+                    className={`flex-1 px-3 py-2 text-sm font-semibold rounded-full transition-colors ${nc.creditType === type ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
                   >
-                    {CREDIT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                {nc.reasonCode === 'Other' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Reason details *</label>
-                    <input
-                      value={nc.reasonDetails}
-                      onChange={e => setNc(p => ({ ...p, reasonDetails: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-                      placeholder="Enter details"
-                    />
-                  </div>
-                )}
+                    {type === 'credit' ? 'Issue Credit' : 'Issue Refund'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
+                <select
+                  required
+                  value={nc.reasonCode}
+                  onChange={e => setNc(p => ({ ...p, reasonCode: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                >
+                  {CREDIT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              {nc.reasonCode === 'Other' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason details *</label>
                   <input
-                    required
-                    type="text"
-                    inputMode="decimal"
-                    value={newAmountFocused ? nc.totalAmount : formatApplyAmount(nc.totalAmount)}
-                    onFocus={() => setNewAmountFocused(true)}
-                    onBlur={() => setNewAmountFocused(false)}
-                    onChange={e => {
-                      const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
-                      if ((normalized.match(/\./g) ?? []).length > 1) return
-                      setNc(p => ({ ...p, totalAmount: normalized }))
-                    }}
+                    value={nc.reasonDetails}
+                    onChange={e => setNc(p => ({ ...p, reasonDetails: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-                    placeholder="0.00"
+                    placeholder="Enter details"
                   />
                 </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                <input
+                  required
+                  type="text"
+                  inputMode="decimal"
+                  value={newAmountFocused ? nc.totalAmount : formatApplyAmount(nc.totalAmount)}
+                  onFocus={() => setNewAmountFocused(true)}
+                  onBlur={() => setNewAmountFocused(false)}
+                  onChange={e => {
+                    const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
+                    if ((normalized.match(/\./g) ?? []).length > 1) return
+                    setNc(p => ({ ...p, totalAmount: normalized }))
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                  placeholder="0.00"
+                />
               </div>
+            </div>
 
-              {nc.creditType === 'refund' && (
-                <div className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Refund Method</label>
-                      <select
-                        value={nc.refundMethod}
-                        onChange={e => setNc(p => ({ ...p, refundMethod: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-                      >
-                        {REFUND_METHODS.map(method => <option key={method} value={method}>{method}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Refund Date</label>
-                      <input
-                        type="date"
-                        value={nc.refundDate}
-                        onChange={e => setNc(p => ({ ...p, refundDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-                      />
-                    </div>
+            {nc.creditType === 'refund' && (
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Refund Method</label>
+                    <select
+                      value={nc.refundMethod}
+                      onChange={e => setNc(p => ({ ...p, refundMethod: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                    >
+                      {REFUND_METHODS.map(method => <option key={method} value={method}>{method}</option>)}
+                    </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Refund Reference</label>
-                      <input
-                        value={nc.refundReference}
-                        onChange={e => setNc(p => ({ ...p, refundReference: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-                        placeholder="Reference #"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Bank Account</label>
-                      <select
-                        value={nc.bankAccountId}
-                        onChange={e => setNc(p => ({ ...p, bankAccountId: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
-                      >
-                        <option value="">Select an account</option>
-                        {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Refund Date</label>
+                    <input
+                      type="date"
+                      value={nc.refundDate}
+                      onChange={e => setNc(p => ({ ...p, refundDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                    />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Refund Reference</label>
+                    <input
+                      value={nc.refundReference}
+                      onChange={e => setNc(p => ({ ...p, refundReference: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                      placeholder="Reference #"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Bank Account</label>
+                    <select
+                      value={nc.bankAccountId}
+                      onChange={e => setNc(p => ({ ...p, bankAccountId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                    >
+                      <option value="">Select an account</option>
+                      {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-slate-800">Apply to Invoices</p>
+                <p className="text-sm text-slate-500">Remaining Unapplied: {formatCurrency(Math.max(0, parseApplyAmount(nc.totalAmount) - appliedInvoices.reduce((sum, row) => sum + (parseApplyAmount(row.amountToApply) || 0), 0)), currency)}</p>
+              </div>
+              {invoicesLoading ? (
+                <p className="text-sm text-slate-500">Loading open invoices…</p>
+              ) : appliedInvoices.length === 0 ? (
+                <p className="text-sm text-slate-500">Select a customer to view open invoices.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-semibold">
+                        <th className="px-3 py-2 text-left">Invoice #</th>
+                        <th className="px-3 py-2 text-left">Date</th>
+                        <th className="px-3 py-2 text-right">Original</th>
+                        <th className="px-3 py-2 text-right">Balance Due</th>
+                        <th className="px-3 py-2 text-right">Amount to Apply</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {appliedInvoices.map((invoice) => (
+                        <tr key={invoice.invoiceId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-3 py-2 truncate">{invoice.invoiceNumber}</td>
+                          <td className="px-3 py-2 text-slate-600">{fmtDate(invoices.find(i => i.id === invoice.invoiceId)?.date ?? '')}</td>
+                          <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
+                          <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={invoice.amountToApply}
+                              onChange={e => {
+                                const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
+                                if ((normalized.match(/\./g) ?? []).length > 1) return
+                                setAppliedInvoices(prev => prev.map((row) => row.invoiceId === invoice.invoiceId ? { ...row, amountToApply: normalized } : row))
+                              }}
+                              className="w-full px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-right"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
+            </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-slate-800">Apply to Invoices</p>
-                  <p className="text-sm text-slate-500">Remaining Unapplied: {formatCurrency(Math.max(0, parseApplyAmount(nc.totalAmount) - appliedInvoices.reduce((sum, row) => sum + (parseApplyAmount(row.amountToApply) || 0), 0)), currency)}</p>
-                </div>
-                {invoicesLoading ? (
-                  <p className="text-sm text-slate-500">Loading open invoices…</p>
-                ) : appliedInvoices.length === 0 ? (
-                  <p className="text-sm text-slate-500">Select a customer to view open invoices.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-                      <thead>
-                        <tr className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-semibold">
-                          <th className="px-3 py-2 text-left">Invoice #</th>
-                          <th className="px-3 py-2 text-left">Date</th>
-                          <th className="px-3 py-2 text-right">Original</th>
-                          <th className="px-3 py-2 text-right">Balance Due</th>
-                          <th className="px-3 py-2 text-right">Amount to Apply</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {appliedInvoices.map((invoice) => (
-                          <tr key={invoice.invoiceId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="px-3 py-2 truncate">{invoice.invoiceNumber}</td>
-                            <td className="px-3 py-2 text-slate-600">{fmtDate(invoices.find(i => i.id === invoice.invoiceId)?.date ?? '')}</td>
-                            <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
-                            <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
-                            <td className="px-3 py-2 text-right">
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={invoice.amountToApply}
-                                onChange={e => {
-                                  const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
-                                  if ((normalized.match(/\./g) ?? []).length > 1) return
-                                  setAppliedInvoices(prev => prev.map((row) => row.invoiceId === invoice.invoiceId ? { ...row, amountToApply: normalized } : row))
-                                }}
-                                className="w-full px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-right"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setNewOpen(false)} className="px-4 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50">
-                  {saving ? 'Saving…' : 'Create Credit Note'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setNewOpen(false)} className="px-4 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">Cancel</button>
+              <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50">
+                {saving ? 'Saving…' : 'Create Credit Note'}
+              </button>
+            </div>
+          </form>
+        </HaypModal>
       )}
 
       {showQuickAddCustomer && companyId && (

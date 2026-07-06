@@ -134,8 +134,9 @@ export class SalesController {
     @Req() req: any,
     @Param('companyId') companyId: string,
     @Param('invoiceId') invoiceId: string,
+    @Body() body: { reason?: string },
   ) {
-    return this.salesService.voidInvoice(req.user.userId, companyId, invoiceId)
+    return this.salesService.voidInvoice(req.user.userId, companyId, invoiceId, body)
   }
 
   // ─── Quotes (Sales facade) ────────────────────────────────────────────────

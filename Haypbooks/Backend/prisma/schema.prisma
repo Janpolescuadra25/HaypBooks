@@ -712,17 +712,17 @@ model User {
 
   // relation back to security events (optional)
 
-  securityEvents        UserSecurityEvent[]
-  ownedWorkspace        Workspace?          @relation("WorkspaceOwner")
-  workspaceUsers        WorkspaceUser[]
-  invitedWorkspaceUsers WorkspaceUser[]     @relation("InvitedUsers")
-  sentWorkspaceInvites  WorkspaceInvite[]   @relation("WorkspaceInviteInvitedBy")
-  timesheetApprovals    TimesheetApproval[]
-  auditLogs             AuditLog[]
-  recurringExpensesCreated RecurringExpense[] @relation("RecurringExpenseCreator")
+  securityEvents           UserSecurityEvent[]
+  ownedWorkspace           Workspace?          @relation("WorkspaceOwner")
+  workspaceUsers           WorkspaceUser[]
+  invitedWorkspaceUsers    WorkspaceUser[]     @relation("InvitedUsers")
+  sentWorkspaceInvites     WorkspaceInvite[]   @relation("WorkspaceInviteInvitedBy")
+  timesheetApprovals       TimesheetApproval[]
+  auditLogs                AuditLog[]
+  recurringExpensesCreated RecurringExpense[]  @relation("RecurringExpenseCreator")
   // Tasks relations
-  tasksCreated          Task[]
-  createdWorkflows      Workflow[]
+  tasksCreated             Task[]
+  createdWorkflows         Workflow[]
 
   // Construction project & grant relation backrefs
   constructionProjectsManaged ConstructionProject[] @relation("ConstructionProjectManager")
@@ -1095,8 +1095,6 @@ model Workspace {
   deletedAt DateTime?
 
   owner                       User                         @relation("WorkspaceOwner", fields: [ownerUserId], references: [id])
-
-  @@index([ownerUserId], map: "Workspace_ownerUserId_idx_2")
   users                       WorkspaceUser[]
   auditLogs                   AuditLog[]
   events                      EventLog[]
@@ -1129,7 +1127,7 @@ model Workspace {
   RecurringInvoice            RecurringInvoice[]
   RecurringBill               RecurringBill[]
   InvoicePaymentApplication   InvoicePaymentApplication[]
-  CreditNoteApplication       CreditNoteApplication[] @relation("CreditNoteApplication_Workspace")
+  CreditNoteApplication       CreditNoteApplication[]      @relation("CreditNoteApplication_Workspace")
   BillPaymentApplication      BillPaymentApplication[]
   // Billing & usage tracking (migrated from TenantBilling* legacy tables)
   billingInvoices             WorkspaceBillingInvoice[]
@@ -1286,6 +1284,7 @@ model Workspace {
   InvoiceTemplate           InvoiceTemplate[]
   ApprovalWorkflow          ApprovalWorkflow[]
 
+  @@index([ownerUserId], map: "Workspace_ownerUserId_idx_2")
   @@index([ownerUserId], map: "Workspace_ownerUserId_idx_3")
 }
 
@@ -1714,7 +1713,7 @@ model Company {
   donations                             Donation[]
   entityVersions                        EntityVersion[]
   expenseClaims                         ExpenseClaim[]
-  perDiemClaims                          PerDiemClaim[]
+  perDiemClaims                         PerDiemClaim[]
   externalSystemConfigs                 ExternalSystemConfig[]
   financialControls                     FinancialControl[]
   financialMetrics                      FinancialMetric[]
@@ -1835,8 +1834,8 @@ model Company {
   birRegistrationStatus String? // REGISTERED | PENDING | EXEMPT
   birRegistrationDate   DateTime?
   birRdoCode            String? // Revenue District Office code
-  birTin                String?    @db.VarChar(15) // BIR TIN with dashes
-  taxIncentiveGranted   Boolean    @default(false)
+  birTin                String?         @db.VarChar(15) // BIR TIN with dashes
+  taxIncentiveGranted   Boolean         @default(false)
   taxIncentiveType      String? // PEZA | BOI | SBMA | etc.
   taxIncentiveExpiry    DateTime?
   taxIncentiveDetails   Json? // Additional incentive programme details
@@ -3999,7 +3998,7 @@ model Project {
   InventoryTransactionLine InventoryTransactionLine[]
   InvoiceLine              InvoiceLine[]
   BillLine                 BillLine[]
-  receipts                  Receipt[]
+  receipts                 Receipt[]
   company                  Company                    @relation(fields: [companyId], references: [id])
   workspace                Workspace                  @relation(fields: [workspaceId], references: [id])
   lines                    ProjectLine[]
@@ -5437,31 +5436,31 @@ model Account {
 }
 
 model JournalEntry {
-  id            String        @id @default(uuid())
-  workspaceId   String
-  companyId     String
-  entryNumber   String?       @unique
-  date          DateTime
-  description   String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  createdById   String?
-  updatedById   String?
-  createdBy     User?         @relation("JournalEntry_createdBy", fields: [createdById], references: [id])
-  updatedBy     User?         @relation("JournalEntry_updatedBy", fields: [updatedById], references: [id])
-  postingStatus PostingStatus @default(DRAFT)
-  currency      String?
-  exchangeRate  Decimal?      @db.Decimal(18, 12)
-  baseTotal     Decimal?      @db.Decimal(19, 4)
-  deletedAt     DateTime?
+  id                String        @id @default(uuid())
+  workspaceId       String
+  companyId         String
+  entryNumber       String?       @unique
+  date              DateTime
+  description       String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  createdById       String?
+  updatedById       String?
+  createdBy         User?         @relation("JournalEntry_createdBy", fields: [createdById], references: [id])
+  updatedBy         User?         @relation("JournalEntry_updatedBy", fields: [updatedById], references: [id])
+  postingStatus     PostingStatus @default(DRAFT)
+  currency          String?
+  exchangeRate      Decimal?      @db.Decimal(18, 12)
+  baseTotal         Decimal?      @db.Decimal(19, 4)
+  deletedAt         DateTime?
   /// Monotonically increasing version counter for optimistic concurrency
-  version       Int           @default(1)
+  version           Int           @default(1)
   /// References the immediately preceding version of this entry
-  previousId    String?
+  previousId        String?
   /// Source module that created this entry ("Bank Transaction", "Bank Transfer", "Invoice", "Bill", etc.)
-  transactionSource  String?
+  transactionSource String?
   /// ID of the source record (BankTransaction.id, Invoice.id, etc.)
-  sourceReferenceId  String?
+  sourceReferenceId String?
 
   // Approval / review workflow (tightly scoped; optional)
   reviewedById  String?
@@ -5798,7 +5797,7 @@ model Item {
   inventoryLines            InventoryTransactionLine[]
   costLayers                InventoryCostLayer[]
   priceListItems            PriceListItem[]
-  priceListEntries          PriceListEntry[] @relation("PriceListEntryItem")
+  priceListEntries          PriceListEntry[]           @relation("PriceListEntryItem")
   // Assembly relations
   assemblyBuilds            AssemblyBuild[]            @relation("ItemBuilt")
 
@@ -5847,8 +5846,8 @@ model PriceList {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  workspace     Workspace       @relation(fields: [workspaceId], references: [id])
-  customerGroup CustomerGroup?  @relation("PriceListCustomerGroup", fields: [customerGroupId], references: [id])
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id])
+  customerGroup CustomerGroup?   @relation("PriceListCustomerGroup", fields: [customerGroupId], references: [id])
   items         PriceListItem[]
   entries       PriceListEntry[] @relation("PriceListEntries")
   customers     Customer[]
@@ -5955,7 +5954,7 @@ model Employee {
   payrollAccruals                PayrollAccrual[]
   expenseClaims                  ExpenseClaim[]
   perDiemClaims                  PerDiemClaim[]
-  receipts                      Receipt[]
+  receipts                       Receipt[]
   pettyCashFunds                 PettyCashFund[]
 
   @@unique([companyId, employeeNumber])
@@ -7179,25 +7178,25 @@ model RevenueSchedule {
 }
 
 model RevenueRecognition {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   workspaceId         String
   companyId           String
   customerId          String?
   invoiceId           String?
   contractId          String
   description         String
-  method              String   @default("STRAIGHT_LINE")
-  totalContractValue  Decimal  @db.Decimal(19, 4)
-  recognizedToDate    Decimal  @default(0) @db.Decimal(19, 4)
+  method              String    @default("STRAIGHT_LINE")
+  totalContractValue  Decimal   @db.Decimal(19, 4)
+  recognizedToDate    Decimal   @default(0) @db.Decimal(19, 4)
   startDate           DateTime
   endDate             DateTime
   nextRecognitionDate DateTime?
-  status              String   @default("ACTIVE")
+  status              String    @default("ACTIVE")
   lastRecognizedAt    DateTime?
   journalEntryId      String?
   createdById         String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@unique([companyId, contractId])
   @@index([workspaceId, companyId])
@@ -7208,7 +7207,7 @@ model RevenueRecognition {
 }
 
 model DeferredRevenue {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   workspaceId         String
   companyId           String
   customerId          String?
@@ -7216,19 +7215,19 @@ model DeferredRevenue {
   recognitionId       String?
   contractId          String
   description         String
-  totalDeferredAmount Decimal  @db.Decimal(19, 4)
-  recognizedAmount    Decimal  @default(0) @db.Decimal(19, 4)
-  remainingDeferred   Decimal  @db.Decimal(19, 4)
+  totalDeferredAmount Decimal   @db.Decimal(19, 4)
+  recognizedAmount    Decimal   @default(0) @db.Decimal(19, 4)
+  remainingDeferred   Decimal   @db.Decimal(19, 4)
   startDate           DateTime
   endDate             DateTime
   nextRecognitionDate DateTime?
-  frequency           String   @default("MONTHLY")
-  status              String   @default("ACTIVE")
+  frequency           String    @default("MONTHLY")
+  status              String    @default("ACTIVE")
   lastRecognizedAt    DateTime?
   journalEntryId      String?
   createdById         String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@unique([companyId, contractId])
   @@index([workspaceId, companyId])
@@ -7240,25 +7239,25 @@ model DeferredRevenue {
 }
 
 model PaymentLink {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   workspaceId       String
   companyId         String
   customerId        String?
   invoiceId         String?
   paymentReceivedId String?
-  linkId            String   @unique
-  token             String   @unique
+  linkId            String    @unique
+  token             String    @unique
   description       String?
-  amount            Decimal  @db.Decimal(19, 4)
-  currency          String   @default("PHP")
-  status            String   @default("ACTIVE")
+  amount            Decimal   @db.Decimal(19, 4)
+  currency          String    @default("PHP")
+  status            String    @default("ACTIVE")
   expiresAt         DateTime?
   paidAt            DateTime?
-  viewCount         Int      @default(0)
+  viewCount         Int       @default(0)
   lastViewedAt      DateTime?
   createdById       String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([workspaceId, companyId])
   @@index([companyId, status, expiresAt])
@@ -7859,6 +7858,16 @@ model Invoice {
   dueDate              DateTime?
   paymentTermId        String?
   paymentTerm          PaymentTerm?     @relation(fields: [paymentTermId], references: [id])
+  recurringTemplateId  String?
+  recurringTemplate    RecurringInvoice? @relation(fields: [recurringTemplateId], references: [id])
+  memo                 String?
+  internalNotes        String?
+  poNumber             String?
+  discountType         String?
+  billAddress          Json?
+  shipAddress          Json?
+  voidReason           String?
+  voidedAt             DateTime?
   deletedAt            DateTime?
 
   createdById String?
@@ -7886,7 +7895,7 @@ model Invoice {
   writeOffs                  WriteOff[]
   // Auto-added opposite relations (generated)
   creditNotes                CreditNote[]
-  creditNoteApplications     CreditNoteApplication[]    @relation("CreditNoteApplication_Invoice")
+  creditNoteApplications     CreditNoteApplication[]     @relation("CreditNoteApplication_Invoice")
   dunningNotices             DunningNotice[]
   paymentReminders           PaymentReminder[]
   disputes                   Dispute[]
@@ -7914,6 +7923,7 @@ model Invoice {
   @@index([companyId, customerId, dueDate, balance])
   @@index([companyId, templateId])
   @@index([companyId, status, dueDate])
+  @@index([recurringTemplateId])
 }
 
 model CreditNote {
@@ -7929,10 +7939,10 @@ model CreditNote {
   issuedAt         DateTime         @default(now())
   journalEntryId   String?
 
-  company      Company       @relation(fields: [companyId], references: [id])
-  customer     Customer      @relation(fields: [customerId], references: [contactId])
-  invoice      Invoice?      @relation(fields: [invoiceId], references: [id])
-  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  company      Company                 @relation(fields: [companyId], references: [id])
+  customer     Customer                @relation(fields: [customerId], references: [contactId])
+  invoice      Invoice?                @relation(fields: [invoiceId], references: [id])
+  journalEntry JournalEntry?           @relation(fields: [journalEntryId], references: [id])
   applications CreditNoteApplication[] @relation("CreditNoteApplication_CreditNote")
 
   templateId String?
@@ -7945,16 +7955,16 @@ model CreditNote {
 }
 
 model CreditNoteApplication {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   workspaceId  String
   creditNoteId String
   invoiceId    String
-  amount       Decimal   @db.Decimal(19, 4)
-  appliedAt    DateTime  @default(now())
+  amount       Decimal  @db.Decimal(19, 4)
+  appliedAt    DateTime @default(now())
 
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], name: "CreditNoteApplication_Workspace")
-  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], name: "CreditNoteApplication_CreditNote")
-  invoice      Invoice    @relation(fields: [invoiceId], references: [id], name: "CreditNoteApplication_Invoice")
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], name: "CreditNoteApplication_Workspace")
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], name: "CreditNoteApplication_CreditNote")
+  invoice    Invoice    @relation(fields: [invoiceId], references: [id], name: "CreditNoteApplication_Invoice")
 
   @@index([workspaceId])
   @@index([creditNoteId])
@@ -7984,29 +7994,30 @@ model DebitNote {
 }
 
 model RecurringInvoice {
-  id             String                 @id @default(uuid())
-  workspaceId    String
-  companyId      String
-  customerId     String
-  frequency      String
-  startDate      DateTime
-  endDate        DateTime?
-  nextRun        DateTime
-  lastRun        DateTime?
+  id                String                 @id @default(uuid())
+  workspaceId       String
+  companyId         String
+  customerId        String
+  frequency         String
+  startDate         DateTime
+  endDate           DateTime?
+  nextRun           DateTime
+  lastRun           DateTime?
   status            RecurringInvoiceStatus @default(ACTIVE)
   isActive          Boolean                @default(true)
   templateName      String?
   maxOccurrences    Int?
   daysInAdvance     Int                    @default(7)
   currentOccurrence Int                    @default(0)
-  templateData   Json
-  recurrenceRule Json?
-  createdAt      DateTime               @default(now())
-  deletedAt      DateTime?
+  templateData      Json
+  recurrenceRule    Json?
+  createdAt         DateTime               @default(now())
+  deletedAt         DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   customer  Customer  @relation(fields: [customerId], references: [contactId])
+  generatedInvoices Invoice[]
 
   @@index([workspaceId, nextRun])
   @@index([companyId, nextRun])
@@ -8014,7 +8025,7 @@ model RecurringInvoice {
 }
 
 model RecurringBill {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   companyId         String
   workspaceId       String?
   vendorId          String?
@@ -8023,13 +8034,13 @@ model RecurringBill {
   startDate         DateTime
   endDate           DateTime?
   maxOccurrences    Int?
-  daysInAdvance     Int      @default(7)
+  daysInAdvance     Int       @default(7)
   nextDueDate       DateTime?
-  currentOccurrence Int      @default(0)
-  status            String   @default("DRAFT") // DRAFT, ACTIVE, PAUSED, CANCELLED
+  currentOccurrence Int       @default(0)
+  status            String    @default("DRAFT") // DRAFT, ACTIVE, PAUSED, CANCELLED
   templateData      Json? // stores the full bill template (vendor, line items, amounts, etc.)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   company   Company    @relation(fields: [companyId], references: [id])
   workspace Workspace? @relation(fields: [workspaceId], references: [id])
@@ -8039,28 +8050,28 @@ model RecurringBill {
 }
 
 model RecurringExpense {
-  id                  String    @id @default(uuid())
-  companyId           String
-  vendorId            String?
-  description         String
-  memo                String?
-  amount              Decimal   @db.Decimal(18, 2)
-  currency            String    @default("USD")
-  expenseAccountId    String?
-  frequency           String
-  interval            Int       @default(1)
-  startDate           DateTime
-  endDate             DateTime?
-  nextExecutionDate   DateTime
-  lastExecutionDate   DateTime?
-  status              String    @default("ACTIVE")
-  createdBy           String
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  companyId         String
+  vendorId          String?
+  description       String
+  memo              String?
+  amount            Decimal   @db.Decimal(18, 2)
+  currency          String    @default("USD")
+  expenseAccountId  String?
+  frequency         String
+  interval          Int       @default(1)
+  startDate         DateTime
+  endDate           DateTime?
+  nextExecutionDate DateTime
+  lastExecutionDate DateTime?
+  status            String    @default("ACTIVE")
+  createdBy         String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  company    Company  @relation(fields: [companyId], references: [id])
-  vendor     Vendor?  @relation(fields: [vendorId], references: [contactId])
-  creator    User     @relation("RecurringExpenseCreator", fields: [createdBy], references: [id])
+  company           Company        @relation(fields: [companyId], references: [id])
+  vendor            Vendor?        @relation(fields: [vendorId], references: [contactId])
+  creator           User           @relation("RecurringExpenseCreator", fields: [createdBy], references: [id])
   generatedExpenses ExpenseClaim[] @relation("GeneratedByRecurring")
 
   @@index([companyId])
@@ -8161,17 +8172,17 @@ model ExpenseClaim {
   approvedAt          DateTime?
   reimbursedAt        DateTime?
 
-  workspace Workspace          @relation(fields: [workspaceId], references: [id])
-  company   Company            @relation(fields: [companyId], references: [id])
-  employee    Employee           @relation(fields: [employeeId], references: [id])
-  recurringExpense RecurringExpense? @relation("GeneratedByRecurring", fields: [recurringExpenseId], references: [id])
-  departmentId String?
-  department   Department?       @relation(fields: [departmentId], references: [id])
-  paycheck     Paycheck?          @relation(fields: [paycheckId], references: [id])
-  lines        ExpenseClaimLine[]
-  journalEntryId String?
-  postingStatus PostingStatus @default(DRAFT)
-  journalEntry JournalEntry? @relation("JournalEntry_ExpenseClaims", fields: [journalEntryId], references: [id])
+  workspace        Workspace          @relation(fields: [workspaceId], references: [id])
+  company          Company            @relation(fields: [companyId], references: [id])
+  employee         Employee           @relation(fields: [employeeId], references: [id])
+  recurringExpense RecurringExpense?  @relation("GeneratedByRecurring", fields: [recurringExpenseId], references: [id])
+  departmentId     String?
+  department       Department?        @relation(fields: [departmentId], references: [id])
+  paycheck         Paycheck?          @relation(fields: [paycheckId], references: [id])
+  lines            ExpenseClaimLine[]
+  journalEntryId   String?
+  postingStatus    PostingStatus      @default(DRAFT)
+  journalEntry     JournalEntry?      @relation("JournalEntry_ExpenseClaims", fields: [journalEntryId], references: [id])
 
   @@index([workspaceId, employeeId])
   @@index([workspaceId, departmentId])
@@ -8204,14 +8215,14 @@ model PerDiemClaim {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
-  company     Company     @relation(fields: [companyId], references: [id])
-  employee    Employee    @relation(fields: [employeeId], references: [id])
-  department  Department? @relation(fields: [departmentId], references: [id])
-  account     Account?    @relation(fields: [accountId], references: [id])
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id])
+  company        Company       @relation(fields: [companyId], references: [id])
+  employee       Employee      @relation(fields: [employeeId], references: [id])
+  department     Department?   @relation(fields: [departmentId], references: [id])
+  account        Account?      @relation(fields: [accountId], references: [id])
   journalEntryId String?
-  postingStatus PostingStatus @default(DRAFT)
-  journalEntry JournalEntry? @relation("JournalEntry_PerDiemClaims", fields: [journalEntryId], references: [id])
+  postingStatus  PostingStatus @default(DRAFT)
+  journalEntry   JournalEntry? @relation("JournalEntry_PerDiemClaims", fields: [journalEntryId], references: [id])
 
   @@index([workspaceId, employeeId])
   @@index([companyId, status])
@@ -8851,7 +8862,7 @@ model BankAccount {
   isDefault           Boolean   @default(false)
   checkStartingNumber Int?
   lastCheckNumber     Int?
-  glAccountId         String?   // GL/COA Account ID linked to this bank account
+  glAccountId         String? // GL/COA Account ID linked to this bank account
   createdAt           DateTime  @default(now())
   /// Soft-delete — null means active account
   deletedAt           DateTime?
@@ -8879,18 +8890,18 @@ model BankAccount {
 }
 
 model BankTransaction {
-  id            String                @id @default(uuid())
-  bankAccountId String
-  amount        Decimal               @db.Decimal(19, 4)
-  date          DateTime
-  description   String
-  workspaceId       String
-  category          String?
-  memo              String?
-  status            BankTransactionStatus @default(PENDING)
-  contactId         String?   // Customer/Vendor/Employee contact ID
-  journalEntryId    String?   // Journal Entry created when categorized
-  transactionType   String?   // "Bank Transaction", "Bank Transfer", "Bank Deposit", etc.
+  id              String                @id @default(uuid())
+  bankAccountId   String
+  amount          Decimal               @db.Decimal(19, 4)
+  date            DateTime
+  description     String
+  workspaceId     String
+  category        String?
+  memo            String?
+  status          BankTransactionStatus @default(PENDING)
+  contactId       String? // Customer/Vendor/Employee contact ID
+  journalEntryId  String? // Journal Entry created when categorized
+  transactionType String? // "Bank Transaction", "Bank Transfer", "Bank Deposit", etc.
 
   bankAccount            BankAccount              @relation(fields: [bankAccountId], references: [id])
   workspace              Workspace                @relation(fields: [workspaceId], references: [id])
@@ -8920,7 +8931,7 @@ model BankTransactionSplit {
   id                String  @id @default(uuid())
   bankTransactionId String
   accountCode       String
-  accountId         String?  // COA Account ID for this split line
+  accountId         String? // COA Account ID for this split line
   description       String
   amount            Decimal @db.Decimal(19, 4)
   workspaceId       String
@@ -9182,7 +9193,7 @@ model Bill {
   otherCharges          Decimal?         @db.Decimal(19, 4)
   withholdingTaxAmount  Decimal?         @db.Decimal(19, 4)
   creditableWithholding Decimal?         @db.Decimal(19, 4)
-  discountType          String?          // "pct" for percentage, "fixed" for flat amount
+  discountType          String? // "pct" for percentage, "fixed" for flat amount
   issuedAt              DateTime         @default(now())
   dueAt                 DateTime?
   paymentTermId         String?
@@ -9346,32 +9357,32 @@ model PurchaseOrderLine {
 }
 
 model VendorCredit {
-  id                 String   @id @default(uuid())
-  companyId          String
-  workspaceId        String
-  vendorId           String
-  creditNumber       String?
-  creditType         String?
+  id                  String   @id @default(uuid())
+  companyId           String
+  workspaceId         String
+  vendorId            String
+  creditNumber        String?
+  creditType          String?
   referenceBillNumber String?
-  referenceBillId    String?
-  memo               String?
-  notes              String?
-  attachments        Json?
-  total              Decimal  @db.Decimal(19, 4)
-  balance            Decimal  @db.Decimal(19, 4)
-  issuedAt           DateTime @default(now())
-  status             String   @default("DRAFT")
-  templateId         String?
+  referenceBillId     String?
+  memo                String?
+  notes               String?
+  attachments         Json?
+  total               Decimal  @db.Decimal(19, 4)
+  balance             Decimal  @db.Decimal(19, 4)
+  issuedAt            DateTime @default(now())
+  status              String   @default("DRAFT")
+  templateId          String?
 
-  workspace     Workspace          @relation(fields: [workspaceId], references: [id])
-  company       Company            @relation(fields: [companyId], references: [id])
-  vendor        Vendor             @relation(fields: [vendorId], references: [contactId])
-  referenceBill Bill?              @relation(fields: [referenceBillId], references: [id])
-  template      DocumentTemplate?  @relation(fields: [templateId], references: [id])
-  lines         VendorCreditLine[]
-  postingStatus PostingStatus      @default(DRAFT)
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id])
+  company        Company            @relation(fields: [companyId], references: [id])
+  vendor         Vendor             @relation(fields: [vendorId], references: [contactId])
+  referenceBill  Bill?              @relation(fields: [referenceBillId], references: [id])
+  template       DocumentTemplate?  @relation(fields: [templateId], references: [id])
+  lines          VendorCreditLine[]
+  postingStatus  PostingStatus      @default(DRAFT)
   journalEntryId String?
-  journalEntry JournalEntry? @relation("JournalEntry_VendorCredits", fields: [journalEntryId], references: [id])
+  journalEntry   JournalEntry?      @relation("JournalEntry_VendorCredits", fields: [journalEntryId], references: [id])
 
   @@unique([workspaceId, creditNumber])
   @@index([workspaceId, status])
@@ -9813,38 +9824,38 @@ model AccountSettings {
 }
 
 model CompanySettings {
-  id                   String   @id @default(uuid())
-  companyId            String   @unique
-  fiscalYearStartMonth Int      @default(1)
-  defaultCurrency      String   @default("PHP")
-  accountingMethod     String   @default("ACCRUAL")
-  birFilingReminder    Boolean  @default(true)
-  vatRegistered        Boolean  @default(false)
+  id                   String  @id @default(uuid())
+  companyId            String  @unique
+  fiscalYearStartMonth Int     @default(1)
+  defaultCurrency      String  @default("PHP")
+  accountingMethod     String  @default("ACCRUAL")
+  birFilingReminder    Boolean @default(true)
+  vatRegistered        Boolean @default(false)
   expensePolicy        Json?
 
   // ── Invoice / Accounting Defaults ────────────────────────────────────────
-  defaultTaxTreatment  String   @default("exclusive")   // 'inclusive' | 'exclusive' | 'none'
-  defaultTaxRate       Float    @default(12)
-  defaultPaymentTerms  String   @default("net-30")
-  dateFormat           String   @default("MMM DD, YYYY")
-  numberFormat         String   @default("1,234.56")
-  decimalPlaces        Int      @default(2)
+  defaultTaxTreatment String @default("exclusive") // 'inclusive' | 'exclusive' | 'none'
+  defaultTaxRate      Float  @default(12)
+  defaultPaymentTerms String @default("net-30")
+  dateFormat          String @default("MMM DD, YYYY")
+  numberFormat        String @default("1,234.56")
+  decimalPlaces       Int    @default(2)
 
   // ── Late Fee Defaults ─────────────────────────────────────────────────────
-  lateFeeEnabled       Boolean  @default(false)
-  lateFeeType          String   @default("percentage")  // 'percentage' | 'flat'
-  lateFeeRate          Float    @default(5)
-  lateFeeGracePeriod   Int      @default(7)             // days after due date
-  lateFeeMaxCap        Float?                           // null = no cap
+  lateFeeEnabled     Boolean @default(false)
+  lateFeeType        String  @default("percentage") // 'percentage' | 'flat'
+  lateFeeRate        Float   @default(5)
+  lateFeeGracePeriod Int     @default(7) // days after due date
+  lateFeeMaxCap      Float? // null = no cap
 
   // ── Reminder Defaults ─────────────────────────────────────────────────────
-  reminderEnabled      Boolean  @default(false)
-  reminderDaysBefore   Int      @default(3)
-  reminderDaysAfter    Int      @default(7)
-  reminderRepeatDays   Int      @default(7)
+  reminderEnabled    Boolean @default(false)
+  reminderDaysBefore Int     @default(3)
+  reminderDaysAfter  Int     @default(7)
+  reminderRepeatDays Int     @default(7)
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -10839,9 +10850,9 @@ model Department {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  parent   Department?  @relation("DeptHierarchy", fields: [parentId], references: [id])
-  children Department[] @relation("DeptHierarchy")
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent        Department?    @relation("DeptHierarchy", fields: [parentId], references: [id])
+  children      Department[]   @relation("DeptHierarchy")
   expenseClaims ExpenseClaim[]
   perDiemClaims PerDiemClaim[]
   receipts      Receipt[]
@@ -11084,12 +11095,12 @@ model Receipt {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employee    Employee?  @relation(fields: [employeeId], references: [id])
-  department  Department?@relation(fields: [departmentId], references: [id])
-  account     Account?   @relation(fields: [accountId], references: [id])
-  customer    Customer?  @relation(fields: [customerId], references: [contactId])
-  project     Project?   @relation(fields: [projectId], references: [id])
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee   Employee?   @relation(fields: [employeeId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+  account    Account?    @relation(fields: [accountId], references: [id])
+  customer   Customer?   @relation(fields: [customerId], references: [contactId])
+  project    Project?    @relation(fields: [projectId], references: [id])
 
   @@index([companyId])
   @@index([uploadedById])
@@ -11097,37 +11108,37 @@ model Receipt {
 }
 
 model MileageLog {
-  id             String   @id @default(uuid())
-  workspaceId    String
-  companyId      String
-  employeeId     String?
-  userId         String
-  logNumber      String?
-  logDate        DateTime
-  tripDate       DateTime?
-  fromLocation   String?
-  toLocation     String?
-  miles          Decimal
-  ratePerMile    Decimal
-  distanceUnit   String?
-  vehicle        String?
-  personalVehicle Boolean  @default(false)
-  accountId      String?
-  amount         Decimal
-  purpose        String?
-  notes          String?
-  isBillable     Boolean  @default(false)
-  customerId     String?
-  projectId      String?
-  status         String   @default("draft")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String    @id @default(uuid())
+  workspaceId     String
+  companyId       String
+  employeeId      String?
+  userId          String
+  logNumber       String?
+  logDate         DateTime
+  tripDate        DateTime?
+  fromLocation    String?
+  toLocation      String?
+  miles           Decimal
+  ratePerMile     Decimal
+  distanceUnit    String?
+  vehicle         String?
+  personalVehicle Boolean   @default(false)
+  accountId       String?
+  amount          Decimal
+  purpose         String?
+  notes           String?
+  isBillable      Boolean   @default(false)
+  customerId      String?
+  projectId       String?
+  status          String    @default("draft")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id])
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   journalEntryId String?
-  postingStatus PostingStatus @default(DRAFT)
-  journalEntry JournalEntry? @relation("JournalEntry_MileageLogs", fields: [journalEntryId], references: [id])
+  postingStatus  PostingStatus @default(DRAFT)
+  journalEntry   JournalEntry? @relation("JournalEntry_MileageLogs", fields: [journalEntryId], references: [id])
 
   @@index([workspaceId])
   @@index([companyId])
@@ -13191,20 +13202,21 @@ model ClientPortalSettings {
 
   practice Practice @relation(fields: [practiceId], references: [id])
 }
+
 // ─── Email Templates ──────────────────────────────────────────────────────────
 // Saved email templates per company for use in invoice/quote send flows.
 
 model EmailTemplate {
-  id          String   @id @default(uuid())
-  companyId   String
-  name        String
-  subject     String
-  body        String   @db.Text
-  tone        String   @default("professional") // professional | friendly | brief | custom
-  cc          String?  @db.Text                 // comma-separated CC addresses
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  subject   String
+  body      String   @db.Text
+  tone      String   @default("professional") // professional | friendly | brief | custom
+  cc        String?  @db.Text // comma-separated CC addresses
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 

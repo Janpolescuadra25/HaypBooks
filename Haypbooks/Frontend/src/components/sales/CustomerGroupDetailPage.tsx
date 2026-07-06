@@ -7,6 +7,7 @@ import { salesService } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import HaypModal from '@/components/shared/HaypModal'
 import type { HaypActionItem, HaypColumn, HaypBulkAction } from '@/components/shared/HaypDataTable.types'
 
 const PAGE_SIZE = 25
@@ -70,39 +71,33 @@ function EditGroupModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">Edit Group</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100"><X size={16} /></button>
+    <HaypModal open={true} onClose={onClose} title="Edit Group" size="sm">
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Group Name <span className="text-red-500">*</span></label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
         </div>
-        <form onSubmit={submit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Group Name <span className="text-red-500">*</span></label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">
-              {saving ? 'Saving…' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </HaypModal>
   )
 }
 
@@ -327,6 +322,8 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
   ], [router])
 
   const handleRemoveMember = async (memberId: string) => {
+    const member = members.find(m => m.id === memberId)
+    if (!confirm(`Remove "${member?.name ?? 'customer'}" from this group?`)) return
     setRemovingIds(prev => new Set(prev).add(memberId))
     try {
       await salesService.removeArCustomerGroupMembers(companyId!, groupId, [memberId])
@@ -379,7 +376,7 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
 
   const handleDeleteGroup = async () => {
     if (!group) return
-    if (!confirm(`Delete group "${group.name}"? All customers will be unassigned.`)) return
+    if (!confirm(`Delete group "${group.name}"? ${group.customerCount} customer(s) will be unassigned.`)) return
     try {
       await salesService.deleteArCustomerGroup(companyId!, groupId)
       toast.success('Group deleted')
@@ -493,8 +490,6 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
           emptyTitle={membersError ? 'Unable to load members' : 'No group members'}
           emptySubtitle={membersError ? membersError : 'Add customers to this group to see members here.'}
           className="bg-white rounded-xl border border-gray-200"
-          globalFilter={memberSearch}
-          searchPlaceholder="Search members…"
           onRowClick={(row) => router.push(`/sales/customers/${row.id}`)}
         />
       </div>

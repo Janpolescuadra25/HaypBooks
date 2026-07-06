@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, Download, Clock, Edit2, Trash2, AlertCircle, Loader2 } from 'lucide-react'
+import { RefreshCw, Download, Clock, Edit2, UserCheck, UserX, Trash2, AlertCircle, Loader2 } from 'lucide-react'
 import { salesService, type ArCustomer, type CustomerStatus, type CustomerGroup, type PaymentTerm } from '@/services/sales.service'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -42,6 +42,7 @@ export default function CustomersPage() {
     setLoading(true)
     try {
       const response = await salesService.listArCustomers(companyId, {
+        search: search || undefined,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         groupId: groupFilter || undefined,
       })
@@ -54,7 +55,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, groupFilter, statusFilter])
+  }, [companyId, groupFilter, statusFilter, search])
 
   const fetchPaymentTerms = useCallback(async () => {
     if (!companyId) return
@@ -105,6 +106,14 @@ export default function CustomersPage() {
 
   const handleBatchDelete = useCallback(async () => {
     if (!companyId || batchDeleteIds.length === 0) return
+    const hasHistory = customers.some(c =>
+      batchDeleteIds.includes(c.id) && ((c.openBalance ?? 0) > 0 || (c.invoiceCount ?? 0) > 0)
+    )
+    if (hasHistory) {
+      toast.error('Cannot delete customers with outstanding balance or invoices. Deactivate them instead.')
+      setShowBatchDeleteModal(false)
+      return
+    }
     setBatchLoading(true)
     try {
       await salesService.batchDeleteArCustomers(companyId, batchDeleteIds)
@@ -117,7 +126,7 @@ export default function CustomersPage() {
     } finally {
       setBatchLoading(false)
     }
-  }, [batchDeleteIds, companyId, fetchCustomers, toast])
+  }, [batchDeleteIds, companyId, customers, fetchCustomers, toast])
 
   const handleBatchStatus = useCallback(async (selectedIds: string[], status: CustomerStatus) => {
     if (!companyId || selectedIds.length === 0) return
@@ -295,13 +304,26 @@ export default function CustomersPage() {
         },
       },
       {
+        label: 'Deactivate',
+        icon: <UserX size={14} />,
+        onClick: (_rowId: string, row: ArCustomer) => handleBatchStatus([row.id], 'INACTIVE'),
+        show: (row: ArCustomer) => row.status === 'ACTIVE',
+      },
+      {
+        label: 'Activate',
+        icon: <UserCheck size={14} />,
+        onClick: (_rowId: string, row: ArCustomer) => handleBatchStatus([row.id], 'ACTIVE'),
+        show: (row: ArCustomer) => row.status === 'INACTIVE',
+      },
+      {
         label: 'Delete',
         icon: <Trash2 size={14} />,
         danger: true,
         onClick: (_rowId: string, row: ArCustomer) => handleDelete(row),
+        show: (row: ArCustomer) => (row.openBalance ?? 0) === 0 && (row.invoiceCount ?? 0) === 0,
       },
     ],
-    [handleDelete],
+    [handleDelete, handleBatchStatus],
   )
 
   if (cidLoading || (loading && customers.length === 0 && !error)) {

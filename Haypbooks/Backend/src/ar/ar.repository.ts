@@ -131,7 +131,7 @@ export class ArRepository {
         return `${base}-COPY-${timestampToken}-${entropyToken}`
     }
 
-    private async nextInvoiceNumber(tx: any, companyId: string) {
+    async nextInvoiceNumber(tx: any, companyId: string) {
         const sequence = await tx.documentSequence.upsert({
             where: { companyId_documentType: { companyId, documentType: 'INVOICE' } },
             create: {
@@ -817,13 +817,14 @@ export class ArRepository {
     // ─── Invoices ─────────────────────────────────────────────────────────────
 
     async findInvoices(companyId: string, opts: {
-        customerId?: string, status?: string, openOnly?: boolean, search?: string, from?: Date, to?: Date, limit?: number, offset?: number
+        customerId?: string, status?: string, openOnly?: boolean, search?: string, from?: Date, to?: Date, recurringTemplateId?: string, limit?: number, offset?: number
     } = {}) {
         await this.transitionOverdueInvoices(companyId)
         const where: any = {
             companyId,
             deletedAt: null,
             ...(opts.customerId ? { customerId: opts.customerId } : {}),
+            ...(opts.recurringTemplateId ? { recurringTemplateId: opts.recurringTemplateId } : {}),
             ...(opts.from || opts.to ? {
                 date: {
                     ...(opts.from ? { gte: opts.from } : {}),
@@ -852,6 +853,7 @@ export class ArRepository {
             include: {
                 customer: { include: { contact: { select: { displayName: true } } } },
                 lines: { select: { id: true, description: true, quantity: true, unitPrice: true, totalPrice: true } },
+                paymentTerm: { select: { id: true, name: true } },
                 createdBy: { select: { id: true, name: true } },
             },
             orderBy: [{ date: 'desc' }, { invoiceNumber: 'desc' }],
@@ -868,6 +870,7 @@ export class ArRepository {
                 customer: { include: { contact: { include: { contactEmails: true } } } },
                 lines: { include: { item: { select: { id: true, name: true } } } },
                 InvoicePaymentApplication: { include: { payment: true } },
+                paymentTerm: { select: { id: true, name: true } },
                 createdBy: { select: { id: true, name: true } },
                 journalEntry: { select: { id: true, entryNumber: true, postingStatus: true } },
             },
@@ -896,6 +899,13 @@ export class ArRepository {
                     date: new Date(),
                     dueDate: data.dueDate ?? null,
                     paymentTermId: data.paymentTermId ?? null,
+                    memo: data.memo ?? null,
+                    internalNotes: data.internalNotes ?? null,
+                    poNumber: data.poNumber ?? null,
+                    discountType: data.discountType ?? null,
+                    discountAmount: data.discountAmount ?? null,
+                    billAddress: data.billAddress ?? null,
+                    shipAddress: data.shipAddress ?? null,
                     createdById: data.createdById,
                     lines: {
                         create: data.lines.map((l: any) => ({
@@ -940,6 +950,13 @@ export class ArRepository {
                     dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
                     paymentTermId: data.paymentTermId,
                     currency: data.currency,
+                    memo: data.memo !== undefined ? data.memo : undefined,
+                    internalNotes: data.internalNotes !== undefined ? data.internalNotes : undefined,
+                    poNumber: data.poNumber !== undefined ? data.poNumber : undefined,
+                    discountType: data.discountType !== undefined ? data.discountType : undefined,
+                    discountAmount: data.discountAmount !== undefined ? data.discountAmount : undefined,
+                    billAddress: data.billAddress !== undefined ? data.billAddress : undefined,
+                    shipAddress: data.shipAddress !== undefined ? data.shipAddress : undefined,
                     totalAmount,
                     balance: totalAmount,
                     updatedById,
@@ -994,6 +1011,13 @@ export class ArRepository {
                     date: new Date(),
                     dueDate: source.dueDate,
                     paymentTermId: source.paymentTermId,
+                    memo: source.memo,
+                    internalNotes: source.internalNotes,
+                    poNumber: source.poNumber,
+                    discountType: source.discountType,
+                    discountAmount: source.discountAmount,
+                    billAddress: source.billAddress,
+                    shipAddress: source.shipAddress,
                     templateId: source.templateId,
                     invoiceTemplateId: source.invoiceTemplateId,
                     createdById,
@@ -1050,7 +1074,7 @@ export class ArRepository {
         })
     }
 
-    async voidInvoice(companyId: string, invoiceId: string, opts?: { workspaceId?: string; userId?: string; tx?: any }) {
+    async voidInvoice(companyId: string, invoiceId: string, opts?: { workspaceId?: string; userId?: string; tx?: any; reason?: string }) {
         const db = opts?.tx ?? this.prisma
         const invoice = await db.invoice.findFirst({ where: { id: invoiceId, companyId } })
         if (!invoice) return null
@@ -1106,6 +1130,8 @@ export class ArRepository {
                     balance: invoice.totalAmount,
                     deletedAt: null,
                     journalEntryId: null,
+                    voidReason: opts?.reason ?? undefined,
+                    voidedAt: new Date(),
                 },
             })
 
@@ -1118,7 +1144,7 @@ export class ArRepository {
                         action: 'VOID',
                         tableName: 'Invoice',
                         recordId: invoiceId,
-                        changes: { status: 'VOID' },
+                        changes: { status: 'VOID', reason: opts?.reason ?? 'No reason provided' },
                     },
                 })
             }
@@ -1433,7 +1459,7 @@ export class ArRepository {
 
     // ─── Aging Report ─────────────────────────────────────────────────────────
 
-    async getArAging(companyId: string) {
+    async getArAging(companyId: string, asOf?: string) {
         await this.transitionOverdueInvoices(companyId)
         const invoices = await this.prisma.invoice.findMany({
             where: {
@@ -1448,7 +1474,7 @@ export class ArRepository {
             },
         })
 
-        const today = new Date()
+        const today = asOf ? new Date(asOf) : new Date()
         const buckets = { current: 0, days1_30: 0, days31_60: 0, days61_90: 0, over90: 0 }
 
         const rows = invoices.map((inv) => {

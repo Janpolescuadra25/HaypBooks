@@ -27,7 +27,7 @@ import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import { ProductPickerField, TaxCodePickerField, type ProductPickerItem } from '@/components/sales/pickers'
 import { useToast } from '@/components/ToastProvider'
 
-interface CustomerAddress { line1?: string; city?: string; state?: string; zip?: string; country?: string }
+interface CustomerAddress { line1?: string; line2?: string; city?: string; state?: string; zip?: string; country?: string }
 interface Customer {
   contactId: string
   name: string
@@ -130,9 +130,80 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
   const [customerEmail, setCustomerEmail] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [paymentTerms, setPaymentTerms] = useState('Net 30')
-  const [billAddress, setBillAddress] = useState({ line1: '', city: '', state: '', zip: '' })
+  const TERMS_DAY_MAP: Record<string, number> = {
+    'Due on Receipt': 0,
+    'Net 7': 7,
+    'Net 15': 15,
+    'Net 30': 30,
+    'Net 60': 60,
+    'Net 90': 90,
+  }
+  const [billAddress, setBillAddress] = useState({ line1: '', line2: '', city: '', state: '', zip: '', country: '' })
   const [shipSameAsBill, setShipSameAsBill] = useState(true)
-  const [shipAddress, setShipAddress] = useState({ line1: '', city: '', state: '', zip: '' })
+  const [shipAddress, setShipAddress] = useState({ line1: '', line2: '', city: '', state: '', zip: '', country: '' })
+  const [loading, setLoading] = useState(false)
+  const [isDraft, setIsDraft] = useState(true)
+
+  useEffect(() => {
+    if (!companyId || mode !== 'edit' || !invoiceId || isRecurringTemplate) return
+    const editInvoiceId = invoiceId ?? ''
+    ;(async () => {
+      setLoading(true)
+      try {
+        const { data: inv } = await salesService.getArInvoice(companyId, editInvoiceId)
+        if (!inv) return
+
+        if (inv.customerId) setCustomerId(inv.customerId)
+        if (inv.date) setDate(inv.date.slice(0, 10))
+        if (inv.dueDate) setDueDate(inv.dueDate.slice(0, 10))
+        setMemo(inv.memo ?? '')
+        setInternalNotes(inv.internalNotes ?? '')
+        setPoNumber(inv.poNumber ?? '')
+        setPaymentTerms(inv.paymentTerms ?? 'Net 30')
+        if (inv.discountAmount != null) setDiscountValue(Number(inv.discountAmount))
+
+        if (inv.billAddress) {
+          setBillAddress({
+            line1: inv.billAddress.line1 ?? '',
+            line2: inv.billAddress.line2 ?? '',
+            city: inv.billAddress.city ?? '',
+            state: inv.billAddress.state ?? '',
+            zip: inv.billAddress.zip ?? '',
+            country: inv.billAddress.country ?? '',
+          })
+        }
+
+        if (inv.shipAddress && Object.keys(inv.shipAddress).length > 0) {
+          setShipSameAsBill(false)
+          setShipAddress({
+            line1: inv.shipAddress.line1 ?? '',
+            line2: inv.shipAddress.line2 ?? '',
+            city: inv.shipAddress.city ?? '',
+            state: inv.shipAddress.state ?? '',
+            zip: inv.shipAddress.zip ?? '',
+            country: inv.shipAddress.country ?? '',
+          })
+        }
+
+        if (Array.isArray(inv.lines) && inv.lines.length > 0) {
+          setItems(inv.lines.map((line: any) => ({
+            id: genId(),
+            description: line.description ?? '',
+            quantity: Number(line.quantity ?? 1),
+            unitPrice: Number(line.unitPrice ?? line.rate ?? 0),
+            taxRate: Number(line.taxRate ?? 0),
+            itemId: line.itemId ?? '',
+          })))
+        }
+
+        setIsDraft(inv.status === 'DRAFT')
+      } catch (e: any) {
+        setError(e?.response?.data?.message ?? 'Failed to load invoice')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [companyId, invoiceId, isRecurringTemplate, mode])
   
   // Recurring fields
   const [isRecurring, setIsRecurring] = useState(isRecurringTemplate || false)
@@ -212,7 +283,7 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
   const loadCustomers = useCallback(async () => {
     if (!companyId) return
     try {
-      const { data } = await salesService.listArCustomers(companyId)
+      const { data } = await salesService.listArCustomers(companyId) as any
       const list: any[] = Array.isArray(data)
         ? data
         : data?.data ?? data.items ?? data.customers ?? []
@@ -278,9 +349,11 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
               setBillCompany(td.billAddress.company || '')
               setBillAddress({
                 line1: td.billAddress.line1 || '',
+                line2: td.billAddress.line2 || '',
                 city: td.billAddress.city || '',
                 state: td.billAddress.state || '',
                 zip: td.billAddress.zip || '',
+                country: td.billAddress.country || '',
               })
             }
           }
@@ -313,15 +386,19 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
     if (c.paymentTerms) setPaymentTerms(c.paymentTerms)
     if (c.billingAddress) setBillAddress({
       line1: c.billingAddress.line1 ?? '',
+      line2: c.billingAddress.line2 ?? '',
       city: c.billingAddress.city ?? '',
       state: c.billingAddress.state ?? '',
       zip: c.billingAddress.zip ?? '',
+      country: c.billingAddress.country ?? '',
     })
     if (c.shippingAddress) setShipAddress({
       line1: c.shippingAddress.line1 ?? '',
+      line2: c.shippingAddress.line2 ?? '',
       city: c.shippingAddress.city ?? '',
       state: c.shippingAddress.state ?? '',
       zip: c.shippingAddress.zip ?? '',
+      country: c.shippingAddress.country ?? '',
     })
   }, [customerId, customers])
 
@@ -372,9 +449,11 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
   }
 
   const handleSave = async (action: 'draft' | 'send') => {
+    if (!companyId) { setError('Company ID is required.'); return }
     if (!customerId) { setError('Please select a customer.'); return }
     const validItems = items.filter(it => it.description.trim())
     if (validItems.length === 0) { setError('Add at least one line item.'); return }
+    if (action === 'send' && total <= 0) { setError('Invoice total must be greater than zero to send.'); return }
     setSaving(true); setSaveAction(action); setError('')
     try {
       const invoiceLines = validItems.map(it => ({
@@ -425,9 +504,12 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
       }
 
       // Dispatch to the correct service method
+      const editInvoiceId = invoiceId ?? ''
       let inv: any
       if (mode === 'edit' && isRecurringTemplate) {
-        ({ data: inv } = await salesService.updateRecurringInvoice(companyId, invoiceId, body))
+        ({ data: inv } = await salesService.updateRecurringInvoice(companyId, editInvoiceId, body))
+      } else if (mode === 'edit' && invoiceId) {
+        ({ data: inv } = await salesService.updateArInvoice(companyId, editInvoiceId, body))
       } else if (isRecurring) {
         ({ data: inv } = await salesService.createArRecurringInvoice(companyId, body))
       } else {
@@ -441,7 +523,7 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
       }
 
       if (action === 'send' && inv?.id) {
-        await salesService.sendArInvoice(companyId, inv.id, {
+        await salesService.sendArInvoice(companyId, inv.id!, {
           subject: emailSubject,
           body: emailMessage,
           ...(emailCc ? { cc: emailCc } : {}),
@@ -782,7 +864,14 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
               </div>
               <div>
                 <label htmlFor="invoice-payment-terms" className="block text-xs font-medium text-gray-500 mb-1">Payment Terms</label>
-                <select id="invoice-payment-terms" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)}
+                <select id="invoice-payment-terms" value={paymentTerms} onChange={e => {
+                  const term = e.target.value
+                  setPaymentTerms(term)
+                  const offset = TERMS_DAY_MAP[term] ?? 30
+                  const d = new Date(date)
+                  d.setDate(d.getDate() + offset)
+                  setDueDate(d.toISOString().split('T')[0])
+                }}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white">
                   {['Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 60', 'Net 90'].map(t => (
                     <option key={t} value={t}>{t}</option>
@@ -1396,9 +1485,16 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
             
             {!isRecurring ? (
               <>
+                {mode === 'edit' && !isDraft && (
+                  <p className="text-xs text-amber-600 font-medium flex items-center gap-1.5 mb-2">
+                    <AlertCircle size={13} className="shrink-0" />
+                    This invoice has been sent and can no longer be edited.
+                    Create a new invoice or duplicate this one to make changes.
+                  </p>
+                )}
                 <button
                   onClick={() => handleSave('draft')}
-                  disabled={saving}
+                  disabled={saving || !isDraft}
                   className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
                 >
                   {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -1406,7 +1502,7 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
                 </button>
                 <button
                   onClick={() => handleSave('send')}
-                  disabled={saving}
+                  disabled={saving || !isDraft}
                   className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
                 >
                   {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
@@ -1419,7 +1515,7 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
             ) : (
               <button
                 onClick={() => handleSave('draft')}
-                disabled={saving}
+                disabled={saving || !isDraft}
                 className="flex items-center gap-1.5 px-6 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -1466,9 +1562,11 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
             setBillContact(c.name)
             if (c.billingAddress) setBillAddress({
               line1: c.billingAddress.line1 ?? '',
+              line2: c.billingAddress.line2 ?? '',
               city: c.billingAddress.city ?? '',
               state: c.billingAddress.state ?? '',
               zip: c.billingAddress.zip ?? '',
+              country: c.billingAddress.country ?? '',
             })
             setShowQuickAddModal(false)
           }}

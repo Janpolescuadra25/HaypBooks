@@ -76,6 +76,8 @@ const METHOD_OPTIONS = [
   { value: 'OTHER', label: 'Other' },
 ]
 
+const methodLabel = (m: string) => METHOD_OPTIONS.find(o => o.value === m)?.label ?? m
+
 function extractApiErrorMessage(err: any, fallback: string) {
   const unwrap = (value: any): string => {
     if (!value) return ''
@@ -315,7 +317,7 @@ export default function CustomerPaymentsPage() {
     setCustomersLoading(true)
     try {
       const { data } = await salesService.listArCustomers(companyId)
-      const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? []
+      const raw: any[] = Array.isArray(data) ? data : []
       setCustomers(
         raw.map((c: any) => ({
           id: c.id || c.contactId,
@@ -825,7 +827,7 @@ export default function CustomerPaymentsPage() {
                     <td className="px-4 py-3 font-mono text-xs text-slate-700 truncate border-r border-slate-100" title={row.paymentNumber ?? ''}>{row.paymentNumber}</td>
                     <td className="px-4 py-3 font-medium text-slate-900 truncate border-r border-slate-100" title={row.customer ?? ''}>{row.customer}</td>
                     <td className="px-4 py-3 text-slate-600 truncate hidden md:table-cell border-r border-slate-100" title={fmtDate(row.date)}>{fmtDate(row.date)}</td>
-                    <td className="px-4 py-3 text-slate-600 truncate hidden sm:table-cell border-r border-slate-100" title={row.method ?? ''}>{row.method}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate hidden sm:table-cell border-r border-slate-100" title={row.method ?? ''}>{methodLabel(row.method)}</td>
                     <td className="px-4 py-3 border-r border-slate-100">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${row.depositStatus === 'DEPOSITED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                         {row.depositStatus === 'DEPOSITED' ? 'Deposited' : 'Undeposited'}
@@ -953,7 +955,7 @@ export default function CustomerPaymentsPage() {
                       </div>
                       <div>
                         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Method</p>
-                        <p className="font-semibold text-slate-800">{drawerPayment.method}</p>
+                        <p className="font-semibold text-slate-800">{methodLabel(drawerPayment.method)}</p>
                       </div>
                       <div>
                         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Amount</p>
@@ -1310,13 +1312,13 @@ export default function CustomerPaymentsPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Reference #</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{form.method === 'CHECK' ? 'Check #' : 'Reference #'}</label>
                         <input
                           value={form.reference}
                           disabled={isReallocationMode}
                           onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-100 disabled:text-slate-500"
-                          placeholder="Check # or ref"
+                          placeholder={form.method === 'CHECK' ? 'Enter check number' : 'Check # or ref'}
                         />
                       </div>
                     </div>

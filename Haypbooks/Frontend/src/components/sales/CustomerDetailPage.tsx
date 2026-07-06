@@ -4,14 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit2, User, Mail, Phone, MapPin, AlertCircle,
-  Loader2, FileText, CreditCard, DollarSign, TrendingUp, X, Clock,
+  Loader2, FileText, CreditCard, DollarSign, TrendingUp, Clock,
 } from 'lucide-react'
-import HaypModal from '@/components/shared/HaypModal'
+import CustomerFormModal from '@/components/sales/CustomerFormModal'
 import { salesService } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useToast } from '@/components/ToastProvider'
 import { formatActivityValue } from '@/components/ui/ActivityLog'
 
 interface RecentInvoice {
@@ -86,7 +85,6 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   const router = useRouter()
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const toast = useToast()
 
   const [customer, setCustomer] = useState<CustomerDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -319,7 +317,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
                 <div key={inv.id} className="flex items-center justify-between text-sm">
                   <div>
                     <button
-                      onClick={() => router.push('/sales/billing/invoices')}
+                      onClick={() => router.push(`/sales/billing/invoices/${inv.id}`)}
                       className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline text-sm">
                       {inv.invoiceNumber}
                     </button>
@@ -339,7 +337,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
       </div>
 
       {/* Recent payments */}
-      {customer.recentPayments.length > 0 && (
+      {customer.recentPayments.length > 0 ? (
         <div className="bg-white rounded-xl border border-emerald-100 p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <CreditCard size={15} /> Recent Payments
@@ -365,11 +363,13 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
             </table>
           </div>
         </div>
+      ) : (
+        <p className="text-xs text-gray-400">No payments yet</p>
       )}
 
       {/* Edit Modal */}
       {showEdit && customer && (
-        <CustomerEditModal
+        <CustomerFormModal
           companyId={companyId!}
           customer={customer}
           paymentTerms={paymentTerms}
@@ -484,132 +484,3 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   )
 }
 
-function CustomerEditModal({ companyId, customer, paymentTerms, onClose, onSaved }: {
-  companyId: string
-  customer: CustomerDetail
-  paymentTerms: PaymentTerm[]
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const toast = useToast()
-  const [form, setForm] = useState({
-    name: customer.name ?? '',
-    email: customer.email ?? '',
-    phone: customer.phone ?? '',
-    address: customer.address ?? '',
-    city: customer.city ?? '',
-    state: customer.state ?? '',
-    zip: customer.zip ?? '',
-    country: customer.country ?? 'US',
-    paymentTermId: customer.paymentTermId ?? '',
-    creditLimit: customer.creditLimit != null ? String(customer.creditLimit) : '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const set = (f: string, v: string) => setForm(p => ({ ...p, [f]: v }))
-
-  const handleSave = async () => {
-    if (!form.name.trim()) { setError('Name is required.'); return }
-    setSaving(true); setError('')
-    try {
-      await salesService.updateArCustomer(companyId, customer.id, {
-        displayName: form.name.trim(),
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-        address: form.address.trim() || undefined,
-        city: form.city.trim() || undefined,
-        state: form.state.trim() || undefined,
-        zip: form.zip.trim() || undefined,
-        country: form.country.trim() || undefined,
-        paymentTermId: form.paymentTermId || undefined,
-        creditLimit: form.creditLimit ? parseFloat(form.creditLimit) : undefined,
-      })
-      toast.success('Customer updated')
-      onSaved()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to save customer')
-    } finally { setSaving(false) }
-  }
-
-  return (
-    <HaypModal
-      open={true}
-      onClose={onClose}
-      title="Edit Customer"
-      size="lg"
-      footer={
-        <>
-          <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving}
-            className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors font-semibold">
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2">
-            <AlertCircle size={14} /> {error}
-          </div>
-        )}
-        <div>
-          <label className="block text-xs font-medium text-emerald-700 mb-1">Name *</label>
-          <input value={form.name} onChange={e => set('name', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Email</label>
-            <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Phone</label>
-            <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-emerald-700 mb-1">Street Address</label>
-          <input value={form.address} onChange={e => set('address', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">City</label>
-            <input value={form.city} onChange={e => set('city', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">State</label>
-            <input value={form.state} onChange={e => set('state', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">ZIP</label>
-            <input value={form.zip} onChange={e => set('zip', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Payment Terms</label>
-            <select value={form.paymentTermId} onChange={e => set('paymentTermId', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white">
-              <option value="">— None —</option>
-              {paymentTerms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Credit Limit</label>
-            <input type="number" min="0" step="0.01" value={form.creditLimit} onChange={e => set('creditLimit', e.target.value)}
-              placeholder="0.00"
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-        </div>
-      </div>
-    </HaypModal>
-  )
-}

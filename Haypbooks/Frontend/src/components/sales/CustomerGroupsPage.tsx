@@ -158,7 +158,7 @@ export default function CustomerGroupsPage() {
   useEffect(() => { loadActivity() }, [loadActivity])
 
   const handleDelete = async (group: CustomerGroupRow) => {
-    if (!confirm(`Delete group "${group.name}"? This will unassign all its customers.`)) return
+    if (!confirm(`Delete group "${group.name}"? ${group.customerCount} customer(s) will be unassigned.`)) return
     try {
       await salesService.deleteArCustomerGroup(companyId!, group.id)
       toast.success('Group deleted')
@@ -171,7 +171,8 @@ export default function CustomerGroupsPage() {
 
   const handleBatchDelete = async (ids: string[]) => {
     if (!ids.length) return
-    if (!confirm(`Delete ${ids.length} group(s)? This will unassign all their customers.`)) return
+    const affectedCustomers = groups.filter(g => ids.includes(g.id)).reduce((sum, g) => sum + (g.customerCount ?? 0), 0)
+    if (!confirm(`Delete ${ids.length} group(s)? A total of ${affectedCustomers} customer(s) will be unassigned.`)) return
     setBatchDeleting(true)
     try {
       await salesService.batchDeleteArCustomerGroups(companyId!, ids)
@@ -269,34 +270,6 @@ export default function CustomerGroupsPage() {
     [handleBatchDelete],
   )
 
-  const headerActions = (
-    <>
-      <button
-        type="button"
-        onClick={() => setModal({ mode: 'create' })}
-        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-      >
-        <Plus size={14} />
-        New Group
-      </button>
-      <button
-        type="button"
-        onClick={handleExport}
-        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-      >
-        <Download size={14} />
-        Export
-      </button>
-      <button
-        type="button"
-        onClick={() => setHelpOpen(true)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-        aria-label="Help"
-      >
-        ?
-      </button>
-    </>
-  )
 
   const describeActivity = (entry: ActivityLog) => {
     const name = entry.changes?.name ?? entry.recordId
@@ -362,11 +335,12 @@ export default function CustomerGroupsPage() {
           columns={columns}
           actions={rowActions}
           bulkActions={bulkActions}
-          headerActions={headerActions}
           loading={loading || companyLoading}
           globalFilter={search}
           onGlobalFilterChange={setSearch}
           searchPlaceholder="Search groups…"
+          emptyTitle="No customer groups yet"
+          emptySubtitle="Create your first group to organize customers"
           onRefresh={fetchGroups}
           onExport={handleExport}
           exportLabel={exporting ? 'Exporting…' : 'Export'}

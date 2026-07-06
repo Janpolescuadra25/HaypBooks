@@ -12,7 +12,7 @@ interface NewCustomer {
   email: string
   phone: string
   balance: number
-  billingAddress?: { line1?: string; city?: string; state?: string; zip?: string }
+  billingAddress?: { line1?: string; line2?: string; city?: string; state?: string; zip?: string; country?: string }
 }
 
 interface Props {

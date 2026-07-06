@@ -69,8 +69,8 @@ export class SalesService {
     return this.arService.sendInvoice(userId, companyId, invoiceId, opts)
   }
 
-  async voidInvoice(userId: string, companyId: string, invoiceId: string) {
-    return this.arService.voidInvoice(userId, companyId, invoiceId)
+  async voidInvoice(userId: string, companyId: string, invoiceId: string, body?: { reason?: string }) {
+    return this.arService.voidInvoice(userId, companyId, invoiceId, body)
   }
 
   async listSubscriptions(userId: string, companyId: string, query: any) {

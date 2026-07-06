@@ -74,7 +74,7 @@ export default function ArAgingPage() {
     },
     {
       id: 'days30',
-      header: '1-30',
+      header: '1-30 Days',
       accessorKey: 'days30',
       size: 120,
       align: 'right',
@@ -82,7 +82,7 @@ export default function ArAgingPage() {
     },
     {
       id: 'days60',
-      header: '31-60',
+      header: '31-60 Days',
       accessorKey: 'days60',
       size: 120,
       align: 'right',
@@ -90,7 +90,7 @@ export default function ArAgingPage() {
     },
     {
       id: 'days90',
-      header: '61-90',
+      header: '61-90 Days',
       accessorKey: 'days90',
       size: 120,
       align: 'right',
@@ -98,7 +98,7 @@ export default function ArAgingPage() {
     },
     {
       id: 'over90',
-      header: '90+',
+      header: 'Over 90 Days',
       accessorKey: 'over90',
       size: 120,
       align: 'right',
@@ -140,11 +140,20 @@ export default function ArAgingPage() {
   }, [allCustomers, search])
 
   function exportCsv() {
-    const headers = ['Customer', 'Current', '1-30', '31-60', '61-90', '90+', 'Total']
+    const headers = ['Customer', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', 'Over 90 Days', 'Total']
     const rows = filteredCustomers.map(c => [
       c.customerName, c.current, c.days30, c.days60, c.days90, c.over90, c.total,
     ])
-    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+    const totalsRow = [
+      'Total',
+      filteredCustomers.reduce((s, c) => s + (c.current || 0), 0),
+      filteredCustomers.reduce((s, c) => s + (c.days30 || 0), 0),
+      filteredCustomers.reduce((s, c) => s + (c.days60 || 0), 0),
+      filteredCustomers.reduce((s, c) => s + (c.days90 || 0), 0),
+      filteredCustomers.reduce((s, c) => s + (c.over90 || 0), 0),
+      filteredCustomers.reduce((s, c) => s + (c.total || 0), 0),
+    ]
+    const csv = [headers, ...rows, totalsRow].map(r => r.join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = `ar-aging-${asOf}.csv`; a.click()
@@ -298,7 +307,7 @@ export default function ArAgingPage() {
                         <p className="font-semibold text-slate-800">{fmt(drawerCustomer.days90)}</p>
                       </div>
                       <div>
-                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">90+ Days</p>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Over 90 Days</p>
                         <p className="font-semibold text-red-600">{fmt(drawerCustomer.over90)}</p>
                       </div>
                       <div>

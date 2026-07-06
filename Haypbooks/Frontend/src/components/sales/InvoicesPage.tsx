@@ -8,7 +8,6 @@ import {
   Send,
   Ban,
   Copy,
-  Trash2,
   Printer,
   Share2,
   CreditCard,
@@ -84,8 +83,8 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-  const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([])
+  const [voidConfirmationOpen, setVoidConfirmationOpen] = useState(false)
+  const [voidTargetIds, setVoidTargetIds] = useState<string[]>([])
   const toast = useToast()
 
   const fetchInvoices = useCallback(async () => {
@@ -219,12 +218,20 @@ export default function InvoicesPage() {
   )
 
   const handleBulkMarkAsSent = useCallback(
-    (ids: string[]) => {
-      if (ids.length === 0) return
-      setInvoices((prev) => prev.map((invoice) => (ids.includes(invoice.id) ? { ...invoice, status: 'SENT' } : invoice)))
-      toast.success(`${ids.length} invoice(s) marked as Sent`)
+    async (ids: string[]) => {
+      if (!companyId || ids.length === 0) return
+      try {
+        const results = await Promise.allSettled(
+          ids.map(id => salesService.sendArInvoice(companyId, id))
+        )
+        const succeeded = results.filter(r => r.status === 'fulfilled').length
+        toast.success(`Marked ${succeeded} invoice(s) as sent`)
+        fetchInvoices()
+      } catch {
+        toast.error('Error marking invoices as sent')
+      }
     },
-    [toast],
+    [companyId, fetchInvoices, toast],
   )
 
   const handleBulkPrint = useCallback(
@@ -235,22 +242,32 @@ export default function InvoicesPage() {
     [toast],
   )
 
-  const handleConfirmDelete = useCallback((ids: string[]) => {
+  const handleConfirmVoid = useCallback((ids: string[]) => {
     if (ids.length === 0) return
-    setDeleteTargetIds(ids)
-    setDeleteConfirmationOpen(true)
+    setVoidTargetIds(ids)
+    setVoidConfirmationOpen(true)
   }, [])
 
-  const handleBulkDelete = useCallback(() => {
-    setInvoices((prev) => prev.filter((invoice) => !deleteTargetIds.includes(invoice.id)))
-    setDeleteTargetIds([])
-    setDeleteConfirmationOpen(false)
-    toast.success('Selected invoices deleted')
-  }, [deleteTargetIds, toast])
+  const handleBulkVoid = useCallback(async () => {
+    if (!companyId || voidTargetIds.length === 0) return
+    try {
+      const results = await Promise.allSettled(
+        voidTargetIds.map(id => salesService.voidArInvoice(companyId, id, 'Bulk void'))
+      )
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+      toast.success(`Voided ${succeeded} invoice(s)`)
+      fetchInvoices()
+    } catch {
+      toast.error('Error voiding invoices')
+    } finally {
+      setVoidConfirmationOpen(false)
+      setVoidTargetIds([])
+    }
+  }, [companyId, fetchInvoices, toast, voidTargetIds])
 
   const downloadInvoicesCSV = useCallback(
     (rows: Invoice[]) => {
-      const headers = ['Invoice #', 'Customer', 'Date', 'Due Date', 'Status', 'Days overdue', 'Total']
+      const headers = ['Invoice #', 'Customer', 'Date', 'Due Date', 'Status', 'Days overdue', 'Total', 'Amount Due']
       const formatted = rows.map((invoice) => [
         invoice.invoiceNumber ?? invoice.id.slice(0, 8).toUpperCase(),
         invoice.customerName ?? '',
@@ -259,8 +276,14 @@ export default function InvoicesPage() {
         invoice.status.replace(/_/g, ' '),
         String(getDaysOverdue(invoice)),
         String(invoice.total),
+        String(invoice.amountDue || 0),
       ])
-      csvDownload(`invoices-${new Date().toISOString().slice(0, 10)}`, headers, formatted)
+      const totalsRow = [
+        'Total', '', '', '', '', '',
+        String(rows.reduce((s, r) => s + (r.total || 0), 0)),
+        String(rows.reduce((s, r) => s + (r.amountDue || 0), 0)),
+      ]
+      csvDownload(`invoices-${new Date().toISOString().slice(0, 10)}`, headers, [...formatted, totalsRow])
       toast.success('CSV export ready')
     },
     [toast],
@@ -354,6 +377,24 @@ export default function InvoicesPage() {
         isSummable: true,
         render: (value) => <span className="font-medium text-slate-900">{fmt(value)}</span>,
       },
+      {
+        id: 'amountDue',
+        header: 'Amount Due',
+        accessorKey: 'amountDue',
+        size: 130,
+        align: 'right' as const,
+        enableSorting: true,
+        isSummable: true,
+        render: (value) => {
+          if (value === undefined || value === null) return '—'
+          if (value > 0) return (
+            <span className="font-semibold text-orange-600">
+              {fmt(value)}
+            </span>
+          )
+          return <span className="text-green-600">{fmt(value)}</span>
+        }
+      },
     ],
     [fmt],
   )
@@ -437,13 +478,13 @@ export default function InvoicesPage() {
         onClick: (ids) => handleBulkPrint(ids),
       },
       {
-        label: 'Delete',
-        icon: <Trash2 size={14} />,
+        label: 'Void',
+        icon: <Ban size={14} />,
         variant: 'danger',
-        onClick: (ids) => handleConfirmDelete(ids),
+        onClick: (ids) => handleConfirmVoid(ids),
       },
     ],
-    [handleBulkSend, handleBulkMarkAsSent, handleBulkPrint, handleConfirmDelete],
+    [handleBulkSend, handleBulkMarkAsSent, handleBulkPrint, handleConfirmVoid],
   )
 
   const stats = useMemo<HaypStat[]>(
@@ -511,22 +552,22 @@ export default function InvoicesPage() {
 
       {showTemplates && <TemplateGallery modal onClose={() => setShowTemplates(false)} />}
 
-      {deleteConfirmationOpen && (
+      {voidConfirmationOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white p-6">
-            <h3 className="text-lg font-semibold text-slate-900">Delete Invoices</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Void Invoices?</h3>
             <p className="text-sm text-slate-600 mt-2">
-              Are you sure you want to delete the selected invoices? This action cannot be undone.
+              This will void {voidTargetIds.length} invoice{voidTargetIds.length !== 1 ? 's' : ''}. Voided invoices cannot be restored.
             </p>
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setDeleteConfirmationOpen(false)} className="px-4 py-2 text-sm text-slate-600 border rounded-lg hover:bg-slate-50">
+              <button onClick={() => setVoidConfirmationOpen(false)} className="px-4 py-2 text-sm text-slate-600 border rounded-lg hover:bg-slate-50">
                 Cancel
               </button>
               <button
-                onClick={handleBulkDelete}
+                onClick={handleBulkVoid}
                 className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
-                Delete {deleteTargetIds.length} invoice{deleteTargetIds.length !== 1 ? 's' : ''}
+                Void {voidTargetIds.length} invoice{voidTargetIds.length !== 1 ? 's' : ''}
               </button>
             </div>
           </div>
