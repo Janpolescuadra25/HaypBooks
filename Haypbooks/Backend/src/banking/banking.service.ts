@@ -438,13 +438,30 @@ export class BankingService {
         if (!data.toBankAccountId) throw new BadRequestException('toBankAccountId is required')
         if (!data.amount) throw new BadRequestException('amount is required')
         if (!data.date) throw new BadRequestException('date is required')
-        return this.repo.createTransfer(wid, {
+        const transfer = await this.repo.createTransfer(wid, {
             fromBankAccountId: data.fromBankAccountId,
             toBankAccountId: data.toBankAccountId,
             amount: Number(data.amount),
             date: new Date(data.date),
             memo: data.memo,
         })
+
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        const jeId = await this.subLedger.postBankTransferToGL({
+            workspaceId: wid,
+            companyId,
+            transferId: transfer.id,
+            postedById: userId,
+            currency: company?.currency ?? 'PHP',
+        })
+        if (jeId && transfer.fromTransactionId && transfer.toTransactionId) {
+            await this.prisma.bankTransaction.updateMany({
+                where: { id: { in: [transfer.fromTransactionId, transfer.toTransactionId] } },
+                data: { journalEntryId: jeId },
+            })
+        }
+
+        return transfer
     }
 
     // ─── Bank Reconciliation ──────────────────────────────────────────────────

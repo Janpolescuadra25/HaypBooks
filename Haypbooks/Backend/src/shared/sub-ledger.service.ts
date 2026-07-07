@@ -1345,6 +1345,81 @@ export class SubLedgerService {
     }
   }
 
+  // ─── Bank Transfer (DR: Destination Bank  CR: Source Bank) ─────────────────
+
+  async postBankTransferToGL(data: {
+    workspaceId: string
+    companyId: string
+    transferId: string
+    postedById: string
+    currency?: string
+  }): Promise<string | null> {
+    try {
+      const transfer = await this.prisma.bankTransfer.findUnique({
+        where: { id: data.transferId },
+        select: { fromBankAccountId: true, toBankAccountId: true, amount: true, date: true },
+      })
+      if (!transfer) return null
+
+      const [fromBankAcct, toBankAcct] = await Promise.all([
+        this.prisma.bankAccount.findUnique({ where: { id: transfer.fromBankAccountId }, select: { glAccountId: true, name: true } }),
+        this.prisma.bankAccount.findUnique({ where: { id: transfer.toBankAccountId }, select: { glAccountId: true, name: true } }),
+      ])
+      if (!fromBankAcct || !toBankAcct) {
+        this.logger.warn(`[SubLedger] Cannot post bank transfer ${data.transferId}: source or destination bank account not found`)
+        return null
+      }
+
+      const findBankGlFallback = async () => {
+        const cashAcct = await this.prisma.account.findFirst({
+          where: {
+            companyId: data.companyId,
+            isActive: true,
+            deletedAt: null,
+            isHeader: false,
+            type: { category: { in: ['ASSET'] } },
+            name: { contains: 'Cash', mode: 'insensitive' },
+          },
+          select: { id: true },
+        })
+        return cashAcct?.id ?? null
+      }
+
+      let sourceGlAccountId = fromBankAcct.glAccountId ?? await findBankGlFallback()
+      let destinationGlAccountId = toBankAcct.glAccountId ?? await findBankGlFallback()
+      if (!sourceGlAccountId || !destinationGlAccountId) {
+        this.logger.warn(`[SubLedger] Cannot post bank transfer ${data.transferId}: GL account not found for source or destination bank account`)
+        return null
+      }
+
+      let jeId: string | null = null
+      await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(data.companyId, new Date(transfer.date), tx)
+        const entryNumber = await this.nextEntryNumber(data.companyId, 'BT')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: data.workspaceId,
+          companyId: data.companyId,
+          date: new Date(transfer.date),
+          description: `Bank transfer: ${fromBankAcct.name} → ${toBankAcct.name}`,
+          currency: data.currency,
+          createdById: data.postedById,
+          entryNumber,
+          transactionSource: 'Bank Transfer',
+          sourceReferenceId: data.transferId,
+          lines: [
+            { accountId: destinationGlAccountId, debit: Number(transfer.amount), credit: 0, memo: `Received by ${toBankAcct.name}` },
+            { accountId: sourceGlAccountId, debit: 0, credit: Number(transfer.amount), memo: `Transferred from ${fromBankAcct.name}` },
+          ],
+        })
+        jeId = je?.id ?? null
+      })
+      return jeId
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post bank transfer ${data.transferId}: ${err?.message}`)
+      return null
+    }
+  }
+
   // ─── Expenses: Expense Claim Approved ──────────────────────────────────────
   //   DR: Expense accounts (per line)
   //   CR: Accrued Expenses - Employee Payable (2100)
