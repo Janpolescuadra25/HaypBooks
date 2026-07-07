@@ -153,6 +153,34 @@ export class ArController {
         return this.svc.listPaymentTerms(req.user.userId, companyId)
     }
 
+    @Post('payment-terms')
+    createPaymentTerm(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createPaymentTerm(req.user.userId, companyId, body)
+    }
+
+    @Put('payment-terms/:id')
+    updatePaymentTerm(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updatePaymentTerm(req.user.userId, companyId, id, body)
+    }
+
+    @Delete('payment-terms/:id')
+    deletePaymentTerm(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.deletePaymentTerm(req.user.userId, companyId, id)
+    }
+
     @Post('customers/batch/delete')
     @HttpCode(HttpStatus.OK)
     batchDeleteCustomers(

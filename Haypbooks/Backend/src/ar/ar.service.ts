@@ -509,6 +509,59 @@ export class ArService {
         return this.repo.findPaymentTerms(wid)
     }
 
+    async createPaymentTerm(userId: string, companyId: string, data: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!data.name?.trim()) throw new BadRequestException('name is required')
+        if (data.dueDays == null || !Number.isFinite(Number(data.dueDays))) throw new BadRequestException('dueDays is required')
+        const existing = await this.prisma.paymentTerm.findFirst({ where: { workspaceId: wid, name: data.name.trim() } })
+        if (existing) throw new BadRequestException('A payment term with this name already exists')
+        const result = await this.repo.createPaymentTerm(wid, {
+            name: data.name.trim(),
+            dueDays: Number(data.dueDays),
+            discountDays: data.discountDays != null ? Number(data.discountDays) : null,
+            discountPct: data.discountPct != null ? Number(data.discountPct) : null,
+            isDefault: data.isDefault === true,
+        })
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'PaymentTerm', recordId: result.id, changes: { name: result.name } },
+        }).catch(() => {})
+        return result
+    }
+
+    async updatePaymentTerm(userId: string, companyId: string, id: string, data: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.paymentTerm.findFirst({ where: { id, workspaceId: wid } })
+        if (!existing) throw new NotFoundException('Payment term not found')
+        const result = await this.repo.updatePaymentTerm(id, {
+            name: data.name?.trim(),
+            dueDays: data.dueDays != null ? Number(data.dueDays) : undefined,
+            discountDays: data.discountDays != null ? Number(data.discountDays) : undefined,
+            discountPct: data.discountPct != null ? Number(data.discountPct) : undefined,
+            isDefault: data.isDefault,
+            isActive: data.isActive,
+        })
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'PaymentTerm', recordId: id, changes: data },
+        }).catch(() => {})
+        return result
+    }
+
+    async deletePaymentTerm(userId: string, companyId: string, id: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.paymentTerm.findFirst({ where: { id, workspaceId: wid } })
+        if (!existing) throw new NotFoundException('Payment term not found')
+        const inUse = await this.prisma.customer.count({ where: { paymentTermId: id } })
+        if (inUse > 0) throw new BadRequestException(`Cannot delete: ${inUse} customer(s) are using this payment term`)
+        const result = await this.repo.deletePaymentTerm(id)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'PaymentTerm', recordId: id, changes: { name: existing.name } },
+        }).catch(() => {})
+        return result
+    }
+
     async getCustomer(userId: string, companyId: string, contactId: string) {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)

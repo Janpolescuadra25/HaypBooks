@@ -625,8 +625,55 @@ export class ArRepository {
         return this.prisma.paymentTerm.findMany({
             where: { workspaceId, isActive: true },
             orderBy: { dueDays: 'asc' },
-            select: { id: true, name: true, dueDays: true },
+            select: { id: true, name: true, dueDays: true, discountDays: true, discountPct: true, isDefault: true },
         })
+    }
+
+    async createPaymentTerm(workspaceId: string, data: {
+        name: string; dueDays: number; discountDays: number | null;
+        discountPct: number | null; isDefault: boolean;
+    }) {
+        return this.prisma.$transaction(async (tx) => {
+            if (data.isDefault) {
+                await tx.paymentTerm.updateMany({ where: { workspaceId, isDefault: true }, data: { isDefault: false } })
+            }
+            return tx.paymentTerm.create({
+                data: {
+                    workspaceId,
+                    name: data.name,
+                    dueDays: data.dueDays,
+                    discountDays: data.discountDays,
+                    discountPct: data.discountPct,
+                    isDefault: data.isDefault,
+                },
+            })
+        })
+    }
+
+    async updatePaymentTerm(id: string, data: {
+        name?: string; dueDays?: number; discountDays?: number | null;
+        discountPct?: number | null; isDefault?: boolean; isActive?: boolean;
+    }) {
+        return this.prisma.$transaction(async (tx) => {
+            if (data.isDefault === true) {
+                const term = await tx.paymentTerm.findUnique({ where: { id }, select: { workspaceId: true } })
+                if (term) {
+                    await tx.paymentTerm.updateMany({ where: { workspaceId: term.workspaceId, isDefault: true }, data: { isDefault: false } })
+                }
+            }
+            const updateData: any = {}
+            if (data.name !== undefined) updateData.name = data.name
+            if (data.dueDays !== undefined) updateData.dueDays = data.dueDays
+            if (data.discountDays !== undefined) updateData.discountDays = data.discountDays
+            if (data.discountPct !== undefined) updateData.discountPct = data.discountPct
+            if (data.isDefault !== undefined) updateData.isDefault = data.isDefault
+            if (data.isActive !== undefined) updateData.isActive = data.isActive
+            return tx.paymentTerm.update({ where: { id }, data: updateData })
+        })
+    }
+
+    async deletePaymentTerm(id: string) {
+        return this.prisma.paymentTerm.update({ where: { id }, data: { isActive: false } })
     }
 
     // ─── Quotes ───────────────────────────────────────────────────────────────

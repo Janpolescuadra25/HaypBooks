@@ -13,6 +13,9 @@ export interface PaymentTerm {
   id: string
   name: string
   dueDays: number
+  discountDays?: number | null
+  discountPct?: number | null
+  isDefault?: boolean
 }
 
 export interface ArCustomer {
@@ -151,6 +154,15 @@ export const salesService = {
 
   listArPaymentTerms: (companyId: string) =>
     apiClient.get<PaymentTerm[]>(`/companies/${companyId}/ar/payment-terms`),
+
+  createArPaymentTerm: (companyId: string, body: { name: string; dueDays: number; discountDays?: number | null; discountPct?: number | null; isDefault?: boolean }) =>
+    apiClient.post(`/companies/${companyId}/ar/payment-terms`, body),
+
+  updateArPaymentTerm: (companyId: string, id: string, body: Partial<{ name: string; dueDays: number; discountDays: number | null; discountPct: number | null; isDefault: boolean; isActive: boolean }>) =>
+    apiClient.put(`/companies/${companyId}/ar/payment-terms/${id}`, body),
+
+  deleteArPaymentTerm: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/payment-terms/${id}`),
 
   listArCustomerGroups: (companyId: string) =>
     apiClient.get<CustomerGroup[]>(`/companies/${companyId}/ar/customer-groups`),
