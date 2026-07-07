@@ -201,11 +201,30 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setShowEdit(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
-          <Edit2 size={14} /> Edit
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push('/sales/billing/invoices/new')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+          >
+            <FileText size={14} />
+            Create Invoice
+          </button>
+
+          <button
+            onClick={() => router.push('/sales/collections/payments')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            <CreditCard size={14} />
+            Record Payment
+          </button>
+
+          <button
+            onClick={() => setShowEdit(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
+          >
+            <Edit2 size={14} /> Edit
+          </button>
+        </div>
       </div>
 
       {/* Tab navigation */}
