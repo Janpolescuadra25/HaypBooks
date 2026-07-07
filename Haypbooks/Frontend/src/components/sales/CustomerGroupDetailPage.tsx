@@ -169,51 +169,13 @@ function AddMembersModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col max-h-[85vh]">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">Add Customers to Group</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100"><X size={16} /></button>
-        </div>
-        <div className="p-4 flex-shrink-0">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search customers not yet in a group…"
-              className="pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-          <p className="text-xs text-gray-400 mt-1">Only customers without an existing group are shown.</p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto border-t border-gray-100">
-          {loading ? (
-            <div className="flex justify-center items-center py-10">
-              <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full" />
-            </div>
-          ) : customers.length === 0 ? (
-            <p className="text-center text-gray-400 py-8 text-sm">No available customers found.</p>
-          ) : (
-            customers.map(c => (
-              <label key={c.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50">
-                <input
-                  type="checkbox"
-                  checked={selected.has(c.id)}
-                  onChange={() => toggleOne(c.id)}
-                  className="accent-blue-600"
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
-                  {c.email && <p className="text-xs text-gray-400 truncate">{c.email}</p>}
-                </div>
-              </label>
-            ))
-          )}
-        </div>
-
-        <div className="p-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
+    <HaypModal
+      open={true}
+      onClose={onClose}
+      title="Add Customers to Group"
+      size="md"
+      footer={
+        <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">{selected.size} selected</span>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
@@ -226,8 +188,46 @@ function AddMembersModal({
             </button>
           </div>
         </div>
+      }
+    >
+      <div className="p-4 flex-shrink-0">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search customers not yet in a group…"
+            className="pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-1">Only customers without an existing group are shown.</p>
       </div>
-    </div>
+
+      <div className="flex-1 overflow-y-auto border-t border-gray-100">
+        {loading ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full" />
+          </div>
+        ) : customers.length === 0 ? (
+          <p className="text-center text-gray-400 py-8 text-sm">No available customers found.</p>
+        ) : (
+          customers.map(c => (
+            <label key={c.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50">
+              <input
+                type="checkbox"
+                checked={selected.has(c.id)}
+                onChange={() => toggleOne(c.id)}
+                className="accent-blue-600"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
+                {c.email && <p className="text-xs text-gray-400 truncate">{c.email}</p>}
+              </div>
+            </label>
+          ))
+        )}
+      </div>
+    </HaypModal>
   )
 }
 
