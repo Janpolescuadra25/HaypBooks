@@ -1297,6 +1297,54 @@ export class SubLedgerService {
     }
   }
 
+  // ─── Deferred Revenue Creation (DR: Cash  CR: Deferred Revenue) ───────────
+
+  async postDeferredRevenueCreationToGL(data: {
+    workspaceId: string
+    companyId: string
+    amount: number
+    deferredRevenueId: string
+    description?: string
+    currency?: string
+    postedById?: string
+  }): Promise<string | null> {
+    try {
+      const cashAccountId = await this.findAccountByCode(data.companyId, '1010')
+      const deferredRevenueId = await this.findAccountByCode(data.companyId, '2110')
+
+      if (!cashAccountId || !deferredRevenueId) {
+        this.logger.warn(`[SubLedger] Cannot post deferred revenue creation ${data.deferredRevenueId}: Cash (1010) or Deferred Revenue (2110) account not found`)
+        return null
+      }
+
+      let jeId: string | null = null
+      await this.prisma.$transaction(async (tx) => {
+        await this.assertPeriodOpen(data.companyId, new Date(), tx)
+        const entryNumber = await this.nextEntryNumber(data.companyId, 'DR')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: data.workspaceId,
+          companyId: data.companyId,
+          date: new Date(),
+          description: data.description ?? `Deferred revenue creation ${data.deferredRevenueId}`,
+          currency: data.currency,
+          createdById: data.postedById,
+          entryNumber,
+          transactionSource: 'Deferred Revenue',
+          sourceReferenceId: data.deferredRevenueId,
+          lines: [
+            { accountId: cashAccountId, debit: data.amount, credit: 0, memo: 'Cash received' },
+            { accountId: deferredRevenueId, debit: 0, credit: data.amount, memo: 'Deferred Revenue' },
+          ],
+        })
+        jeId = je?.id ?? null
+      })
+      return jeId
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post deferred revenue creation ${data.deferredRevenueId}: ${err?.message}`)
+      return null
+    }
+  }
+
   // ─── Expenses: Expense Claim Approved ──────────────────────────────────────
   //   DR: Expense accounts (per line)
   //   CR: Accrued Expenses - Employee Payable (2100)

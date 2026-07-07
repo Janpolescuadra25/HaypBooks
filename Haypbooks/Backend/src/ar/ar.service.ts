@@ -1383,6 +1383,20 @@ export class ArService {
             createdById: userId,
         })
 
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        const jeId = await this.subLedger.postDeferredRevenueCreationToGL({
+            workspaceId: created.workspaceId,
+            companyId,
+            amount: created.totalDeferredAmount,
+            deferredRevenueId: created.id,
+            description: `Deferred revenue creation — ${created.description}`,
+            currency: company?.currency ?? 'PHP',
+            postedById: userId,
+        })
+        if (jeId) {
+            await this.prisma.deferredRevenue.update({ where: { id: created.id }, data: { journalEntryId: jeId } })
+        }
+
         const customerName = created.customerId
             ? (await this.prisma.customer.findFirst({
                 where: { contactId: created.customerId },
