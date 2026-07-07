@@ -1226,11 +1226,11 @@ export class SubLedgerService {
     postedById?: string
   }): Promise<string | null> {
     try {
-      const deferredRevenueId = await this.findAccountByCode(data.companyId, '2100')
-      const revenueAccountId = await this.findAccountByCode(data.companyId, '4000')
+      const deferredRevenueId = await this.findAccountByCode(data.companyId, '2110')
+      const revenueAccountId = await this.findAccountByCode(data.companyId, '4010')
 
       if (!deferredRevenueId || !revenueAccountId) {
-        this.logger.warn(`[SubLedger] Cannot post revenue recognition ${data.recognitionId}: Deferred Revenue (2100) or Revenue (4000) account not found`)
+        this.logger.warn(`[SubLedger] Cannot post revenue recognition ${data.recognitionId}: Deferred Revenue (2110) or Revenue (4010) account not found`)
         return null
       }
 
@@ -1271,8 +1271,8 @@ export class SubLedgerService {
     postedById?: string
   }): Promise<void> {
     try {
-      const deferredRevenueId = await this.findAccountByCode(data.companyId, '2100')
-      const revenueAccountId = await this.findAccountByCode(data.companyId, '4000')
+      const deferredRevenueId = await this.findAccountByCode(data.companyId, '2110')
+      const revenueAccountId = await this.findAccountByCode(data.companyId, '4010')
       if (!deferredRevenueId || !revenueAccountId) return
 
       await this.prisma.$transaction(async (tx) => {
