@@ -897,62 +897,38 @@ export class AccountingRepository {
         })
     }
 
-    // TODO: GL8 — Migrate to journalLines-based balance calculation exclusively.
-    // Account.balance can drift from actual journalLines sum if any code path
-    // updates one without the other. Trial Balance should aggregate from
-    // JournalEntryLine records only, not use the Account.balance snapshot.
-    // ─── Trial Balance ────────────────────────────────────────────────────────
-
     async getTrialBalance(companyId: string, asOf?: Date) {
+        const effectiveAsOf = asOf ?? new Date()
+
         const accounts = await this.prisma.account.findMany({
             where: { companyId, isActive: true, deletedAt: null, isHeader: false },
             include: { type: { select: { name: true, category: true, normalSide: true } } },
             orderBy: { code: 'asc' },
         })
 
-        // If asOf is provided, calculate balances from posted JE lines up to that date
-        // instead of using the current account.balance snapshot
-        if (asOf) {
-            const lines = await this.prisma.journalEntryLine.groupBy({
-                by: ['accountId'],
-                where: {
-                    companyId,
-                    journal: { postingStatus: 'POSTED', deletedAt: null, date: { lte: asOf } },
-                },
-                _sum: { debit: true, credit: true },
-            })
+        const lines = await this.prisma.journalEntryLine.groupBy({
+            by: ['accountId'],
+            where: {
+                companyId,
+                journal: { postingStatus: 'POSTED', deletedAt: null, date: { lte: effectiveAsOf } },
+            },
+            _sum: { debit: true, credit: true },
+        })
 
-            const balanceMap = new Map<string, { debit: number; credit: number }>()
-            for (const row of lines) {
-                balanceMap.set(row.accountId, {
-                    debit: Number(row._sum.debit ?? 0),
-                    credit: Number(row._sum.credit ?? 0),
-                })
-            }
-
-            return accounts.map(a => {
-                const sums = balanceMap.get(a.id) ?? { debit: 0, credit: 0 }
-                const ns = a.normalSide ?? a.type?.normalSide ?? 'DEBIT'
-                const balance = ns === 'DEBIT'
-                    ? sums.debit - sums.credit
-                    : sums.credit - sums.debit
-                return {
-                    accountId: a.id,
-                    code: a.code,
-                    name: a.name,
-                    type: a.type?.name,
-                    category: a.type?.category,
-                    normalSide: ns,
-                    balance,
-                    debit: ns === 'DEBIT' ? Math.max(0, balance) : 0,
-                    credit: ns === 'CREDIT' ? Math.max(0, balance) : 0,
-                }
+        const balanceMap = new Map<string, { debit: number; credit: number }>()
+        for (const row of lines) {
+            balanceMap.set(row.accountId, {
+                debit: Number(row._sum.debit ?? 0),
+                credit: Number(row._sum.credit ?? 0),
             })
         }
 
-        // Default: use current balance snapshot
         return accounts.map(a => {
+            const sums = balanceMap.get(a.id) ?? { debit: 0, credit: 0 }
             const ns = a.normalSide ?? a.type?.normalSide ?? 'DEBIT'
+            const balance = ns === 'DEBIT'
+                ? sums.debit - sums.credit
+                : sums.credit - sums.debit
             return {
                 accountId: a.id,
                 code: a.code,
@@ -960,9 +936,9 @@ export class AccountingRepository {
                 type: a.type?.name,
                 category: a.type?.category,
                 normalSide: ns,
-                balance: a.balance,
-                debit: ns === 'DEBIT' ? a.balance : 0,
-                credit: ns === 'CREDIT' ? a.balance : 0,
+                balance,
+                debit: ns === 'DEBIT' ? Math.max(0, balance) : 0,
+                credit: ns === 'CREDIT' ? Math.max(0, balance) : 0,
             }
         })
     }
