@@ -524,8 +524,6 @@ export default function QuotesEstimatesPage() {
           data={statusFiltered}
           columns={columns}
           tableId="quotes-estimates"
-          title="Quotes & Estimates"
-          description="Create and manage customer quotes"
           loading={loading}
           headerActions={headerActions}
           actions={actions}

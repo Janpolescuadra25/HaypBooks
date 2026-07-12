@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -77,26 +77,26 @@ function GroupFormModal({
     >
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Group Name <span className="text-red-500">*</span></label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Group Name <span className="text-red-500">*</span></label>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. Wholesale"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={3}
             placeholder="Optional description"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50">Cancel</button>
           <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">
             {saving ? 'Saving…' : mode === 'create' ? 'Create Group' : 'Save Changes'}
           </button>
@@ -227,7 +227,7 @@ export default function CustomerGroupsPage() {
       accessorKey: 'description',
       header: 'Description',
       render: (value: any) => (
-        <span className="text-gray-500">{value || <span className="italic text-gray-300">—</span>}</span>
+        <span className="text-slate-500">{value || <span className="italic text-slate-300">—</span>}</span>
       ),
     },
     {
@@ -236,7 +236,7 @@ export default function CustomerGroupsPage() {
       header: 'Customers',
       align: 'right' as const,
       render: (value: any) => (
-        <span className="text-gray-700 font-medium">{value ?? 0}</span>
+        <span className="text-slate-700 font-medium">{value ?? 0}</span>
       ),
     },
   ], [router])
@@ -282,29 +282,29 @@ export default function CustomerGroupsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Users size={22} className="text-emerald-600" />
               Customer Groups
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">Organize customers into segments for reporting and pricing</p>
+            <p className="text-sm text-slate-500 mt-0.5">Organize customers into segments for reporting and pricing</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               <Download size={14} />
               {exporting ? 'Exporting…' : 'Export'}
             </button>
             <button
               onClick={() => fetchGroups()}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
               title="Refresh"
             >
               <RefreshCw size={14} />
@@ -318,7 +318,7 @@ export default function CustomerGroupsPage() {
             </button>
             <button
               onClick={() => setHelpOpen(o => !o)}
-              className="w-8 h-8 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-sm font-bold"
+              className="w-8 h-8 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-sm font-bold"
               title="Help"
             >?</button>
           </div>
@@ -329,8 +329,6 @@ export default function CustomerGroupsPage() {
       <div className="px-6 py-5">
         <HaypDataTable
           tableId="customer-groups"
-          title="Customer Groups"
-          description="Organize customers into segments for reporting and pricing"
           data={groups}
           columns={columns}
           actions={rowActions}
@@ -345,27 +343,27 @@ export default function CustomerGroupsPage() {
           onExport={handleExport}
           exportLabel={exporting ? 'Exporting…' : 'Export'}
           onRowClick={(row) => router.push(`/sales/customers/groups/${row.id}`)}
-          className="bg-white rounded-xl border border-gray-200"
+          className="bg-white rounded-xl border border-slate-200"
         />
 
-        <section className="mt-5 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2"><Clock size={14} className="text-emerald-600" />Recent Activity</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Latest customer-group create, update, and delete events</p>
+        <section className="mt-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200">
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Clock size={14} className="text-emerald-600" />Recent Activity</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Latest customer-group create, update, and delete events</p>
           </div>
           {activityLoading ? (
-            <div className="px-4 py-8 text-sm text-gray-500">Loading activity…</div>
+            <div className="px-4 py-8 text-sm text-slate-500">Loading activity…</div>
           ) : activity.length === 0 ? (
-            <div className="px-4 py-8 text-sm text-gray-500">No customer group activity recorded yet.</div>
+            <div className="px-4 py-8 text-sm text-slate-500">No customer group activity recorded yet.</div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-slate-100">
               {activity.map((entry) => (
                 <div key={entry.id} className="px-4 py-3 flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{describeActivity(entry)}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{entry.user?.name ?? entry.user?.email ?? 'System'}</p>
+                    <p className="text-sm font-medium text-slate-900">{describeActivity(entry)}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{entry.user?.name ?? entry.user?.email ?? 'System'}</p>
                   </div>
-                  <p className="text-xs text-gray-400 shrink-0">{new Date(entry.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-slate-400 shrink-0">{new Date(entry.createdAt).toLocaleString()}</p>
                 </div>
               ))}
             </div>
@@ -386,24 +384,19 @@ export default function CustomerGroupsPage() {
 
       {/* Help */}
       {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-200 overflow-y-auto max-h-[85vh]">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-base font-semibold">Customer Groups Help</h2>
-              <button onClick={() => setHelpOpen(false)} className="p-1 rounded hover:bg-gray-100" aria-label="Close help" title="Close help"><X size={16} /></button>
-            </div>
-            <div className="p-4 text-sm text-gray-700 space-y-3">
-              <p>Customer Groups let you segment your customers for reporting, pricing rules, and targeted workflows.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Create named groups (e.g. Wholesale, VIP, Retail).</li>
-                <li>Assign customers to groups individually or in bulk from the Customers page.</li>
-                <li>Click a group name to view and manage its members.</li>
-                <li>Use groups as filters in the Customers list and reports.</li>
-              </ul>
-            </div>
+        <HaypModal open={helpOpen} onClose={() => setHelpOpen(false)} title="Customer Groups Help">
+          <div className="p-4 text-sm text-slate-700 space-y-3">
+            <p>Customer Groups let you segment your customers for reporting, pricing rules, and targeted workflows.</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Create named groups (e.g. Wholesale, VIP, Retail).</li>
+              <li>Assign customers to groups individually or in bulk from the Customers page.</li>
+              <li>Click a group name to view and manage its members.</li>
+              <li>Use groups as filters in the Customers list and reports.</li>
+            </ul>
           </div>
-        </div>
+        </HaypModal>
       )}
     </div>
   )
 }
+

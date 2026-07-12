@@ -558,8 +558,6 @@ export default function CollectionsCenterPage() {
           data={sorted}
           columns={tableColumns}
           tableId="collections-center"
-          title="Collections Center"
-          description="Manage collection cases and payment promises."
           headerActions={
             <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">
               <Plus size={16} /> New Case

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import HaypModal from '@/components/shared/HaypModal'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypColumn } from '@/components/shared/HaypDataTable.types'
 
@@ -61,7 +62,6 @@ export default function CustomerDocumentsPage() {
             data={DEFAULT_DOCUMENTS}
             columns={columns}
             tableId="customer-documents"
-            title="Customer Documents"
             globalFilter={search}
             onGlobalFilterChange={setSearch}
             searchPlaceholder="Search documents..."
@@ -74,22 +74,16 @@ export default function CustomerDocumentsPage() {
       </div>
 
       {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Customer Documents Documentation</h2>
-              <button onClick={() => setHelpOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
-            </div>
-            <div className="p-4 text-sm text-slate-700 space-y-3">
-              <p>Store and manage customer-related files linked to customer accounts and contracts.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Upload contracts, tax IDs, agreements, and more.</li>
-                <li>Search by customer, type, or status.</li>
-                <li>Track who uploaded files and when.</li>
-              </ul>
-            </div>
+        <HaypModal open={helpOpen} onClose={() => setHelpOpen(false)} title="Customer Documents Documentation">
+          <div className="p-4 text-sm text-slate-700 space-y-3">
+            <p>Store and manage customer-related files linked to customer accounts and contracts.</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Upload contracts, tax IDs, agreements, and more.</li>
+              <li>Search by customer, type, or status.</li>
+              <li>Track who uploaded files and when.</li>
+            </ul>
           </div>
-        </div>
+        </HaypModal>
       )}
     </div>
   )

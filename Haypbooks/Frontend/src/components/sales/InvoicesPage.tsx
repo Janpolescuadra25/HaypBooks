@@ -503,7 +503,6 @@ export default function InvoicesPage() {
         data={tableData}
         columns={columns}
         tableId="invoices"
-        title="Invoices"
         stats={stats}
         headerActions={
           <div className="flex items-center gap-2">

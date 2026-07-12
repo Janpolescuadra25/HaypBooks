@@ -343,8 +343,6 @@ export default function CustomersPage() {
     <div className="p-4 sm:p-6 space-y-4">
       <HaypDataTable
         tableId="sales-customers"
-        title="Customers"
-        description={`${customers.length} customer${customers.length !== 1 ? 's' : ''}`}
         data={customers}
         columns={customerColumns}
         getRowId={(row) => row.id}

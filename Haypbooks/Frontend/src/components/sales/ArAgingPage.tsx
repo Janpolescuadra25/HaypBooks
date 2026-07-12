@@ -173,8 +173,8 @@ export default function ArAgingPage() {
           <p className="text-sm text-emerald-600/70 mt-0.5">Accounts Receivable aging summary</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-white border border-emerald-100 rounded-lg px-3 py-1.5">
-            <span className="text-xs text-emerald-500">As of</span>
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
+            <span className="text-xs text-slate-500">As of</span>
             <input
               type="date"
               value={asOf}
@@ -184,7 +184,7 @@ export default function ArAgingPage() {
           </div>
           <button
             onClick={exportCsv}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-emerald-200 rounded-lg text-emerald-700 hover:bg-emerald-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50"
           >
             <Download size={14} /> Export CSV
           </button>
@@ -229,8 +229,6 @@ export default function ArAgingPage() {
                 data={allCustomers}
                 columns={columns}
                 tableId="ar-aging"
-                title="Customer Aging Details"
-                description="Browse customer balances by aging bucket."
                 loading={loading}
                 globalFilter={search}
                 onGlobalFilterChange={setSearch}

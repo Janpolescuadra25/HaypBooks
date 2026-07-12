@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -74,24 +74,24 @@ function EditGroupModal({
     <HaypModal open={true} onClose={onClose} title="Edit Group" size="sm">
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Group Name <span className="text-red-500">*</span></label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Group Name <span className="text-red-500">*</span></label>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50">Cancel</button>
           <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
@@ -176,9 +176,9 @@ function AddMembersModal({
       size="md"
       footer={
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">{selected.size} selected</span>
+          <span className="text-sm text-slate-500">{selected.size} selected</span>
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50">Cancel</button>
             <button
               onClick={handleAdd}
               disabled={!selected.size || adding}
@@ -192,27 +192,27 @@ function AddMembersModal({
     >
       <div className="p-4 flex-shrink-0">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search customers not yet in a group…"
-            className="pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-        <p className="text-xs text-gray-400 mt-1">Only customers without an existing group are shown.</p>
+        <p className="text-xs text-slate-400 mt-1">Only customers without an existing group are shown.</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto border-t border-gray-100">
+      <div className="flex-1 overflow-y-auto border-t border-slate-100">
         {loading ? (
           <div className="flex justify-center items-center py-10">
             <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full" />
           </div>
         ) : customers.length === 0 ? (
-          <p className="text-center text-gray-400 py-8 text-sm">No available customers found.</p>
+          <p className="text-center text-slate-400 py-8 text-sm">No available customers found.</p>
         ) : (
           customers.map(c => (
-            <label key={c.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50">
+            <label key={c.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-50">
               <input
                 type="checkbox"
                 checked={selected.has(c.id)}
@@ -220,8 +220,8 @@ function AddMembersModal({
                 className="accent-blue-600"
               />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
-                {c.email && <p className="text-xs text-gray-400 truncate">{c.email}</p>}
+                <p className="text-sm font-medium text-slate-900 truncate">{c.name}</p>
+                {c.email && <p className="text-xs text-slate-400 truncate">{c.email}</p>}
               </div>
             </label>
           ))
@@ -311,13 +311,13 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
       id: 'email',
       accessorKey: 'email',
       header: 'Email',
-      render: (value: any) => value || <span className="italic text-gray-300">—</span>,
+      render: (value: any) => value || <span className="italic text-slate-300">—</span>,
     },
     {
       id: 'paymentTermName',
       accessorKey: 'paymentTermName',
       header: 'Payment Terms',
-      render: (value: any) => value || <span className="italic text-gray-300">—</span>,
+      render: (value: any) => value || <span className="italic text-slate-300">—</span>,
     },
   ], [router])
 
@@ -406,34 +406,34 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-3">
             <button
               onClick={() => router.push('/sales/customers/groups')}
-              className="mt-1 p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+              className="mt-1 p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
               title="Back to Groups"
             >
               <ArrowLeft size={16} />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                 <Users size={20} className="text-emerald-600" />
                 {group.name}
               </h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-sm text-slate-500 mt-0.5">
                 {group.description || <span className="italic">No description</span>}
                 &nbsp;·&nbsp;
-                <span className="font-medium text-gray-700">{group.customerCount} customer{group.customerCount !== 1 ? 's' : ''}</span>
+                <span className="font-medium text-slate-700">{group.customerCount} customer{group.customerCount !== 1 ? 's' : ''}</span>
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50"
             >
               <Edit2 size={13} />
               Edit
@@ -458,22 +458,22 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
         {/* Members search */}
         <div className="px-6 pb-3 flex items-center gap-3">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={memberSearch}
               onChange={e => setMemberSearch(e.target.value)}
               placeholder="Search members…"
-              className="pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg w-56 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg w-56 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <button
             onClick={() => { fetchGroup(); fetchMembers(memberSearch) }}
-            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+            className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
             title="Refresh"
           >
             <RefreshCw size={13} />
           </button>
-          <span className="text-xs text-gray-400">{members.length} member{members.length !== 1 ? 's' : ''}</span>
+          <span className="text-xs text-slate-400">{members.length} member{members.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
@@ -489,7 +489,7 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
           loading={membersLoading}
           emptyTitle={membersError ? 'Unable to load members' : 'No group members'}
           emptySubtitle={membersError ? membersError : 'Add customers to this group to see members here.'}
-          className="bg-white rounded-xl border border-gray-200"
+          className="bg-white rounded-xl border border-slate-200"
           onRowClick={(row) => router.push(`/sales/customers/${row.id}`)}
         />
       </div>
@@ -517,3 +517,4 @@ export default function CustomerGroupDetailPage({ groupId }: { groupId: string }
     </div>
   )
 }
+

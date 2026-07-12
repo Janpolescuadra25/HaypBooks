@@ -287,8 +287,6 @@ export default function RecurringInvoicesPage() {
         data={filteredItems}
         columns={columns}
         tableId="recurring-invoices"
-        title="Recurring Invoices"
-        description="Manage recurring invoice templates."
         loading={loading}
         searchPlaceholder="Search templates..."
         globalFilter={search}

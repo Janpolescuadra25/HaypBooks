@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, Printer, Loader2, AlertCircle, X } from 'lucide-react'
@@ -249,7 +249,7 @@ export default function CustomerStatementsPage() {
         ) : null}
 
         {!selectedCustomerId ? (
-          <div className="min-h-[320px] rounded-3xl border border-dashed border-slate-200 bg-white px-8 py-16 text-center text-slate-500">
+          <div className="min-h-[320px] rounded-xl border border-dashed border-slate-200 bg-white px-8 py-16 text-center text-slate-500">
             <p className="text-lg font-semibold text-slate-900">Select a customer to view their statement</p>
             <p className="mt-2 text-sm">Customer statements are generated from the AR aging report for the chosen date.</p>
           </div>
@@ -257,20 +257,18 @@ export default function CustomerStatementsPage() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {statementCards.map((card) => (
-                <div key={card.label} className={`rounded-3xl border px-5 py-5 shadow-sm ${card.className}`}>
+                <div key={card.label} className={`rounded-xl border px-5 py-5 shadow-sm ${card.className}`}>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em]">{card.label}</p>
                   <p className="mt-3 text-2xl font-bold">{fmt(card.amount)}</p>
                 </div>
               ))}
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <HaypDataTable
                 data={statements}
                 columns={columns}
                 tableId="customer-statements-details"
-                title={`Statement details for ${selectedCustomer?.name ?? 'Customer'}`}
-                description={`Aging balances as of ${asOfDate}`}
                 loading={loading}
                 emptyTitle="No statement data"
                 emptySubtitle="This customer has no aging details for the selected date."
@@ -282,3 +280,4 @@ export default function CustomerStatementsPage() {
     </div>
   )
 }
+

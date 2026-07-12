@@ -634,7 +634,6 @@ export default function CreditNotesPage() {
           data={tableData}
           columns={columns}
           tableId="credit-notes"
-          title="Credit Notes"
           stats={stats}
           headerActions={
             <div className="flex flex-wrap items-center gap-2">

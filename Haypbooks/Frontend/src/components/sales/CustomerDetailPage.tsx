@@ -184,19 +184,19 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button onClick={() => router.push('/sales/customers')}
-            className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 border border-emerald-100 transition-colors">
+            className="p-2 rounded-lg hover:bg-slate-50 text-emerald-600 border border-slate-200 transition-colors">
             <ArrowLeft size={16} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-emerald-900">{customer.name}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{customer.name}</h1>
             <div className="flex items-center gap-2 mt-0.5">
               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                customer.status === 'INACTIVE' ? 'bg-gray-100 text-gray-600' : 'bg-emerald-100 text-emerald-700'
+                customer.status === 'INACTIVE' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700'
               }`}>
                 {customer.status === 'INACTIVE' ? 'Inactive' : 'Active'}
               </span>
               {customer.groupName && (
-                <span className="text-xs text-gray-400">{customer.groupName}</span>
+                <span className="text-xs text-slate-400">{customer.groupName}</span>
               )}
             </div>
           </div>
@@ -204,7 +204,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push('/sales/billing/invoices/new')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
           >
             <FileText size={14} />
             Create Invoice
@@ -212,7 +212,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
 
           <button
             onClick={() => router.push('/sales/collections/payments')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
             <CreditCard size={14} />
             Record Payment
@@ -249,46 +249,46 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
       {activeTab === 'overview' && (<>
       {/* Financial summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-emerald-50 rounded-lg"><DollarSign size={15} className="text-emerald-600" /></div>
-            <span className="text-xs text-gray-500">Open Balance</span>
+            <div className="p-1.5 bg-slate-50 rounded-lg"><DollarSign size={15} className="text-emerald-600" /></div>
+            <span className="text-xs text-slate-500">Open Balance</span>
           </div>
-          <p className="text-xl font-bold text-emerald-900 tabular-nums">{fmtCurrency(customer.openBalance)}</p>
+          <p className="text-xl font-bold text-slate-900 tabular-nums">{fmtCurrency(customer.openBalance)}</p>
           {customer.openInvoiceCount > 0 && (
-            <p className="text-xs text-gray-400 mt-0.5">{customer.openInvoiceCount} open invoice{customer.openInvoiceCount !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{customer.openInvoiceCount} open invoice{customer.openInvoiceCount !== 1 ? 's' : ''}</p>
           )}
         </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-blue-50 rounded-lg"><TrendingUp size={15} className="text-blue-600" /></div>
-            <span className="text-xs text-gray-500">Total Revenue</span>
+            <span className="text-xs text-slate-500">Total Revenue</span>
           </div>
-          <p className="text-xl font-bold text-emerald-900 tabular-nums">{fmtCurrency(customer.totalRevenue)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{customer.invoiceCount} invoice{customer.invoiceCount !== 1 ? 's' : ''}</p>
+          <p className="text-xl font-bold text-slate-900 tabular-nums">{fmtCurrency(customer.totalRevenue)}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{customer.invoiceCount} invoice{customer.invoiceCount !== 1 ? 's' : ''}</p>
         </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-amber-50 rounded-lg"><CreditCard size={15} className="text-amber-600" /></div>
-            <span className="text-xs text-gray-500">Credit Limit</span>
+            <span className="text-xs text-slate-500">Credit Limit</span>
           </div>
-          <p className="text-xl font-bold text-emerald-900 tabular-nums">
+          <p className="text-xl font-bold text-slate-900 tabular-nums">
             {customer.creditLimit != null ? fmtCurrency(customer.creditLimit) : '—'}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-purple-50 rounded-lg"><FileText size={15} className="text-purple-600" /></div>
-            <span className="text-xs text-gray-500">Payment Terms</span>
+            <span className="text-xs text-slate-500">Payment Terms</span>
           </div>
-          <p className="text-lg font-bold text-emerald-900">{customer.paymentTermName ?? '—'}</p>
+          <p className="text-lg font-bold text-slate-900">{customer.paymentTermName ?? '—'}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Contact info */}
-        <div className="bg-white rounded-xl border border-emerald-100 p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h2 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <User size={15} /> Contact Information
           </h2>
           <div className="space-y-3 text-sm">
@@ -317,9 +317,9 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
         </div>
 
         {/* Recent invoices */}
-        <div className="bg-white rounded-xl border border-emerald-100 p-5">
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <FileText size={15} /> Recent Invoices
             </h2>
             <button
@@ -357,8 +357,8 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
 
       {/* Recent payments */}
       {customer.recentPayments.length > 0 ? (
-        <div className="bg-white rounded-xl border border-emerald-100 p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h2 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <CreditCard size={15} /> Recent Payments
           </h2>
           <div className="overflow-x-auto">

@@ -197,17 +197,17 @@ export default function CustomerActivityPage() {
       {/* Filter bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Action type segmented control */}
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm shrink-0">
+        <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm shrink-0">
           {ACTION_FILTERS.map((f, i) => (
             <button
               key={f.key}
               onClick={() => handleActionFilter(f.key)}
               className={`px-4 py-2 font-medium transition-colors ${
-                i > 0 ? 'border-l border-gray-200' : ''
+                i > 0 ? 'border-l border-slate-200' : ''
               } ${
                 actionFilter === f.key
                   ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
+                  : 'bg-white text-slate-600 hover:bg-slate-50'
               }`}
             >
               {f.label}
@@ -228,14 +228,14 @@ export default function CustomerActivityPage() {
       {loading && (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-l-4 border-gray-200 border-l-gray-300 p-4 animate-pulse">
+            <div key={i} className="bg-white rounded-xl border border-l-4 border-slate-200 border-l-gray-300 p-4 animate-pulse">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-200 shrink-0" />
+                <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-56" />
-                  <div className="h-3 bg-gray-100 rounded w-40" />
+                  <div className="h-4 bg-slate-200 rounded w-56" />
+                  <div className="h-3 bg-slate-100 rounded w-40" />
                 </div>
-                <div className="h-3 bg-gray-100 rounded w-28 shrink-0" />
+                <div className="h-3 bg-slate-100 rounded w-28 shrink-0" />
               </div>
             </div>
           ))}
@@ -244,13 +244,11 @@ export default function CustomerActivityPage() {
 
       {/* Activity table */}
       {!loading && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <HaypDataTable
             data={activity}
             columns={activityColumns}
             tableId="customer-activity"
-            title="Customer activity"
-            description="All customer actions across your workspace"
             loading={loading}
             globalFilter={search}
             onGlobalFilterChange={setSearch}
@@ -261,14 +259,14 @@ export default function CustomerActivityPage() {
       )}
 
       {total > 0 && (
-        <div className="flex items-center justify-between gap-3 text-sm text-gray-500 flex-wrap">
+        <div className="flex items-center justify-between gap-3 text-sm text-slate-500 flex-wrap">
           <div className="flex items-center gap-2">
             <span>Show</span>
             <select
               value={pageSize}
               onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
               title="Items per page"
-              className="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              className="border border-slate-200 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
             >
               {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -279,7 +277,7 @@ export default function CustomerActivityPage() {
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
               title="Previous page"
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft size={15} />
             </button>
@@ -288,7 +286,7 @@ export default function CustomerActivityPage() {
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               title="Next page"
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight size={15} />
             </button>
@@ -313,7 +311,7 @@ export default function CustomerActivityPage() {
             const changeKeys = changes ? Object.keys(changes).filter((k) => k !== 'name') : []
 
             return (
-              <div key={entry.id} className={`bg-white rounded-xl border border-l-4 border-gray-200 ${borderColor} p-4`}> 
+              <div key={entry.id} className={`bg-white rounded-xl border border-l-4 border-slate-200 ${borderColor} p-4`}> 
                 <div className="flex items-start gap-3">
                   <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${iconBg}`}>
                     {isCreate ? (
@@ -331,16 +329,16 @@ export default function CustomerActivityPage() {
                           {entry.action}
                         </span>
                         <span className="text-sm font-semibold text-emerald-700">{entry.customerName}</span>
-                        <span className="text-xs text-gray-400">by {entry.userName}</span>
+                        <span className="text-xs text-slate-400">by {entry.userName}</span>
                       </div>
-                      <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{fmt(entry.createdAt)}</span>
+                      <span className="text-xs text-slate-400 shrink-0 whitespace-nowrap">{fmt(entry.createdAt)}</span>
                     </div>
                     {changeKeys.length > 0 && (
-                      <div className="mt-4 rounded-lg border border-gray-100 overflow-hidden text-xs">
+                      <div className="mt-4 rounded-lg border border-slate-100 overflow-hidden text-xs">
                         {changeKeys.map((k) => (
-                          <div key={k} className="flex items-start gap-3 border-t border-gray-100 first:border-t-0">
-                            <div className="w-32 min-w-[8rem] px-3 py-2 text-gray-400 bg-gray-50 font-medium">{k}</div>
-                            <div className="flex-1 px-3 py-2 text-gray-700">
+                          <div key={k} className="flex items-start gap-3 border-t border-slate-100 first:border-t-0">
+                            <div className="w-32 min-w-[8rem] px-3 py-2 text-slate-400 bg-slate-50 font-medium">{k}</div>
+                            <div className="flex-1 px-3 py-2 text-slate-700">
                               {formatActivityValue(changes![k])}
                             </div>
                           </div>
@@ -357,3 +355,4 @@ export default function CustomerActivityPage() {
     </div>
   )
 }
+
