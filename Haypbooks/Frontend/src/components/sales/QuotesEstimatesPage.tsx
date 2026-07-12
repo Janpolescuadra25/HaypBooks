@@ -525,7 +525,15 @@ export default function QuotesEstimatesPage() {
           columns={columns}
           tableId="quotes-estimates"
           loading={loading}
-          headerActions={headerActions}
+          primaryAction={
+            <button
+              type="button"
+              onClick={openCreate}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+            >
+              <Plus size={16} /> New Quote
+            </button>
+          }
           actions={actions}
           bulkActions={bulkActions}
           onRowClick={(row) => setDrawerQuote(row)}

@@ -95,6 +95,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
     description,
     stats,
     headerActions,
+    primaryAction,
     getRowId: getRowIdProp,
     searchPlaceholder = 'Search...',
     globalFilter,
@@ -1000,6 +1001,14 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+            {primaryAction && (
+              <>
+                <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
+                <div className="ml-1">
+                  {primaryAction}
+                </div>
+              </>
+            )}
           </div>
         </div>
 

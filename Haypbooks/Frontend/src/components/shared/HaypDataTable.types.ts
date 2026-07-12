@@ -74,6 +74,7 @@ export interface HaypDataTableProps<T = any> {
   description?: string
   stats?: HaypStat[]
   headerActions?: React.ReactNode
+  primaryAction?: React.ReactNode
   getRowId?: (row: T) => string
   searchPlaceholder?: string
   globalFilter?: string

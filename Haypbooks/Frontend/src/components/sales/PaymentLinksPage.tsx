@@ -224,7 +224,15 @@ export default function PaymentLinksPage() {
         searchPlaceholder="Search payment links..."
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        headerActions={headerActions}
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            <Plus size={16} /> Create Link
+          </button>
+        }
         actions={actions}
         onRefresh={fetchItems}
         emptyTitle="No payment links found"

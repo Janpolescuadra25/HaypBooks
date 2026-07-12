@@ -295,6 +295,15 @@ export default function RecurringInvoicesPage() {
         activeFilter={statusFilter}
         onFilterChange={setStatusFilter}
         headerActions={headerActions}
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => router.push('/sales/billing/recurring/new')}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+          >
+            <Plus size={14} /> New Template
+          </button>
+        }
         bulkActions={[{
           label: 'Delete Selected',
           icon: <Trash2 size={14} />,

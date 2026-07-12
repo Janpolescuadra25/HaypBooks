@@ -321,7 +321,15 @@ export default function RefundsPage() {
         filters={statusFilters}
         activeFilter={statusFilter}
         onFilterChange={setStatusFilter}
-        headerActions={headerActions}
+        primaryAction={
+          <button
+            type="button"
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            <Plus size={14} /> Create Refund
+          </button>
+        }
         actions={actions}
         bulkActions={[{
           label: 'Batch Delete',

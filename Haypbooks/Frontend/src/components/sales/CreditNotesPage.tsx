@@ -666,13 +666,15 @@ export default function CreditNotesPage() {
                 onChange={e => setFilterDateTo(e.target.value)}
                 className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <button
-                onClick={openModal}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-              >
-                <Plus size={14} /> New Credit Note
-              </button>
             </div>
+          }
+          primaryAction={
+            <button
+              onClick={openModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+            >
+              <Plus size={14} /> New Credit Note
+            </button>
           }
           globalFilter={search}
           onGlobalFilterChange={setSearch}

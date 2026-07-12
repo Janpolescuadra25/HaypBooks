@@ -353,7 +353,28 @@ export default function CustomersPage() {
         activeFilter={statusFilter}
         onFilterChange={(value) => setStatusFilter(value as CustomerStatus | 'ALL')}
         filterLabel="Status"
-        headerActions={headerActions}
+        headerActions={
+          <div className="flex flex-wrap items-center gap-2">
+            <HaypSelect
+              value={groupFilter}
+              onChange={setGroupFilter}
+              options={[
+                { value: '', label: 'All groups' },
+                ...groups.map((group) => ({ value: group.id, label: group.name })),
+              ]}
+              className="min-w-[180px]"
+            />
+          </div>
+        }
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => { setEditing(null); setShowForm(true) }}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+          >
+            Add Customer
+          </button>
+        }
         loading={loading}
         actions={rowActions}
         bulkActions={[

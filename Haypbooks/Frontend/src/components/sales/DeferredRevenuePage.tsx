@@ -301,7 +301,16 @@ export default function DeferredRevenuePage() {
         filters={statusFilters}
         activeFilter={statusFilter}
         onFilterChange={setStatusFilter}
-        headerActions={headerActions}
+        primaryAction={
+          <button
+            type="button"
+            onClick={handleBatchRecognize}
+            disabled={recognizing || loading}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {recognizing ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />} Process Recognition
+          </button>
+        }
         actions={actions}
         onRowClick={(row) => setDrawerSchedule(row)}
         onRefresh={fetchItems}

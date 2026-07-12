@@ -512,13 +512,15 @@ export default function InvoicesPage() {
             >
               <LayoutTemplate size={14} /> Templates
             </button>
-            <button
-              onClick={() => router.push('/sales/billing/invoices/new')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              <Plus size={14} /> New Invoice
-            </button>
           </div>
+        }
+        primaryAction={
+          <button
+            onClick={() => router.push('/sales/billing/invoices/new')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            <Plus size={14} /> New Invoice
+          </button>
         }
         globalFilter={search}
         onGlobalFilterChange={setSearch}
