@@ -1,10 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Patch, BadRequestException, Req, UseInterceptors, UploadedFile } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Query, Patch, BadRequestException, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { diskStorage } from 'multer'
 import { mkdirSync } from 'fs'
 import { join } from 'path'
 import { AttachmentsService } from './attachments.service'
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 
+@UseGuards(JwtAuthGuard, CompanyAccessGuard)
 @Controller('/api')
 export class AttachmentsController {
   constructor(private readonly svc: AttachmentsService) {}
@@ -36,7 +39,7 @@ export class AttachmentsController {
       }),
     }),
   )
-  async upload(@Req() req: any, @Param('companyId') companyId: string, @UploadedFile() file: Express.Multer.File, @Body() body: any) {
+  async upload(@Req() req: any, @Param('companyId') companyId: string, @UploadedFile() file: any, @Body() body: any) {
     if (!file) {
       throw new BadRequestException('File is required')
     }

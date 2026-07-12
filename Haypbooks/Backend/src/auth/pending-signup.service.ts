@@ -60,16 +60,13 @@ export class PendingSignupService {
     const [id, secret] = String(token).split('.')
     if (!id || !secret) return null
     const row = await this.prisma.emailVerificationToken.findUnique({ where: { id } })
-    console.log('[PENDING-DBG] found row:', row)
     if (!row) return null
     if ((row as any).consumedAt) return null
     if (new Date() > row.expiresAt) {
-      console.log('[PENDING-DBG] row expired:', row.expiresAt, 'now:', new Date())
       return null
     }
 
     const ok = await bcrypt.compare(secret, row.tokenHash)
-    console.log('[PENDING-DBG] compare result:', ok)
     if (!ok) return null
     return row.data as PendingData | null
   }

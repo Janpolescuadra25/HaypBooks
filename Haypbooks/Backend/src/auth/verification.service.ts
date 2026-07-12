@@ -21,8 +21,7 @@ export class VerificationService {
     const created = await this.otpRepo.create({ email, otpCode: code, purpose: 'MFA', expiresAt } as any)
     // debug log created MFA row in dev
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log('[verification] sendEmailCode created', { email, otpCode: code, id: created.id, expiresAt })
+      return { success: true, expiresAt, otp: code }
     }
 
     // Build email
@@ -53,22 +52,16 @@ export class VerificationService {
     // fall back to VERIFY_EMAIL so dev flows that use send-verification still work.
     const mfaRow = await this.otpRepo.findLatestByEmail(email, 'MFA')
     if (mfaRow) {
-      // eslint-disable-next-line no-console
-      console.log('[verification] MFA row on verify attempt', { email, mfaRow: { id: mfaRow.id, otpCode: mfaRow.otpCode, expiresAt: mfaRow.expiresAt } })
       if (mfaRow.expiresAt < new Date()) {
         // expired MFA, proceed to check VERIFY_EMAIL
       } else if (mfaRow.otpCode === code) {
         await this.otpRepo.delete(mfaRow.id)
-        // eslint-disable-next-line no-console
-        console.log('[verification] accepted MFA row', { email, id: mfaRow.id })
         return { success: true }
       }
       // if MFA exists but doesn't match, we'll try VERIFY_EMAIL before failing
     }
 
     const verifyRow = await this.otpRepo.findLatestByEmail(email, 'VERIFY_EMAIL')
-    // eslint-disable-next-line no-console
-    console.log('[verification] VERIFY_EMAIL row', { email, verifyRow: verifyRow ? { id: verifyRow.id, otpCode: verifyRow.otpCode, expiresAt: verifyRow.expiresAt } : null })
     if (!verifyRow) {
       if (mfaRow) {
         await this.otpRepo.incrementAttempts(mfaRow.id)
@@ -83,8 +76,6 @@ export class VerificationService {
 
     if (verifyRow.otpCode !== code) {
       // Increment attempts on the most relevant row (prefer MFA if present)
-      // eslint-disable-next-line no-console
-      console.log('[verification] code mismatch', { email, expected: verifyRow.otpCode, got: code })
       if (mfaRow) await this.otpRepo.incrementAttempts(mfaRow.id).catch(() => {})
       await this.otpRepo.incrementAttempts(verifyRow.id).catch(() => {})
       throw new BadRequestException('Invalid code')
@@ -92,8 +83,6 @@ export class VerificationService {
 
     // Success: consume/delete
     await this.otpRepo.delete(verifyRow.id).catch(() => {})
-    // eslint-disable-next-line no-console
-    console.log('[verification] accepted VERIFY_EMAIL row', { email, id: verifyRow.id })
     return { success: true }
   }
 
@@ -105,9 +94,6 @@ export class VerificationService {
     const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000)
     const created = await this.otpRepo.create({ phone: normalized, otpCode: code, purpose: 'MFA', expiresAt } as any)
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      const maskedPhone = require('../utils/phone.util').maskPhoneForDisplay(normalized)
-      console.log('[verification] sendPhoneCode created', { phone: maskedPhone, otpCode: code, id: created.id, expiresAt })
       return { success: true, expiresAt, otp: code }
     }
     return { success: true, expiresAt }
@@ -117,9 +103,7 @@ export class VerificationService {
     const normalized = require('../utils/phone.util').normalizePhoneOrThrow(phone)
     const mfaRow = await this.otpRepo.findLatestByPhone(normalized, 'MFA')
     if (!mfaRow) throw new BadRequestException('No code found')
-    // eslint-disable-next-line no-console
     const maskedPhone = require('../utils/phone.util').maskPhoneForDisplay(normalized)
-    console.log('[verification] MFA row (phone) on verify attempt', { phone: maskedPhone, mfaRow: { id: mfaRow.id, otpCode: mfaRow.otpCode, expiresAt: mfaRow.expiresAt } })
 
     if (mfaRow.expiresAt < new Date()) {
       throw new BadRequestException('Code expired')
@@ -134,24 +118,15 @@ export class VerificationService {
     // Mark user's phone as verified if we can find a user with that phone
     try {
       // Diagnostic: log normalized phone and attempt find
-      // eslint-disable-next-line no-console
-      console.log('[verification] verifying phone', { inputPhone: phone, normalized })
-
       const user = await this.userRepo.findByPhone?.(normalized)
-      // eslint-disable-next-line no-console
-      console.log('[verification] findByPhone result', { userId: user?.id, userPhone: user?.phone })
 
       if (user) {
         await this.userRepo.update(user.id, { phone: normalized, isPhoneVerified: true, phoneVerifiedAt: new Date() })
-        // eslint-disable-next-line no-console
         const maskedPhone = require('../utils/phone.util').maskPhoneForDisplay(normalized)
-        // eslint-disable-next-line no-console
         console.log('[verification] marked user phone verified', { userId: user.id, phone: maskedPhone })
       }
     } catch (err) {
       // do not fail verification if user update fails; just log
-      // eslint-disable-next-line no-console
-      console.error('[verification] failed to mark phone verified', { phone: normalized, err })
     }
 
     // eslint-disable-next-line no-console
