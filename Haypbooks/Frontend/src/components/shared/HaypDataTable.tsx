@@ -906,8 +906,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
 
         {/* Redesigned Toolbar */}
         <div className={cn(
-          "flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-200 shadow-sm relative z-50 mb-2 bg-white",
-          !(title || stats) && "mx-4 mt-4"
+          "flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-200 shadow-sm relative z-50 mb-2 bg-white"
         )}>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
             <div className="relative flex-1 max-w-full sm:max-w-[320px]">
@@ -1072,7 +1071,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
           ref={containerRef}
           className={cn(
             "glass-morphism rounded-none border border-slate-200/50 shadow-xl relative w-full max-w-full min-w-0 flex flex-col bg-white group/table overflow-x-clip overflow-y-visible h-auto",
-            !(title || stats) && "mx-4 mb-4 border-t-0"
+            !(title || stats) && "border-t-0"
           )}
           style={{ overflowY: 'visible' }}
         >

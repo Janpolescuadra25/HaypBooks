@@ -10,7 +10,6 @@ import { useToast } from '@/components/ToastProvider'
 import { StatusBadge } from '@/components/shared/StatusBadgeSet'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypColumn, HaypFilterOption } from '@/components/shared/HaypDataTable.types'
-import HaypSelect from '@/components/shared/HaypSelect'
 import ModalForm from '@/components/shared/ModalForm'
 import { ModalPortal } from '@/components/shared/ModalPortal'
 import CustomerFormModal from '@/components/sales/CustomerFormModal'
@@ -248,51 +247,6 @@ export default function CustomersPage() {
     [currency, router],
   )
 
-  const headerActions = (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={fetchCustomers}
-        title="Refresh"
-        className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-      >
-        <RefreshCw size={16} />
-      </button>
-      <button
-        type="button"
-        onClick={handleExport}
-        title="Export CSV"
-        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-      >
-        <Download size={15} /> Export
-      </button>
-      <button
-        type="button"
-        onClick={() => router.push('/sales/customers/activity')}
-        title="Activity Log"
-        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-      >
-        <Clock size={15} /> Activity Log
-      </button>
-      <HaypSelect
-        value={groupFilter}
-        onChange={setGroupFilter}
-        options={[
-          { value: '', label: 'All groups' },
-          ...groups.map((group) => ({ value: group.id, label: group.name })),
-        ]}
-        className="min-w-[180px]"
-      />
-      <button
-        type="button"
-        onClick={() => { setEditing(null); setShowForm(true) }}
-        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
-      >
-        Add Customer
-      </button>
-    </div>
-  )
-
   const rowActions = useMemo(
     () => [
       {
@@ -353,19 +307,6 @@ export default function CustomersPage() {
         activeFilter={statusFilter}
         onFilterChange={(value) => setStatusFilter(value as CustomerStatus | 'ALL')}
         filterLabel="Status"
-        headerActions={
-          <div className="flex flex-wrap items-center gap-2">
-            <HaypSelect
-              value={groupFilter}
-              onChange={setGroupFilter}
-              options={[
-                { value: '', label: 'All groups' },
-                ...groups.map((group) => ({ value: group.id, label: group.name })),
-              ]}
-              className="min-w-[180px]"
-            />
-          </div>
-        }
         primaryAction={
           <button
             type="button"
