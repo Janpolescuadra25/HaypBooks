@@ -208,7 +208,7 @@ export default function ProductsServicesPage() {
     { icon: Package, label: 'Units in Stock', value: totalStock, color: 'emerald' },
   ], [items.length, productCount, serviceCount, totalStock])
 
-  const headerActions = (
+  const secondaryActions = (
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
@@ -257,7 +257,7 @@ export default function ProductsServicesPage() {
           searchPlaceholder="Search products and services..."
           globalFilter={search}
           onGlobalFilterChange={setSearch}
-          headerActions={headerActions}
+          secondaryActions={secondaryActions}
           primaryAction={
             <button
               type="button"

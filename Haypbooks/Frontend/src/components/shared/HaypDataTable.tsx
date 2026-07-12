@@ -95,6 +95,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
     description,
     stats,
     headerActions,
+    secondaryActions,
     primaryAction,
     getRowId: getRowIdProp,
     searchPlaceholder = 'Search...',
@@ -919,6 +920,12 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                 className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all h-10"
               />
             </div>
+            
+            {secondaryActions && (
+              <div className="flex items-center gap-2">
+                {secondaryActions}
+              </div>
+            )}
             
             {(datePickerButton || statusButton) && <div className="h-6 w-px bg-slate-200 mx-1 hidden lg:block" />}
             

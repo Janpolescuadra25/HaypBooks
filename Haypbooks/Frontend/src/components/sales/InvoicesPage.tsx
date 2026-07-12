@@ -504,7 +504,7 @@ export default function InvoicesPage() {
         columns={columns}
         tableId="invoices"
         stats={stats}
-        headerActions={
+        secondaryActions={
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowTemplates(true)}

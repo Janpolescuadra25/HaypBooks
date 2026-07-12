@@ -156,8 +156,15 @@ export default function CreditNotesPage() {
   const [duplicateWarning, setDuplicateWarning] = useState<CreditNoteRow[] | null>(null)
   const [filterReason, setFilterReason] = useState('')
   const [filterType, setFilterType] = useState('')
-  const [filterDateFrom, setFilterDateFrom] = useState('')
-  const [filterDateTo, setFilterDateTo] = useState('')
+  const now = new Date()
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59),
+  })
+
+  const handleDateRangeChange = (range: { start: Date; end: Date }) => {
+    setDateRange(range)
+  }
 
   // Apply to Invoice modal
   const [applyOpen, setApplyOpen] = useState(false)
@@ -254,10 +261,17 @@ export default function CreditNotesPage() {
     let list = items.map((cn) => ({ ...cn, _unapplied: Math.max(0, (cn.amount || 0) - (cn.appliedAmount || 0)) }))
     if (filterReason) list = list.filter((cn) => cn.reasonCode === filterReason)
     if (filterType) list = list.filter((cn) => cn.type === filterType)
-    if (filterDateFrom) list = list.filter((cn) => cn.date && cn.date >= filterDateFrom)
-    if (filterDateTo) list = list.filter((cn) => cn.date && cn.date <= filterDateTo)
+    if (dateRange) {
+      const startDate = dateRange.start
+      const endDate = dateRange.end
+      list = list.filter((cn) => {
+        if (!cn.date) return false
+        const cnDate = new Date(cn.date)
+        return cnDate >= startDate && cnDate <= endDate
+      })
+    }
     return list
-  }, [items, filterReason, filterType, filterDateFrom, filterDateTo])
+  }, [items, filterReason, filterType, dateRange])
 
   const columns = useMemo<HaypColumn<EnrichedCN>[]>(() => [
     {
@@ -635,7 +649,7 @@ export default function CreditNotesPage() {
           columns={columns}
           tableId="credit-notes"
           stats={stats}
-          headerActions={
+          secondaryActions={
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={filterReason}
@@ -654,18 +668,6 @@ export default function CreditNotesPage() {
                 <option value="credit">Credit</option>
                 <option value="refund">Refund</option>
               </select>
-              <input
-                type="date"
-                value={filterDateFrom}
-                onChange={e => setFilterDateFrom(e.target.value)}
-                className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <input
-                type="date"
-                value={filterDateTo}
-                onChange={e => setFilterDateTo(e.target.value)}
-                className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
             </div>
           }
           primaryAction={
@@ -683,6 +685,8 @@ export default function CreditNotesPage() {
           activeFilter={statusFilter}
           onFilterChange={setStatusFilter}
           filterLabel="Status"
+          dateRange={dateRange}
+          onDateRangeChange={handleDateRangeChange}
           actions={actions}
           bulkActions={bulkActions}
           totals={{ enabled: true, sumColumns: ['amount', 'appliedAmount', '_unapplied'], formatValue: (value) => fmt(Number(value)) }}

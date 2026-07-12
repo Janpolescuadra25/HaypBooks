@@ -245,7 +245,7 @@ export default function RecurringInvoicesPage() {
     },
   ], [handleGenerate, handleUpdateStatus, router])
 
-  const headerActions = (
+  const secondaryActions = (
     <div className="flex flex-wrap items-center gap-2">
       <select
         aria-label="Filter by frequency"
@@ -294,7 +294,7 @@ export default function RecurringInvoicesPage() {
         filters={filters}
         activeFilter={statusFilter}
         onFilterChange={setStatusFilter}
-        headerActions={headerActions}
+        secondaryActions={secondaryActions}
         primaryAction={
           <button
             type="button"
