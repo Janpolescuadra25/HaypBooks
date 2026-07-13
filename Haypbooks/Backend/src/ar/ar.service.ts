@@ -2225,34 +2225,120 @@ export class ArService {
 
     // ─── Dunning ─────────────────────────────────────────────────────────────
 
-    async sendDunningReminder(userId: string, companyId: string, invoiceId: string, level: number) {
+    async sendDunningReminder(userId: string, companyId: string, invoiceId: string, profileId?: string) {
         await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId } })
+
+        // 1. Fetch invoice
+        const invoice = await this.prisma.invoice.findFirst({
+            where: { id: invoiceId, companyId },
+        })
         if (!invoice) throw new NotFoundException('Invoice not found')
-        const levelMap: Record<number, string> = { 1: 'REMINDER', 2: 'WARNING', 3: 'FINAL_NOTICE' }
+        if (!invoice.dueDate) throw new BadRequestException('Invoice has no due date')
+
+        // 2. Resolve profile — use provided profileId or auto-resolve active profile
+        let profile = null
+        if (profileId) {
+            profile = await this.prisma.dunningProfile.findFirst({
+                where: { id: profileId, companyId, workspaceId: wid },
+                include: { steps: { orderBy: { dayOffset: 'asc' } } },
+            })
+        } else {
+            profile = await this.repo.findActiveDunningProfile(companyId, wid)
+        }
+        if (!profile) throw new BadRequestException('No active dunning profile found for this company')
+
+        // 3. Calculate days overdue
+        const today = new Date()
+        const dueDate = new Date(invoice.dueDate)
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+
+        // 4. Find the matching step (highest dayOffset that is <= daysOverdue)
+        const matchingStep = [...profile.steps]
+            .filter((s) => s.isActive && s.dayOffset <= daysOverdue)
+            .sort((a, b) => b.dayOffset - a.dayOffset)[0]
+
+        if (!matchingStep) throw new BadRequestException('No matching dunning step found for current overdue period')
+
+        // 5. Update invoice dunning fields
         await this.prisma.invoice.update({
             where: { id: invoiceId },
-            data: { dunningLevel: level, dunningLastSentAt: new Date() },
-        }).catch(() => {}) // field may not exist — non-critical
-        this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'SEND', tableName: 'Invoice', recordId: invoiceId, changes: { dunningLevel: level, type: levelMap[level] ?? 'REMINDER' } },
-        }).catch(() => {})
-        return { success: true, level, sentAt: new Date() }
+            data: {
+                dunningLevel: profile.steps.indexOf(matchingStep) + 1,
+                dunningLastSentAt: new Date(),
+            },
+        })
+
+        // 6. Create DunningNotice record
+        await this.repo.createDunningNotice(wid, companyId, {
+            invoiceId,
+            customerId: invoice.customerId,
+            stepId: matchingStep.id,
+            status: 'SENT',
+        })
+
+        // 7. Create audit log (no .catch)
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'SEND',
+                tableName: 'Invoice',
+                recordId: invoiceId,
+                changes: {
+                    dunningLevel: matchingStep.dayOffset,
+                    channel: matchingStep.channel,
+                    templateKey: matchingStep.templateKey,
+                    profileId: profile.id,
+                    profileName: profile.name,
+                },
+            },
+        })
+
+        return {
+            success: true,
+            profileName: profile.name,
+            step: { dayOffset: matchingStep.dayOffset, channel: matchingStep.channel, templateKey: matchingStep.templateKey },
+            daysOverdue,
+            sentAt: new Date(),
+        }
     }
 
-    async batchSendDunning(userId: string, companyId: string, invoiceIds: string[], level: number) {
+    async batchSendDunning(userId: string, companyId: string, invoiceIds: string[], profileId?: string) {
         await this.assertAccess(userId, companyId)
-        const results = await Promise.allSettled(invoiceIds.map(id => this.sendDunningReminder(userId, companyId, id, level)))
-        return { sent: results.filter(r => r.status === 'fulfilled').length, total: invoiceIds.length }
+        const results = await Promise.allSettled(
+            invoiceIds.map((id) => this.sendDunningReminder(userId, companyId, id, profileId)),
+        )
+        const sent = results.filter((r) => r.status === 'fulfilled').length
+        const failed = results.filter((r) => r.status === 'rejected').length
+        return { sent, failed, total: invoiceIds.length }
     }
 
     async updateDunningLevel(userId: string, companyId: string, invoiceId: string, level: number) {
         await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'Invoice', recordId: invoiceId, changes: { dunningLevel: level } },
-        }).catch(() => {})
+
+        const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId } })
+        if (!invoice) throw new NotFoundException('Invoice not found')
+
+        await this.prisma.invoice.update({
+            where: { id: invoiceId },
+            data: { dunningLevel: level, dunningLastSentAt: new Date() },
+        })
+
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'Invoice',
+                recordId: invoiceId,
+                changes: { dunningLevel: level },
+            },
+        })
+
         return { success: true, invoiceId, level }
     }
 

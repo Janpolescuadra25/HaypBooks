@@ -1048,9 +1048,9 @@ export class ArController {
     sendDunningReminder(
         @Req() req: any,
         @Param('companyId') companyId: string,
-        @Body() body: { invoiceId: string; level: number },
+        @Body() body: { invoiceId: string; profileId?: string },
     ) {
-        return this.svc.sendDunningReminder(req.user.userId, companyId, body.invoiceId, body.level ?? 1)
+        return this.svc.sendDunningReminder(req.user.userId, companyId, body.invoiceId, body.profileId)
     }
 
     @Post('dunning/batch/send')
@@ -1058,9 +1058,9 @@ export class ArController {
     batchSendDunning(
         @Req() req: any,
         @Param('companyId') companyId: string,
-        @Body() body: { invoiceIds: string[]; level: number },
+        @Body() body: { invoiceIds: string[]; profileId?: string },
     ) {
-        return this.svc.batchSendDunning(req.user.userId, companyId, body.invoiceIds, body.level ?? 1)
+        return this.svc.batchSendDunning(req.user.userId, companyId, body.invoiceIds, body.profileId)
     }
 
     @Patch('dunning/:invoiceId/level')

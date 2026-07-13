@@ -523,6 +523,26 @@ export class ArRepository {
         return this.prisma.dunningStep.delete({ where: { id: stepId } })
     }
 
+    async findActiveDunningProfile(companyId: string, workspaceId: string) {
+        return this.prisma.dunningProfile.findFirst({
+            where: { companyId, workspaceId, isActive: true },
+            include: { steps: { orderBy: { dayOffset: 'asc' } } },
+        })
+    }
+
+    async createDunningNotice(workspaceId: string, companyId: string, data: { invoiceId: string; customerId: string; stepId: string; status: string }) {
+        return this.prisma.dunningNotice.create({
+            data: {
+                workspaceId,
+                companyId,
+                invoiceId: data.invoiceId,
+                customerId: data.customerId,
+                stepId: data.stepId,
+                status: data.status as any,
+            },
+        })
+    }
+
     async batchUpdateCustomerStatus(workspaceId: string, ids: string[], status: 'ACTIVE' | 'INACTIVE') {
         const data = status === 'ACTIVE' ? { deletedAt: null } : { deletedAt: new Date() }
         await this.prisma.customer.updateMany({
