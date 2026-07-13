@@ -163,6 +163,7 @@ export const navigationData: NavSection[] = [
               { label: 'A/R Aging',           value: 'aging',      status: 'existing' },
               { label: 'Collections Center',  value: 'center',     status: 'existing' },
               { label: 'Dunning',             value: 'dunning',    status: 'existing' },
+              { label: 'Dunning Profiles',    value: 'dunning-profiles', status: 'existing' },
               { label: 'Write-Offs',          value: 'write-offs', status: 'existing' },
               { label: 'Refunds',             value: 'refunds',    status: 'existing' },
             ],

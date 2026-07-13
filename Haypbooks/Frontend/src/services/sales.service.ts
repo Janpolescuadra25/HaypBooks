@@ -45,6 +45,25 @@ export interface ArCustomerQuery {
   groupId?: string
 }
 
+export interface DunningStep {
+  id: string
+  profileId: string
+  dayOffset: number
+  channel: string
+  templateKey: string
+  isActive: boolean
+}
+
+export interface DunningProfile {
+  id: string
+  workspaceId: string
+  companyId: string
+  name: string
+  isActive: boolean
+  createdAt: string
+  steps: DunningStep[]
+}
+
 export const salesService = {
   // ─── Customers ────────────────────────────────────────────────────────
   listCustomers: (companyId: string, query?: any) =>
@@ -182,6 +201,32 @@ export const salesService = {
 
   getArDunningActivity: (companyId: string, invoiceId: string) =>
     apiClient.get(`/companies/${companyId}/ar/dunning/${invoiceId}/activity`),
+
+  // Dunning Profile CRUD
+  getDunningProfiles: (companyId: string) =>
+    apiClient.get<DunningProfile[]>(`/companies/${companyId}/ar/dunning-profiles`),
+
+  createDunningProfile: (companyId: string, body: { name: string; isActive?: boolean }) =>
+    apiClient.post<DunningProfile>(`/companies/${companyId}/ar/dunning-profiles`, body),
+
+  updateDunningProfile: (companyId: string, profileId: string, body: { name?: string; isActive?: boolean }) =>
+    apiClient.put<DunningProfile>(`/companies/${companyId}/ar/dunning-profiles/${profileId}`, body),
+
+  deleteDunningProfile: (companyId: string, profileId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/dunning-profiles/${profileId}`),
+
+  // Dunning Step CRUD
+  getDunningSteps: (companyId: string, profileId: string) =>
+    apiClient.get<DunningStep[]>(`/companies/${companyId}/ar/dunning-profiles/${profileId}/steps`),
+
+  createDunningStep: (companyId: string, profileId: string, body: { dayOffset: number; channel: string; templateKey: string; isActive?: boolean }) =>
+    apiClient.post<DunningStep>(`/companies/${companyId}/ar/dunning-profiles/${profileId}/steps`, body),
+
+  updateDunningStep: (companyId: string, profileId: string, stepId: string, body: { dayOffset?: number; channel?: string; templateKey?: string; isActive?: boolean }) =>
+    apiClient.put<DunningStep>(`/companies/${companyId}/ar/dunning-profiles/${profileId}/steps/${stepId}`, body),
+
+  deleteDunningStep: (companyId: string, profileId: string, stepId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/dunning-profiles/${profileId}/steps/${stepId}`),
 
   sendArInvoice: (companyId: string, invoiceId: string, body?: any) =>
     apiClient.post(`/companies/${companyId}/ar/invoices/${invoiceId}/send`, body),
