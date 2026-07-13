@@ -448,6 +448,81 @@ export class ArRepository {
         return { deleted: ids.length }
     }
 
+    async createDunningProfile(workspaceId: string, companyId: string, data: { name: string; isActive: boolean }) {
+        return this.prisma.dunningProfile.create({
+            data: {
+                workspaceId,
+                companyId,
+                name: data.name,
+                isActive: data.isActive,
+            },
+            include: {
+                steps: { orderBy: { dayOffset: 'asc' } },
+            },
+        })
+    }
+
+    async getDunningProfiles(workspaceId: string, companyId: string) {
+        return this.prisma.dunningProfile.findMany({
+            where: { workspaceId, companyId },
+            include: { steps: { orderBy: { dayOffset: 'asc' } } },
+            orderBy: { name: 'asc' },
+        })
+    }
+
+    async findDunningProfile(workspaceId: string, companyId: string, profileId: string) {
+        return this.prisma.dunningProfile.findFirst({
+            where: { id: profileId, workspaceId, companyId },
+            include: { steps: { orderBy: { dayOffset: 'asc' } } },
+        })
+    }
+
+    async updateDunningProfile(profileId: string, data: { name?: string; isActive?: boolean }) {
+        return this.prisma.dunningProfile.update({
+            where: { id: profileId },
+            data,
+            include: { steps: { orderBy: { dayOffset: 'asc' } } },
+        })
+    }
+
+    async deleteDunningProfile(profileId: string) {
+        return this.prisma.dunningProfile.delete({ where: { id: profileId } })
+    }
+
+    async createDunningStep(profileId: string, data: { dayOffset: number; channel: string; templateKey: string; isActive: boolean }) {
+        return this.prisma.dunningStep.create({
+            data: {
+                profileId,
+                dayOffset: data.dayOffset,
+                channel: data.channel,
+                templateKey: data.templateKey,
+                isActive: data.isActive,
+            },
+        })
+    }
+
+    async getDunningSteps(profileId: string) {
+        return this.prisma.dunningStep.findMany({
+            where: { profileId },
+            orderBy: { dayOffset: 'asc' },
+        })
+    }
+
+    async findDunningStep(stepId: string) {
+        return this.prisma.dunningStep.findUnique({ where: { id: stepId } })
+    }
+
+    async updateDunningStep(stepId: string, data: { dayOffset?: number; channel?: string; templateKey?: string; isActive?: boolean }) {
+        return this.prisma.dunningStep.update({
+            where: { id: stepId },
+            data,
+        })
+    }
+
+    async deleteDunningStep(stepId: string) {
+        return this.prisma.dunningStep.delete({ where: { id: stepId } })
+    }
+
     async batchUpdateCustomerStatus(workspaceId: string, ids: string[], status: 'ACTIVE' | 'INACTIVE') {
         const data = status === 'ACTIVE' ? { deletedAt: null } : { deletedAt: new Date() }
         await this.prisma.customer.updateMany({

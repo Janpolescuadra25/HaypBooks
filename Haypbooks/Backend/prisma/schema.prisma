@@ -7845,6 +7845,8 @@ model Invoice {
   paymentStatus        PaymentStatus    @default(DRAFT)
   totalAmount          Decimal          @map("total") @db.Decimal(19, 4)
   balance              Decimal          @db.Decimal(19, 4)
+  dunningLevel         Int?
+  dunningLastSentAt    DateTime?
   currency             String?
   exchangeRate         Decimal?         @db.Decimal(18, 12)
   baseTotal            Decimal?         @db.Decimal(19, 4)

@@ -1072,4 +1072,72 @@ export class ArController {
     ) {
         return this.svc.updateDunningLevel(req.user.userId, companyId, invoiceId, body.level)
     }
+
+    @Post('dunning-profiles')
+    createDunningProfile(
+        @Param('companyId') companyId: string,
+        @Body() body: { name: string; isActive?: boolean },
+    ) {
+        return this.svc.createDunningProfile(companyId, body)
+    }
+
+    @Get('dunning-profiles')
+    getDunningProfiles(
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.getDunningProfiles(companyId)
+    }
+
+    @Put('dunning-profiles/:profileId')
+    updateDunningProfile(
+        @Param('companyId') companyId: string,
+        @Param('profileId') profileId: string,
+        @Body() body: { name?: string; isActive?: boolean },
+    ) {
+        return this.svc.updateDunningProfile(companyId, profileId, body)
+    }
+
+    @Delete('dunning-profiles/:profileId')
+    deleteDunningProfile(
+        @Param('companyId') companyId: string,
+        @Param('profileId') profileId: string,
+    ) {
+        return this.svc.deleteDunningProfile(companyId, profileId)
+    }
+
+    @Post('dunning-profiles/:profileId/steps')
+    createDunningStep(
+        @Param('companyId') companyId: string,
+        @Param('profileId') profileId: string,
+        @Body() body: { dayOffset: number; channel: string; templateKey: string; isActive?: boolean },
+    ) {
+        return this.svc.createDunningStep(companyId, profileId, body)
+    }
+
+    @Get('dunning-profiles/:profileId/steps')
+    getDunningSteps(
+        @Param('companyId') companyId: string,
+        @Param('profileId') profileId: string,
+    ) {
+        return this.svc.getDunningSteps(companyId, profileId)
+    }
+
+    @Put('dunning-profiles/:profileId/steps/:stepId')
+    updateDunningStep(
+        @Param('companyId') companyId: string,
+        @Param('profileId') profileId: string,
+        @Param('stepId') stepId: string,
+        @Body() body: { dayOffset?: number; channel?: string; templateKey?: string; isActive?: boolean },
+    ) {
+        return this.svc.updateDunningStep(companyId, profileId, stepId, body)
+    }
+
+    @Delete('dunning-profiles/:profileId/steps/:stepId')
+    deleteDunningStep(
+        @Param('companyId') companyId: string,
+        @Param('profileId') profileId: string,
+        @Param('stepId') stepId: string,
+    ) {
+        return this.svc.deleteDunningStep(companyId, profileId, stepId)
+    }
 }

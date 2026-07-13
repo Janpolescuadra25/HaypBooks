@@ -2256,6 +2256,79 @@ export class ArService {
         return { success: true, invoiceId, level }
     }
 
+    async createDunningProfile(companyId: string, data: { name: string; isActive?: boolean }) {
+        const wid = await this.getWorkspaceId(companyId)
+        try {
+            return await this.repo.createDunningProfile(wid, companyId, {
+                name: data.name.trim(),
+                isActive: data.isActive !== false,
+            })
+        } catch (err: any) {
+            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+                throw new BadRequestException('Dunning profile with this name already exists')
+            }
+            throw err
+        }
+    }
+
+    async getDunningProfiles(companyId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.getDunningProfiles(wid, companyId)
+    }
+
+    async updateDunningProfile(companyId: string, profileId: string, data: { name?: string; isActive?: boolean }) {
+        const wid = await this.getWorkspaceId(companyId)
+        const existing = await this.repo.findDunningProfile(wid, companyId, profileId)
+        if (!existing) throw new NotFoundException('Dunning profile not found')
+        return this.repo.updateDunningProfile(profileId, data)
+    }
+
+    async deleteDunningProfile(companyId: string, profileId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        const existing = await this.repo.findDunningProfile(wid, companyId, profileId)
+        if (!existing) throw new NotFoundException('Dunning profile not found')
+        await this.repo.deleteDunningProfile(profileId)
+        return { success: true }
+    }
+
+    async createDunningStep(companyId: string, profileId: string, data: { dayOffset: number; channel: string; templateKey: string; isActive?: boolean }) {
+        const wid = await this.getWorkspaceId(companyId)
+        const profile = await this.repo.findDunningProfile(wid, companyId, profileId)
+        if (!profile) throw new NotFoundException('Dunning profile not found')
+        return this.repo.createDunningStep(profileId, {
+            dayOffset: data.dayOffset,
+            channel: data.channel,
+            templateKey: data.templateKey,
+            isActive: data.isActive !== false,
+        })
+    }
+
+    async getDunningSteps(companyId: string, profileId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        const profile = await this.repo.findDunningProfile(wid, companyId, profileId)
+        if (!profile) throw new NotFoundException('Dunning profile not found')
+        return this.repo.getDunningSteps(profileId)
+    }
+
+    async updateDunningStep(companyId: string, profileId: string, stepId: string, data: { dayOffset?: number; channel?: string; templateKey?: string; isActive?: boolean }) {
+        const wid = await this.getWorkspaceId(companyId)
+        const profile = await this.repo.findDunningProfile(wid, companyId, profileId)
+        if (!profile) throw new NotFoundException('Dunning profile not found')
+        const existing = await this.repo.findDunningStep(stepId)
+        if (!existing) throw new NotFoundException('Dunning step not found')
+        return this.repo.updateDunningStep(stepId, data)
+    }
+
+    async deleteDunningStep(companyId: string, profileId: string, stepId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        const profile = await this.repo.findDunningProfile(wid, companyId, profileId)
+        if (!profile) throw new NotFoundException('Dunning profile not found')
+        const existing = await this.repo.findDunningStep(stepId)
+        if (!existing) throw new NotFoundException('Dunning step not found')
+        await this.repo.deleteDunningStep(stepId)
+        return { success: true }
+    }
+
     async getSalesOrderActivity(userId: string, companyId: string, orderId: string, opts: any) {
         await this.assertAccess(userId, companyId)
         const limit = opts.limit ? parseInt(opts.limit) : 20
