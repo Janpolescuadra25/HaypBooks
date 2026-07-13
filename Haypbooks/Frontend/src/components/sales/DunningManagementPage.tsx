@@ -6,7 +6,7 @@ import {
   Download, Eye, Bell, BellRing, FileX, ChevronDown, ArrowUpDown, Clock,
 } from 'lucide-react'
 import HaypModal from '@/components/shared/HaypModal'
-import { salesService } from '@/services/sales.service'
+import { salesService, DunningProfile } from '@/services/sales.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
@@ -108,6 +108,8 @@ export default function DunningManagementPage() {
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(25)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [profiles, setProfiles] = useState<DunningProfile[]>([])
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('')
   const [drawerInvoice, setDrawerInvoice] = useState<OverdueInvoice | null>(null)
   const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
   const [dunningActivity, setDunningActivity] = useState<any[]>([])
@@ -115,7 +117,6 @@ export default function DunningManagementPage() {
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
   const [showColMenu, setShowColMenu] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
-  const [batchLevel, setBatchLevel] = useState(1)
 
   const colsRef = useRef(cols)
   useEffect(() => { colsRef.current = cols }, [cols])
@@ -144,7 +145,21 @@ export default function DunningManagementPage() {
     } finally { setLoading(false) }
   }, [companyId])
 
+  const fetchProfiles = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const response = await salesService.getDunningProfiles(companyId)
+      const profileData = Array.isArray(response.data) ? response.data : []
+      setProfiles(profileData)
+      const active = profileData.find((p) => p.isActive)
+      if (active) setSelectedProfileId(active.id)
+    } catch {
+      setProfiles([])
+    }
+  }, [companyId])
+
   useEffect(() => { fetchItems() }, [fetchItems])
+  useEffect(() => { fetchProfiles() }, [fetchProfiles])
 
   const filtered = items.filter(row => {
     const q = search.toLowerCase()
@@ -170,11 +185,11 @@ export default function DunningManagementPage() {
   const toggleAll = () => { if (allSelected) setSelectedIds(new Set()); else setSelectedIds(new Set(paginated.map(r => r.id))) }
   const toggleOne = (id: string) => { const n = new Set(selectedIds); if (n.has(id)) n.delete(id); else n.add(id); setSelectedIds(n) }
 
-  const handleSendReminder = async (invoiceId: string, level: number) => {
+  const handleSendReminder = async (invoiceId: string) => {
     if (!companyId) return
     try {
-      await salesService.sendArDunningNotice(companyId, invoiceId, level)
-      toast.success(`Level ${level} reminder sent`); fetchItems()
+      await salesService.sendArDunningNotice(companyId, invoiceId, selectedProfileId || undefined)
+      toast.success('Reminder sent'); fetchItems()
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Send failed') }
   }
 
@@ -190,7 +205,7 @@ export default function DunningManagementPage() {
     if (!companyId || !selectedIds.size) return
     setBatchLoading(true)
     try {
-      await salesService.sendArDunningBatch(companyId, [...selectedIds], batchLevel)
+      await salesService.sendArDunningBatch(companyId, [...selectedIds], selectedProfileId || undefined)
       toast.success(`Reminders sent to ${selectedIds.size} invoice(s)`); setSelectedIds(new Set()); fetchItems()
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Batch send failed') }
     finally { setBatchLoading(false) }
@@ -307,12 +322,13 @@ export default function DunningManagementPage() {
         <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold">{selectedIds.size} selected</span>
           <div className="flex items-center gap-2">
-            <span className="text-xs opacity-80">Send as level:</span>
-            <select value={batchLevel} onChange={e => setBatchLevel(Number(e.target.value))}
+            <span className="text-xs opacity-80">Send with profile:</span>
+            <select value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}
               className="px-2 py-1 text-xs bg-white/20 border border-white/30 rounded text-white focus:outline-none">
-              <option value={1}>1 – Reminder</option>
-              <option value={2}>2 – Warning</option>
-              <option value={3}>3 – Final Notice</option>
+              <option value="">Auto (first active profile)</option>
+              {profiles.filter(p => p.isActive).map((profile) => (
+                <option key={profile.id} value={profile.id}>{profile.name} ({profile.steps.length} steps)</option>
+              ))}
             </select>
           </div>
           <div className="flex-1" />
@@ -398,7 +414,7 @@ export default function DunningManagementPage() {
                           <option value={2}>L2</option>
                           <option value={3}>L3</option>
                         </select>
-                        <button onClick={e => { e.stopPropagation(); handleSendReminder(row.id, Math.max(1, level)) }} title="Send Reminder"
+                        <button onClick={e => { e.stopPropagation(); handleSendReminder(row.id) }} title="Send Reminder"
                           className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 transition-colors"><Bell size={14} /></button>
                       </div>
                     </td>
@@ -429,7 +445,7 @@ export default function DunningManagementPage() {
           footer={
             <div className="flex gap-2 w-full justify-end">
               <button
-                onClick={() => handleSendReminder(drawerInvoice.id, Math.max(1, getLevel(drawerInvoice)))}
+                onClick={() => handleSendReminder(drawerInvoice.id)}
                 className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
               >
                 Send Reminder

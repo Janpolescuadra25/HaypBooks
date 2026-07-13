@@ -190,14 +190,14 @@ export const salesService = {
   listArInvoices: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/ar/invoices`, { params: query }),
 
-  sendArDunningNotice: (companyId: string, invoiceId: string, level: number) =>
-    apiClient.post(`/companies/${companyId}/ar/dunning/send`, { invoiceId, level }),
+  sendArDunningNotice: (companyId: string, invoiceId: string, profileId?: string) =>
+    apiClient.post(`/companies/${companyId}/ar/dunning/send`, { invoiceId, profileId }),
 
   updateArDunningLevel: (companyId: string, invoiceId: string, level: number) =>
     apiClient.patch(`/companies/${companyId}/ar/dunning/${invoiceId}/level`, { level }),
 
-  sendArDunningBatch: (companyId: string, invoiceIds: string[], level: number) =>
-    apiClient.post(`/companies/${companyId}/ar/dunning/batch/send`, { invoiceIds, level }),
+  sendArDunningBatch: (companyId: string, invoiceIds: string[], profileId?: string) =>
+    apiClient.post(`/companies/${companyId}/ar/dunning/batch/send`, { invoiceIds, profileId }),
 
   getArDunningActivity: (companyId: string, invoiceId: string) =>
     apiClient.get(`/companies/${companyId}/ar/dunning/${invoiceId}/activity`),
