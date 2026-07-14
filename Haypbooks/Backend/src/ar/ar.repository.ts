@@ -1636,12 +1636,19 @@ export class ArRepository {
     // ─── Credit Notes ─────────────────────────────────────────────────────────
 
     async findCreditNotes(companyId: string, opts: {
-        status?: string; search?: string; limit?: number; offset?: number
+        status?: string; search?: string; customerId?: string; from?: Date; to?: Date; limit?: number; offset?: number
     } = {}) {
         return this.prisma.creditNote.findMany({
             where: {
                 companyId,
                 ...(opts.status ? { status: opts.status as any } : {}),
+                ...(opts.customerId ? { customerId: opts.customerId } : {}),
+                ...(opts.from || opts.to ? {
+                    issuedAt: {
+                        ...(opts.from ? { gte: opts.from } : {}),
+                        ...(opts.to ? { lte: opts.to } : {}),
+                    },
+                } : {}),
                 ...(opts.search ? {
                     OR: [
                         { creditNoteNumber: { contains: opts.search, mode: 'insensitive' } },

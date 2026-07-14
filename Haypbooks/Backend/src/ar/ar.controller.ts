@@ -1140,4 +1140,14 @@ export class ArController {
     ) {
         return this.svc.deleteDunningStep(companyId, profileId, stepId)
     }
+
+    @Get('customers/:contactId/statement')
+    getCustomerStatement(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('contactId') contactId: string,
+        @Query() q: any,
+    ) {
+        return this.svc.getCustomerStatement(req.user.userId, companyId, contactId, q)
+    }
 }

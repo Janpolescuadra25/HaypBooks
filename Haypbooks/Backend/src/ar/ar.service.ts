@@ -2342,6 +2342,104 @@ export class ArService {
         return { success: true, invoiceId, level }
     }
 
+    async getCustomerStatement(userId: string, companyId: string, contactId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+
+        const customer = await this.repo.findCustomerById(wid, contactId)
+        if (!customer) throw new NotFoundException('Customer not found')
+
+        const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
+        const start = opts.start ? new Date(opts.start) : null
+
+        const [invoices, payments, creditNotes] = await Promise.all([
+            this.repo.findInvoices(companyId, { customerId: contactId, to: asOf }),
+            this.repo.findPayments(companyId, { customerId: contactId, to: asOf }),
+            this.repo.findCreditNotes(companyId, { customerId: contactId, to: asOf }),
+        ])
+
+        const lines: any[] = []
+
+        for (const inv of invoices) {
+            lines.push({
+                id: 'inv_' + inv.id,
+                date: new Date(inv.date).toISOString().split('T')[0],
+                type: 'invoice',
+                description: 'Invoice ' + inv.invoiceNumber,
+                number: inv.invoiceNumber,
+                dueDate: new Date(inv.dueDate).toISOString().split('T')[0],
+                amount: Number(inv.totalAmount),
+                impact: Number(inv.totalAmount),
+            })
+        }
+
+        for (const pay of payments) {
+            const apps = (pay as any).InvoicePaymentApplication || []
+            for (const app of apps) {
+                lines.push({
+                    id: 'pay_' + pay.id + '_' + app.invoiceId,
+                    date: new Date(pay.paymentDate).toISOString().split('T')[0],
+                    type: 'payment',
+                    description: 'Payment' + (pay.referenceNumber ? ' ' + pay.referenceNumber : '') + ' — ' + (app.invoice?.invoiceNumber || ''),
+                    number: pay.referenceNumber,
+                    appliedToInvoiceId: app.invoiceId,
+                    appliedToInvoiceNumber: app.invoice?.invoiceNumber,
+                    amount: -Number(app.amount),
+                    impact: -Number(app.amount),
+                })
+            }
+            if (Number(pay.unappliedAmount) > 0) {
+                lines.push({
+                    id: 'pay_' + pay.id + '_unapplied',
+                    date: new Date(pay.paymentDate).toISOString().split('T')[0],
+                    type: 'payment',
+                    description: 'Payment' + (pay.referenceNumber ? ' ' + pay.referenceNumber : '') + ' (Unapplied)',
+                    number: pay.referenceNumber,
+                    amount: -Number(pay.unappliedAmount),
+                    impact: -Number(pay.unappliedAmount),
+                })
+            }
+        }
+
+        for (const cn of creditNotes) {
+            lines.push({
+                id: 'cn_' + cn.id,
+                date: new Date(cn.issuedAt).toISOString().split('T')[0],
+                type: 'credit_note',
+                description: 'Credit Note ' + cn.creditNoteNumber,
+                number: cn.creditNoteNumber,
+                amount: -Number(cn.totalAmount),
+                impact: -Number(cn.totalAmount),
+            })
+        }
+
+        lines.sort((a, b) => a.date.localeCompare(b.date))
+
+        let running = 0
+        for (const line of lines) {
+            running += line.impact
+            ;(line as any).runningBalance = running
+        }
+
+        const totals = {
+            invoices: lines.filter((l) => l.type === 'invoice').reduce((s, l) => s + l.amount, 0),
+            payments: lines.filter((l) => l.type === 'payment').reduce((s, l) => s + l.amount, 0),
+            credits: lines.filter((l) => l.type === 'credit_note').reduce((s, l) => s + l.amount, 0),
+            net: 0,
+        }
+        totals.net = totals.invoices + totals.payments + totals.credits
+
+        return {
+            customerId: contactId,
+            customerName: (customer as any).contact?.displayName || '',
+            asOf: asOf.toISOString().split('T')[0],
+            start: start ? start.toISOString().split('T')[0] : null,
+            type: opts.type || 'transaction',
+            lines,
+            totals,
+        }
+    }
+
     async createDunningProfile(companyId: string, data: { name: string; isActive?: boolean }) {
         const wid = await this.getWorkspaceId(companyId)
         try {
