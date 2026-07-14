@@ -21,7 +21,7 @@ describe('PrismaAuthService (phone normalization)', () => {
   })
 
   test('login rejects when no phone and email is not verified', async () => {
-    const hashed = await bcrypt.hash('Password1!', 10)
+    const hashed = await bcrypt.hash('Password1!', 12)
     mockUserRepo.findByEmail.mockResolvedValue({
       id: 'u1',
       email: 'u@e.test',
@@ -35,7 +35,7 @@ describe('PrismaAuthService (phone normalization)', () => {
   })
 
   test('login succeeds when email is verified even if phone is not (OR policy)', async () => {
-    const hashed = await bcrypt.hash('Password1!', 10)
+    const hashed = await bcrypt.hash('Password1!', 12)
     mockUserRepo.findByEmail.mockResolvedValue({
       id: 'u2',
       email: 'p@e.test',
@@ -56,7 +56,7 @@ describe('PrismaAuthService (phone normalization)', () => {
   })
 
   test('login rejects when phone exists and neither email nor phone is verified (OR policy)', async () => {
-    const hashed = await bcrypt.hash('Password1!', 10)
+    const hashed = await bcrypt.hash('Password1!', 12)
     mockUserRepo.findByEmail.mockResolvedValue({
       id: 'u2b',
       email: 'p2@e.test',
@@ -70,7 +70,7 @@ describe('PrismaAuthService (phone normalization)', () => {
   })
 
   test('login succeeds when email verified (and phone verified if present)', async () => {
-    const hashed = await bcrypt.hash('Password1!', 10)
+    const hashed = await bcrypt.hash('Password1!', 12)
     mockUserRepo.findByEmail.mockResolvedValue({
       id: 'u3',
       email: 'ok@e.test',
@@ -123,7 +123,7 @@ describe('PrismaAuthService (phone normalization)', () => {
   })
 
   test('login rate limits after repeated failures', async () => {
-    const hashed = await bcrypt.hash('Password1!', 10)
+    const hashed = await bcrypt.hash('Password1!', 12)
     mockUserRepo.findByEmail.mockResolvedValue({ id: 'u4', email: 'rl@e.test', password: hashed, isEmailVerified: true })
 
     // Simulate 5 recent failures

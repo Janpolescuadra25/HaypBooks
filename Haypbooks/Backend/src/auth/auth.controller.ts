@@ -144,7 +144,7 @@ export class AuthController {
       }
 
       // Hash password and store pending signup in-memory (replace with Redis in prod)
-      const hashed = await bcrypt.hash(password, 10)
+      const hashed = await bcrypt.hash(password, 12)
       const token = await this.pendingSignupService.create({
         email,
         hashedPassword: hashed,
@@ -793,7 +793,7 @@ export class AuthController {
     if (!valid) throw new NotFoundException('OTP invalid or expired')
 
     // Hash and update password
-    const hashed = await require('bcrypt').hash(password, 10)
+    const hashed = await require('bcrypt').hash(password, 12)
     await this.userRepository.update(user.id, { password: hashed })
     return { success: true }
   }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorException } from '@nestjs/common'
 import { randomUUID } from 'crypto'
-import * as bcrypt from 'bcryptjs'
+import * as bcrypt from '../utils/bcrypt-fallback'
 import { CompanyRepository } from './company.repository.prisma'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { AccountingService } from '../accounting/accounting.service'
@@ -272,7 +272,7 @@ export class CompanyService {
     let user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } })
     if (!user) {
       const tempPassword = randomUUID()
-      const hashedPassword = await bcrypt.hash(tempPassword, 10)
+      const hashedPassword = await bcrypt.hash(tempPassword, 12)
       user = await this.prisma.user.create({ data: { email: normalizedEmail, systemRole: 'USER', password: hashedPassword, isEmailVerified: false } as any })
     }
 

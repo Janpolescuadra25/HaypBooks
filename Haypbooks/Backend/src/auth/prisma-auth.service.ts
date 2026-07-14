@@ -33,7 +33,7 @@ export class PrismaAuthService {
     // Defensive validation: require phone at signup
     if (!phone) throw new BadRequestException('Phone number is required')
 
-    const hashed = await bcrypt.hash(password, 10)
+    const hashed = await bcrypt.hash(password, 12)
     const isAccountant = role === 'accountant' || role === 'both'
     const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
     // Normalize phone

@@ -38,7 +38,7 @@ export class PendingSignupService {
   async create(data: Omit<PendingData, 'createdAt'>, ttlSeconds = 60 * 30) {
     const id = randomBytes(6).toString('hex')
     const secret = this.generateSecret()
-    const tokenHash = await bcrypt.hash(secret, 10)
+    const tokenHash = await bcrypt.hash(secret, 12)
     // Add a small safety margin to account for clock skew between app and DB
     const safetyMs = 1000
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000 + safetyMs)

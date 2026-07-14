@@ -267,7 +267,7 @@ export class TestController {
     this.ensureEnabled()
     console.log('[TEST] createUser called with', { email: body.email, name: body.name, isEmailVerified: body.isEmailVerified, role: body.role })
 
-    const hash = await bcrypt.hash(body.password, 10)
+    const hash = await bcrypt.hash(body.password, 12)
 
     // Map test role strings to valid DB fields. SystemRole is USER/SUPPORT/ADMIN/SUPER_ADMIN.
     // 'accountant' and 'both' are not valid SystemRole values — don't attempt to set systemRole for them.
