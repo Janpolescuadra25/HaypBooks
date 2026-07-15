@@ -232,6 +232,13 @@ enum BirFormType {
   FORM_2551Q // Quarterly Summary of Alphalist of Withholding Agents
 }
 
+enum StatementFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
 // Filing / Status enums for compliance objects
 enum FilingStatus {
   DRAFT
@@ -1151,6 +1158,7 @@ model Workspace {
   // Workspace-scoped relations (missing opposites added to satisfy Prisma validation)
   dunningNotices        DunningNotice[]
   customerStatements    CustomerStatement[]
+  statementSchedules    StatementSchedule[]
   paymentReminders      PaymentReminder[]
   subscriptionReminders SubscriptionReminder[]
   disputes              Dispute[]
@@ -1577,6 +1585,7 @@ model Company {
   dunningRuns                    DunningRun[]
   dunningNotices                 DunningNotice[]
   customerStatements             CustomerStatement[]
+  statementSchedules             StatementSchedule[]
   disputes                       Dispute[]
   chargebacks                    Chargeback[]
   // Intercompany & consolidation
@@ -5645,6 +5654,7 @@ model Customer {
   creditNotes                CreditNote[]
   dunningNotices             DunningNotice[]
   customerStatements         CustomerStatement[]
+  statementSchedules          StatementSchedule[]
   customerRefunds            CustomerRefund[]
 
   @@index([workspaceId])
@@ -8644,6 +8654,28 @@ model CustomerStatement {
   @@index([companyId, templateId])
 }
 
+model StatementSchedule {
+  id             String             @id @default(uuid())
+  workspaceId    String
+  companyId      String
+  customerId     String
+  frequency      StatementFrequency @default(MONTHLY)
+  dayOfMonth     Int                @default(1)
+  nextRunDate    DateTime
+  lastSentAt     DateTime?
+  isActive       Boolean            @default(true)
+  recipientEmail String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  company   Company   @relation(fields: [companyId], references: [id])
+  customer  Customer  @relation(fields: [customerId], references: [contactId])
+
+  @@unique([companyId, customerId])
+  @@index([companyId, isActive, nextRunDate])
+}
+
 model PaymentReminder {
   id          String                @id @default(uuid())
   workspaceId String
@@ -9855,6 +9887,11 @@ model CompanySettings {
   reminderDaysBefore Int     @default(3)
   reminderDaysAfter  Int     @default(7)
   reminderRepeatDays Int     @default(7)
+
+  // Statement Email Defaults
+  statementEmailEnabled  Boolean           @default(false)
+  statementFrequency     StatementFrequency @default(MONTHLY)
+  statementDayOfMonth    Int               @default(1)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
