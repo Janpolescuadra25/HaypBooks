@@ -2453,12 +2453,13 @@ export class ArService {
         if (typeof dayOfMonth !== 'number' || dayOfMonth < 1 || dayOfMonth > 28) {
             throw new BadRequestException('dayOfMonth must be between 1 and 28')
         }
+        const workspaceId = await this.getWorkspaceId(companyId)
         const frequency = String(body.frequency ?? '').toUpperCase()
         const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY']
         if (!validFrequencies.includes(frequency)) {
             throw new BadRequestException('Invalid frequency')
         }
-        return this.repo.upsertStatementSchedule(companyId, contactId, {
+        return this.repo.upsertStatementSchedule(companyId, contactId, workspaceId, {
             frequency,
             dayOfMonth,
         })
@@ -2471,7 +2472,14 @@ export class ArService {
 
     async deactivateStatementSchedule(userId: string, companyId: string, contactId: string) {
         await this.assertAccess(userId, companyId)
-        return this.repo.deactivateStatementSchedule(companyId, contactId)
+        try {
+            return await this.repo.deactivateStatementSchedule(companyId, contactId)
+        } catch (err: any) {
+            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+                throw new NotFoundException('Statement schedule not found')
+            }
+            throw err
+        }
     }
 
     async updateCompanyStatementSettings(userId: string, companyId: string, body: any) {

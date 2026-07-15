@@ -1677,6 +1677,71 @@ export class ArRepository {
         })
     }
 
+    async upsertStatementSchedule(companyId: string, customerId: string, workspaceId: string, data: { frequency: string; dayOfMonth: number }) {
+        const nextRunDate = this.calculateInitialNextRunDate(data.frequency, data.dayOfMonth)
+        return this.prisma.statementSchedule.upsert({
+            where: { companyId_customerId: { companyId, customerId } },
+            update: {
+                frequency: data.frequency as any,
+                dayOfMonth: data.dayOfMonth,
+                isActive: true,
+                nextRunDate,
+            },
+            create: {
+                companyId,
+                customerId,
+                workspaceId,
+                frequency: data.frequency as any,
+                dayOfMonth: data.dayOfMonth,
+                isActive: true,
+                nextRunDate,
+            },
+        })
+    }
+
+    async getStatementSchedule(companyId: string, customerId: string) {
+        return this.prisma.statementSchedule.findUnique({
+            where: { companyId_customerId: { companyId, customerId } },
+        })
+    }
+
+    async deactivateStatementSchedule(companyId: string, customerId: string) {
+        return this.prisma.statementSchedule.update({
+            where: { companyId_customerId: { companyId, customerId } },
+            data: { isActive: false },
+        })
+    }
+
+    private calculateInitialNextRunDate(frequency: string, dayOfMonth: number): Date {
+        const day = Math.min(Math.max(dayOfMonth, 1), 28)
+        if (day !== dayOfMonth) {
+            // Keep behavior consistent with scheduler
+        }
+
+        const next = new Date()
+        switch (frequency) {
+            case 'DAILY':
+                next.setDate(next.getDate() + 1)
+                break
+            case 'WEEKLY':
+                next.setDate(next.getDate() + 7)
+                break
+            case 'MONTHLY':
+                next.setMonth(next.getMonth() + 1)
+                next.setDate(day)
+                break
+            case 'QUARTERLY':
+                next.setMonth(next.getMonth() + 3)
+                next.setDate(day)
+                break
+            default:
+                next.setMonth(next.getMonth() + 1)
+                next.setDate(day)
+                break
+        }
+        return next
+    }
+
     async createCreditNote(companyId: string, data: {
         customerId: string
         invoiceId?: string

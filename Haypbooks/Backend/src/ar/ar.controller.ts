@@ -5,6 +5,7 @@ import {
 import { ArService } from './ar.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { UpsertStatementScheduleDto, UpdateStatementEmailSettingsDto } from './dto/statement-schedule.dto'
 
 @Controller('api/companies/:companyId/ar')
 @UseGuards(JwtAuthGuard, CompanyAccessGuard)
@@ -1149,5 +1150,42 @@ export class ArController {
         @Query() q: any,
     ) {
         return this.svc.getCustomerStatement(req.user.userId, companyId, contactId, q)
+    }
+
+    @Post('customers/:contactId/statement-schedule')
+    upsertStatementSchedule(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('contactId') contactId: string,
+        @Body() body: UpsertStatementScheduleDto,
+    ) {
+        return this.svc.upsertStatementSchedule(req.user.userId, companyId, contactId, body)
+    }
+
+    @Get('customers/:contactId/statement-schedule')
+    getStatementSchedule(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('contactId') contactId: string,
+    ) {
+        return this.svc.getStatementSchedule(req.user.userId, companyId, contactId)
+    }
+
+    @Delete('customers/:contactId/statement-schedule')
+    deactivateStatementSchedule(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('contactId') contactId: string,
+    ) {
+        return this.svc.deactivateStatementSchedule(req.user.userId, companyId, contactId)
+    }
+
+    @Patch('settings/statement-email')
+    updateCompanyStatementSettings(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: UpdateStatementEmailSettingsDto,
+    ) {
+        return this.svc.updateCompanyStatementSettings(req.user.userId, companyId, body)
     }
 }
