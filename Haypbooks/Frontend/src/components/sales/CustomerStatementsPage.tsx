@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, Printer, Loader2, AlertCircle, X } from 'lucide-react'
-import { salesService } from '@/services/sales.service'
+import { salesService, CustomerStatementResponse, StatementLine } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -10,32 +10,6 @@ import { useToast } from '@/components/ToastProvider'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypColumn } from '@/components/shared/HaypDataTable.types'
-
-interface ArAgingCustomer {
-  customerId: string
-  customerName: string
-  current: number
-  days30: number
-  days60: number
-  days90: number
-  over90: number
-  total: number
-}
-
-interface ArAgingSummary {
-  current: number
-  days1to30: number
-  days31to60: number
-  days61to90: number
-  over90: number
-  total: number
-}
-
-interface AgingResponse {
-  summary?: ArAgingSummary
-  buckets?: Array<{ label: string; amount: number }>
-  customers?: ArAgingCustomer[]
-}
 
 interface CustomerOption {
   id: string
@@ -52,7 +26,7 @@ export default function CustomerStatementsPage() {
   const [customerLoading, setCustomerLoading] = useState(false)
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0])
-  const [data, setData] = useState<AgingResponse | null>(null)
+  const [statement, setStatement] = useState<CustomerStatementResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -76,20 +50,17 @@ export default function CustomerStatementsPage() {
 
   const loadStatement = useCallback(async () => {
     if (!companyId || !selectedCustomerId) {
-      setData(null)
+      setStatement(null)
       return
     }
     setLoading(true)
     try {
-      const response = await salesService.getArAgingReport(companyId, {
-        asOf: asOfDate,
-        customerId: selectedCustomerId,
-      })
-      setData(response.data)
+      const response = await salesService.getCustomerStatement(companyId, selectedCustomerId, { asOf: asOfDate })
+      setStatement(response.data)
       setError('')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to load statement')
-      setData(null)
+      setStatement(null)
     } finally {
       setLoading(false)
     }
@@ -98,71 +69,80 @@ export default function CustomerStatementsPage() {
   useEffect(() => { loadCustomers() }, [loadCustomers])
   useEffect(() => { loadStatement() }, [loadStatement])
 
-  const summary = data?.summary ?? { current: 0, days1to30: 0, days31to60: 0, days61to90: 0, over90: 0, total: 0 }
-  const statements: ArAgingCustomer[] = data?.customers ?? []
+  const summary = statement?.totals ?? { invoices: 0, payments: 0, credits: 0, net: 0 }
+  const statementLines: StatementLine[] = statement?.lines ?? []
 
-  const columns = useMemo<HaypColumn<ArAgingCustomer>[]>(() => [
-    { id: 'customerName', header: 'Customer', accessorKey: 'customerName', size: 220 },
+  const columns = useMemo<HaypColumn<StatementLine>[]>(() => [
+    { id: 'date', header: 'Date', accessorKey: 'date', size: 120 },
     {
-      id: 'current', header: 'Current', accessorKey: 'current', size: 120, align: 'right',
-      render: (_value, row) => (row.current ? fmt(row.current) : '—'),
+      id: 'type',
+      header: 'Type',
+      accessorKey: 'type',
+      size: 120,
+      render: (_value, row) => {
+        const label = row.type === 'invoice' ? 'Invoice' : row.type === 'payment' ? 'Payment' : 'Credit Note'
+        const badgeClass = row.type === 'invoice'
+          ? 'bg-indigo-50 text-indigo-700'
+          : row.type === 'payment'
+            ? 'bg-emerald-50 text-emerald-700'
+            : 'bg-amber-50 text-amber-700'
+        return <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${badgeClass}`}>{label}</span>
+      },
     },
     {
-      id: 'days30', header: '1-30 Days', accessorKey: 'days30', size: 120, align: 'right',
-      render: (_value, row) => (row.days30 ? fmt(row.days30) : '—'),
+      id: 'number',
+      header: 'No.',
+      accessorKey: 'number',
+      size: 140,
+      render: (value, row) => (
+        <span>{value ?? '—'}{row.appliedToInvoiceNumber ? ` (${row.appliedToInvoiceNumber})` : ''}</span>
+      ),
+    },
+    { id: 'description', header: 'Description', accessorKey: 'description', size: 260 },
+    {
+      id: 'amount',
+      header: 'Amount',
+      accessorKey: 'amount',
+      size: 140,
+      align: 'right',
+      render: (_value, row) => (
+        <span className={row.amount < 0 ? 'text-red-600' : 'text-slate-900'}>{fmt(row.amount)}</span>
+      ),
     },
     {
-      id: 'days60', header: '31-60 Days', accessorKey: 'days60', size: 120, align: 'right',
-      render: (_value, row) => (row.days60 ? fmt(row.days60) : '—'),
-    },
-    {
-      id: 'days90', header: '61-90 Days', accessorKey: 'days90', size: 120, align: 'right',
-      render: (_value, row) => (row.days90 ? fmt(row.days90) : '—'),
-    },
-    {
-      id: 'over90', header: 'Over 90 Days', accessorKey: 'over90', size: 120, align: 'right',
-      render: (_value, row) => (row.over90 ? fmt(row.over90) : '—'),
-    },
-    {
-      id: 'total', header: 'Total Outstanding', accessorKey: 'total', size: 140, align: 'right',
-      render: (_value, row) => fmt(row.total),
+      id: 'runningBalance',
+      header: 'Balance',
+      accessorKey: 'runningBalance',
+      size: 140,
+      align: 'right',
+      render: (_value, row) => (
+        <span className="font-semibold">{fmt(row.runningBalance)}</span>
+      ),
     },
   ], [fmt])
 
   const statementCards = [
-    { label: 'Current', amount: summary.current, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    { label: '1-30 Days', amount: summary.days1to30, className: 'bg-slate-50 text-slate-700 border-slate-200' },
-    { label: '31-60 Days', amount: summary.days31to60, className: 'bg-amber-50 text-amber-700 border-amber-200' },
-    { label: '61-90 Days', amount: summary.days61to90, className: 'bg-orange-50 text-orange-700 border-orange-200' },
-    { label: 'Over 90 Days', amount: summary.over90, className: 'bg-red-50 text-red-700 border-red-200' },
-    { label: 'Total Outstanding', amount: summary.total, className: 'bg-slate-900 text-white border-slate-800' },
+    { label: 'Total Invoiced', amount: summary.invoices },
+    { label: 'Total Payments', amount: summary.payments },
+    { label: 'Total Credits', amount: summary.credits },
+    { label: 'Net Balance', amount: summary.net },
   ]
 
   const exportCsv = useCallback(() => {
-    if (!statements.length) {
+    if (!statementLines.length) {
       toast.error('No statement data available to export')
       return
     }
-    const headers = ['Customer', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', 'Over 90 Days', 'Total']
-    const rows = statements.map((row) => [
-      row.customerName,
-      row.current,
-      row.days30,
-      row.days60,
-      row.days90,
-      row.over90,
-      row.total,
+    const headers = ['Date', 'Type', 'Number', 'Description', 'Amount', 'Running Balance']
+    const rows = statementLines.map((line) => [
+      line.date,
+      line.type,
+      line.number ?? '',
+      line.description,
+      line.amount.toFixed(2),
+      line.runningBalance.toFixed(2),
     ])
-    const summaryRow = [
-      'Summary',
-      summary.current,
-      summary.days1to30,
-      summary.days31to60,
-      summary.days61to90,
-      summary.over90,
-      summary.total,
-    ]
-    const csv = [headers, ...rows, summaryRow]
+    const csv = [headers, ...rows]
       .map((line) => line.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -172,7 +152,7 @@ export default function CustomerStatementsPage() {
     anchor.download = `customer-statement-${selectedCustomerId}-${asOfDate}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
-  }, [selectedCustomerId, asOfDate, statements, summary, toast])
+  }, [selectedCustomerId, asOfDate, statementLines, toast])
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
 
@@ -251,13 +231,21 @@ export default function CustomerStatementsPage() {
         {!selectedCustomerId ? (
           <div className="min-h-[320px] rounded-xl border border-dashed border-slate-200 bg-white px-8 py-16 text-center text-slate-500">
             <p className="text-lg font-semibold text-slate-900">Select a customer to view their statement</p>
-            <p className="mt-2 text-sm">Customer statements are generated from the AR aging report for the chosen date.</p>
+            <p className="mt-2 text-sm">Select a customer to view their transaction statement.</p>
           </div>
         ) : (
           <>
+            {statement ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Statement for {statement.customerName} as of {statement.asOf}
+                </h2>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {statementCards.map((card) => (
-                <div key={card.label} className={`rounded-xl border px-5 py-5 shadow-sm ${card.className}`}>
+                <div key={card.label} className="rounded-xl border px-5 py-5 shadow-sm bg-slate-50">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em]">{card.label}</p>
                   <p className="mt-3 text-2xl font-bold">{fmt(card.amount)}</p>
                 </div>
@@ -266,12 +254,12 @@ export default function CustomerStatementsPage() {
 
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <HaypDataTable
-                data={statements}
+                data={statementLines}
                 columns={columns}
                 tableId="customer-statements-details"
                 loading={loading}
                 emptyTitle="No statement data"
-                emptySubtitle="This customer has no aging details for the selected date."
+                emptySubtitle="This customer has no statement details for the selected date."
               />
             </div>
           </>

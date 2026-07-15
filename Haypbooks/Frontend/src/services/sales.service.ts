@@ -64,6 +64,35 @@ export interface DunningProfile {
   steps: DunningStep[]
 }
 
+export interface StatementLine {
+  id: string
+  date: string
+  type: 'invoice' | 'payment' | 'credit_note'
+  description: string
+  number?: string
+  dueDate?: string
+  amount: number
+  impact: number
+  runningBalance: number
+  appliedToInvoiceId?: string
+  appliedToInvoiceNumber?: string
+}
+
+export interface CustomerStatementResponse {
+  customerId: string
+  customerName: string
+  asOf: string
+  start: string | null
+  type: string
+  lines: StatementLine[]
+  totals: {
+    invoices: number
+    payments: number
+    credits: number
+    net: number
+  }
+}
+
 export const salesService = {
   // ─── Customers ────────────────────────────────────────────────────────
   listCustomers: (companyId: string, query?: any) =>
@@ -120,6 +149,9 @@ export const salesService = {
 
   getArAgingReport: (companyId: string, query?: Record<string, any>) =>
     apiClient.get(`/companies/${companyId}/ar/reports/aging`, { params: query }),
+
+  getCustomerStatement: (companyId: string, customerId: string, params?: Record<string, any>) =>
+    apiClient.get<CustomerStatementResponse>(`/companies/${companyId}/ar/customers/${customerId}/statement`, { params }),
 
   getArCustomerActivity: (companyId: string, customerId?: string, params?: Record<string, any>) =>
     apiClient.get(
