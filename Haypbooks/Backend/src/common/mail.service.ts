@@ -69,6 +69,149 @@ export class MailService {
   buildInviteText(inviterName: string, workspaceName: string, link: string) {
     return `You have been invited to HaypBooks\n\n${inviterName} has invited you to join ${workspaceName} on HaypBooks.\n\nAccept here: ${link}\n\nThis invitation expires in 7 days.\n\n— The HaypBooks Team`
   }
+
+  buildStatementEmailHtml(
+    customerName: string,
+    companyName: string,
+    data: {
+      asOf: string
+      lines: Array<{
+        date: string
+        type: string
+        description: string
+        amount: number
+        runningBalance: number
+      }>
+      totals: {
+        invoices: number
+        payments: number
+        credits: number
+        net: number
+      }
+    },
+  ) {
+    const formatCurrency = (value: number) => Number(value).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+    const formatNegative = (value: number) => value < 0 ? formatCurrency(value) : `(${formatCurrency(value)})`
+    const visibleLines = data.lines.slice(0, 20)
+    const remainingCount = Math.max(0, data.lines.length - visibleLines.length)
+
+    const summaryRows = `
+      <tr>
+        <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Total Invoiced</th>
+        <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${formatCurrency(data.totals.invoices)}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Total Payments</th>
+        <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${formatNegative(data.totals.payments)}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Total Credits</th>
+        <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${formatNegative(data.totals.credits)}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;"><strong>Outstanding Balance</strong></th>
+        <td style="padding:8px;border-bottom:1px solid #f1f5f9;"><strong>${formatCurrency(data.totals.net)}</strong></td>
+      </tr>
+    `
+
+    const transactionRows = visibleLines.map((line) => {
+      const amount = formatCurrency(line.amount)
+      const amountCell = line.amount < 0
+        ? `<span style="color: #dc2626;">${amount}</span>`
+        : amount
+
+      return `
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${line.date}</td>
+          <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${line.description}</td>
+          <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${amountCell}</td>
+          <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${formatCurrency(line.runningBalance)}</td>
+        </tr>
+      `
+    }).join('')
+
+    const moreTransactionsRow = remainingCount > 0
+      ? `
+        <tr>
+          <td colspan="4" style="padding:8px;text-align:center;color:#64748b;border-bottom:1px solid #f1f5f9;">… and ${remainingCount} more transactions</td>
+        </tr>
+      `
+      : ''
+
+    return `
+      <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; color: #111; max-width: 600px;">
+        <h2 style="color: #111;">Account Statement</h2>
+        <p>Dear ${customerName},</p>
+        <p>Below is your account statement with ${companyName} as of ${data.asOf}.</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tbody>
+            ${summaryRows}
+          </tbody>
+        </table>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Date</th>
+              <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Description</th>
+              <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Amount</th>
+              <th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transactionRows}
+            ${moreTransactionsRow}
+          </tbody>
+        </table>
+
+        <p>If you have any questions about this statement, please contact us.</p>
+        <p style="color: #64748b;">The ${companyName} Team</p>
+      </div>
+    `
+  }
+
+  buildStatementEmailText(
+    customerName: string,
+    companyName: string,
+    data: {
+      asOf: string
+      lines: Array<{
+        date: string
+        type: string
+        description: string
+        amount: number
+        runningBalance: number
+      }>
+      totals: {
+        invoices: number
+        payments: number
+        credits: number
+        net: number
+      }
+    },
+  ) {
+    const formatCurrency = (value: number) => Number(value).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+    const formatNegative = (value: number) => value < 0 ? `(${formatCurrency(Math.abs(value))})` : `(${formatCurrency(value)})`
+    const formatAmount = (value: number) => value < 0 ? `(${formatCurrency(Math.abs(value))})` : formatCurrency(value)
+
+    const padRight = (value: string, width: number) => value.padEnd(width, ' ')
+    const padLeft = (value: string, width: number) => value.padStart(width, ' ')
+
+    const visibleLines = data.lines.slice(0, 20)
+    const remainingCount = Math.max(0, data.lines.length - visibleLines.length)
+
+    const transactionRows = visibleLines.map((line) => {
+      return `
+${padRight(line.date, 10)} | ${padRight(line.description, 22)} | ${padLeft(formatAmount(line.amount), 13)} | ${padLeft(formatCurrency(line.runningBalance), 11)}`
+    }).join('')
+
+    const moreTransactionsRow = remainingCount > 0
+      ? `\n... and ${remainingCount} more transactions`
+      : ''
+
+    return `ACCOUNT STATEMENT\nDear ${customerName},\n\nBelow is your account statement with ${companyName} as of ${data.asOf}.\n\nSUMMARY\n--------\nTotal Invoiced:       ${formatCurrency(data.totals.invoices)}\nTotal Payments:      ${formatAmount(-Math.abs(data.totals.payments))}\nTotal Credits:       ${formatAmount(-Math.abs(data.totals.credits))}\nOutstanding Balance: ${formatCurrency(data.totals.net)}\n\nTRANSACTIONS\n------------\nDate       | Description           | Amount        | Balance\n-----------+----------------------+---------------+------------${transactionRows}${moreTransactionsRow}\n` 
+  }
   async sendEmail(to: string, subject: string, html: string, text: string) {
     // Prefer SendGrid if configured
     if (process.env.SENDGRID_API_KEY) {
