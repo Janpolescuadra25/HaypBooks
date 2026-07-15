@@ -2342,15 +2342,11 @@ export class ArService {
         return { success: true, invoiceId, level }
     }
 
-    async getCustomerStatement(userId: string, companyId: string, contactId: string, opts: any) {
-        await this.assertAccess(userId, companyId)
+    async generateStatementData(companyId: string, contactId: string, asOf: Date) {
         const wid = await this.getWorkspaceId(companyId)
 
         const customer = await this.repo.findCustomerById(wid, contactId)
         if (!customer) throw new NotFoundException('Customer not found')
-
-        const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
-        const start = opts.start ? new Date(opts.start) : null
 
         const [invoices, payments, creditNotes] = await Promise.all([
             this.repo.findInvoices(companyId, { customerId: contactId, to: asOf }),
@@ -2433,11 +2429,66 @@ export class ArService {
             customerId: contactId,
             customerName: (customer as any).contact?.displayName || '',
             asOf: asOf.toISOString().split('T')[0],
-            start: start ? start.toISOString().split('T')[0] : null,
-            type: opts.type || 'transaction',
             lines,
             totals,
         }
+    }
+
+    async getCustomerStatement(userId: string, companyId: string, contactId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
+        const start = opts.start ? new Date(opts.start) : null
+        const data = await this.generateStatementData(companyId, contactId, asOf)
+
+        return {
+            ...data,
+            start: start ? start.toISOString().split('T')[0] : null,
+            type: opts.type || 'transaction',
+        }
+    }
+
+    async upsertStatementSchedule(userId: string, companyId: string, contactId: string, body: any) {
+        await this.assertAccess(userId, companyId)
+        const dayOfMonth = body.dayOfMonth ?? 1
+        if (typeof dayOfMonth !== 'number' || dayOfMonth < 1 || dayOfMonth > 28) {
+            throw new BadRequestException('dayOfMonth must be between 1 and 28')
+        }
+        const frequency = String(body.frequency ?? '').toUpperCase()
+        const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY']
+        if (!validFrequencies.includes(frequency)) {
+            throw new BadRequestException('Invalid frequency')
+        }
+        return this.repo.upsertStatementSchedule(companyId, contactId, {
+            frequency,
+            dayOfMonth,
+        })
+    }
+
+    async getStatementSchedule(userId: string, companyId: string, contactId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.getStatementSchedule(companyId, contactId)
+    }
+
+    async deactivateStatementSchedule(userId: string, companyId: string, contactId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.deactivateStatementSchedule(companyId, contactId)
+    }
+
+    async updateCompanyStatementSettings(userId: string, companyId: string, body: any) {
+        await this.assertAccess(userId, companyId)
+        const updateData: any = {}
+        if (body.statementEmailEnabled !== undefined) updateData.statementEmailEnabled = body.statementEmailEnabled
+        if (body.statementFrequency !== undefined) updateData.statementFrequency = body.statementFrequency as any
+        if (body.statementDayOfMonth !== undefined) updateData.statementDayOfMonth = body.statementDayOfMonth
+
+        return this.prisma.companySettings.upsert({
+            where: { companyId },
+            update: updateData,
+            create: {
+                companyId,
+                ...updateData,
+            },
+        })
     }
 
     async createDunningProfile(companyId: string, data: { name: string; isActive?: boolean }) {
