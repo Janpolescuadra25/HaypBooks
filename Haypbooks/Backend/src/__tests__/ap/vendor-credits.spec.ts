@@ -5,10 +5,13 @@ describe('ApService - Vendor Credits', () => {
   let mockRepo: any
   let mockPrisma: any
   let mockSubLedger: any
+  let mockAuditService: any
   let service: ApService
 
   beforeEach(() => {
     jest.resetAllMocks()
+
+    mockAuditService = { log: jest.fn() }
 
     mockRepo = {
       findVendorCreditById: jest.fn(),
@@ -29,7 +32,7 @@ describe('ApService - Vendor Credits', () => {
       postVendorCreditToGL: jest.fn().mockResolvedValue(undefined),
     }
 
-    service = new ApService(mockRepo as any, mockPrisma as any, mockSubLedger as any)
+    service = new ApService(mockRepo as any, mockPrisma as any, mockAuditService as any, mockSubLedger as any)
   })
 
   test('creates a vendor credit with correct total and vendor', async () => {

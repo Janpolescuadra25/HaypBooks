@@ -19,7 +19,7 @@ describe('TestController delete-company', () => {
       $executeRawUnsafe: jest.fn()
     }
 
-    controller = new TestController(mockPrisma as any, pending as any, auth as any, onboarding as any)
+    controller = new TestController(mockPrisma as any, pending as any, auth as any, onboarding as any, {} as any)
     jest.clearAllMocks()
   })
 

@@ -30,7 +30,7 @@ describe('ApService - Approval Workflow Rules', () => {
       postBillReversalToGL: jest.fn().mockResolvedValue(undefined),
     }
 
-    service = new ApService(mockRepo as any, mockPrisma as any, mockSubLedger as any)
+    service = new ApService(mockRepo as any, mockPrisma as any, { log: jest.fn() } as any, mockSubLedger as any)
   })
 
   test('submit creates PENDING status and does not post to GL', async () => {

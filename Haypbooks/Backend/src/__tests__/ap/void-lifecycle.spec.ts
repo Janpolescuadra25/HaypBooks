@@ -17,12 +17,15 @@ describe('Void Lifecycle', () => {
   let mockRepo: any
   let mockPrisma: any
   let mockSubLedger: any
+  let mockAuditService: any
   let apService: ApService
   let apRepo: ApRepository
   let expensesService: ExpensesService
 
   beforeEach(() => {
     jest.resetAllMocks()
+
+    mockAuditService = { log: jest.fn() }
 
     mockRepo = {
       findVendorCreditById: jest.fn(),
@@ -57,12 +60,13 @@ describe('Void Lifecycle', () => {
       postBillPaymentReversalToGL: jest.fn().mockResolvedValue(undefined),
     }
 
-    apService = new ApService(mockRepo as any, mockPrisma as any, mockSubLedger as any)
+    apService = new ApService(mockRepo as any, mockPrisma as any, mockAuditService as any, mockSubLedger as any)
     apRepo = new ApRepository(mockPrisma as any)
     expensesService = new ExpensesService(
       {} as any,
       mockPrisma as any,
       {} as any,
+      mockAuditService as any,
       mockSubLedger as any,
       new ExpenseStatusTransitionGuard({} as any),
       { validateExpenseAgainstPolicy: jest.fn().mockResolvedValue([]) } as any,
