@@ -87,10 +87,10 @@ export class AccountingRepository {
                 typeId: data.typeId,
                 parentId: data.parentId ?? null,
                 currency: await this.resolveCurrency(data.companyId, data.currency),
-                normalSide: data.normalSide ? data.normalSide as Prisma.NormalSide : null,
+                normalSide: data.normalSide ? data.normalSide as any : null,
                 isHeader: data.isHeader ?? false,
-                liquidityType: data.liquidityType ? data.liquidityType as Prisma.LiquidityType : null,
-                specialType: data.specialType ? data.specialType as Prisma.AccountSpecialType : Prisma.AccountSpecialType.NONE,
+                liquidityType: data.liquidityType ? data.liquidityType as any : null,
+                specialType: data.specialType ? data.specialType as any : Prisma.AccountSpecialType.NONE,
                 cashFlowType: data.cashFlowType ?? null,
                 accountSubTypeId: data.accountSubTypeId ?? null,
                 isFromTemplate: data.isFromTemplate ?? false,
@@ -107,8 +107,8 @@ export class AccountingRepository {
                 parentId: data.parentId,
                 isActive: data.isActive,
                 isHeader: data.isHeader,
-                liquidityType: data.liquidityType ? data.liquidityType as Prisma.LiquidityType : null,
-                specialType: data.specialType ? data.specialType as Prisma.AccountSpecialType : null,
+                liquidityType: data.liquidityType ? data.liquidityType as any : null,
+                specialType: data.specialType ? data.specialType as any : null,
                 cashFlowType: data.cashFlowType,
             },
         })
@@ -158,7 +158,7 @@ export class AccountingRepository {
     // ─── Journal Entries ──────────────────────────────────────────────────────
 
     async findJournalEntries(companyId: string, opts: {
-        status?: Prisma.PostingStatus
+        status?: 'DRAFT' | 'POSTED' | 'VOIDED'
         from?: Date
         to?: Date
         limit?: number
@@ -739,7 +739,6 @@ export class AccountingRepository {
     async createPeriod(data: { companyId: string; workspaceId: string; name: string; startDate: Date; endDate: Date }) {
         return this.prisma.accountingPeriod.create({
             data: {
-                companyId: data.companyId,
                 workspaceId: data.workspaceId,
                 name: data.name,
                 startDate: data.startDate,
@@ -788,7 +787,7 @@ export class AccountingRepository {
                     workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Revenue (${period.name})`,
+                    description: `Closing entry – Revenue (${(period as any).name})`,
                     createdById: userId,
                     lines: revLines,
                 })
@@ -809,7 +808,7 @@ export class AccountingRepository {
                     workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Expenses (${period.name})`,
+                    description: `Closing entry – Expenses (${(period as any).name})`,
                     createdById: userId,
                     lines: expLines,
                 })
@@ -824,7 +823,7 @@ export class AccountingRepository {
                     workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Net Income to Retained Earnings (${period.name})`,
+                    description: `Closing entry – Net Income to Retained Earnings (${(period as any).name})`,
                     createdById: userId,
                     lines: [
                         {
@@ -845,7 +844,7 @@ export class AccountingRepository {
 
             return tx.accountingPeriod.update({
                 where: { id: periodId },
-                data: { status: 'CLOSED', closedAt: new Date(), isClosed: true },
+                data: { status: 'CLOSED', closedAt: new Date() },
             })
         })
     }
@@ -892,7 +891,7 @@ export class AccountingRepository {
 
             return tx.accountingPeriod.update({
                 where: { id: periodId },
-                data: { status: 'OPEN', closedAt: null, isClosed: false },
+                data: { status: 'OPEN', closedAt: null },
             })
         })
     }

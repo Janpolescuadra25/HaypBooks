@@ -164,7 +164,7 @@ export class ArService {
             where: {
                 workspaceId,
                 isActive: true,
-                type: mapped.type as Prisma.PaymentMethodType,
+                type: mapped.type as any,
                 ...(mapped.type === 'OTHER' ? { name: mapped.name } : {}),
             },
             select: { id: true },
@@ -175,7 +175,7 @@ export class ArService {
             data: {
                 workspaceId,
                 name: mapped.name,
-                type: mapped.type as Prisma.PaymentMethodType,
+                type: mapped.type as any,
                 isActive: true,
             },
             select: { id: true },
@@ -904,7 +904,7 @@ export class ArService {
         if (!data.lines?.length) throw new BadRequestException('At least one line item is required')
         const quote = await this.repo.createQuote({ workspaceId, companyId, ...data })
         this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Quote', recordId: quote.id, changes: { customerId: data.customerId, total: quote.totalAmount } },
+            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Quote', recordId: quote.id, changes: { customerId: data.customerId, total: quote.totalAmount } as any },
         }).catch(() => {})
         return this.normalizeQuote(quote)
     }
@@ -1077,7 +1077,7 @@ export class ArService {
             lines: normalizedLines,
         })
         this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Invoice', recordId: result.id, changes: { invoiceNumber: result.invoiceNumber, customerId: data.customerId, total: result.totalAmount } },
+            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Invoice', recordId: result.id, changes: { invoiceNumber: result.invoiceNumber, customerId: data.customerId, total: result.totalAmount } as any },
         }).catch(() => {})
         return this.normalizeInvoice(result)
     }
@@ -1440,7 +1440,7 @@ export class ArService {
         const jeId = await this.subLedger.postDeferredRevenueCreationToGL({
             workspaceId: created.workspaceId,
             companyId,
-            amount: created.totalDeferredAmount,
+            amount: Number(created.totalDeferredAmount),
             deferredRevenueId: created.id,
             description: `Deferred revenue creation — ${created.description}`,
             currency: company?.currency ?? 'PHP',
@@ -1890,7 +1890,7 @@ export class ArService {
                 { label: '61-90 Days', amount: result.summary.days61to90, count: customerCounts.days61to90 },
                 { label: 'Over 90 Days', amount: result.summary.over90, count: customerCounts.over90 },
             ]
-            result.totalOutstanding = result.summary.total
+            ;(result as any).totalOutstanding = result.summary.total
         }
 
         return result
@@ -2022,7 +2022,7 @@ export class ArService {
         this.prisma.auditLog.create({
             data: { workspaceId: wid, companyId, userId, action: 'GENERATE', tableName: 'RecurringInvoice', recordId: id, changes: { invoiceId: invoice.id } },
         }).catch(() => {})
-        return { invoiceId: invoice.id, invoiceNumber }
+        return { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber }
     }
 
     async batchDeleteRecurringInvoices(userId: string, companyId: string, ids: string[]) {
@@ -2237,7 +2237,7 @@ export class ArService {
         if (!invoice.dueDate) throw new BadRequestException('Invoice has no due date')
 
         // 2. Resolve profile — use provided profileId or auto-resolve active profile
-        let profile = null
+        let profile: any = null
         if (profileId) {
             profile = await this.prisma.dunningProfile.findFirst({
                 where: { id: profileId, companyId, workspaceId: wid },
@@ -2363,7 +2363,7 @@ export class ArService {
                 type: 'invoice',
                 description: 'Invoice ' + inv.invoiceNumber,
                 number: inv.invoiceNumber,
-                dueDate: new Date(inv.dueDate).toISOString().split('T')[0],
+                dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : '',
                 amount: Number(inv.totalAmount),
                 impact: Number(inv.totalAmount),
             })

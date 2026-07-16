@@ -254,8 +254,8 @@ export class SubLedgerService {
         return
       }
 
-      const lines = invoice.lines ?? []
-      const grossTotal = this.roundMoney(Number(invoice.totalAmount ?? 0))
+const lines = (invoice as any).lines ?? []
+        const grossTotal = this.roundMoney(Number((invoice as any).totalAmount ?? 0))
 
       // Build credit lines — one per invoice line
       const creditLines: Array<{ accountId: string; debit: number; credit: number; memo?: string }> = []
@@ -312,7 +312,7 @@ export class SubLedgerService {
 
       // DR Accounts Receivable for the full gross amount
       await this.prisma.$transaction(async (tx) => {
-        await this.assertPeriodOpen(invoice.companyId, invoice.issuedAt ?? invoice.date ?? new Date(), tx)
+        await this.assertPeriodOpen(invoice.companyId, (invoice as any).issuedAt ?? invoice.date ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(invoice.companyId, 'AR')
         const je = await this.createPostedJE(tx, {
           workspaceId: invoice.workspaceId,
@@ -788,7 +788,7 @@ export class SubLedgerService {
       const amount = Number(deposit.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
-        await this.assertPeriodOpen(deposit.companyId, deposit.depositDate ?? deposit.date ?? new Date(), tx)
+        await this.assertPeriodOpen(deposit.companyId, (deposit as any).depositDate ?? (deposit as any).date ?? new Date(), tx)
         const entryNumber = await this.nextEntryNumber(deposit.companyId, 'BD')
         const je = await this.createPostedJE(tx, {
           workspaceId: deposit.workspaceId,

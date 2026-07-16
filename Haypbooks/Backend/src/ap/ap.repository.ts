@@ -170,6 +170,7 @@ export class ApRepository {
         memo?: string | null
         terms?: string | null
         internalNotes?: string | null
+        discountType?: string | null
         dueAt?: Date; paymentTermId?: string; currency?: string; description?: string
         createdById: string; lines: any[]
     }) {
@@ -191,6 +192,7 @@ export class ApRepository {
                         memo: data.memo ?? null,
                         terms: data.terms ?? null,
                         internalNotes: data.internalNotes ?? null,
+                        discountType: data.discountType ?? null,
                         status: 'DRAFT', postingStatus: 'DRAFT', total, balance: total,
                         currency: await this.resolveCurrency(data.companyId, data.currency), dueAt: data.dueAt ?? null,
                         paymentTermId: data.paymentTermId ?? null, description: data.description ?? null,

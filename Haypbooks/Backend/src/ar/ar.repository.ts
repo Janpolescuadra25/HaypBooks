@@ -1021,7 +1021,10 @@ export class ArRepository {
 
     async createInvoice(data: {
         workspaceId: string, companyId: string, customerId: string, dueDate?: Date,
-        paymentTermId?: string, currency?: string, createdById: string, lines: any[]
+        paymentTermId?: string, currency?: string, createdById: string, lines: any[],
+        memo?: string | null, internalNotes?: string | null, poNumber?: string | null,
+        discountType?: string | null, discountAmount?: number | null,
+        billAddress?: string | null, shipAddress?: string | null,
     }) {
         const totalAmount = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? 0), 0)
         const currency = await this.resolveCurrency(data.companyId, data.currency)
@@ -1041,13 +1044,13 @@ export class ArRepository {
                     date: new Date(),
                     dueDate: data.dueDate ?? null,
                     paymentTermId: data.paymentTermId ?? null,
-                    memo: data.memo ?? null,
-                    internalNotes: data.internalNotes ?? null,
-                    poNumber: data.poNumber ?? null,
-                    discountType: data.discountType ?? null,
-                    discountAmount: data.discountAmount ?? null,
-                    billAddress: data.billAddress ?? null,
-                    shipAddress: data.shipAddress ?? null,
+                    memo: (data as any).memo ?? null,
+                    internalNotes: (data as any).internalNotes ?? null,
+                    poNumber: (data as any).poNumber ?? null,
+                    discountType: (data as any).discountType ?? null,
+                    discountAmount: (data as any).discountAmount ?? null,
+                    billAddress: (data as any).billAddress ?? null,
+                    shipAddress: (data as any).shipAddress ?? null,
                     createdById: data.createdById,
                     lines: {
                         create: data.lines.map((l: any) => ({
@@ -1145,7 +1148,6 @@ export class ArRepository {
                     exchangeRate: source.exchangeRate,
                     baseTotal: source.baseTotal,
                     transactionType: source.transactionType,
-                    discountAmount: source.discountAmount,
                     shippingAmount: source.shippingAmount,
                     otherCharges: source.otherCharges,
                     withholdingTaxAmount: source.withholdingTaxAmount,
@@ -1153,13 +1155,13 @@ export class ArRepository {
                     date: new Date(),
                     dueDate: source.dueDate,
                     paymentTermId: source.paymentTermId,
-                    memo: source.memo,
-                    internalNotes: source.internalNotes,
-                    poNumber: source.poNumber,
-                    discountType: source.discountType,
-                    discountAmount: source.discountAmount,
-                    billAddress: source.billAddress,
-                    shipAddress: source.shipAddress,
+                    memo: (source as any).memo,
+                    internalNotes: (source as any).internalNotes,
+                    poNumber: (source as any).poNumber,
+                    discountType: (source as any).discountType,
+                    discountAmount: (source as any).discountAmount,
+                    billAddress: (source as any).billAddress,
+                    shipAddress: (source as any).shipAddress,
                     templateId: source.templateId,
                     invoiceTemplateId: source.invoiceTemplateId,
                     createdById,

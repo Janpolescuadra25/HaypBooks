@@ -185,7 +185,7 @@ export class ApService {
         if (Number.isNaN(asOf.getTime())) throw new BadRequestException('Invalid asOf date')
 
         const start = opts.start ? new Date(opts.start) : undefined
-        if (opts.start && Number.isNaN(start.getTime())) throw new BadRequestException('Invalid start date')
+        if (opts.start && Number.isNaN(start!.getTime())) throw new BadRequestException('Invalid start date')
 
         const type = typeof opts.type === 'string' ? opts.type : undefined
         const asOfIso = asOf.toISOString().slice(0, 10)
@@ -340,7 +340,7 @@ export class ApService {
 
         return {
             vendorId: contactId,
-            vendorName: vendor.contact?.displayName ?? vendor.name ?? '',
+            vendorName: vendor.contact?.displayName ?? (vendor as any).name ?? '',
             asOf: asOfIso,
             start: startIso,
             type,
@@ -782,7 +782,7 @@ export class ApService {
             entityType: 'BillPayment',
             entityId: paymentId,
             action: 'VOIDED',
-            oldValue: { status: payment.status, postingStatus: payment.postingStatus },
+            oldValue: { status: (payment as any).status, postingStatus: payment.postingStatus },
             newValue: { status: 'VOIDED', postingStatus: 'VOIDED' },
             metadata: { reason: 'void' },
         }).catch(() => {})
@@ -827,7 +827,7 @@ export class ApService {
         if (!po) throw new NotFoundException('Purchase order not found')
         const allowed = ['OPEN', 'PARTIAL_RECEIVED', 'RECEIVED', 'CLOSED', 'CANCELLED']
         if (!allowed.includes(status)) throw new BadRequestException(`Invalid status: ${status}`)
-        return this.repo.updatePoStatus(companyId, poId, status)
+        return this.repo.updatePoStatus(companyId, poId, status as any)
     }
 
     async convertPoToBill(userId: string, companyId: string, poId: string) {
@@ -1272,12 +1272,12 @@ export class ApService {
             vehicle: data.vehicle ?? existing.vehicle,
             personalVehicle: data.personalVehicle ?? existing.personalVehicle,
             accountId: data.accountId ?? existing.accountId,
-            projectId: data.projectId ?? existingAny.projectId,
-            notes: data.notes ?? existingAny.notes,
-            status: data.status ?? existingAny.status,
+            projectId: data.projectId ?? existing.projectId,
+            notes: data.notes ?? existing.notes,
+            status: data.status ?? existing.status,
         }
         const workspaceId = await this.getWorkspaceId(companyId)
-        const shouldPost = data.status && String(data.status).toUpperCase() === 'APPROVED' && String(existingAny.status ?? '').toUpperCase() !== 'APPROVED'
+        const shouldPost = data.status && String(data.status).toUpperCase() === 'APPROVED' && String(existing.status ?? '').toUpperCase() !== 'APPROVED'
         const result = shouldPost
             ? await this.prisma.$transaction(async (tx) => {
                 const updatedLog = await tx.mileageLog.update({ where: { id: logId }, data: { ...payload, postingStatus: 'POSTED' } })
