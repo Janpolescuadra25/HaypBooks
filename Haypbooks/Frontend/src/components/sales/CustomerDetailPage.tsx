@@ -11,6 +11,7 @@ import { salesService } from '@/services/sales.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useToast } from '@/components/ToastProvider'
 import { formatActivityValue } from '@/components/ui/ActivityLog'
 
 interface RecentInvoice {
@@ -96,6 +97,10 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   const [activityTotal, setActivityTotal] = useState(0)
   const [activityLoading, setActivityLoading] = useState(false)
   const [activityError, setActivityError] = useState('')
+  const [schedule, setSchedule] = useState<any>(null)
+  const [scheduleLoading, setScheduleLoading] = useState(true)
+  const [scheduleSaving, setScheduleSaving] = useState(false)
+  const toast = useToast()
 
   const fmtCurrency = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -122,6 +127,56 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
     } catch { /* not critical */ }
   }, [companyId])
 
+  const loadSchedule = useCallback(async () => {
+    if (!companyId || !customerId) return
+    try {
+      setScheduleLoading(true)
+      const res = await salesService.getStatementSchedule(companyId, customerId)
+      setSchedule(res.data || null)
+    } catch {
+      setSchedule(null)
+    } finally {
+      setScheduleLoading(false)
+    }
+  }, [companyId, customerId])
+
+  const handleToggleSchedule = async (enabled: boolean) => {
+    if (!companyId || !customerId) return
+    setScheduleSaving(true)
+    try {
+      if (enabled) {
+        const res = await salesService.upsertStatementSchedule(companyId, customerId, {
+          frequency: schedule?.frequency || 'MONTHLY',
+          dayOfMonth: schedule?.dayOfMonth || 1,
+        })
+        setSchedule(res.data)
+        toast.push({ type: 'success', message: 'Statement schedule enabled' })
+      } else {
+        await salesService.deactivateStatementSchedule(companyId, customerId)
+        setSchedule(prev => prev ? { ...prev, isActive: false } : null)
+        toast.push({ type: 'success', message: 'Statement schedule disabled' })
+      }
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to update schedule' })
+    } finally {
+      setScheduleSaving(false)
+    }
+  }
+
+  const handleUpdateSchedule = async (frequency: string, dayOfMonth: number) => {
+    if (!companyId || !customerId) return
+    setScheduleSaving(true)
+    try {
+      const res = await salesService.upsertStatementSchedule(companyId, customerId, { frequency, dayOfMonth })
+      setSchedule(res.data)
+      toast.push({ type: 'success', message: 'Schedule updated' })
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to update schedule' })
+    } finally {
+      setScheduleSaving(false)
+    }
+  }
+
   const fetchActivity = useCallback(async () => {
     if (!companyId) return
     setActivityLoading(true)
@@ -141,7 +196,8 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   useEffect(() => {
     fetchCustomer()
     fetchPaymentTerms()
-  }, [fetchCustomer, fetchPaymentTerms])
+    loadSchedule()
+  }, [fetchCustomer, fetchPaymentTerms, loadSchedule])
 
   useEffect(() => {
     if (activeTab === 'activity') fetchActivity()
@@ -385,6 +441,78 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
       ) : (
         <p className="text-xs text-gray-400">No payments yet</p>
       )}
+
+      {/* Statement Schedule */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-8 h-8 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0 mt-0.5">
+            <Mail size={16} />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">Statement Schedule</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Automatically email account statements to this customer</p>
+          </div>
+        </div>
+
+        {scheduleLoading ? (
+          <div className="flex items-center gap-2 text-sm text-slate-400">
+            <Loader2 size={14} className="animate-spin" />
+            Loading schedule...
+          </div>
+        ) : (
+          <>
+            <label className="flex items-center gap-3 cursor-pointer mb-4">
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${schedule?.isActive ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${schedule?.isActive ? 'left-5' : 'left-0.5'}`} />
+              </div>
+              <input type="checkbox" checked={!!schedule?.isActive} onChange={e => handleToggleSchedule(e.target.checked)} disabled={scheduleSaving} className="sr-only" />
+              <span className="text-sm font-medium text-gray-700">Enable scheduled statements</span>
+            </label>
+
+            {schedule?.isActive && (
+              <div className="pl-4 border-l-2 border-emerald-100 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Frequency</label>
+                    <select
+                      value={schedule.frequency}
+                      onChange={e => handleUpdateSchedule(e.target.value, schedule.dayOfMonth)}
+                      disabled={scheduleSaving}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                    >
+                      <option value="DAILY">Daily</option>
+                      <option value="WEEKLY">Weekly</option>
+                      <option value="MONTHLY">Monthly</option>
+                      <option value="QUARTERLY">Quarterly</option>
+                    </select>
+                  </div>
+                  {(schedule.frequency === 'MONTHLY' || schedule.frequency === 'QUARTERLY') && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Day of Month</label>
+                      <select
+                        value={schedule.dayOfMonth}
+                        onChange={e => handleUpdateSchedule(schedule.frequency, parseInt(e.target.value))}
+                        disabled={scheduleSaving}
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                      >
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {schedule.lastSentAt && (
+                  <p className="text-xs text-slate-400">
+                    Last sent: {new Date(schedule.lastSentAt).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Edit Modal */}
       {showEdit && customer && (

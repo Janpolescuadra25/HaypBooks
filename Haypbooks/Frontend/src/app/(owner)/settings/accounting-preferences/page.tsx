@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   Settings, Save, RotateCcw, DollarSign, Calendar, Hash,
-  AlertTriangle, Bell, ChevronRight, Lock, CheckCircle, Loader2,
+  AlertTriangle, Bell, ChevronRight, Lock, CheckCircle, Loader2, Mail,
 } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -132,6 +132,13 @@ export default function AccountingPreferencesPage() {
 
   const [prefs, setPrefs] = useState<AccountingPreferences>(DEFAULTS)
   const [customPaymentDays, setCustomPaymentDays] = useState(30)
+  const [statementSettings, setStatementSettings] = useState({
+    statementEmailEnabled: false,
+    statementFrequency: 'MONTHLY',
+    statementDayOfMonth: 1,
+  })
+  const [statementSaving, setStatementSaving] = useState(false)
+  const [statementDirty, setStatementDirty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -165,6 +172,11 @@ export default function AccountingPreferencesPage() {
           reminderRepeatDays: settings.reminderRepeatDays ?? p.reminderRepeatDays,
           baseCurrency: company?.currency ?? 'PHP',
         }))
+        setStatementSettings({
+          statementEmailEnabled: settings.statementEmailEnabled ?? false,
+          statementFrequency: settings.statementFrequency ?? 'MONTHLY',
+          statementDayOfMonth: settings.statementDayOfMonth ?? 1,
+        })
         if (settings.defaultPaymentTerms === 'custom' && settings.customPaymentDays) {
           setCustomPaymentDays(settings.customPaymentDays)
         }
@@ -179,6 +191,30 @@ export default function AccountingPreferencesPage() {
     setDirty(true)
     setSaved(false)
   }, [])
+
+  const setStatement = (key: string, value: any) => {
+    setStatementSettings(prev => ({ ...prev, [key]: value }))
+    setStatementDirty(true)
+  }
+
+  const handleSaveStatementSettings = async () => {
+    if (!companyId) return
+    setStatementSaving(true)
+    try {
+      const res = await fetch(`/api/companies/${companyId}/ar/settings/statement-email`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(statementSettings),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      setStatementDirty(false)
+      toast.push({ type: 'success', message: 'Statement email settings saved.' })
+    } catch {
+      toast.push({ type: 'error', message: 'Could not save statement settings.' })
+    } finally {
+      setStatementSaving(false)
+    }
+  }
 
   const handleSave = async () => {
     if (!companyId) return
@@ -549,6 +585,65 @@ export default function AccountingPreferencesPage() {
                   <span className="text-xs text-gray-500">days while overdue</span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Statement Email Settings */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+        <SectionHeader
+          icon={<Mail size={16} />}
+          title="Statement Emails"
+          description="Configure automatic statement emails for customers"
+        />
+
+        <label className="flex items-center gap-3 cursor-pointer mb-4">
+          <div className={`relative w-10 h-5 rounded-full transition-colors ${statementSettings.statementEmailEnabled ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${statementSettings.statementEmailEnabled ? 'left-5' : 'left-0.5'}`} />
+          </div>
+          <input type="checkbox" checked={statementSettings.statementEmailEnabled} onChange={e => setStatement('statementEmailEnabled', e.target.checked)} className="sr-only" />
+          <span className="text-sm font-medium text-gray-700">Enable automated statement emails</span>
+        </label>
+
+        {statementSettings.statementEmailEnabled && (
+          <div className="pl-4 border-l-2 border-emerald-100 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Default Frequency</label>
+              <select
+                value={statementSettings.statementFrequency}
+                onChange={e => setStatement('statementFrequency', e.target.value)}
+                className="w-full max-w-xs px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+              >
+                <option value="DAILY">Daily</option>
+                <option value="WEEKLY">Weekly</option>
+                <option value="MONTHLY">Monthly</option>
+                <option value="QUARTERLY">Quarterly</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Default Day of Month</label>
+              <select
+                value={statementSettings.statementDayOfMonth}
+                onChange={e => setStatement('statementDayOfMonth', parseInt(e.target.value))}
+                className="w-full max-w-xs px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">Used when creating new customer schedules (1-28)</p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleSaveStatementSettings}
+                disabled={statementSaving || !statementDirty}
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {statementSaving ? 'Saving...' : 'Save Statement Settings'}
+              </button>
             </div>
           </div>
         )}

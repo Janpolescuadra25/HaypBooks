@@ -93,6 +93,19 @@ export interface CustomerStatementResponse {
   }
 }
 
+export interface StatementSchedule {
+  id: string
+  companyId: string
+  customerId: string
+  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'
+  dayOfMonth: number
+  isActive: boolean
+  lastSentAt: string | null
+  nextRunDate: string
+  createdAt: string
+  updatedAt: string
+}
+
 export const salesService = {
   // ─── Customers ────────────────────────────────────────────────────────
   listCustomers: (companyId: string, query?: any) =>
@@ -152,6 +165,18 @@ export const salesService = {
 
   getCustomerStatement: (companyId: string, customerId: string, params?: Record<string, any>) =>
     apiClient.get<CustomerStatementResponse>(`/companies/${companyId}/ar/customers/${customerId}/statement`, { params }),
+
+  upsertStatementSchedule: (companyId: string, customerId: string, body: { frequency: string; dayOfMonth?: number }) =>
+    apiClient.post<StatementSchedule>(`/companies/${companyId}/ar/customers/${customerId}/statement-schedule`, body),
+
+  getStatementSchedule: (companyId: string, customerId: string) =>
+    apiClient.get<StatementSchedule>(`/companies/${companyId}/ar/customers/${customerId}/statement-schedule`),
+
+  deactivateStatementSchedule: (companyId: string, customerId: string) =>
+    apiClient.delete(`/companies/${companyId}/ar/customers/${customerId}/statement-schedule`),
+
+  updateStatementEmailSettings: (companyId: string, body: { statementEmailEnabled?: boolean; statementFrequency?: string; statementDayOfMonth?: number }) =>
+    apiClient.patch(`/companies/${companyId}/ar/settings/statement-email`, body),
 
   getArCustomerActivity: (companyId: string, customerId?: string, params?: Record<string, any>) =>
     apiClient.get(
