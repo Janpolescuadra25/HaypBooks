@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { randomUUID } from 'crypto'
 import { PrismaService } from '../repositories/prisma/prisma.service'
-import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
+import { createReversingJE } from '../shared/gl-integration'
 import { encryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
@@ -1418,21 +1418,7 @@ export class ArRepository {
                 }
             }
 
-            // GL: Dr Cash/Bank, Cr Accounts Receivable
-            const cashAcct = await resolveAccount(tx, data.companyId, SYSTEM_ACCOUNTS.CASH)
-            const arAcct   = await resolveAccount(tx, data.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_RECEIVABLE)
-            const jeId = await createAndPostJE(tx, {
-                workspaceId: data.workspaceId,
-                companyId: data.companyId,
-                date: data.paymentDate,
-                description: `Payment received – ${data.referenceNumber ?? payment.id}`,
-                createdById: data.createdById,
-                lines: [
-                    { accountId: cashAcct.id, debit: data.amount, credit: 0, description: 'Cash received' },
-                    { accountId: arAcct.id,   debit: 0, credit: data.amount, description: 'AR applied' },
-                ],
-            })
-            return tx.paymentReceived.update({ where: { id: payment.id }, data: { journalEntryId: jeId } })
+            return payment
         })
     }
 
