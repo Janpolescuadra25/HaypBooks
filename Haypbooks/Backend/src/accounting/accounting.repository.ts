@@ -90,7 +90,7 @@ export class AccountingRepository {
                 normalSide: data.normalSide ? data.normalSide as any : null,
                 isHeader: data.isHeader ?? false,
                 liquidityType: data.liquidityType ? data.liquidityType as any : null,
-                specialType: data.specialType ? data.specialType as any : Prisma.AccountSpecialType.NONE,
+                specialType: data.specialType ? 'NONE' as any : null,
                 cashFlowType: data.cashFlowType ?? null,
                 accountSubTypeId: data.accountSubTypeId ?? null,
                 isFromTemplate: data.isFromTemplate ?? false,
@@ -746,7 +746,7 @@ export class AccountingRepository {
                 isClosed: false,
                 isLocked: false,
             },
-        })
+        } as any)
     }
 
     async closePeriod(companyId: string, periodId: string, closedById?: string) {

@@ -113,6 +113,8 @@ export class SubLedgerService {
     currency?: string
     createdById?: string
     entryNumber: string
+    transactionSource?: string
+    sourceReferenceId?: string
     lines: Array<{ accountId: string; debit: number; credit: number; memo?: string }>
   }) {
     const totalDebit = data.lines.reduce((s, l) => s + l.debit, 0)
@@ -317,7 +319,7 @@ const lines = (invoice as any).lines ?? []
         const je = await this.createPostedJE(tx, {
           workspaceId: invoice.workspaceId,
           companyId: invoice.companyId,
-          date: invoice.issuedAt ?? invoice.date ?? new Date(),
+          date: (invoice as any).issuedAt ?? invoice.date ?? new Date(),
           description: `Invoice ${invoice.invoiceNumber ?? invoiceId}`,
           currency: invoice.currency ?? undefined,
           createdById: postedById,
@@ -429,7 +431,7 @@ const lines = (invoice as any).lines ?? []
           companyId,
           date: payment.paymentDate ?? new Date(),
           description: `Receipt ${payment.referenceNumber ?? paymentId}`,
-          currency: payment.currency,
+          currency: payment.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -488,7 +490,7 @@ const lines = (invoice as any).lines ?? []
           companyId,
           date: new Date(),
           description: `Payment reversal ${payment.referenceNumber ?? paymentId}`,
-          currency: payment.currency,
+          currency: payment.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: reversalLines,
@@ -785,7 +787,7 @@ const lines = (invoice as any).lines ?? []
         return
       }
 
-      const amount = Number(deposit.amount ?? 0)
+      const amount = Number((deposit as any).amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
         await this.assertPeriodOpen(deposit.companyId, (deposit as any).depositDate ?? (deposit as any).date ?? new Date(), tx)
@@ -793,9 +795,9 @@ const lines = (invoice as any).lines ?? []
         const je = await this.createPostedJE(tx, {
           workspaceId: deposit.workspaceId,
           companyId: deposit.companyId,
-          date: deposit.depositDate ?? deposit.date ?? new Date(),
+          date: deposit.depositDate ?? (deposit as any).date ?? new Date(),
           description: `Bank Deposit ${deposit.referenceNumber ?? depositId}`,
-          currency: deposit.currency,
+          currency: deposit.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -841,7 +843,7 @@ const lines = (invoice as any).lines ?? []
           companyId: refund.companyId,
           date: refund.refundDate ?? new Date(),
           description: `Customer Refund ${refund.referenceNumber ?? refundId}`,
-          currency: refund.currency,
+          currency: refund.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -889,7 +891,7 @@ const lines = (invoice as any).lines ?? []
           companyId: refund.companyId,
           date: refund.refundDate ?? new Date(),
           description: `Vendor Refund ${refund.referenceNumber ?? refundId}`,
-          currency: refund.currency,
+          currency: refund.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: [
