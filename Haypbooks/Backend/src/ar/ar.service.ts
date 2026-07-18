@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { ArRepository } from './ar.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { MailService } from '../common/mail.service'
 
 @Injectable()
 export class ArService {
@@ -12,6 +13,7 @@ export class ArService {
         private readonly repo: ArRepository,
         private readonly prisma: PrismaService,
         private readonly subLedger: SubLedgerService,
+        private readonly mailService: MailService,
     ) { }
 
     // ─── Helper ───────────────────────────────────────────────────────────────
@@ -2445,6 +2447,44 @@ export class ArService {
             start: start ? start.toISOString().split('T')[0] : null,
             type: opts.type || 'transaction',
         }
+    }
+
+    async sendStatementNow(userId: string, companyId: string, contactId: string) {
+        await this.assertAccess(userId, companyId)
+
+        const company = await this.prisma.company.findUnique({
+            where: { id: companyId },
+            select: { name: true, workspaceId: true },
+        })
+        if (!company) throw new NotFoundException('Company not found')
+
+        const customer = await this.repo.findCustomerById(company.workspaceId, contactId)
+        if (!customer) throw new NotFoundException('Customer not found')
+
+        const primaryEmail = customer.contact?.contactEmails?.find((e: any) => e.isPrimary)?.email
+        if (!primaryEmail) throw new BadRequestException('Customer has no primary email address')
+
+        const data = await this.generateStatementData(companyId, contactId, new Date())
+        if (!data || data.lines.length === 0) {
+            throw new BadRequestException('No transactions to include in the statement')
+        }
+
+        const html = this.mailService.buildStatementEmailHtml(data.customerName, company.name, data)
+        const text = this.mailService.buildStatementEmailText(data.customerName, company.name, data)
+        await this.mailService.sendEmail(primaryEmail, `Your Account Statement from ${company.name}`, html, text)
+
+        const now = new Date()
+        await this.prisma.customerStatement.create({
+            data: {
+                workspaceId: company.workspaceId,
+                companyId,
+                customerId: contactId,
+                periodStart: new Date(now.getFullYear(), now.getMonth(), 1),
+                periodEnd: now,
+            },
+        })
+
+        return { success: true, sentTo: primaryEmail, asOf: data.asOf, lineCount: data.lines.length }
     }
 
     async upsertStatementSchedule(userId: string, companyId: string, contactId: string, body: any) {

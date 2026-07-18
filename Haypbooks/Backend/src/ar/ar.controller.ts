@@ -1180,6 +1180,15 @@ export class ArController {
         return this.svc.deactivateStatementSchedule(req.user.userId, companyId, contactId)
     }
 
+    @Post('customers/:contactId/send-statement')
+    async sendStatementNow(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('contactId') contactId: string,
+    ) {
+        return this.svc.sendStatementNow(req.user.userId, companyId, contactId)
+    }
+
     @Patch('settings/statement-email')
     updateCompanyStatementSettings(
         @Req() req: any,
