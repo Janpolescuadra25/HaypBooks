@@ -175,6 +175,9 @@ export const salesService = {
   deactivateStatementSchedule: (companyId: string, customerId: string) =>
     apiClient.delete(`/companies/${companyId}/ar/customers/${customerId}/statement-schedule`),
 
+  sendStatementNow: (companyId: string, customerId: string) =>
+    apiClient.post(`/companies/${companyId}/ar/customers/${customerId}/send-statement`),
+
   updateStatementEmailSettings: (companyId: string, body: { statementEmailEnabled?: boolean; statementFrequency?: string; statementDayOfMonth?: number }) =>
     apiClient.patch(`/companies/${companyId}/ar/settings/statement-email`, body),
 

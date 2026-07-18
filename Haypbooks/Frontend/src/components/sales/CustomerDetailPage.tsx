@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit2, User, Mail, Phone, MapPin, AlertCircle,
-  Loader2, FileText, CreditCard, DollarSign, TrendingUp, Clock,
+  Loader2, FileText, CreditCard, DollarSign, TrendingUp, Clock, Send,
 } from 'lucide-react'
 import CustomerFormModal from '@/components/sales/CustomerFormModal'
 import { salesService } from '@/services/sales.service'
@@ -100,6 +100,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   const [schedule, setSchedule] = useState<any>(null)
   const [scheduleLoading, setScheduleLoading] = useState(true)
   const [scheduleSaving, setScheduleSaving] = useState(false)
+  const [sendNowLoading, setSendNowLoading] = useState(false)
   const toast = useToast()
 
   const fmtCurrency = useCallback((n: number) => formatCurrency(n, currency), [currency])
@@ -174,6 +175,20 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
       toast.push({ type: 'error', message: 'Failed to update schedule' })
     } finally {
       setScheduleSaving(false)
+    }
+  }
+
+  const handleSendNow = async () => {
+    if (!companyId || !customerId) return
+    setSendNowLoading(true)
+    try {
+      await salesService.sendStatementNow(companyId, customerId)
+      toast.push({ type: 'success', message: 'Statement sent successfully' })
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to send statement'
+      toast.push({ type: 'error', message: msg })
+    } finally {
+      setSendNowLoading(false)
     }
   }
 
@@ -510,6 +525,18 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
                 )}
               </div>
             )}
+
+            {schedule?.isActive && (
+              <button
+                onClick={handleSendNow}
+                disabled={sendNowLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              >
+                {sendNowLoading ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                Send Statement Now
+              </button>
+            )}
+          </>
           </>
         )}
       </div>
