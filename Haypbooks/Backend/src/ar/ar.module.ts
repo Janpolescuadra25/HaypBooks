@@ -5,10 +5,11 @@ import { ArRepository } from './ar.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
 import { MailService } from '../common/mail.service'
+import { AuditService } from '../audit/audit.service'
 import { StatementScheduler } from './statement.scheduler'
 
 @Module({
-    providers: [ArService, ArRepository, PrismaService, SubLedgerService, MailService, StatementScheduler],
+    providers: [ArService, ArRepository, PrismaService, SubLedgerService, MailService, StatementScheduler, AuditService],
     controllers: [ArController],
     exports: [ArService],
 })

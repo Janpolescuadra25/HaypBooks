@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { MailService } from '../common/mail.service'
 import { ArService } from './ar.service'
+import { AuditService } from '../audit/audit.service'
 
 @Injectable()
 export class StatementScheduler {
@@ -12,6 +13,7 @@ export class StatementScheduler {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly arService: ArService,
+    private readonly auditService: AuditService,
   ) {}
 
   @Cron('0 2 * * *', {
@@ -102,7 +104,7 @@ export class StatementScheduler {
           text,
         )
 
-        await this.prisma.customerStatement.create({
+        const customerStatement = await this.prisma.customerStatement.create({
           data: {
             workspaceId: schedule.company.workspaceId,
             companyId: schedule.companyId,
@@ -111,6 +113,23 @@ export class StatementScheduler {
             periodEnd: now,
           },
         })
+
+        await this.auditService.log({
+          workspaceId: schedule.company.workspaceId,
+          companyId: schedule.companyId,
+          userId: schedule.createdBy,
+          entityType: 'CustomerStatement',
+          entityId: customerStatement.id,
+          action: 'CREATED',
+          newValue: {
+            source: 'statement_scheduler',
+            statementScheduleId: schedule.id,
+            customerName: data.customerName,
+            asOf: data.asOf,
+            lineCount: data.lines.length,
+            totalDue: String(data.totals.net),
+          },
+        }).catch(() => {})
 
         const nextRunDate = this.calculateNextRunDate(schedule.frequency, schedule.dayOfMonth)
         await this.prisma.statementSchedule.update({
@@ -126,6 +145,18 @@ export class StatementScheduler {
       } catch (err) {
         failed++
         this.logger.error(`Failed to send statement for schedule ${schedule.id}: ${err?.message ?? err}`)
+        this.auditService.log({
+          workspaceId: schedule.company.workspaceId,
+          companyId: schedule.companyId,
+          userId: schedule.createdBy,
+          entityType: 'StatementSchedule',
+          entityId: schedule.id,
+          action: 'ERROR',
+          newValue: {
+            source: 'statement_scheduler',
+            error: err instanceof Error ? err.message : String(err),
+          },
+        }).catch(() => {})
       }
     }
 

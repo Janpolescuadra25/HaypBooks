@@ -2462,7 +2462,7 @@ export class ArService {
         return this.repo.upsertStatementSchedule(companyId, contactId, workspaceId, {
             frequency,
             dayOfMonth,
-        })
+        }, userId)
     }
 
     async getStatementSchedule(userId: string, companyId: string, contactId: string) {

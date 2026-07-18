@@ -1665,7 +1665,7 @@ export class ArRepository {
         })
     }
 
-    async upsertStatementSchedule(companyId: string, customerId: string, workspaceId: string, data: { frequency: string; dayOfMonth: number }) {
+    async upsertStatementSchedule(companyId: string, customerId: string, workspaceId: string, data: { frequency: string; dayOfMonth: number }, userId: string) {
         const nextRunDate = this.calculateInitialNextRunDate(data.frequency, data.dayOfMonth)
         return this.prisma.statementSchedule.upsert({
             where: { companyId_customerId: { companyId, customerId } },
@@ -1676,9 +1676,10 @@ export class ArRepository {
                 nextRunDate,
             },
             create: {
-                companyId,
-                customerId,
-                workspaceId,
+                workspace: { connect: { id: workspaceId } },
+                company: { connect: { id: companyId } },
+                customer: { connect: { contactId: customerId } },
+                user: { connect: { id: userId } },
                 frequency: data.frequency as any,
                 dayOfMonth: data.dayOfMonth,
                 isActive: true,
