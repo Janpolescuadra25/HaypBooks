@@ -4851,6 +4851,7 @@ model CurrencyRevaluationLine {
 model AccountingPeriod {
   id          String       @id @default(uuid())
   workspaceId String
+  name        String?
   startDate   DateTime
   endDate     DateTime
   status      PeriodStatus

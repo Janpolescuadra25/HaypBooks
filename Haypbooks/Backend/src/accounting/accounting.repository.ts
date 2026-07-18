@@ -743,10 +743,9 @@ export class AccountingRepository {
                 name: data.name,
                 startDate: data.startDate,
                 endDate: data.endDate,
-                isClosed: false,
-                isLocked: false,
+                status: 'OPEN',
             },
-        } as any)
+        })
     }
 
     async closePeriod(companyId: string, periodId: string, closedById?: string) {
@@ -787,7 +786,7 @@ export class AccountingRepository {
                     workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Revenue (${(period as any).name})`,
+                    description: `Closing entry – Revenue (${period.name})`,
                     createdById: userId,
                     lines: revLines,
                 })
@@ -808,7 +807,7 @@ export class AccountingRepository {
                     workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Expenses (${(period as any).name})`,
+                    description: `Closing entry – Expenses (${period.name})`,
                     createdById: userId,
                     lines: expLines,
                 })
@@ -823,7 +822,7 @@ export class AccountingRepository {
                     workspaceId: period.workspaceId,
                     companyId,
                     date: periodEnd,
-                    description: `Closing entry – Net Income to Retained Earnings (${(period as any).name})`,
+                    description: `Closing entry – Net Income to Retained Earnings (${period.name})`,
                     createdById: userId,
                     lines: [
                         {
