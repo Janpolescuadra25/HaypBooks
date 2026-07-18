@@ -336,6 +336,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post invoice ${invoiceId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -390,6 +391,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to reverse invoice ${invoiceId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -446,6 +448,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post payment ${paymentId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -503,6 +506,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to reverse payment ${paymentId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -768,6 +772,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post bill payment ${billPaymentId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -812,6 +817,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post bank deposit ${depositId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -858,6 +864,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post customer refund ${refundId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -906,6 +913,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post vendor refund ${refundId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -962,6 +970,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post credit note ${creditNoteId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1013,6 +1022,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to reverse credit note ${creditNoteId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1068,6 +1078,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post write-off ${writeOffId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1110,6 +1121,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to reverse write-off ${writeOffId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1165,6 +1177,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post refund ${refundId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1207,6 +1220,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to reverse refund ${refundId}: ${err?.message}`)
+      throw err
     }
   }
 
@@ -1296,6 +1310,7 @@ const lines = (invoice as any).lines ?? []
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to reverse revenue recognition ${data.recognitionId}: ${err?.message}`)
+      throw err
     }
   }
 
