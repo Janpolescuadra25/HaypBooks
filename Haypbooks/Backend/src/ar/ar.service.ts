@@ -1310,11 +1310,6 @@ export class ArService {
         return this.getNormalizedPaymentById(companyId, paymentId)
     }
 
-    async getAging(userId: string, companyId: string) {
-        await this.assertAccess(userId, companyId)
-        return []
-    }
-
     // ─── Revenue Recognition ───────────────────────────────────────────────
 
     async listRevenueRecognition(userId: string, companyId: string, opts: any = {}) {
@@ -2476,7 +2471,7 @@ export class ArService {
         await this.mailService.sendEmail(primaryEmail, `Your Account Statement from ${company.name}`, html, text)
 
         const now = new Date()
-        await this.prisma.customerStatement.create({
+        const customerStatement = await this.prisma.customerStatement.create({
             data: {
                 workspaceId: company.workspaceId,
                 companyId,
@@ -2485,6 +2480,16 @@ export class ArService {
                 periodEnd: now,
             },
         })
+
+        this.auditService.log({
+            workspaceId: company.workspaceId,
+            companyId,
+            userId,
+            entityType: 'CustomerStatement',
+            entityId: customerStatement.id,
+            action: 'CREATED',
+            newValue: { source: 'manual_send', sentTo: primaryEmail, asOf: data.asOf, lineCount: data.lines.length },
+        }).catch(() => {})
 
         return { success: true, sentTo: primaryEmail, asOf: data.asOf, lineCount: data.lines.length }
     }
