@@ -607,14 +607,6 @@ export class ArController {
         return this.svc.createPaymentLink(req.user.userId, companyId, body)
     }
 
-    @Get('aging')
-    getAging(
-        @Req() req: any,
-        @Param('companyId') companyId: string,
-    ) {
-        return this.svc.getAging(req.user.userId, companyId)
-    }
-
     @Get('collections')
     listCollections(
         @Req() req: any,

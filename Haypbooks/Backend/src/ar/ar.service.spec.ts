@@ -7,6 +7,7 @@ describe('ArService', () => {
   let mockPrisma: any
   let mockSubLedger: any
   let mockMailService: any
+  let mockAuditService: any
 
   beforeEach(() => {
     mockRepo = {
@@ -29,7 +30,11 @@ describe('ArService', () => {
       sendEmail: jest.fn().mockResolvedValue(undefined),
     }
 
-    service = new ArService(mockRepo as any, mockPrisma as any, mockSubLedger as any, mockMailService as any)
+    mockAuditService = {
+      log: jest.fn().mockResolvedValue({}),
+    }
+
+    service = new ArService(mockRepo as any, mockPrisma as any, mockSubLedger as any, mockMailService as any, mockAuditService as any)
   })
 
   it('forwards issueInvoice to sendInvoice', async () => {

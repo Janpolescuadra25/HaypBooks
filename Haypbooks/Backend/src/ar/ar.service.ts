@@ -4,6 +4,7 @@ import { ArRepository } from './ar.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
 import { MailService } from '../common/mail.service'
+import { AuditService } from '../audit/audit.service'
 
 @Injectable()
 export class ArService {
@@ -14,6 +15,7 @@ export class ArService {
         private readonly prisma: PrismaService,
         private readonly subLedger: SubLedgerService,
         private readonly mailService: MailService,
+        private readonly auditService: AuditService,
     ) { }
 
     // ─── Helper ───────────────────────────────────────────────────────────────
