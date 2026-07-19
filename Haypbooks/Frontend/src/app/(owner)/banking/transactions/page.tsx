@@ -8,6 +8,7 @@ import {
   RotateCcw, Scissors, Search, Sparkles, User, X,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import { useToast } from '@/components/ToastProvider'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
@@ -20,8 +21,6 @@ import {
   mockJEs,
   mockStore,
   categorizeTransaction  as glCategorize,
-  excludeTransaction     as glExclude,
-  undoCategorize         as glUndo,
   applyRules             as glApplyRules,
   matchTransaction       as glMatch,
   transferTransaction    as glTransfer,
@@ -30,10 +29,8 @@ import {
   addToHistory,
   searchForMatch,
   matchWithDifference    as glMatchWithDiff,
-  batchMatchTransactions as glBatchMatch,
   type MockBankTransaction,
   type MockSplitLine,
-  type MatchSuggestion,
   getBalances,
   getAuditLogForEntity,
 } from './mockGLState'
@@ -356,7 +353,6 @@ export default function BankFeedPage() {
   const [items,     setItems]     = useState<BankTransaction[]>([])
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState<string | null>(null)
-  const [usingMock, setUsingMock] = useState(false)
 
   // ── Filter / sort ──────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('review')
@@ -428,12 +424,8 @@ export default function BankFeedPage() {
   const batchEntRef = useRef<HTMLDivElement>(null)
 
   // ── COA & entities ─────────────────────────────────────────────────────────
-  const [coa,      setCoa]      = useState<CoaAccount[]>(() =>
-    MOCK_COA_ACCOUNTS.map(a => ({ id: a.id, code: a.code, name: a.name, category: a.type })),
-  )
-  const [entities, setEntities] = useState<EntityOption[]>(() =>
-    MOCK_ENTITIES.map(e => ({ id: e.id, name: e.name, entityType: e.type })),
-  )
+  const [coa,      setCoa]      = useState<CoaAccount[]>([])
+  const [entities, setEntities] = useState<EntityOption[]>([])
 
   // ── Column widths ──────────────────────────────────────────────────────────
   const [colW, setColW] = useState<Record<string, number>>(DEFAULT_COL_W)
@@ -450,11 +442,7 @@ export default function BankFeedPage() {
     minWidth: BANK_TX_MIN_COL_W,
   })
 
-  // ── Toast ──────────────────────────────────────────────────────────────────
-  const [toast, setToast] = useState('')
-  const showToast = useCallback((msg: string) => {
-    setToast(msg); setTimeout(() => setToast(''), 3500)
-  }, [])
+  const toast = useToast()
 
   // ── Link Account modal ─────────────────────────────────────────────────────
   const [linkAcctOpen, setLinkAcctOpen] = useState(false)
@@ -480,7 +468,7 @@ export default function BankFeedPage() {
 
   const loadTransactions = useCallback(async (acctId: string) => {
     if (!companyId || !acctId) return
-    setLoading(true); setError(null); setUsingMock(false)
+    setLoading(true); setError(null)
     try {
       const r = await apiClient.get(
         `/companies/${companyId}/banking/accounts/${acctId}/transactions`,
@@ -503,13 +491,12 @@ export default function BankFeedPage() {
         bankRef:         t.bankRef,
         createdAt:       t.createdAt,
       }))
-      if (mapped.length > 0) { setItems(mapped) }
-      else { setItems(mockStore.items.map(mockTxToBankTx)); setUsingMock(true) }
+      setItems(mapped)
     } catch {
-      // Fall back to live mock state (which may have been mutated by interactions)
-      setItems(mockStore.items.map(mockTxToBankTx)); setUsingMock(true)
+      setItems([])
+      toast.push({ type: 'error', message: 'Failed to load transactions' })
     } finally { setLoading(false) }
-  }, [companyId])
+  }, [companyId, toast])
 
   const loadCoa = useCallback(async () => {
     if (!companyId) return
@@ -519,9 +506,11 @@ export default function BankFeedPage() {
         id: a.id, code: a.code ?? '', name: a.name, category: a.category ?? a.accountType,
       }))
       if (fetched.length > 0) setCoa(fetched)
-      // else keep the mock COA that was set as initial state
-    } catch { /* keep mock COA */ }
-  }, [companyId])
+    } catch {
+      setCoa([])
+      toast.push({ type: 'error', message: 'Failed to load accounts' })
+    }
+  }, [companyId, toast])
 
   const loadEntities = useCallback(async () => {
     if (!companyId) return
@@ -545,18 +534,12 @@ export default function BankFeedPage() {
         rows.forEach(r => out.push({ id: r.id, name: r.displayName ?? r.name ?? (`${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || r.id), entityType: 'Employee' }))
       }
       if (out.length > 0) setEntities(out)
-      // else keep mock entities that were set as initial state
-    } catch { /* keep mock entities */ }
-  }, [companyId])
-
-  // Initialize items immediately from mock (don't wait for API)
-  useEffect(() => {
-    if (!loading && items.length === 0) {
-      setItems(mockStore.items.map(mockTxToBankTx))
-      setUsingMock(true)
+      else setEntities([])
+    } catch {
+      setEntities([])
+      toast.push({ type: 'error', message: 'Failed to load entities' })
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [companyId, toast])
 
   // Recompute auto-match suggestions whenever items change
   useEffect(() => {
@@ -595,9 +578,8 @@ export default function BankFeedPage() {
       const detail = (event as CustomEvent<BankTransactionsImportEventDetail>).detail
       if (!detail) return
 
+      const nextAcct = detail.bankAccountId ?? selectedAcct
       if (detail.bankAccountId) setSelectedAcct(detail.bankAccountId)
-      setItems(mockStore.items.map(mockTxToBankTx))
-      setUsingMock(true)
       setStatusFilter('review')
       setSearch('')
       setDateFrom('')
@@ -609,12 +591,13 @@ export default function BankFeedPage() {
       setPage(1)
       setSelected(new Set())
       setExpandedId(null)
-      if (detail.toastMessage) showToast(detail.toastMessage)
+      if (detail.toastMessage) toast.push({ type: 'success', message: detail.toastMessage })
+      if (nextAcct) loadTransactions(nextAcct)
     }
 
     window.addEventListener(BANK_TRANSACTIONS_IMPORT_EVENT, handleImportEvent as EventListener)
     return () => window.removeEventListener(BANK_TRANSACTIONS_IMPORT_EVENT, handleImportEvent as EventListener)
-  }, [showToast])
+  }, [loadTransactions, selectedAcct, toast])
 
   // ─── Derived / filtered ────────────────────────────────────────────────────
 
@@ -724,27 +707,6 @@ export default function BankFeedPage() {
     const tx = items.find(t => t.id === expandedId)
     if (!tx) { setInlineSaving(false); return }
 
-    // Update mock state
-    const mockTx = mockStore.items.find(m => m.id === expandedId)
-    if (mockTx) {
-      const coaAcct = coa.find(c => c.id === inlineCoa)
-      const entOpt  = entities.find(e => e.id === inlineEnt)
-      const updated = glCategorize(mockTx, inlineCoa, coaAcct?.name ?? '', inlineEnt || undefined, entOpt?.name, inlineMemo || undefined)
-      mockStore.items = mockStore.items.map(m => m.id === expandedId ? updated : m)
-      // Record in categorization history
-      if (inlineCoa) {
-        addToHistory(
-          mockTx.description,
-          inlineCoa,
-          coaAcct?.name ?? '',
-          coaAcct?.code ?? '',
-          inlineEnt || null,
-          entOpt?.name ?? null,
-        )
-      }
-    }
-
-    // Try real API
     try {
       if (companyId) {
         await apiClient.patch(
@@ -752,7 +714,10 @@ export default function BankFeedPage() {
           { status: 'CATEGORIZED', accountId: inlineCoa || undefined, contactId: inlineEnt || undefined, memo: inlineMemo || undefined, transactionType: 'Bank Transaction' },
         )
       }
-    } catch { /* ignore for mock mode */ }
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to categorize transaction' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+    }
 
     setItems(prev => prev.map(t => t.id !== expandedId ? t : {
       ...t, status: 'CATEGORIZED',
@@ -764,19 +729,12 @@ export default function BankFeedPage() {
       memo:        inlineMemo || t.memo,
     }))
     setExpandedId(null); setEditMode(false)
-    showToast('Transaction categorized')
+    toast.push({ type: 'success', message: 'Transaction categorized' })
     setInlineSaving(false)
   }
 
   // ─── Undo ─────────────────────────────────────────────────────────────────
   const undoTransaction = async (tx: BankTransaction) => {
-    // Update mock state
-    const mockTx = mockStore.items.find(m => m.id === tx.id)
-    if (mockTx) {
-      const updated = glUndo(mockTx)
-      mockStore.items = mockStore.items.map(m => m.id === tx.id ? updated : m)
-    }
-    // Try real API
     try {
       if (companyId) {
         await apiClient.patch(
@@ -784,7 +742,10 @@ export default function BankFeedPage() {
           { status: 'PENDING' },
         )
       }
-    } catch { /* ignore for mock mode */ }
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to undo categorization' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+    }
 
     const typeLabel =
       tx.transactionType === 'Bank Payment'       ? 'Bank Payment' :
@@ -798,7 +759,7 @@ export default function BankFeedPage() {
       memo: undefined, ruleName: undefined, splitLines: undefined,
     } : t))
     setExpandedId(null); setEditMode(false)
-    showToast(`${typeLabel} undone — moved back to For Review`)
+    toast.push({ type: 'success', message: `${typeLabel} undone — moved back to For Review` })
   }
 
   // ─── Quick Match (inline) ─────────────────────────────────────────────────
@@ -813,7 +774,7 @@ export default function BankFeedPage() {
       : t))
     setExpandedId(null); setEditMode(false)
     setQuickMatchConfirm(null)
-    showToast(`Matched to ${jeRef}`)
+    toast.push({ type: 'success', message: `Matched to ${jeRef}` })
   }
 
   // ─── Smart Match Action ────────────────────────────────────────────────────
@@ -871,9 +832,9 @@ export default function BankFeedPage() {
         },
       ])
       setExpandedId(null); setEditMode(false)
-      showToast('Transaction marked as Bank Transfer')
+      toast.push({ type: 'success', message: 'Transaction marked as Bank Transfer' })
     } else {
-      showToast('Transfer failed — check account selection')
+      toast.push({ type: 'error', message: 'Transfer failed — check account selection' })
     }
     setTransferSaving(false)
   }
@@ -899,31 +860,25 @@ export default function BankFeedPage() {
       contactName: entOpt?.name ?? t.contactName,
     }))
     setExpandedId(null)
-    showToast('Transaction categorized')
+    toast.push({ type: 'success', message: 'Transaction categorized' })
   }
 
   // ─── Exclude ─────────────────────────────────────────────────────────────
   const excludeRows = async (ids: string[]) => {
-    // Update mock state
-    ids.forEach(id => {
-      const mockTx = mockStore.items.find(m => m.id === id)
-      if (mockTx) {
-        const updated = glExclude(mockTx)
-        mockStore.items = mockStore.items.map(m => m.id === id ? updated : m)
-      }
-    })
-    // Try real API
     try {
       if (companyId) {
         await Promise.all(ids.map(id =>
           apiClient.patch(`/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${id}`, { status: 'EXCLUDED' }),
         ))
       }
-    } catch { /* ignore for mock mode */ }
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to exclude transaction(s)' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+    }
 
     setItems(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'EXCLUDED' } : t))
     setSelected(new Set())
-    showToast(`${ids.length} transaction${ids.length !== 1 ? 's' : ''} excluded`)
+    toast.push({ type: 'success', message: `${ids.length} transaction${ids.length !== 1 ? 's' : ''} excluded` })
   }
 
   // ─── Batch categorize ─────────────────────────────────────────────────────
@@ -940,16 +895,6 @@ export default function BankFeedPage() {
     const coaAcct = coa.find(a => a.id === batchCoa)
     const entOpt  = entities.find(e => e.id === batchEnt)
 
-    // Update mock state for each selected pending tx
-    selected.forEach(id => {
-      const mockTx = mockStore.items.find(m => m.id === id)
-      if (mockTx && mockTx.status === 'PENDING') {
-        const updated = glCategorize(mockTx, batchCoa, coaAcct?.name ?? '', batchEnt || undefined, entOpt?.name)
-        mockStore.items = mockStore.items.map(m => m.id === id ? updated : m)
-      }
-    })
-
-    // Try real API
     try {
       if (companyId) {
         await apiClient.post(
@@ -963,7 +908,10 @@ export default function BankFeedPage() {
           },
         )
       }
-    } catch { /* ignore for mock mode */ }
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to batch categorize' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+    }
 
     setItems(prev => prev.map(t => !selected.has(t.id) ? t : {
       ...t, status: 'CATEGORIZED',
@@ -974,7 +922,7 @@ export default function BankFeedPage() {
       contactName: entOpt?.name ?? t.contactName,
     }))
     setSelected(new Set()); setBatchOpen(false)
-    showToast(`${count} transaction${count !== 1 ? 's' : ''} categorized`)
+    toast.push({ type: 'success', message: `${count} transaction${count !== 1 ? 's' : ''} categorized` })
     setBatchLoading(false)
   }
 
@@ -994,7 +942,7 @@ export default function BankFeedPage() {
     })
     setItems(mockStore.items.map(mockTxToBankTx))
     setApplyRulesLoading(false)
-    showToast(count > 0 ? `${count} rule${count !== 1 ? 's' : ''} applied` : 'No matching rules found')
+    toast.push({ type: 'success', message: count > 0 ? `${count} rule${count !== 1 ? 's' : ''} applied` : 'No matching rules found' })
   }
 
   const openImportWizard = () => {
@@ -1006,12 +954,14 @@ export default function BankFeedPage() {
   }
 
   const handleImportComplete = (count: number) => {
-    setItems(mockStore.items.map(mockTxToBankTx))
-    setUsingMock(true)
     setStatusFilter('review')
     setPage(1)
     setSelected(new Set())
-    if (count > 0) setExpandedId(null)
+    if (selectedAcct) loadTransactions(selectedAcct)
+    if (count > 0) {
+      setExpandedId(null)
+      toast.push({ type: 'success', message: `${count} transaction${count !== 1 ? 's' : ''} imported` })
+    }
   }
 
   const thClass = 'relative px-3 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide bg-slate-50 border-r border-slate-200 select-none overflow-hidden'
@@ -1109,11 +1059,6 @@ export default function BankFeedPage() {
         <span>HaypBooks Balance: <span className="font-semibold text-blue-600">{fmt(booksBalance)}</span></span>
         <span className="text-slate-300">·</span>
         <span>Difference: <span className={`font-semibold ${balanceDiff === 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(balanceDiff)}</span></span>
-        {usingMock && (
-          <span className="ml-2 text-xs text-amber-500 border border-amber-200 bg-amber-50 px-2 py-0.5 rounded">
-            Sample data
-          </span>
-        )}
       </div>
 
       {/* ── C. Filter bar ─────────────────────────────────────────────────── */}
@@ -1746,7 +1691,7 @@ export default function BankFeedPage() {
                                                             ? { ...t, status: 'MATCHED', transactionType: matchType, journalEntryId: je.id, accountName: je.lines.find(l => l.debit > 0)?.accountName, contactName: je.contactName }
                                                             : t))
                                                           setDiffResKey(null); setExpandedId(null)
-                                                          showToast(`Matched to ${jeRef} with difference resolved`)
+                                                          toast.push({ type: 'success', message: `Matched to ${jeRef} with difference resolved` })
                                                         }}
                                                         className="px-2.5 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700"
                                                       >Confirm Match</button>
@@ -2072,7 +2017,7 @@ export default function BankFeedPage() {
                                 )}
                                 <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                                   {je && (
-                                    <button onClick={() => showToast(`Viewing ${je.type} ${je.referenceNo ?? je.id.slice(0, 8)}`)}
+                                    <button onClick={() => toast.push({ type: 'success', message: `Viewing ${je.type} ${je.referenceNo ?? je.id.slice(0, 8)}` })}
                                       className="px-3 py-1.5 text-xs font-medium border border-blue-400 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center gap-1.5">
                                       <GitMerge size={12} /> View {je.type}
                                     </button>
@@ -2219,7 +2164,7 @@ export default function BankFeedPage() {
               ].map(bank => (
                 <button
                   key={bank.abbr}
-                  onClick={() => { showToast(`${bank.name} — connection coming soon`); setLinkAcctOpen(false) }}
+                  onClick={() => { toast.push({ type: 'success', message: `${bank.name} — connection coming soon` }); setLinkAcctOpen(false) }}
                   className="flex flex-col items-center gap-2 p-4 border border-slate-200 rounded-xl hover:border-emerald-400 hover:shadow-sm transition-all group"
                 >
                   <div className={`w-10 h-10 ${bank.color} rounded-full flex items-center justify-center text-white text-xs font-bold`}>
@@ -2336,12 +2281,6 @@ export default function BankFeedPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      {/* ── Toast ─────────────────────────────────────────────────────────── */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-[60] flex items-center gap-2 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
-          <Check size={14} /> {toast}
         </div>
       )}
     </div>
