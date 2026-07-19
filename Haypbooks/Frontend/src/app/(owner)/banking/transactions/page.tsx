@@ -20,13 +20,11 @@ import {
   MOCK_BANK_ACCOUNTS,
   mockJEs,
   mockStore,
-  categorizeTransaction  as glCategorize,
   applyRules             as glApplyRules,
   matchTransaction       as glMatch,
   transferTransaction    as glTransfer,
   detectAutoMatches,
   findHistoryMatch,
-  addToHistory,
   searchForMatch,
   matchWithDifference    as glMatchWithDiff,
   type MockBankTransaction,
@@ -840,17 +838,24 @@ export default function BankFeedPage() {
   }
 
   // ─── Quick Categorize (from inline row dropdowns — no expand) ────────────
-  const quickCategorize = (tx: BankTransaction, coaId: string, contactId: string) => {
+  const quickCategorize = async (tx: BankTransaction, coaId: string, contactId: string) => {
     if (!coaId) return
-    const mockTx = mockStore.items.find(m => m.id === tx.id)
-    if (!mockTx) return
     const coaAcct = coa.find(c => c.id === coaId)
     const entOpt  = entities.find(e => e.id === contactId)
-    const updated = glCategorize(mockTx, coaId, coaAcct?.name ?? '', contactId || undefined, entOpt?.name)
-    mockStore.items = mockStore.items.map(m => m.id === tx.id ? updated : m)
-    if (coaId) {
-      addToHistory(mockTx.description, coaId, coaAcct?.name ?? '', coaAcct?.code ?? '', contactId || null, entOpt?.name ?? null)
+
+    try {
+      if (companyId) {
+        await apiClient.patch(
+          `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${tx.id}`,
+          { status: 'CATEGORIZED', accountId: coaId || undefined, contactId: contactId || undefined, transactionType: tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt' },
+        )
+      }
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to categorize transaction' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+      return
     }
+
     setItems(prev => prev.map(t => t.id !== tx.id ? t : {
       ...t, status: 'CATEGORIZED',
       transactionType: t.amount < 0 ? 'Bank Payment' : 'Bank Receipt',
