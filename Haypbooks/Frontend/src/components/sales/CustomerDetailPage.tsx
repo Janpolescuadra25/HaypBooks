@@ -537,7 +537,6 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
               </button>
             )}
           </>
-          </>
         )}
       </div>
 
