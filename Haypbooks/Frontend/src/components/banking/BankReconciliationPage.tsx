@@ -5,11 +5,6 @@ import {
   AlertTriangle, ArrowLeft, Check, CheckCircle2, ChevronLeft,
   ChevronRight, History, Plus, Printer, X, Loader2,
 } from 'lucide-react'
-import {
-  getReconciliationHistory,
-  saveReconciliation,
-  mockStore,
-} from '@/app/(owner)/banking/transactions/mockGLState'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { bankingService } from '@/services/banking.service'
@@ -74,6 +69,9 @@ export default function BankReconciliationPage() {
   const [txFilter, setTxFilter] = useState<TxFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(0)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [txsLoading, setTxsLoading] = useState(false)
+  const [reconSaving, setReconSaving] = useState(false)
 
   // ── Modals ───────────────────────────────────────────────────────────────
   const [modal, setModal] = useState<'none' | 'unbalanced' | 'success'>('none')
@@ -150,25 +148,51 @@ export default function BankReconciliationPage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  function goToHistory() {
-    setHistoryData(getReconciliationHistory())
+  async function goToHistory() {
     setStep('history')
+    if (!companyId || !form.bankAccountId) {
+      setHistoryData([])
+      return
+    }
+    setHistoryLoading(true)
+    try {
+      const res = await bankingService.listReconciliations(companyId, form.bankAccountId)
+      setHistoryData(res?.data ?? res ?? [])
+    } catch {
+      setHistoryData([])
+      toast.push({ type: 'error', message: 'Failed to load reconciliation history' })
+    } finally {
+      setHistoryLoading(false)
+    }
   }
 
-  function handleStartReconciliation() {
+  async function handleStartReconciliation() {
     if (!form.bankAccountId) { setFormError('Please select a bank account.'); return }
     if (!form.statementBalance.trim()) { setFormError('Please enter the statement ending balance.'); return }
+    if (!companyId) return
     setFormError('')
 
-    const txs = mockStore.items.filter(tx => tx.accountId === form.bankAccountId)
-    const prevRec = new Set(txs.filter(tx => tx.reconciled).map(tx => tx.id))
-    setAccountTxs(txs)
-    setPrevReconciledIds(prevRec)
-    setCheckedIds(new Set(prevRec))
-    setTxFilter('all')
-    setSearchQuery('')
-    setPage(0)
+    setTxsLoading(true)
     setStep('reconcile')
+    try {
+      const res = await bankingService.listTransactions(companyId, form.bankAccountId)
+      const txs = res?.data ?? res ?? []
+      const prevRec = new Set<string>(
+        txs.filter((tx: any) => tx.reconciled || tx.status === 'RECONCILED').map((tx: any) => tx.id)
+      )
+      setAccountTxs(txs)
+      setPrevReconciledIds(prevRec)
+      setCheckedIds(new Set(prevRec))
+      setTxFilter('all')
+      setSearchQuery('')
+      setPage(0)
+    } catch {
+      setAccountTxs([])
+      setStep('setup')
+      toast.push({ type: 'error', message: 'Failed to load transactions' })
+    } finally {
+      setTxsLoading(false)
+    }
   }
 
   function handleToggle(txId: string) {
@@ -192,24 +216,35 @@ export default function BankReconciliationPage() {
     setModal(isBalanced ? 'success' : 'unbalanced')
   }
 
-  function handleConfirmFinish() {
+  async function handleConfirmFinish() {
+    if (!companyId) return
     const clearedTxIds = Array.from(checkedIds)
     const outstandingTxIds = accountTxs.filter(tx => !checkedIds.has(tx.id)).map(tx => tx.id)
 
-    saveReconciliation({
-      bankAccountId: form.bankAccountId,
-      statementDate: form.statementDate,
-      statementBalance,
-      calculatedBalance,
-      clearedTxIds,
-      outstandingTxIds,
-      serviceCharge: serviceChargeAmt > 0 ? serviceChargeAmt : undefined,
-      interestIncome: interestIncomeAmt > 0 ? interestIncomeAmt : undefined,
-    })
-
-    setModal('none')
-    toast.push({ type: 'success', message: 'Reconciliation saved successfully!' })
-    goToHistory()
+    setReconSaving(true)
+    try {
+      const res = await bankingService.createReconciliation(companyId, form.bankAccountId, {
+        bankAccountId: form.bankAccountId,
+        statementDate: form.statementDate,
+        statementBalance,
+        calculatedBalance,
+        clearedTxIds,
+        outstandingTxIds,
+        serviceCharge: serviceChargeAmt > 0 ? serviceChargeAmt : undefined,
+        interestIncome: interestIncomeAmt > 0 ? interestIncomeAmt : undefined,
+      })
+      const reconId = res?.data?.id ?? (res as any)?.id
+      if (reconId && isBalanced) {
+        await bankingService.completeReconciliation(companyId, reconId)
+      }
+      setModal('none')
+      toast.push({ type: 'success', message: 'Reconciliation saved successfully!' })
+      goToHistory()
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to save reconciliation' })
+    } finally {
+      setReconSaving(false)
+    }
   }
 
   if (accountsLoading) {
@@ -220,6 +255,11 @@ export default function BankReconciliationPage() {
   if (step === 'history') {
     return (
       <div className="p-4 sm:p-6 space-y-5">
+        {historyLoading && (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="animate-spin text-slate-400" size={24} />
+          </div>
+        )}
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking</p>
@@ -412,6 +452,11 @@ export default function BankReconciliationPage() {
   // ─── Render: Reconcile ────────────────────────────────────────────────────
   return (
     <div className="p-4 sm:p-6 space-y-4">
+      {txsLoading && (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="animate-spin text-slate-400" size={24} />
+        </div>
+      )}
 
       {/* ── Unbalanced modal ──────────────────────────────────────────────── */}
       {modal === 'unbalanced' && (
@@ -666,6 +711,7 @@ export default function BankReconciliationPage() {
               </button>
               <button
                 onClick={handleFinishClick}
+                disabled={reconSaving}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors text-white ${isBalanced ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'}`}
               >
                 Finish Reconcile
