@@ -7,41 +7,11 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useToast } from '@/components/ToastProvider'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 type TxType = 'Credit' | 'Debit'
 type TxStatus = 'Cleared' | 'Pending' | 'Reconciled' | 'Voided'
-
-interface Transaction {
-  id: string
-  date: string
-  reference: string
-  description: string
-  type: TxType
-  category: string
-  account: string
-  amount: number
-  balance: number
-  status: TxStatus
-  bankRef?: string
-}
-
-const ACCOUNTS = ['PNB Business Checking - 4421', 'BDO Savings - 8832', 'BPI Corporate - 2910', 'MetroBank Payroll - 7755']
-
-const DATA: Transaction[] = [
-  { id: '1', date: 'Mar 25, 2025', reference: 'TXN-20250325-001', description: 'Customer Payment — INV-2025-0089 Acme Corporation', type: 'Credit', category: 'Accounts Receivable', account: ACCOUNTS[0], amount: 85000, balance: 392400.50, status: 'Cleared', bankRef: 'PNBFT-884321' },
-  { id: '2', date: 'Mar 24, 2025', reference: 'TXN-20250324-001', description: 'Vendor Payment — BIL-0034 Metro Office Supplies', type: 'Debit', category: 'Office Expenses', account: ACCOUNTS[0], amount: 12500, balance: 307400.50, status: 'Cleared', bankRef: 'PNBFT-884298' },
-  { id: '3', date: 'Mar 24, 2025', reference: 'TXN-20250324-002', description: 'Payroll Disbursement — March 15–31 Salary Run', type: 'Debit', category: 'Salaries & Wages', account: ACCOUNTS[2], amount: 245000, balance: 480100.00, status: 'Cleared', bankRef: 'BPIFT-554112' },
-  { id: '4', date: 'Mar 23, 2025', reference: 'TXN-20250323-001', description: 'Fund Transfer — PNB to BDO for Payroll Top-up', type: 'Credit', category: 'Inter-Bank Transfer', account: ACCOUNTS[1], amount: 300000, balance: 725100.00, status: 'Cleared' },
-  { id: '5', date: 'Mar 22, 2025', reference: 'TXN-20250322-001', description: 'SSS / PhilHealth / Pag-IBIG Remittance March 2025', type: 'Debit', category: 'Government Contributions', account: ACCOUNTS[0], amount: 38420, balance: 307900.50, status: 'Reconciled', bankRef: 'PNBFT-883900' },
-  { id: '6', date: 'Mar 21, 2025', reference: 'TXN-20250321-001', description: 'Credit Card Bill Payment — Corporate Visa Mar', type: 'Debit', category: 'Credit Card Payment', account: ACCOUNTS[0], amount: 24800, balance: 346320.50, status: 'Cleared' },
-  { id: '7', date: 'Mar 20, 2025', reference: 'TXN-20250320-001', description: 'Customer Advance — GlobalEdge Solutions Project', type: 'Credit', category: 'Accounts Receivable', account: ACCOUNTS[0], amount: 157500, balance: 371120.50, status: 'Cleared', bankRef: 'PNBFT-883750' },
-  { id: '8', date: 'Mar 19, 2025', reference: 'TXN-20250319-001', description: 'Withholding Tax Payment — BIR Form 1601C Feb', type: 'Debit', category: 'Taxes Payable', account: ACCOUNTS[0], amount: 16240, balance: 213620.50, status: 'Reconciled', bankRef: 'PNBFT-883611' },
-  { id: '9', date: 'Mar 18, 2025', reference: 'TXN-20250318-001', description: 'Lone Pine Realty — March Office Rent', type: 'Debit', category: 'Rent Expense', account: ACCOUNTS[0], amount: 65000, balance: 229860.50, status: 'Cleared' },
-  { id: '10', date: 'Mar 15, 2025', reference: 'TXN-20250315-001', description: 'Interest Income — PNB Savings February 2025', type: 'Credit', category: 'Interest Income', account: ACCOUNTS[0], amount: 2480.50, balance: 294860.50, status: 'Reconciled', bankRef: 'PNBFT-883200' },
-  { id: '11', date: 'Mar 14, 2025', reference: 'TXN-20250314-001', description: 'Software Subscription — Haypbooks Pro Annual', type: 'Debit', category: 'Software & Subscriptions', account: ACCOUNTS[0], amount: 45600, balance: 292380.00, status: 'Cleared' },
-  { id: '12', date: 'Mar 12, 2025', reference: 'TXN-20250312-001', description: 'Customer Payment — INV-2025-0092 Metro Supplies', type: 'Credit', category: 'Accounts Receivable', account: ACCOUNTS[0], amount: 23400, balance: 337980.00, status: 'Pending' },
-]
 
 const STATUS_META: Record<TxStatus, { cls: string; dot: string }> = {
   Cleared:    { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
@@ -61,8 +31,6 @@ const defaultTxColWidths = {
   balance: 140,
   status: 132,
 }
-
-function fmt(n: number) { return '₱ ' + n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }
 
 export default function BankTransactionsPage() {
   const router = useRouter()
@@ -84,7 +52,7 @@ export default function BankTransactionsPage() {
   })
   const [transferLoading, setTransferLoading] = useState(false)
   const [transferError, setTransferError] = useState('')
-  const [toast, setToast] = useState('')
+  const toast = useToast()
 
   // ── Activity Drawer ─────────────────────────────────────────────────────
   const [showActivityDrawer, setShowActivityDrawer] = useState(false)
@@ -104,7 +72,6 @@ export default function BankTransactionsPage() {
     } catch { /* non-critical */ }
     finally { setBankActivityLoading(false) }
 }
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchBankAccounts = useCallback(async () => {
@@ -142,7 +109,7 @@ export default function BankTransactionsPage() {
         date: transferForm.date,
         memo: transferForm.memo || undefined,
       })
-      showToast('Funds transferred successfully')
+      toast.push({ type: 'success', message: 'Funds transferred successfully' })
       setShowTransferModal(false)
     } catch (e: any) {
       setTransferError(e?.response?.data?.message ?? 'Transfer failed. Please try again.')
@@ -165,7 +132,10 @@ export default function BankTransactionsPage() {
     }
   }, [companyId])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    fetchData()
+    fetchBankAccounts()
+  }, [fetchData, fetchBankAccounts])
   const [search, setSearch] = useState('')
   const [account, setAccount] = useState('All')
   const [type, setType] = useState<TxType | 'All'>('All')
@@ -207,7 +177,7 @@ export default function BankTransactionsPage() {
   })
 
   const filtered = useMemo(() => {
-    let list = DATA
+    let list = items
     if (account !== 'All') list = list.filter(t => t.account === account)
     if (type !== 'All') list = list.filter(t => t.type === type)
     if (status !== 'All') list = list.filter(t => t.status === status)
@@ -232,7 +202,7 @@ export default function BankTransactionsPage() {
   const totalCredits = filtered.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0)
   const totalDebits = filtered.filter(t => t.type === 'Debit').reduce((s, t) => s + t.amount, 0)
   const netFlow = totalCredits - totalDebits
-  const unreconciled = DATA.filter(t => t.status === 'Pending').length
+  const unreconciled = items.filter(t => t.status === 'Pending').length
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -305,7 +275,7 @@ export default function BankTransactionsPage() {
             <select aria-label="Filter by account" value={account} onChange={e => setAccount(e.target.value)}
               className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer max-w-[220px]">
               <option value="All">All Accounts</option>
-              {ACCOUNTS.map(a => <option key={a} value={a}>{a}</option>)}
+              {bankAccounts.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
             </select>
             <select aria-label="Filter by type" value={type} onChange={e => setType(e.target.value as any)}
               className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer">
@@ -461,13 +431,6 @@ export default function BankTransactionsPage() {
           </div>
         </div>
       </div>
-
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
-          {toast}
-        </div>
-      )}
 
       {/* ── Transfer Funds Modal ── */}
       {showTransferModal && (
