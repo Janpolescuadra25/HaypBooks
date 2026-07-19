@@ -1,18 +1,18 @@
 ﻿'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle, ArrowLeft, Check, CheckCircle2, ChevronLeft,
-  ChevronRight, History, Plus, Printer, X,
+  ChevronRight, History, Plus, Printer, X, Loader2,
 } from 'lucide-react'
 import {
-  MOCK_BANK_ACCOUNTS,
   getReconciliationHistory,
   saveReconciliation,
   mockStore,
-  type MockBankTransaction,
-  type MockReconciliation,
 } from '@/app/(owner)/banking/transactions/mockGLState'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { useToast } from '@/components/ToastProvider'
+import { bankingService } from '@/services/banking.service'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -50,10 +50,14 @@ const PAGE_SIZE = 25
 export default function BankReconciliationPage() {
   // ── Navigation ───────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>('history')
+  const [bankAccounts, setBankAccounts] = useState<any[]>([])
+  const [accountsLoading, setAccountsLoading] = useState(false)
+  const { companyId } = useCompanyId()
+  const toast = useToast()
 
   // ── Setup form ───────────────────────────────────────────────────────────
   const [form, setForm] = useState<SetupForm>({
-    bankAccountId: MOCK_BANK_ACCOUNTS[0]?.id ?? '',
+    bankAccountId: bankAccounts[0]?.id ?? '',
     statementDate: new Date().toISOString().split('T')[0],
     statementBalance: '',
     serviceCharge: '',
@@ -63,7 +67,7 @@ export default function BankReconciliationPage() {
 
   // ── Reconcile step ───────────────────────────────────────────────────────
   // accountTxs: snapshot of all transactions for the selected account (captured on Start)
-  const [accountTxs, setAccountTxs] = useState<MockBankTransaction[]>([])
+  const [accountTxs, setAccountTxs] = useState<any[]>([])
   // prevReconciledIds: txs already reconciled before this session started (disabled)
   const [prevReconciledIds, setPrevReconciledIds] = useState<Set<string>>(new Set())
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
@@ -74,12 +78,17 @@ export default function BankReconciliationPage() {
   // ── Modals ───────────────────────────────────────────────────────────────
   const [modal, setModal] = useState<'none' | 'unbalanced' | 'success'>('none')
 
-  // ── Toast ────────────────────────────────────────────────────────────────
-  const [toast, setToast] = useState('')
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
+  useEffect(() => {
+    if (!companyId) return
+    setAccountsLoading(true)
+    bankingService.listBankAccounts(companyId)
+      .then((res: any) => setBankAccounts(res?.data ?? res ?? []))
+      .catch(() => toast.push({ type: 'error', message: 'Failed to load bank accounts' }))
+      .finally(() => setAccountsLoading(false))
+  }, [companyId])
 
   // ── Derived: reconcile summary ────────────────────────────────────────────
-  const account = MOCK_BANK_ACCOUNTS.find(a => a.id === form.bankAccountId)
+  const account = bankAccounts.find(a => a.id === form.bankAccountId)
   const openingBalance = account?.openingBalance ?? 0
   const statementBalance = parseFloat(form.statementBalance) || 0
   const serviceChargeAmt = parseFloat(form.serviceCharge) || 0
@@ -137,7 +146,7 @@ export default function BankReconciliationPage() {
   const pagedTxs = visibleTxs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   // ── History data (refreshed whenever step changes to 'history') ────────────
-  const [historyData, setHistoryData] = useState<MockReconciliation[]>([])
+  const [historyData, setHistoryData] = useState<any[]>([])
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -199,20 +208,18 @@ export default function BankReconciliationPage() {
     })
 
     setModal('none')
-    showToast('Reconciliation saved successfully!')
+    toast.push({ type: 'success', message: 'Reconciliation saved successfully!' })
     goToHistory()
+  }
+
+  if (accountsLoading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-slate-400" size={24} /></div>
   }
 
   // ─── Render: History ──────────────────────────────────────────────────────
   if (step === 'history') {
     return (
       <div className="p-4 sm:p-6 space-y-5">
-        {toast && (
-          <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
-            {toast}
-          </div>
-        )}
-
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking</p>
@@ -253,7 +260,7 @@ export default function BankReconciliationPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {[...historyData].reverse().map(h => {
-                  const acct = MOCK_BANK_ACCOUNTS.find(a => a.id === h.bankAccountId)
+                  const acct = bankAccounts.find(a => a.id === h.bankAccountId)
                   return (
                     <tr key={h.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{fmtMonth(h.statementDate)}</td>
@@ -315,7 +322,7 @@ export default function BankReconciliationPage() {
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                 >
                   <option value="">Select bank account…</option>
-                  {MOCK_BANK_ACCOUNTS.map(a => (
+                  {bankAccounts.map(a => (
                     <option key={a.id} value={a.id}>{a.name} — {a.accountNumber}</option>
                   ))}
                 </select>
@@ -405,11 +412,6 @@ export default function BankReconciliationPage() {
   // ─── Render: Reconcile ────────────────────────────────────────────────────
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
-          {toast}
-        </div>
-      )}
 
       {/* ── Unbalanced modal ──────────────────────────────────────────────── */}
       {modal === 'unbalanced' && (
