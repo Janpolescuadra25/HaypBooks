@@ -254,7 +254,7 @@ export class BankingService {
             status: data.status,
             contactId: data.contactId,
             transactionType: data.transactionType ?? (isCategorizing ? 'Bank Transaction' : undefined),
-            journalEntryId,
+            journalEntryId: journalEntryId ?? data.journalEntryId,
         })
     }
 

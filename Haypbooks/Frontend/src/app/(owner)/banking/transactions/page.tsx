@@ -21,7 +21,6 @@ import {
   mockJEs,
   mockStore,
   applyRules             as glApplyRules,
-  matchTransaction       as glMatch,
   transferTransaction    as glTransfer,
   detectAutoMatches,
   findHistoryMatch,
@@ -761,17 +760,25 @@ export default function BankFeedPage() {
   }
 
   // ─── Quick Match (inline) ─────────────────────────────────────────────────
-  const handleQuickMatch = (tx: BankTransaction, jeId: string, matchType: 'Bank Payment' | 'Bank Receipt', jeRef: string) => {
-    const mockTx = mockStore.items.find(m => m.id === tx.id)
-    if (!mockTx) return
-    const updated = glMatch(mockTx, jeId, matchType)
-    mockStore.items = mockStore.items.map(m => m.id === tx.id ? updated : m)
-    setItems(prev => prev.map(t => t.id === tx.id
-      ? { ...t, status: 'MATCHED', transactionType: matchType, journalEntryId: jeId,
-          accountName: updated.accountName, contactName: updated.contactName }
-      : t))
-    setExpandedId(null); setEditMode(false)
+  const handleQuickMatch = async (tx: BankTransaction, jeId: string, matchType: 'Bank Payment' | 'Bank Receipt', jeRef: string) => {
     setQuickMatchConfirm(null)
+    try {
+      if (companyId) {
+        await apiClient.patch(
+          `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${tx.id}`,
+          { status: 'MATCHED', transactionType: matchType, journalEntryId: jeId },
+        )
+      }
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to match transaction' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+      return
+    }
+    setItems(prev => prev.map(t => t.id === tx.id
+      ? { ...t, status: 'MATCHED', transactionType: matchType, journalEntryId: jeId }
+      : t))
+    setExpandedId(null)
+    setEditMode(false)
     toast.push({ type: 'success', message: `Matched to ${jeRef}` })
   }
 
