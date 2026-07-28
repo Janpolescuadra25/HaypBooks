@@ -213,7 +213,12 @@ export default function RulesPage() {
         </div>
 
         {/* Rules list */}
-        {rules.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 flex flex-col items-center gap-2">
+            <Loader2 size={24} className="animate-spin text-emerald-500" />
+            <p className="text-sm">Loading rules…</p>
+          </div>
+        ) : rules.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
             <p className="text-sm">No rules yet. Click <strong className="text-slate-600">Add Rule</strong> to get started.</p>
           </div>
