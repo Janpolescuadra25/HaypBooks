@@ -20,7 +20,6 @@ import {
   MOCK_BANK_ACCOUNTS,
   mockJEs,
   mockStore,
-  applyRules             as glApplyRules,
   transferTransaction    as glTransfer,
   detectAutoMatches,
   findHistoryMatch,
@@ -946,15 +945,22 @@ export default function BankFeedPage() {
   // ─── Apply Rules ──────────────────────────────────────────────────────────
   const handleApplyRules = async () => {
     setApplyRulesLoading(true)
-    const updated = glApplyRules(mockStore.items)
-    let count = 0
-    updated.forEach(u => {
-      mockStore.items = mockStore.items.map(m => m.id === u.id ? u : m)
-      count++
-    })
-    setItems(mockStore.items.map(mockTxToBankTx))
-    setApplyRulesLoading(false)
-    toast.push({ type: 'success', message: count > 0 ? `${count} rule${count !== 1 ? 's' : ''} applied` : 'No matching rules found' })
+    try {
+      if (!companyId || !selectedAcct) return
+      const { data } = await apiClient.post(
+        `/companies/${companyId}/banking/smart-rules/apply`,
+        { bankAccountId: selectedAcct },
+      )
+      const applied = data?.applied ?? 0
+      if (selectedAcct) loadTransactions(selectedAcct)
+      toast.push({ type: 'success', message: applied > 0 ? `${applied} rule${applied !== 1 ? 's' : ''} applied` : 'No matching rules found' })
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to apply rules' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+      return
+    } finally {
+      setApplyRulesLoading(false)
+    }
   }
 
   const openImportWizard = () => {
