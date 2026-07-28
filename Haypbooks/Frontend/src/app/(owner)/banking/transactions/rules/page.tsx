@@ -1,48 +1,100 @@
 ﻿'use client'
 
-import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Edit2, Plus, Trash2, X, Check, ToggleLeft, ToggleRight, Zap } from 'lucide-react'
-import {
-  MOCK_RULES,
-  MOCK_COA_ACCOUNTS,
-  auditLog,
-  createRule,
-  deleteRule,
-  moveRule as moveMockRule,
-  toggleRuleEnabled,
-  updateRule,
-  type MockRule,
-} from '../mockGLState'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { ChevronDown, ChevronUp, Edit2, Plus, Trash2, X, Check, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react'
+import apiClient from '@/lib/api-client'
+import { useToast } from '@/components/ToastProvider'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { bankingService } from '@/services/banking.service'
+
+interface Rule {
+  id: string
+  companyId: string
+  name: string
+  priority: number
+  matchType: string
+  matchString: string
+  amountRangeMin?: number | null
+  amountRangeMax?: number | null
+  assignmentAccountId?: string | null
+  assignmentPayee?: string | null
+  assignmentClassId?: string | null
+  isActive: boolean
+  assignmentAccountName?: string
+  assignmentAccountCode?: string
+}
+
+interface CoaAccount {
+  id: string
+  code: string
+  name: string
+}
 
 interface RuleFormState {
   name: string
-  matchKeyword: string
-  accountId: string
-  transactionType: 'Bank Payment' | 'Bank Receipt'
+  matchString: string
+  assignmentAccountId: string
 }
 
 const EMPTY_FORM: RuleFormState = {
   name: '',
-  matchKeyword: '',
-  accountId: '',
-  transactionType: 'Bank Payment',
+  matchString: '',
+  assignmentAccountId: '',
 }
 
 export default function RulesPage() {
-  const [rules, setRules] = useState<MockRule[]>(() => [...MOCK_RULES])
+  const [rules, setRules] = useState<Rule[]>([])
   const [addOpen, setAddOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<RuleFormState>(EMPTY_FORM)
   const [coaSearch, setCoaSearch] = useState('')
   const [coaOpen, setCoaOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [coa, setCoa] = useState<CoaAccount[]>([])
+  const { companyId } = useCompanyId()
+  const toast = useToast()
+
+  const loadRules = useCallback(async () => {
+    if (!companyId) return
+    setLoading(true)
+    try {
+      const { data } = await bankingService.listSmartRules(companyId)
+      setRules(data)
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to load rules' })
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadCoa = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/accounts`)
+      const fetched = (Array.isArray(data) ? data : data?.accounts ?? []).map((a: any): CoaAccount => ({
+        id: a.id,
+        code: a.code ?? '',
+        name: a.name,
+      }))
+      if (fetched.length > 0) setCoa(fetched)
+    } catch {
+      // silent — COA is non-critical for page load
+    }
+  }, [companyId])
+
+  useEffect(() => {
+    loadRules()
+    loadCoa()
+  }, [loadRules, loadCoa])
 
   const filteredCoa = useMemo(() => {
     const q = coaSearch.toLowerCase()
     return q
-      ? MOCK_COA_ACCOUNTS.filter(a => a.name.toLowerCase().includes(q) || a.code.includes(q))
-      : MOCK_COA_ACCOUNTS
-  }, [coaSearch])
+      ? coa.filter(a => a.name.toLowerCase().includes(q) || a.code.includes(q))
+      : coa
+  }, [coaSearch, coa])
 
   const openAdd = () => {
     setForm(EMPTY_FORM)
@@ -51,12 +103,11 @@ export default function RulesPage() {
     setAddOpen(true)
   }
 
-  const openEdit = (rule: MockRule) => {
+  const openEdit = (rule: Rule) => {
     setForm({
       name: rule.name,
-      matchKeyword: rule.matchKeyword,
-      accountId: rule.accountId,
-      transactionType: (rule.transactionType as 'Bank Payment' | 'Bank Receipt') ?? 'Bank Payment',
+      matchString: rule.matchString,
+      assignmentAccountId: rule.assignmentAccountId ?? '',
     })
     setCoaSearch('')
     setEditingId(rule.id)
@@ -71,51 +122,78 @@ export default function RulesPage() {
     setCoaOpen(false)
   }
 
-  const handleSave = () => {
-    if (!form.name.trim() || !form.matchKeyword.trim() || !form.accountId) return
-    const acct = MOCK_COA_ACCOUNTS.find(a => a.id === form.accountId)
-    if (!acct) return
-
-    if (editingId) {
-      const updated = updateRule(editingId, {
-        name: form.name.trim(),
-        matchKeyword: form.matchKeyword.trim().toUpperCase(),
-        accountId: form.accountId,
-        transactionType: form.transactionType,
-      })
-      if (!updated) return
-    } else {
-      const created = createRule({
-        name: form.name.trim(),
-        matchKeyword: form.matchKeyword.trim().toUpperCase(),
-        accountId: form.accountId,
-        transactionType: form.transactionType,
-      })
-      if (!created) return
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.matchString.trim() || !form.assignmentAccountId) return
+    setSaving(true)
+    try {
+      if (editingId) {
+        await bankingService.updateSmartRule(companyId!, editingId, {
+          name: form.name.trim(),
+          matchString: form.matchString.trim(),
+          assignmentAccountId: form.assignmentAccountId,
+        })
+        toast.push({ type: 'success', message: 'Rule updated' })
+      } else {
+        await bankingService.createSmartRule(companyId!, {
+          name: form.name.trim(),
+          matchString: form.matchString.trim(),
+          matchType: 'CONTAINS',
+          assignmentAccountId: form.assignmentAccountId,
+          isActive: true,
+          priority: rules.length + 1,
+        })
+        toast.push({ type: 'success', message: 'Rule created' })
+      }
+      await loadRules()
+      closeModal()
+    } catch {
+      toast.push({ type: 'error', message: editingId ? 'Failed to update rule' : 'Failed to create rule' })
+    } finally {
+      setSaving(false)
     }
-    setRules([...MOCK_RULES])
-    closeModal()
   }
 
-  const handleDelete = (id: string) => {
-    deleteRule(id)
-    setRules([...MOCK_RULES])
-    setDeleteConfirm(null)
+  const handleDelete = async (id: string) => {
+    try {
+      await bankingService.deleteSmartRule(companyId!, id)
+      toast.push({ type: 'success', message: 'Rule deleted' })
+      await loadRules()
+      setDeleteConfirm(null)
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to delete rule' })
+    }
   }
 
-  const toggleEnabled = (id: string) => {
-    toggleRuleEnabled(id)
-    setRules([...MOCK_RULES])
+  const toggleEnabled = async (id: string) => {
+    const rule = rules.find(r => r.id === id)
+    if (!rule) return
+    try {
+      await bankingService.updateSmartRule(companyId!, id, { isActive: !rule.isActive })
+      await loadRules()
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to update rule' })
+    }
   }
 
-  const moveRule = (id: string, dir: 'up' | 'down') => {
-    setRules(moveMockRule(id, dir))
+  const moveRule = async (id: string, dir: 'up' | 'down') => {
+    const idx = rules.findIndex(r => r.id === id)
+    if (idx < 0) return
+    const swapIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= rules.length) return
+    const cur = rules[idx]
+    const swp = rules[swapIdx]
+    try {
+      await Promise.all([
+        bankingService.updateSmartRule(companyId!, cur.id, { priority: swp.priority ?? swapIdx + 1 }),
+        bankingService.updateSmartRule(companyId!, swp.id, { priority: cur.priority ?? idx + 1 }),
+      ])
+      await loadRules()
+    } catch {
+      toast.push({ type: 'error', message: 'Failed to reorder rules' })
+    }
   }
 
-  const appliedCount = (rule: MockRule) =>
-    auditLog.filter(e => e.action === 'rule_applied' && e.details.includes(rule.name)).length
-
-  const selectedAcct = MOCK_COA_ACCOUNTS.find(a => a.id === form.accountId)
+  const selectedAcct = coa.find(a => a.id === form.assignmentAccountId)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -160,25 +238,15 @@ export default function RulesPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs text-slate-400 font-mono">#{rule.priority ?? rIdx + 1}</span>
                     <span className="text-sm font-semibold text-slate-800">{rule.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                      rule.transactionType === 'Bank Payment' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
-                    }`}>
-                      {rule.transactionType === 'Bank Payment' ? 'Payment' : 'Receipt'}
-                    </span>
-                    {appliedCount(rule) > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">
-                        <Zap size={9} /> {appliedCount(rule)} applied
-                      </span>
-                    )}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <span>If description contains <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-700">{rule.matchKeyword}</code></span>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span>If description contains <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-700">{rule.matchString}</code></span>
                     <span className="text-slate-300">→</span>
-                    <span className="font-medium text-slate-700">{rule.accountName}</span>
-                    {rule.contactName && (
+                    <span className="font-medium text-slate-700">{rule.assignmentAccountName ?? '—'}</span>
+                    {rule.assignmentPayee && (
                       <>
                         <span className="text-slate-300">·</span>
-                        <span className="text-slate-600">{rule.contactName}</span>
+                        <span className="text-slate-600">{rule.assignmentPayee}</span>
                       </>
                     )}
                   </div>
@@ -188,12 +256,12 @@ export default function RulesPage() {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => toggleEnabled(rule.id)}
-                    title={(rule.enabled ?? true) ? 'Disable rule' : 'Enable rule'}
+                    title={rule.isActive ? 'Disable rule' : 'Enable rule'}
                     className={`p-1 rounded transition-colors ${
-                      (rule.enabled ?? true) ? 'text-emerald-500 hover:text-emerald-700' : 'text-slate-300 hover:text-slate-500'
+                      rule.isActive ? 'text-emerald-500 hover:text-emerald-700' : 'text-slate-300 hover:text-slate-500'
                     }`}
                   >
-                    {(rule.enabled ?? true) ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                    {rule.isActive ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
                   </button>
                   {deleteConfirm === rule.id ? (
                     <>
@@ -205,7 +273,7 @@ export default function RulesPage() {
                     </>
                   ) : (
                     <>
-                      <button aria-label={`Edit ${rule.name}`} title={`Edit ${rule.name}`} onClick={() => openEdit(rule)}
+                          <button aria-label={`Edit ${rule.name}`} title={`Edit ${rule.name}`} onClick={() => openEdit(rule)}
                         className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
                         <Edit2 size={14} />
                       </button>
@@ -242,7 +310,7 @@ export default function RulesPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">If description contains</label>
-                <input value={form.matchKeyword} onChange={e => setForm(f => ({ ...f, matchKeyword: e.target.value }))}
+                <input value={form.matchString} onChange={e => setForm(f => ({ ...f, matchString: e.target.value }))}
                   placeholder="e.g. MERALCO"
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                 />
@@ -269,7 +337,7 @@ export default function RulesPage() {
                         {filteredCoa.map(a => (
                           <li key={a.id}>
                             <button type="button"
-                              onClick={() => { setForm(f => ({ ...f, accountId: a.id })); setCoaOpen(false); setCoaSearch('') }}
+                              onClick={() => { setForm(f => ({ ...f, assignmentAccountId: a.id })); setCoaOpen(false); setCoaSearch('') }}
                               className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2">
                               <span className="font-mono text-slate-400 text-xs w-12 shrink-0">{a.code}</span>
                               <span className="text-slate-700">{a.name}</span>
@@ -282,25 +350,13 @@ export default function RulesPage() {
                   )}
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Transaction Type</label>
-                <div className="flex gap-3">
-                  {(['Bank Payment', 'Bank Receipt'] as const).map(t => (
-                    <label key={t} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" checked={form.transactionType === t} onChange={() => setForm(f => ({ ...f, transactionType: t }))}
-                        className="text-emerald-600 focus:ring-emerald-500" />
-                      <span className="text-sm text-slate-700">{t}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
             </div>
             <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
               <button onClick={closeModal}
                 className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
-              <button onClick={handleSave} disabled={!form.name.trim() || !form.matchKeyword.trim() || !form.accountId}
+              <button onClick={handleSave} disabled={saving || !form.name.trim() || !form.matchString.trim() || !form.assignmentAccountId}
                 className="px-4 py-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-1.5">
-                <Check size={14} /> {editingId ? 'Save Changes' : 'Add Rule'}
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {editingId ? 'Save Changes' : 'Add Rule'}
               </button>
             </div>
           </div>
