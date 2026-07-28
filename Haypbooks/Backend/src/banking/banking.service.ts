@@ -738,7 +738,23 @@ export class BankingService {
 
     async listSmartRules(userId: string, companyId: string) {
         await this.assertAccess(userId, companyId)
-        return this.prisma.bankFeedRule.findMany({ where: { companyId }, orderBy: { priority: 'asc' } })
+        const rules = await this.prisma.bankFeedRule.findMany({ where: { companyId }, orderBy: { priority: 'asc' } })
+        const accountIds = rules.map(r => r.assignmentAccountId).filter((id): id is string => id != null)
+        if (accountIds.length === 0) return rules
+        const accounts = await this.prisma.account.findMany({
+            where: { id: { in: accountIds } },
+            select: { id: true, name: true, code: true },
+        })
+        const accountMap = new Map(accounts.map(a => [a.id, a]))
+        return rules.map(rule => ({
+            ...rule,
+            assignmentAccountName: rule.assignmentAccountId
+                ? accountMap.get(rule.assignmentAccountId)?.name ?? null
+                : null,
+            assignmentAccountCode: rule.assignmentAccountId
+                ? accountMap.get(rule.assignmentAccountId)?.code ?? null
+                : null,
+        }))
     }
 
     async createSmartRule(userId: string, companyId: string, data: any) {
@@ -750,7 +766,11 @@ export class BankingService {
                 name: data.name,
                 matchType: data.trigger ?? data.matchType ?? 'CONTAINS',
                 matchString: data.condition ?? data.matchString ?? '',
-                assignmentPayee: data.action ?? data.assignmentPayee,
+                assignmentAccountId: data.assignmentAccountId ?? null,
+                assignmentPayee: data.action ?? data.assignmentPayee ?? null,
+                priority: data.priority ?? 0,
+                amountRangeMin: data.amountRangeMin ?? null,
+                amountRangeMax: data.amountRangeMax ?? null,
                 isActive: data.isActive ?? true,
             },
         })
@@ -765,8 +785,15 @@ export class BankingService {
             data: {
                 ...(data.name && { name: data.name }),
                 ...(data.trigger != null && { matchType: data.trigger }),
+                ...(data.matchType != null && { matchType: data.matchType }),
                 ...(data.condition != null && { matchString: data.condition }),
+                ...(data.matchString != null && { matchString: data.matchString }),
+                ...(data.assignmentAccountId != null && { assignmentAccountId: data.assignmentAccountId }),
+                ...(data.assignmentPayee != null && { assignmentPayee: data.assignmentPayee }),
                 ...(data.action != null && { assignmentPayee: data.action }),
+                ...(data.priority != null && { priority: data.priority }),
+                ...(data.amountRangeMin != null && { amountRangeMin: data.amountRangeMin }),
+                ...(data.amountRangeMax != null && { amountRangeMax: data.amountRangeMax }),
                 ...(data.isActive != null && { isActive: data.isActive }),
             },
         })
@@ -778,6 +805,70 @@ export class BankingService {
         if (!existing) throw new NotFoundException('Rule not found')
         await this.prisma.bankFeedRule.delete({ where: { id } })
         return { success: true }
+    }
+
+    async applySmartRules(userId: string, companyId: string, body: { bankAccountId: string }) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+
+        const { bankAccountId } = body
+        if (!bankAccountId) throw new BadRequestException('bankAccountId is required')
+
+        const [rules, transactions] = await Promise.all([
+            this.prisma.bankFeedRule.findMany({
+                where: { companyId, isActive: true },
+                orderBy: { priority: 'asc' },
+            }),
+            this.prisma.bankTransaction.findMany({
+                where: { bankAccountId, workspaceId: wid, status: 'PENDING' },
+            }),
+        ])
+
+        if (rules.length === 0 || transactions.length === 0) return { applied: 0 }
+
+        const accountIds = rules.map(r => r.assignmentAccountId).filter((id): id is string => id != null)
+        const accountMap = accountIds.length > 0
+            ? new Map(
+                (await this.prisma.account.findMany({
+                    where: { id: { in: accountIds } },
+                    select: { id: true, name: true },
+                })).map(a => [a.id, a.name])
+              )
+            : new Map<string, string>()
+
+        let applied = 0
+        for (const tx of transactions) {
+            const desc = tx.description.toUpperCase()
+            const amt = Number(tx.amount)
+
+            const matched = rules.find(rule => {
+                const kw = rule.matchString.toUpperCase()
+                let hit = false
+                if (rule.matchType === 'EXACT') hit = desc === kw
+                else if (rule.matchType === 'STARTS_WITH') hit = desc.startsWith(kw)
+                else hit = desc.includes(kw)
+                if (!hit) return false
+                if (rule.amountRangeMin != null && amt < Number(rule.amountRangeMin)) return false
+                if (rule.amountRangeMax != null && amt > Number(rule.amountRangeMax)) return false
+                return true
+            })
+
+            if (!matched) continue
+
+            const categoryName = matched.assignmentAccountId
+                ? accountMap.get(matched.assignmentAccountId) ?? matched.assignmentPayee ?? null
+                : matched.assignmentPayee ?? null
+
+            try {
+                await this.repo.updateTransaction(wid, tx.id, {
+                    status: 'CATEGORIZED',
+                    ...(categoryName && { category: categoryName }),
+                })
+                applied++
+            } catch { /* skip individual apply failures */ }
+        }
+
+        return { applied }
     }
 
     // ─── Feed Connections ────────────────────────────────────────────────────

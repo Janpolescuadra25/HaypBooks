@@ -265,6 +265,16 @@ export class BankingController {
         return this.svc.deleteSmartRule(req.user.userId, cid, id)
     }
 
+    @Post('smart-rules/apply')
+    @HttpCode(HttpStatus.OK)
+    applySmartRules(
+        @Req() req: any,
+        @Param('companyId') cid: string,
+        @Body() body: any,
+    ) {
+        return this.svc.applySmartRules(req.user.userId, cid, body)
+    }
+
     // ─── Feed Connections ────────────────────────────────────────────────────
 
     @Get('feed-connections')
