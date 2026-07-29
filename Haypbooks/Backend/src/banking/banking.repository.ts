@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
@@ -45,25 +46,28 @@ export class BankingRepository {
     async createBankAccount(workspaceId: string, data: {
         name: string; institution?: string; accountNumber?: string
         routingNumber?: string; swiftCode?: string; iban?: string; isDefault?: boolean
-    }) {
+    }, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
         // If new account is set as default, unset others first
         if (data.isDefault) {
-            await this.prisma.bankAccount.updateMany({ where: { workspaceId, isDefault: true }, data: { isDefault: false } })
+            await client.bankAccount.updateMany({ where: { workspaceId, isDefault: true }, data: { isDefault: false } })
         }
-        return this.prisma.bankAccount.create({
+        return client.bankAccount.create({
             data: { workspaceId, ...data, isDefault: data.isDefault ?? false },
         })
     }
 
-    async updateBankAccount(workspaceId: string, bankAccountId: string, data: any) {
+    async updateBankAccount(workspaceId: string, bankAccountId: string, data: any, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
         if (data.isDefault) {
-            await this.prisma.bankAccount.updateMany({ where: { workspaceId, isDefault: true }, data: { isDefault: false } })
+            await client.bankAccount.updateMany({ where: { workspaceId, isDefault: true }, data: { isDefault: false } })
         }
-        return this.prisma.bankAccount.update({ where: { id: bankAccountId }, data })
+        return client.bankAccount.update({ where: { id: bankAccountId }, data })
     }
 
-    async softDeleteBankAccount(bankAccountId: string) {
-        return this.prisma.bankAccount.update({ where: { id: bankAccountId }, data: { deletedAt: new Date() } })
+    async softDeleteBankAccount(bankAccountId: string, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        return client.bankAccount.update({ where: { id: bankAccountId }, data: { deletedAt: new Date() } })
     }
 
     // ─── Bank Transactions ────────────────────────────────────────────────────
@@ -105,8 +109,9 @@ export class BankingRepository {
 
     async createTransaction(workspaceId: string, bankAccountId: string, data: {
         date: Date; description: string; amount: number; category?: string; memo?: string
-    }) {
-        return this.prisma.bankTransaction.create({
+    }, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        return client.bankTransaction.create({
             data: {
                 workspaceId, bankAccountId,
                 date: data.date, description: data.description, amount: data.amount,
@@ -258,10 +263,19 @@ export class BankingRepository {
         })
     }
 
-    async completeReconciliation(workspaceId: string, reconId: string) {
-        return this.prisma.bankReconciliation.update({
+    async completeReconciliation(workspaceId: string, reconId: string, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        return client.bankReconciliation.update({
             where: { id: reconId },
             data: { status: 'COMPLETED' },
+        })
+    }
+
+    async undoReconciliation(workspaceId: string, reconId: string, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        return client.bankReconciliation.update({
+            where: { id: reconId },
+            data: { status: 'IN_PROGRESS' },
         })
     }
 
