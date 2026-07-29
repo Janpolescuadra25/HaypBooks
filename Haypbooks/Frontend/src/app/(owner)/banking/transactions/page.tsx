@@ -20,7 +20,6 @@ import {
   MOCK_BANK_ACCOUNTS,
   mockJEs,
   mockStore,
-  transferTransaction    as glTransfer,
   detectAutoMatches,
   findHistoryMatch,
   searchForMatch,
@@ -815,32 +814,36 @@ export default function BankFeedPage() {
   }, [matchSuggestions, expandedId, expandedTab])
 
   // ─── Handle Transfer ──────────────────────────────────────────────────
-  const handleTransfer = (tx: BankTransaction) => {
-    if (!transferOtherAcct) return
+  const handleTransfer = async (tx: BankTransaction) => {
+    if (!transferOtherAcct || !companyId) return
     setTransferSaving(true)
-    const result = glTransfer(tx.id, transferOtherAcct, transferDirection, transferDate || tx.date, transferMemo || undefined)
-    if (result) {
-      setItems(prev => [
-        ...prev.map(t => t.id === tx.id
-          ? { ...t, status: 'CATEGORIZED', transactionType: 'Bank Transfer', accountName: 'Bank Transfers', memo: result.tx.memo }
-          : t),
+    try {
+      const fromBankAccountId = transferDirection === 'to' ? selectedAcct : transferOtherAcct
+      const toBankAccountId   = transferDirection === 'to' ? transferOtherAcct : selectedAcct
+      await apiClient.post(
+        `/companies/${companyId}/banking/transfers`,
         {
-          id:              result.mirrorTx.id,
-          date:            result.mirrorTx.date,
-          description:     result.mirrorTx.description,
-          amount:          result.mirrorTx.amount,
-          status:          result.mirrorTx.status,
-          transactionType: result.mirrorTx.transactionType,
-          accountName:     result.mirrorTx.accountName,
-          memo:            result.mirrorTx.memo,
+          fromBankAccountId,
+          toBankAccountId,
+          amount: Math.abs(tx.amount),
+          date: transferDate || tx.date,
+          memo: transferMemo || undefined,
         },
-      ])
+      )
+      await apiClient.patch(
+        `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${tx.id}`,
+        { status: 'CATEGORIZED', transactionType: 'Bank Transfer' },
+      )
+      if (selectedAcct) loadTransactions(selectedAcct)
       setExpandedId(null); setEditMode(false)
       toast.push({ type: 'success', message: 'Transaction marked as Bank Transfer' })
-    } else {
+    } catch {
       toast.push({ type: 'error', message: 'Transfer failed — check account selection' })
+      if (selectedAcct) loadTransactions(selectedAcct)
+      return
+    } finally {
+      setTransferSaving(false)
     }
-    setTransferSaving(false)
   }
 
   // ─── Quick Categorize (from inline row dropdowns — no expand) ────────────
@@ -1815,9 +1818,9 @@ export default function BankFeedPage() {
 
                               {/* ── Tab: Transfer ── */}
                               {expandedTab === 'transfer' && (() => {
-                                const currentBankId = mockStore.items.find(m => m.id === tx.id)?.accountId ?? selectedAcct
-                                const otherAccounts = MOCK_BANK_ACCOUNTS.filter(a => a.id !== currentBankId)
-                                const currentBank   = MOCK_BANK_ACCOUNTS.find(a => a.id === currentBankId)
+                                const currentBankId = selectedAcct
+                                const otherAccounts = accounts.filter(a => a.id !== currentBankId)
+                                const currentBank   = accounts.find(a => a.id === currentBankId)
                                 return (
                                   <div className="max-w-2xl space-y-3">
                                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
