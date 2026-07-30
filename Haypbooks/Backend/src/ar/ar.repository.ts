@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { createReversingJE } from '../shared/gl-integration'
@@ -435,8 +436,9 @@ export class ArRepository {
         })
     }
 
-    async softDeleteCustomer(workspaceId: string, contactId: string) {
-        await this.prisma.customer.update({ where: { contactId }, data: { deletedAt: new Date() } })
+    async softDeleteCustomer(workspaceId: string, contactId: string, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        await client.customer.update({ where: { contactId }, data: { deletedAt: new Date() } })
         return { success: true }
     }
 
@@ -623,8 +625,9 @@ export class ArRepository {
         }))
     }
 
-    async createCustomerGroup(workspaceId: string, companyId: string, data: { name: string; description?: string }) {
-        return this.prisma.customerGroup.create({
+    async createCustomerGroup(workspaceId: string, companyId: string, data: { name: string; description?: string }, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        return client.customerGroup.create({
             data: { workspaceId, companyId, name: data.name, description: data.description ?? null },
         })
     }
@@ -641,8 +644,9 @@ export class ArRepository {
         return { id: group.id, name: group.name, description: group.description ?? '', customerCount: group._count.customers }
     }
 
-    async updateCustomerGroup(workspaceId: string, id: string, data: { name?: string; description?: string }) {
-        return this.prisma.customerGroup.update({
+    async updateCustomerGroup(workspaceId: string, id: string, data: { name?: string; description?: string }, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        return client.customerGroup.update({
             where: { id },
             data: {
                 ...(data.name !== undefined ? { name: data.name } : {}),
@@ -652,9 +656,10 @@ export class ArRepository {
         })
     }
 
-    async deleteCustomerGroup(workspaceId: string, id: string) {
-        await this.prisma.customer.updateMany({ where: { groupId: id, workspaceId }, data: { groupId: null } })
-        return this.prisma.customerGroup.delete({ where: { id } })
+    async deleteCustomerGroup(workspaceId: string, id: string, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        await client.customer.updateMany({ where: { groupId: id, workspaceId }, data: { groupId: null } })
+        return client.customerGroup.delete({ where: { id } })
     }
 
     async listGroupMembers(workspaceId: string, groupId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
@@ -702,9 +707,10 @@ export class ArRepository {
         })
     }
 
-    async batchDeleteCustomerGroups(workspaceId: string, ids: string[]) {
-        await this.prisma.customer.updateMany({ where: { groupId: { in: ids }, workspaceId }, data: { groupId: null } })
-        return this.prisma.customerGroup.deleteMany({ where: { id: { in: ids }, workspaceId } })
+    async batchDeleteCustomerGroups(workspaceId: string, ids: string[], tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        await client.customer.updateMany({ where: { groupId: { in: ids }, workspaceId }, data: { groupId: null } })
+        return client.customerGroup.deleteMany({ where: { id: { in: ids }, workspaceId } })
     }
 
     async exportCustomerGroupsCsv(workspaceId: string) {
@@ -767,8 +773,9 @@ export class ArRepository {
         })
     }
 
-    async deletePaymentTerm(id: string) {
-        return this.prisma.paymentTerm.update({ where: { id }, data: { isActive: false } })
+    async deletePaymentTerm(id: string, tx?: Prisma.TransactionClient) {
+        const client = tx ?? this.prisma
+        return client.paymentTerm.update({ where: { id }, data: { isActive: false } })
     }
 
     // ─── Quotes ───────────────────────────────────────────────────────────────

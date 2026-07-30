@@ -559,10 +559,13 @@ export class ArService {
         if (!existing) throw new NotFoundException('Payment term not found')
         const inUse = await this.prisma.customer.count({ where: { paymentTermId: id } })
         if (inUse > 0) throw new BadRequestException(`Cannot delete: ${inUse} customer(s) are using this payment term`)
-        const result = await this.repo.deletePaymentTerm(id)
-        this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'PaymentTerm', recordId: id, changes: { name: existing.name } },
-        }).catch(() => {})
+        const result = await this.prisma.$transaction(async (tx) => {
+            const deleted = await this.repo.deletePaymentTerm(id, tx)
+            await tx.auditLog.create({
+                data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'PaymentTerm', recordId: id, changes: { name: existing.name } },
+            })
+            return deleted
+        })
         return result
     }
 
@@ -623,18 +626,21 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         const customer = await this.repo.findCustomerById(wid, contactId)
         if (!customer) throw new NotFoundException('Customer not found')
-        const result = await this.repo.softDeleteCustomer(wid, contactId)
-        this.prisma.auditLog.create({
-            data: {
-                workspaceId: wid,
-                companyId,
-                userId,
-                action: 'DELETE',
-                tableName: 'Customer',
-                recordId: contactId,
-                changes: { name: customer.contact?.displayName ?? '' },
-            },
-        }).catch(() => {})
+        const result = await this.prisma.$transaction(async (tx) => {
+            const deleted = await this.repo.softDeleteCustomer(wid, contactId, tx)
+            await tx.auditLog.create({
+                data: {
+                    workspaceId: wid,
+                    companyId,
+                    userId,
+                    action: 'DELETE',
+                    tableName: 'Customer',
+                    recordId: contactId,
+                    changes: { name: customer.contact?.displayName ?? '' },
+                },
+            })
+            return deleted
+        })
         return result
     }
 
@@ -689,10 +695,13 @@ export class ArService {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
         if (!data.name?.trim()) throw new BadRequestException('Group name is required')
-        const result = await this.repo.createCustomerGroup(wid, companyId, data)
-        this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'CustomerGroup', recordId: result.id, changes: { name: result.name } },
-        }).catch(() => {})
+        const result = await this.prisma.$transaction(async (tx) => {
+            const created = await this.repo.createCustomerGroup(wid, companyId, data, tx)
+            await tx.auditLog.create({
+                data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'CustomerGroup', recordId: created.id, changes: { name: created.name } },
+            })
+            return created
+        })
         return result
     }
 
@@ -709,10 +718,13 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         const existing = await this.repo.getCustomerGroup(wid, id)
         if (!existing) throw new NotFoundException('Customer group not found')
-        const result = await this.repo.updateCustomerGroup(wid, id, data)
-        this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'CustomerGroup', recordId: id, changes: data },
-        }).catch(() => {})
+        const result = await this.prisma.$transaction(async (tx) => {
+            const updated = await this.repo.updateCustomerGroup(wid, id, data, tx)
+            await tx.auditLog.create({
+                data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'CustomerGroup', recordId: id, changes: data },
+            })
+            return updated
+        })
         return result
     }
 
@@ -721,10 +733,13 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         const existing = await this.repo.getCustomerGroup(wid, id)
         if (!existing) throw new NotFoundException('Customer group not found')
-        const result = await this.repo.deleteCustomerGroup(wid, id)
-        this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'CustomerGroup', recordId: id, changes: { name: existing.name } },
-        }).catch(() => {})
+        const result = await this.prisma.$transaction(async (tx) => {
+            const deleted = await this.repo.deleteCustomerGroup(wid, id, tx)
+            await tx.auditLog.create({
+                data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'CustomerGroup', recordId: id, changes: { name: existing.name } },
+            })
+            return deleted
+        })
         return result
     }
 
@@ -760,18 +775,21 @@ export class ArService {
             where: { workspaceId: wid, id: { in: ids } },
             select: { id: true, name: true },
         })
-        const result = await this.repo.batchDeleteCustomerGroups(wid, ids)
-        await Promise.all(existing.map((group) => this.prisma.auditLog.create({
-            data: {
-                workspaceId: wid,
-                companyId,
-                userId,
-                action: 'DELETE',
-                tableName: 'CustomerGroup',
-                recordId: group.id,
-                changes: { name: group.name },
-            },
-        }).catch(() => {})))
+        const result = await this.prisma.$transaction(async (tx) => {
+            const deleted = await this.repo.batchDeleteCustomerGroups(wid, ids, tx)
+            await Promise.all(existing.map((group) => tx.auditLog.create({
+                data: {
+                    workspaceId: wid,
+                    companyId,
+                    userId,
+                    action: 'DELETE',
+                    tableName: 'CustomerGroup',
+                    recordId: group.id,
+                    changes: { name: group.name },
+                },
+            })))
+            return deleted
+        })
         return result
     }
 
@@ -2016,11 +2034,11 @@ export class ArService {
                     nextRun: this.computeNextRun(recurring.frequency, new Date()),
                 },
             })
+            await tx.auditLog.create({
+                data: { workspaceId: wid, companyId, userId, action: 'GENERATE', tableName: 'RecurringInvoice', recordId: id, changes: { invoiceId: createdInvoice.id } },
+            })
             return createdInvoice
         })
-        this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'GENERATE', tableName: 'RecurringInvoice', recordId: id, changes: { invoiceId: invoice.id } },
-        }).catch(() => {})
         return { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber }
     }
 
