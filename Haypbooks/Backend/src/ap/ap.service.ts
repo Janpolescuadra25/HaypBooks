@@ -500,13 +500,11 @@ export class ApService {
                 where: { entityId: billId, status: 'PENDING' },
                 data: { status: 'APPROVED' },
             })
+            await tx.auditLog.create({
+                data: { workspaceId: bill.workspaceId, companyId, userId, action: 'APPROVE', tableName: 'Bill', recordId: billId, changes: { status: 'APPROVED' } },
+            })
             return updatedBill
         })
-
-        const workspaceId = await this.getWorkspaceId(companyId)
-        await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'APPROVE', tableName: 'Bill', recordId: billId, changes: { status: 'APPROVED' } },
-        }).catch(() => { /* non-critical */ })
         return result
     }
 
@@ -534,6 +532,9 @@ export class ApService {
                     },
                 })
             }
+            await tx.auditLog.create({
+                data: { workspaceId: bill.workspaceId, companyId, userId, action: 'SUBMIT', tableName: 'Bill', recordId: billId, changes: { status: 'PENDING' } },
+            })
             return tx.bill.update({
                 where: { id: billId },
                 data: {
@@ -542,11 +543,6 @@ export class ApService {
                 },
             })
         })
-
-        const workspaceId = await this.getWorkspaceId(companyId)
-        await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'SUBMIT', tableName: 'Bill', recordId: billId, changes: { status: 'PENDING' } },
-        }).catch(() => { /* non-critical */ })
         return result
     }
 
@@ -568,13 +564,11 @@ export class ApService {
                 where: { entityId: billId, status: 'PENDING' },
                 data: { status: 'REJECTED' },
             })
+            await tx.auditLog.create({
+                data: { workspaceId: bill.workspaceId, companyId, userId, action: 'REJECT', tableName: 'Bill', recordId: billId, changes: { status: 'REJECTED', reason: reason ?? '' } },
+            })
             return updatedBill
         })
-
-        const workspaceId = await this.getWorkspaceId(companyId)
-        await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'REJECT', tableName: 'Bill', recordId: billId, changes: { status: 'REJECTED', reason: reason ?? '' } },
-        }).catch(() => { /* non-critical */ })
         return result
     }
 
@@ -586,6 +580,9 @@ export class ApService {
 
         const result = await this.prisma.$transaction(async (tx) => {
             await this.subLedger.postBillReversalToGL(billId, userId, tx)
+            await tx.auditLog.create({
+                data: { workspaceId: bill.workspaceId, companyId, userId, action: 'UNAPPROVE', tableName: 'Bill', recordId: billId, changes: { status: 'DRAFT' } },
+            })
             return tx.bill.update({
                 where: { id: billId },
                 data: {
@@ -595,11 +592,6 @@ export class ApService {
                 },
             })
         })
-
-        const workspaceId = await this.getWorkspaceId(companyId)
-        await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'UNAPPROVE', tableName: 'Bill', recordId: billId, changes: { status: 'DRAFT' } },
-        }).catch(() => { /* non-critical */ })
         return result
     }
 
@@ -1051,11 +1043,11 @@ export class ApService {
             throw new BadRequestException('Vendor credit has already been applied')
         }
         const workspaceId = await this.getWorkspaceId(companyId)
-        await this.prisma.auditLog.create({
-            data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'VendorCredit', recordId: creditId, changes: { status: 'APPLIED' } },
-        }).catch(() => { /* non-critical */ })
         const result = await this.prisma.$transaction(async (tx) => {
             await this.subLedger.postVendorCreditToGL(creditId, userId, tx)
+            await tx.auditLog.create({
+                data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'VendorCredit', recordId: creditId, changes: { status: 'APPLIED' } },
+            })
             return tx.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED', postingStatus: 'POSTED' } })
         })
         return result
