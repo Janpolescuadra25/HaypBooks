@@ -38,3 +38,12 @@ export function decryptField(encryptedText: string): string {
 
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8')
 }
+
+export function safeDecryptField(value: string | null | undefined): string | null {
+  if (!value) return null
+  try {
+    return decryptField(value)
+  } catch {
+    return value
+  }
+}

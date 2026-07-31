@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { BankingRepository } from './banking.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { encryptField, safeDecryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
 export class BankingService {
@@ -73,7 +74,13 @@ export class BankingService {
             await this.ensureDefaultBankAccount(wid, companyId)
             accounts = await this.repo.findBankAccounts(wid, { search })
         }
-        return accounts
+        return accounts.map(acct => ({
+            ...acct,
+            accountNumber: safeDecryptField(acct.accountNumber),
+            routingNumber: safeDecryptField(acct.routingNumber),
+            swiftCode: safeDecryptField(acct.swiftCode),
+            iban: safeDecryptField(acct.iban),
+        }))
     }
 
     async getBankAccount(userId: string, companyId: string, bankAccountId: string) {
@@ -81,7 +88,13 @@ export class BankingService {
         await this.assertAccess(userId, companyId)
         const acct = await this.repo.findBankAccountById(wid, bankAccountId)
         if (!acct) throw new NotFoundException('Bank account not found')
-        return acct
+        return {
+            ...acct,
+            accountNumber: safeDecryptField(acct.accountNumber),
+            routingNumber: safeDecryptField(acct.routingNumber),
+            swiftCode: safeDecryptField(acct.swiftCode),
+            iban: safeDecryptField(acct.iban),
+        }
     }
 
     async createBankAccount(userId: string, companyId: string, data: any) {
@@ -92,10 +105,10 @@ export class BankingService {
         const accountData = {
             name: data.name,
             institution: data.institution ?? data.bankName ?? undefined,
-            accountNumber: data.accountNumber ?? undefined,
-            routingNumber: data.routingNumber ?? undefined,
-            swiftCode: data.swiftCode ?? undefined,
-            iban: data.iban ?? undefined,
+            accountNumber: data.accountNumber ? encryptField(data.accountNumber) : undefined,
+            routingNumber: data.routingNumber ? encryptField(data.routingNumber) : undefined,
+            swiftCode: data.swiftCode ? encryptField(data.swiftCode) : undefined,
+            iban: data.iban ? encryptField(data.iban) : undefined,
             isDefault: data.isDefault ?? false,
         }
 
@@ -114,8 +127,14 @@ export class BankingService {
         const acct = await this.repo.findBankAccountById(wid, bankAccountId)
         if (!acct) throw new NotFoundException('Bank account not found')
 
+        const encryptedUpdate = { ...data }
+        if (encryptedUpdate.accountNumber !== undefined) encryptedUpdate.accountNumber = encryptField(encryptedUpdate.accountNumber)
+        if (encryptedUpdate.routingNumber !== undefined && encryptedUpdate.routingNumber !== null) encryptedUpdate.routingNumber = encryptField(encryptedUpdate.routingNumber)
+        if (encryptedUpdate.swiftCode !== undefined && encryptedUpdate.swiftCode !== null) encryptedUpdate.swiftCode = encryptField(encryptedUpdate.swiftCode)
+        if (encryptedUpdate.iban !== undefined && encryptedUpdate.iban !== null) encryptedUpdate.iban = encryptField(encryptedUpdate.iban)
+
         return this.prisma.$transaction(async (tx) => {
-            const result = await this.repo.updateBankAccount(wid, bankAccountId, data, tx)
+            const result = await this.repo.updateBankAccount(wid, bankAccountId, encryptedUpdate, tx)
             await tx.auditLog.create({
                 data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'BankAccount', recordId: bankAccountId, changes: data },
             })
@@ -890,11 +909,20 @@ export class BankingService {
 
     async listFeedConnections(userId: string, companyId: string) {
         await this.assertAccess(userId, companyId)
-        return this.prisma.bankFeedConnection.findMany({
+        const connections = await this.prisma.bankFeedConnection.findMany({
             where: { companyId },
             include: { accounts: { include: { bankAccount: { select: { id: true, name: true, institution: true, accountNumber: true } } } } },
             orderBy: { createdAt: 'desc' },
         })
+        return connections.map(conn => ({
+            ...conn,
+            accounts: conn.accounts.map(a => ({
+                ...a,
+                bankAccount: a.bankAccount
+                    ? { ...a.bankAccount, accountNumber: safeDecryptField(a.bankAccount.accountNumber) }
+                    : null,
+            })),
+        }))
     }
 
     async createFeedConnection(userId: string, companyId: string, data: any) {
@@ -975,7 +1003,7 @@ export class BankingService {
             const agg = await this.prisma.bankTransaction.aggregate({
                 where: { bankAccountId: acct.id }, _sum: { amount: true },
             })
-            return { ...acct, currentBalance: Number(agg._sum.amount ?? 0) }
+            return { ...acct, accountNumber: safeDecryptField(acct.accountNumber), currentBalance: Number(agg._sum.amount ?? 0) }
         }))
         // Return accounts with negative balances as credit card candidates
         return result.filter(a => a.currentBalance < 0 || a.name.toLowerCase().includes('credit') || a.name.toLowerCase().includes('card'))
@@ -1010,12 +1038,18 @@ export class BankingService {
         await this.assertAccess(userId, companyId)
         const where: any = { companyId }
         if (opts?.status) where.status = opts.status
-        return this.prisma.check.findMany({
+        const checks = await this.prisma.check.findMany({
             where,
             include: { bankAccount: { select: { name: true, accountNumber: true } } },
             orderBy: { date: 'desc' },
             take: opts?.limit ? parseInt(opts.limit) : 100,
         })
+        return checks.map(c => ({
+            ...c,
+            bankAccount: c.bankAccount
+                ? { ...c.bankAccount, accountNumber: safeDecryptField(c.bankAccount.accountNumber) }
+                : null,
+        }))
     }
 
     async createCheck(userId: string, companyId: string, data: any) {

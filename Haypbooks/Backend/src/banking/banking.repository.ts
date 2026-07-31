@@ -25,7 +25,6 @@ export class BankingRepository {
                         OR: [
                             { name: { contains: search, mode: 'insensitive' } },
                             { institution: { contains: search, mode: 'insensitive' } },
-                            { accountNumber: { contains: search, mode: 'insensitive' } },
                         ],
                     }
                     : {}),
