@@ -28,6 +28,13 @@ apiClient.interceptors.request.use(
     if (config.url && !config.url.startsWith('/api/') && !config.url.startsWith('http')) {
       config.url = '/api' + (config.url.startsWith('/') ? '' : '/') + config.url;
     }
+    // Attach CSRF token from cookie for mutation requests
+    if (typeof window !== 'undefined' && ['post', 'put', 'patch', 'delete'].includes(config.method || '')) {
+      const match = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))
+      if (match) {
+        config.headers['X-CSRF-Token'] = match.split('=')[1]
+      }
+    }
     return config;
   },
   (error) => {

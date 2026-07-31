@@ -82,7 +82,7 @@ async function bootstrap() {
     origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-CSRF-Token'],
   })
 
   // Parse cookies so routes can read req.cookies (required for refresh/logout flows)
@@ -90,6 +90,57 @@ async function bootstrap() {
     // use require to avoid runtime failure in environments where cookie-parser isn't installed
     const cookieParser = require('cookie-parser')
     app.use(cookieParser())
+
+    // ── CSRF Protection: Double-Submit Cookie Pattern ──────────────────────────
+    // Generates a csrf_token cookie on first GET request. All mutation requests
+    // (POST / PUT / PATCH / DELETE) must include an X-CSRF-Token header matching
+    // the cookie value. Public auth endpoints are exempt (no session exists yet).
+    const crypto = require('crypto')
+    const CSRF_EXEMPT_PATHS = [
+      '/api/auth/login',
+      '/api/auth/pre-signup',
+      '/api/auth/complete-signup',
+      '/api/auth/verify-otp',
+      '/api/auth/forgot-password',
+      '/api/auth/reset-password',
+    ]
+    app.use((req, res, next) => {
+      const method = req.method
+      // Safe methods — set cookie if missing, then pass through
+      if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+        if (!req.cookies?.csrf_token) {
+          const token = crypto.randomBytes(32).toString('hex')
+          res.cookie('csrf_token', token, {
+            httpOnly: false,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 86400000, // 24 hours
+          })
+        }
+        return next()
+      }
+      // Exempt paths — public auth endpoints (no session to protect yet)
+      if (CSRF_EXEMPT_PATHS.some(p => req.path.startsWith(p))) {
+        return next()
+      }
+      // Unsafe methods — validate CSRF token (double-submit: cookie === header)
+      const cookieToken = req.cookies?.csrf_token
+      const headerToken = req.headers['x-csrf-token']
+      if (!cookieToken || !headerToken) {
+        return res.status(403).json({ message: 'CSRF token missing', statusCode: 403 })
+      }
+      try {
+        const a = Buffer.from(String(cookieToken))
+        const b = Buffer.from(String(headerToken))
+        if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+          return res.status(403).json({ message: 'CSRF token mismatch', statusCode: 403 })
+        }
+      } catch {
+        return res.status(403).json({ message: 'CSRF token mismatch', statusCode: 403 })
+      }
+      next()
+    })
   } catch (e) {
     // ignore in environments where cookie-parser isn't available
   }
