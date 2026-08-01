@@ -15,12 +15,52 @@ export interface Budget {
   _count?: { lines: number }
 }
 
+export interface BudgetLineAccount {
+  id: string
+  code: string
+  name: string
+}
+
+export interface BudgetLine {
+  id: string
+  budgetId: string
+  workspaceId: string
+  accountId: string | null
+  classId: string | null
+  month: number | null
+  amount: string
+  createdAt: string
+  account: BudgetLineAccount | null
+}
+
+export interface BudgetDetail extends Budget {
+  lines: BudgetLine[]
+}
+
+export interface BudgetVsActualRow {
+  accountId: string | null
+  accountCode: string | null
+  accountName: string | null
+  month: number | null
+  budgeted: number
+  actual: number
+  variance: number
+  variancePct: number
+}
+
+export interface BudgetVsActualResponse {
+  budget: { id: string; name: string; fiscalYear: number }
+  rows: BudgetVsActualRow[]
+  from: string
+  to: string
+}
+
 export const budgetService = {
   list: (companyId: string) =>
     apiClient.get<Budget[]>('/reporting/budgets', { params: { companyId } }),
 
   getById: (companyId: string, id: string) =>
-    apiClient.get<Budget>(`/reporting/budgets/${id}`, { params: { companyId } }),
+    apiClient.get<BudgetDetail>(`/reporting/budgets/${id}`, { params: { companyId } }),
 
   create: (companyId: string, data: { name: string; fiscalYear: number; lines?: any[] }) =>
     apiClient.post<Budget>('/reporting/budgets', data, { params: { companyId } }),
@@ -33,4 +73,16 @@ export const budgetService = {
 
   copy: (companyId: string, id: string, fiscalYear: number) =>
     apiClient.post<Budget>(`/reporting/budgets/${id}/copy`, { fiscalYear }, { params: { companyId } }),
+
+  addLine: (companyId: string, budgetId: string, data: { accountId: string; month: number | null; amount: number }) =>
+    apiClient.post(`/reporting/budgets/${budgetId}/lines`, data, { params: { companyId } }),
+
+  updateLine: (companyId: string, budgetId: string, lineId: string, data: { accountId?: string; month?: number | null; amount?: number }) =>
+    apiClient.patch(`/reporting/budgets/${budgetId}/lines/${lineId}`, data, { params: { companyId } }),
+
+  deleteLine: (companyId: string, budgetId: string, lineId: string) =>
+    apiClient.delete(`/reporting/budgets/${budgetId}/lines/${lineId}`, { params: { companyId } }),
+
+  getBudgetVsActual: (companyId: string, budgetId: string, opts?: { from?: string; to?: string }) =>
+    apiClient.get<BudgetVsActualResponse>(`/reporting/budgets/${budgetId}/vs-actual`, { params: { companyId, ...opts } }),
 }
