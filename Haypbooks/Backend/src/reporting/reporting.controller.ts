@@ -3,12 +3,16 @@ import {
     UseGuards, Req, HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common'
 import { ReportingService } from './reporting.service'
+import { LedgerHealthService } from './ledger-health.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 
 @Controller('api/reporting')
 @UseGuards(JwtAuthGuard)
 export class ReportingController {
-    constructor(private readonly svc: ReportingService) { }
+    constructor(
+        private readonly svc: ReportingService,
+        private readonly ledgerHealthService: LedgerHealthService,
+    ) { }
 
     // ─── Quick KPIs ───────────────────────────────────────────────────────────
 
@@ -56,6 +60,15 @@ export class ReportingController {
     getTrialBalance(@Req() req: any, @Query('companyId') cid: string, @Query('asOf') asOf?: string) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
         return this.svc.getTrialBalance(req.user.userId, cid, { asOf })
+    }
+
+    @Get('ledger-health')
+    async getLedgerHealth(
+        @Req() req: any,
+        @Query('companyId') companyId: string,
+    ) {
+        if (!companyId) throw new BadRequestException('companyId query parameter is required')
+        return this.ledgerHealthService.checkLedgerHealth(req.user.userId, companyId)
     }
 
     // ─── Snapshots ────────────────────────────────────────────────────────────
