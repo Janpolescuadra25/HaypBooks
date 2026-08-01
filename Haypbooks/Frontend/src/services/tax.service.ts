@@ -73,4 +73,10 @@ export const taxService = {
 
   createCode: (companyId: string, data: CreateTaxCodeDto) =>
     apiClient.post(`/companies/${companyId}/tax/codes`, data),
+
+  getSummary: (companyId: string, opts?: { from?: string; to?: string }) =>
+    apiClient.get(`/companies/${companyId}/tax/summary`, { params: opts }),
+
+  getCalendar: (companyId: string, taxYear?: number) =>
+    apiClient.get(`/companies/${companyId}/tax/calendar`, { params: { taxYear } }),
 }
