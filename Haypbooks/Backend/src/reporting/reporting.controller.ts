@@ -1,5 +1,5 @@
 import {
-    Controller, Get, Post, Body, Param, Query,
+    Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
     UseGuards, Req, HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common'
 import { ReportingService } from './reporting.service'
@@ -111,6 +111,44 @@ export class ReportingController {
     ) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
         return this.svc.getBudgetVsActual(req.user.userId, cid, bid, { from, to })
+    }
+
+    // ─── Budget CRUD ──────────────────────────────────────────────────────────
+
+    @Patch('budgets/:budgetId')
+    updateBudget(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string, @Body() body: { name?: string; status?: string; fiscalYear?: number }) {
+        if (!cid) throw new BadRequestException('companyId query parameter is required')
+        return this.svc.updateBudget(req.user.userId, cid, budgetId, body)
+    }
+
+    @Delete('budgets/:budgetId')
+    deleteBudget(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string) {
+        if (!cid) throw new BadRequestException('companyId query parameter is required')
+        return this.svc.deleteBudget(req.user.userId, cid, budgetId)
+    }
+
+    @Post('budgets/:budgetId/lines')
+    addBudgetLine(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string, @Body() body: { accountId: string; classId: string; month: number; amount: number }) {
+        if (!cid) throw new BadRequestException('companyId query parameter is required')
+        return this.svc.addBudgetLine(req.user.userId, cid, budgetId, body)
+    }
+
+    @Patch('budgets/:budgetId/lines/:lineId')
+    updateBudgetLine(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string, @Param('lineId') lineId: string, @Body() body: { accountId?: string; classId?: string; month?: number; amount?: number }) {
+        if (!cid) throw new BadRequestException('companyId query parameter is required')
+        return this.svc.updateBudgetLine(req.user.userId, cid, budgetId, lineId, body)
+    }
+
+    @Delete('budgets/:budgetId/lines/:lineId')
+    deleteBudgetLine(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string, @Param('lineId') lineId: string) {
+        if (!cid) throw new BadRequestException('companyId query parameter is required')
+        return this.svc.deleteBudgetLine(req.user.userId, cid, budgetId, lineId)
+    }
+
+    @Post('budgets/:budgetId/copy')
+    copyBudget(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string, @Body() body: { fiscalYear: number }) {
+        if (!cid) throw new BadRequestException('companyId query parameter is required')
+        return this.svc.copyBudget(req.user.userId, cid, budgetId, body.fiscalYear)
     }
 
     // ─── KPI Dashboards ───────────────────────────────────────────────────────

@@ -386,6 +386,56 @@ export class ReportingService {
         return result
     }
 
+    // ─── Budget CRUD ──────────────────────────────────────────────────────────
+
+    async updateBudget(userId: string, companyId: string, budgetId: string, data: { name?: string; status?: string; fiscalYear?: number }) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const budget = await this.repo.findBudgetById(workspaceId, budgetId)
+        if (!budget) throw new BadRequestException('Budget not found')
+        return this.repo.updateBudget(workspaceId, budgetId, data, companyId, userId)
+    }
+
+    async deleteBudget(userId: string, companyId: string, budgetId: string) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const budget = await this.repo.findBudgetById(workspaceId, budgetId)
+        if (!budget) throw new BadRequestException('Budget not found')
+        return this.repo.deleteBudget(workspaceId, budgetId, companyId, userId)
+    }
+
+    async addBudgetLine(userId: string, companyId: string, budgetId: string, data: { accountId: string; classId: string; month: number; amount: number }) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const budget = await this.repo.findBudgetById(workspaceId, budgetId)
+        if (!budget) throw new BadRequestException('Budget not found')
+        return this.repo.addBudgetLine(workspaceId, budgetId, data, companyId, userId)
+    }
+
+    async updateBudgetLine(userId: string, companyId: string, budgetId: string, lineId: string, data: { accountId?: string; classId?: string; month?: number; amount?: number }) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const line = await this.repo.findBudgetLineById(lineId, budgetId, workspaceId)
+        if (!line) throw new BadRequestException('Budget line not found')
+        return this.repo.updateBudgetLine(lineId, workspaceId, budgetId, data, companyId, userId)
+    }
+
+    async deleteBudgetLine(userId: string, companyId: string, budgetId: string, lineId: string) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const line = await this.repo.findBudgetLineById(lineId, budgetId, workspaceId)
+        if (!line) throw new BadRequestException('Budget line not found')
+        return this.repo.deleteBudgetLine(lineId, workspaceId, budgetId, companyId, userId)
+    }
+
+    async copyBudget(userId: string, companyId: string, budgetId: string, newFiscalYear: number) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const budget = await this.repo.findBudgetById(workspaceId, budgetId)
+        if (!budget) throw new BadRequestException('Budget not found')
+        return this.repo.copyBudget(workspaceId, budgetId, newFiscalYear, companyId, userId)
+    }
+
     // ─── KPI Dashboards ───────────────────────────────────────────────────────
 
     async listDashboards(userId: string, companyId: string) {

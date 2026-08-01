@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
@@ -203,6 +203,183 @@ export class ReportingRepository {
                 },
             },
             include: { lines: true },
+        })
+    }
+
+    async updateBudget(workspaceId: string, budgetId: string, data: { name?: string; status?: string; fiscalYear?: number }, companyId: string, userId: string) {
+        const updateData: any = { ...data }
+        const budget = await this.prisma.budget.update({
+            where: { id: budgetId },
+            data: updateData,
+        })
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'BUDGET_UPDATED',
+                tableName: 'Budget',
+                recordId: budgetId,
+                changes: updateData,
+            },
+        })
+        return budget
+    }
+
+    async deleteBudget(workspaceId: string, budgetId: string, companyId: string, userId: string) {
+        const budget = await this.prisma.budget.delete({
+            where: { id: budgetId },
+        })
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'BUDGET_DELETED',
+                tableName: 'Budget',
+                recordId: budgetId,
+                changes: {},
+            },
+        })
+        return budget
+    }
+
+    async findBudgetLineById(lineId: string, budgetId: string, workspaceId: string) {
+        return this.prisma.budgetLine.findFirst({
+            where: { id: lineId, budgetId, budget: { workspaceId } },
+        })
+    }
+
+    async addBudgetLine(workspaceId: string, budgetId: string, data: { accountId: string; classId: string; month: number; amount: number }, companyId: string, userId: string) {
+        return this.prisma.$transaction(async (tx) => {
+            const line = await tx.budgetLine.create({
+                data: {
+                    workspaceId,
+                    budgetId,
+                    accountId: data.accountId,
+                    classId: data.classId,
+                    month: data.month,
+                    amount: data.amount,
+                },
+            })
+            const { _sum } = await tx.budgetLine.aggregate({
+                where: { budgetId },
+                _sum: { amount: true },
+            })
+            await tx.budget.update({
+                where: { id: budgetId },
+                data: { totalAmount: Number(_sum.amount ?? 0) },
+            })
+            await tx.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'BUDGET_LINE_ADDED',
+                    tableName: 'BudgetLine',
+                    recordId: line.id,
+                    changes: data,
+                },
+            })
+            return line
+        })
+    }
+
+    async updateBudgetLine(lineId: string, workspaceId: string, budgetId: string, data: { accountId?: string; classId?: string; month?: number; amount?: number }, companyId: string, userId: string) {
+        return this.prisma.$transaction(async (tx) => {
+            const line = await tx.budgetLine.update({
+                where: { id: lineId },
+                data,
+            })
+            const { _sum } = await tx.budgetLine.aggregate({
+                where: { budgetId },
+                _sum: { amount: true },
+            })
+            await tx.budget.update({
+                where: { id: budgetId },
+                data: { totalAmount: Number(_sum.amount ?? 0) },
+            })
+            await tx.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'BUDGET_LINE_UPDATED',
+                    tableName: 'BudgetLine',
+                    recordId: lineId,
+                    changes: data,
+                },
+            })
+            return line
+        })
+    }
+
+    async deleteBudgetLine(lineId: string, workspaceId: string, budgetId: string, companyId: string, userId: string) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.budgetLine.delete({
+                where: { id: lineId },
+            })
+            const { _sum } = await tx.budgetLine.aggregate({
+                where: { budgetId },
+                _sum: { amount: true },
+            })
+            await tx.budget.update({
+                where: { id: budgetId },
+                data: { totalAmount: Number(_sum.amount ?? 0) },
+            })
+            await tx.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'BUDGET_LINE_DELETED',
+                    tableName: 'BudgetLine',
+                    recordId: lineId,
+                    changes: {},
+                },
+            })
+        })
+    }
+
+    async copyBudget(workspaceId: string, budgetId: string, newFiscalYear: number, companyId: string, userId: string) {
+        return this.prisma.$transaction(async (tx) => {
+            const source = await tx.budget.findFirst({
+                where: { id: budgetId, workspaceId },
+                include: { lines: true },
+            })
+            if (!source) throw new BadRequestException('Budget not found')
+            const newBudget = await tx.budget.create({
+                data: {
+                    name: `${source.name} (${newFiscalYear})`,
+                    scenario: source.scenario,
+                    status: 'DRAFT',
+                    fiscalYear: newFiscalYear,
+                    totalAmount: source.totalAmount,
+                    workspaceId,
+                    lines: {
+                        create: source.lines.map(line => ({
+                            workspaceId,
+                            accountId: line.accountId,
+                            classId: line.classId,
+                            month: line.month,
+                            amount: line.amount,
+                        })),
+                    },
+                },
+                include: { lines: true },
+            })
+            await tx.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'BUDGET_COPIED',
+                    tableName: 'Budget',
+                    recordId: newBudget.id,
+                    changes: { sourceBudgetId: budgetId, newFiscalYear },
+                },
+            })
+            return newBudget
         })
     }
 
