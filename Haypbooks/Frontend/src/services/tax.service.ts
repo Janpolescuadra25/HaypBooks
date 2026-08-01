@@ -79,4 +79,13 @@ export const taxService = {
 
   getCalendar: (companyId: string, taxYear?: number) =>
     apiClient.get(`/companies/${companyId}/tax/calendar`, { params: { taxYear } }),
+
+  getAgencies: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/tax/agencies`),
+
+  getJurisdictions: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/tax/jurisdictions`),
+
+  getLiabilities: (companyId: string, status?: string) =>
+    apiClient.get(`/companies/${companyId}/tax/liability`, { params: status ? { status } : undefined }),
 }
