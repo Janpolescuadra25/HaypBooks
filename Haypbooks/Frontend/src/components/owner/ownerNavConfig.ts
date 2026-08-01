@@ -397,6 +397,19 @@ export const navigationData: NavSection[] = [
     ],
   },
   {
+    title: 'BUDGETING',
+    label: 'BUDGET',
+    icon: Wallet,
+    groups: [
+      {
+        title: 'Budgets',
+        items: [
+          { title: 'Budgets', path: '/budgeting/budgets' },
+        ],
+      },
+    ],
+  },
+  {
     title: 'PAYROLL',
     label: 'PAYROLL',
     icon: Users,
