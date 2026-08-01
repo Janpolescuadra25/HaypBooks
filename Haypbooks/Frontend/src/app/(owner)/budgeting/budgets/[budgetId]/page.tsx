@@ -4,10 +4,10 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Pencil, X, Check, Copy, Trash2, Plus, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Pencil, X, Check, Copy, Trash2, Plus, RefreshCw, BarChart3, FileText } from 'lucide-react'
 import AccountSelect from '@/components/accounting/AccountSelect'
 import apiClient from '@/lib/api-client'
-import { budgetService, type BudgetDetail, type BudgetLine } from '@/services/budget.service'
+import { budgetService, type BudgetDetail, type BudgetLine, type BudgetStatus } from '@/services/budget.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -300,6 +300,12 @@ export default function BudgetDetailPage() {
             ) : (
               <>
                 <button
+                  onClick={() => router.push(`/budgeting/budgets/${budget!.id}/vs-actual`)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                >
+                  <BarChart3 size={16} /> View vs Actual
+                </button>
+                <button
                   onClick={startEdit}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
@@ -345,7 +351,7 @@ export default function BudgetDetailPage() {
                 {editMode ? (
                   <select
                     value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    onChange={(e) => setEditStatus(e.target.value as BudgetStatus)}
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
                   >
                     <option value="DRAFT">DRAFT</option>
@@ -497,6 +503,16 @@ export default function BudgetDetailPage() {
                       </tr>
                     )
                   })}
+
+                  {!addingLine && budget.lines.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="text-center py-12 text-slate-400">
+                        <FileText className="mx-auto h-8 w-8 mb-2 text-slate-300" />
+                        <p className="text-sm">No budget lines yet</p>
+                        <p className="text-xs mt-1">Click "Add Line" to create your first budget entry</p>
+                      </td>
+                    </tr>
+                  )}
 
                   {addingLine && (
                     <tr className="border-t border-slate-100 bg-slate-50">
