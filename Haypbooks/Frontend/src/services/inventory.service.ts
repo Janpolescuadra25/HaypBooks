@@ -10,6 +10,9 @@ export const inventoryService = {
   getDepreciationSchedule: (companyId: string, assetId: string) =>
     apiClient.get(`/companies/${companyId}/inventory/assets/${assetId}/schedule`),
 
+  runDepreciation: (companyId: string, assetId: string, body: { periodStart: string; periodEnd: string }) =>
+    apiClient.post(`/companies/${companyId}/inventory/assets/${assetId}/depreciate`, body),
+
   getAssetCategories: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/inventory/asset-categories`),
 }
