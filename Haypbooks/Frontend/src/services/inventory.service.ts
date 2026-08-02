@@ -39,4 +39,9 @@ export const inventoryService = {
 
   listReorderRules: (companyId: string, params?: Record<string, any>) =>
     apiClient.get(`/companies/${companyId}/inventory/reorder-rules`, { params }),
+
+  listLotSerial: (companyId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/inventory/lot-serial`, { params }),
+  getStockSummary: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/inventory/stock`),
 }
