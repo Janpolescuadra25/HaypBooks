@@ -256,7 +256,7 @@ export default function DepreciationPage() {
             <div className="mb-3">
               <h2 className="text-sm font-medium text-slate-900">Posted Depreciation Entries</h2>
             </div>
-            {schedule?.entries?.length ? (
+            {schedule?.posted?.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -268,7 +268,7 @@ export default function DepreciationPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {schedule.entries.map((entry: any) => (
+                    {schedule.posted.map((entry: any) => (
                       <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                         <td className="px-5 py-3 text-slate-700">{new Date(entry.periodStart).toLocaleDateString()}</td>
                         <td className="px-5 py-3 text-slate-700">{new Date(entry.periodEnd).toLocaleDateString()}</td>
