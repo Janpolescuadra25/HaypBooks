@@ -15,4 +15,13 @@ export const inventoryService = {
 
   getAssetCategories: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/inventory/asset-categories`),
+
+  listItems: (companyId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/inventory/items`, { params }),
+
+  listItemCategories: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/inventory/items/categories`),
+
+  listUOM: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/inventory/units-of-measure`),
 }
