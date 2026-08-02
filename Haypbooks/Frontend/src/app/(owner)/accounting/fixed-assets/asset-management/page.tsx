@@ -20,7 +20,8 @@ const STATUS_STYLES: Record<string, string> = {
 const METHOD_LABELS: Record<string, string> = {
   STRAIGHT_LINE: 'Straight Line',
   DECLINING_BALANCE: 'Declining Balance',
-  DOUBLE_DECLINING: 'Double Declining',
+  DOUBLE_DECLINING_BALANCE: 'Double Declining',
+  SUM_OF_YEARS_DIGITS: 'Sum of Years',
   UNITS_OF_PRODUCTION: 'Units of Production',
 }
 
@@ -40,7 +41,7 @@ export default function AssetManagementPage() {
     setError(null)
     try {
       const { data } = await inventoryService.getFixedAssets(companyId)
-      setAssets(data)
+      setAssets(Array.isArray(data) ? data : (data?.data ?? []))
     } catch (err: any) {
       setError(err?.message || 'Failed to load fixed assets')
     } finally {

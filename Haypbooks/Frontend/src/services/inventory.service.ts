@@ -1,8 +1,8 @@
 import apiClient from '@/lib/api-client'
 
 export const inventoryService = {
-  getFixedAssets: (companyId: string) =>
-    apiClient.get(`/companies/${companyId}/inventory/assets`),
+  getFixedAssets: (companyId: string, status?: string) =>
+    apiClient.get(`/companies/${companyId}/inventory/assets`, { params: status ? { status } : undefined }),
 
   getFixedAsset: (companyId: string, assetId: string) =>
     apiClient.get(`/companies/${companyId}/inventory/assets/${assetId}`),
