@@ -88,4 +88,16 @@ export const taxService = {
 
   getLiabilities: (companyId: string, status?: string) =>
     apiClient.get(`/companies/${companyId}/tax/liability`, { params: status ? { status } : undefined }),
+
+  getRemittances: (companyId: string, status?: string) =>
+    apiClient.get(`/companies/${companyId}/tax/remittances`, { params: status ? { status } : undefined }),
+
+  getFilingBatch: (companyId: string, period?: string) =>
+    apiClient.get(`/companies/${companyId}/tax/filing-batch`, { params: period ? { period } : undefined }),
+
+  getTaxReturns: (companyId: string, opts?: { status?: string; formType?: string }) =>
+    apiClient.get(`/companies/${companyId}/tax/tax-returns`, { params: opts }),
+
+  getEFiling: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/tax/e-filing`),
 }
