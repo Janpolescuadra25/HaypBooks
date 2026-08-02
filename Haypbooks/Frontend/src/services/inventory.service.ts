@@ -24,4 +24,7 @@ export const inventoryService = {
 
   listUOM: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/inventory/units-of-measure`),
+
+  listTransactions: (companyId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/inventory/transactions`, { params }),
 }
