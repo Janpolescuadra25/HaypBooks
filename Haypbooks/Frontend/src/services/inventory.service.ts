@@ -27,4 +27,16 @@ export const inventoryService = {
 
   listTransactions: (companyId: string, params?: Record<string, any>) =>
     apiClient.get(`/companies/${companyId}/inventory/transactions`, { params }),
+
+  listLocations: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/inventory/locations`),
+
+  listBinLocations: (companyId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/inventory/bin-locations`, { params }),
+
+  listPhysicalCounts: (companyId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/inventory/physical-counts`, { params }),
+
+  listReorderRules: (companyId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/inventory/reorder-rules`, { params }),
 }
