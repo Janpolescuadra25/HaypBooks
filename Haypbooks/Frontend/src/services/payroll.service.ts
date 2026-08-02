@@ -17,4 +17,6 @@ export const payrollService = {
     apiClient.get(`/companies/${companyId}/payroll/deductions`),
   listLoans: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/payroll/loans`),
+  listGovernmentContributions: (companyId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/payroll/government-contributions`, { params }),
 }
