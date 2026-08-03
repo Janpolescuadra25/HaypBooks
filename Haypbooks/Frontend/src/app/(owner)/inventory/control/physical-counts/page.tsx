@@ -4,13 +4,14 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { RefreshCw, PackageOpen, ClipboardCheck } from 'lucide-react'
+import { format } from 'date-fns'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { inventoryService } from '@/services/inventory.service'
 
 const STATUS_STYLES: Record<string, string> = {
   OPEN: 'bg-blue-50 text-blue-700',
   COUNTING: 'bg-amber-50 text-amber-700',
-  REVIEWED: 'bg-purple-50 text-purple-700',
+  REVIEWED: 'bg-slate-100 text-slate-600',
   CLOSED: 'bg-emerald-50 text-emerald-700',
 }
 
@@ -59,21 +60,29 @@ export default function PhysicalCountsPage() {
     return counts.filter((count: any) => count.status === activeStatus)
   }, [counts, activeStatus])
 
+  if (companyLoading || loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Physical Counts</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track stock count operations and variances</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <ClipboardCheck className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Physical Counts</h2>
         </div>
         <button
           type="button"
           onClick={fetchData}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
-          <ClipboardCheck className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
@@ -100,43 +109,36 @@ export default function PhysicalCountsPage() {
       )}
 
       <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : !filteredCounts.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <ClipboardCheck className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No physical counts found.</p>
-          </div>
+        {filteredCounts.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-slate-400">No physical counts found.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Warehouse</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Count Date</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Variance</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Lines</th>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Warehouse</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Count Date</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Variance</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Lines</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {filteredCounts.map((count) => {
                   const variance = count.varianceTotal ? Number(count.varianceTotal) : null
                   return (
-                    <tr key={count.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-4 text-slate-700">{warehouseMap.get(count.warehouseId) ?? '—'}</td>
-                      <td className="px-5 py-4 text-slate-700">{new Date(count.countDate).toLocaleDateString()}</td>
-                      <td className="px-5 py-4">
+                    <tr key={count.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 text-slate-700">{warehouseMap.get(count.warehouseId) ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">{format(new Date(count.countDate), 'MMM d, yyyy')}</td>
+                      <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[count.status] ?? 'bg-slate-100 text-slate-600'}`}>
                           {count.status ?? '—'}
                         </span>
                       </td>
-                      <td className={`px-5 py-4 ${variance !== null && variance < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                      <td className={`px-4 py-3 ${variance !== null && variance < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
                         {variance !== null ? variance : '—'}
                       </td>
-                      <td className="px-5 py-4 text-slate-700">{count.lines?.length ?? 0}</td>
+                      <td className="px-4 py-3 text-slate-700">{count.lines?.length ?? 0}</td>
                     </tr>
                   )
                 })}

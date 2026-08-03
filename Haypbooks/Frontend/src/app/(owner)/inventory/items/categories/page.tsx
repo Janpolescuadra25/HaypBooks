@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, PackageOpen, Tag } from 'lucide-react'
+import { RefreshCw, Tag } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { inventoryService } from '@/services/inventory.service'
 
@@ -41,21 +41,29 @@ export default function CategoriesPage() {
     fetchCategories()
   }, [companyId, companyLoading, fetchCategories])
 
+  if (companyLoading || loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Categories</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Item categories derived from your inventory</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Tag className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Categories</h2>
         </div>
         <button
           type="button"
           onClick={fetchCategories}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
@@ -65,33 +73,26 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center h-64 rounded-2xl border border-slate-200 bg-white">
-          <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-        </div>
-      ) : !categories.length ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-24 text-center text-slate-500">
-          <Tag className="mb-4 h-12 w-12 text-slate-300" />
-          <p className="text-sm">No categories found. Categories are derived from items.</p>
-        </div>
+      {categories.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-slate-400">No categories found. Categories are derived from items.</div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
+          <div className="px-4 py-4 border-b border-slate-100">
             <p className="text-sm text-slate-500">{categories.length} categories total</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Category Name</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Items</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Category Name</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Items</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {categories.map((cat) => (
-                  <tr key={cat.name} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-slate-900">{cat.name}</td>
-                    <td className="px-5 py-3 text-slate-700">{cat.count}</td>
+                  <tr key={cat.name} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-900">{cat.name}</td>
+                    <td className="px-4 py-3 text-slate-700">{cat.count}</td>
                   </tr>
                 ))}
               </tbody>
