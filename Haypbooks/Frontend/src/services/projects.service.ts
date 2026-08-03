@@ -14,4 +14,10 @@ export const projectsService = {
 
   listResourcePlans: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/projects/resource-plans`),
+
+  listMilestones: (companyId: string, projectId: string) =>
+    apiClient.get(`/companies/${companyId}/projects/${projectId}/milestones`),
+
+  listProjectTasks: (companyId: string, projectId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/projects/${projectId}/tasks`, { params }),
 }
