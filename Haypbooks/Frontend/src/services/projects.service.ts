@@ -8,4 +8,10 @@ export const projectsService = {
 
   listChangeOrders: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/change-orders`),
+
+  listWip: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/projects/wip`),
+
+  listResourcePlans: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/projects/resource-plans`),
 }
