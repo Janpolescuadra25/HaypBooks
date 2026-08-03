@@ -20,4 +20,13 @@ export const projectsService = {
 
   listProjectTasks: (companyId: string, projectId: string, params?: Record<string, any>) =>
     apiClient.get(`/companies/${companyId}/projects/${projectId}/tasks`, { params }),
+
+  listProjectBilling: (companyId: string, projectId: string) =>
+    apiClient.get(`/companies/${companyId}/projects/${projectId}/billing`),
+
+  listProjectTimeEntries: (companyId: string, projectId: string, params?: Record<string, any>) =>
+    apiClient.get(`/companies/${companyId}/projects/${projectId}/time-entries`, { params }),
+
+  listProjectExpenses: (companyId: string, projectId: string) =>
+    apiClient.get(`/companies/${companyId}/projects/${projectId}/expenses`),
 }
