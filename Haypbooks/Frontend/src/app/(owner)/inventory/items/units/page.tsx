@@ -64,36 +64,36 @@ export default function UnitsPage() {
         </div>
       )}
 
-      {units.length === 0 ? (
-        <div className="px-4 py-12 text-center text-sm text-slate-400">No units of measure found.</div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Name</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Abbreviation</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Name</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Abbreviation</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {units.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-4 py-12 text-center text-sm text-slate-400">No units of measure found.</td>
+              </tr>
+            ) : (
+              units.map((unit) => (
+                <tr key={unit.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-slate-900">{unit.name}</td>
+                  <td className="px-4 py-3 text-slate-700">{unit.abbreviation ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${unit.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                      {unit.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {units.map((unit) => (
-                  <tr key={unit.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{unit.name}</td>
-                    <td className="px-4 py-3 text-slate-700">{unit.abbreviation ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${unit.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                        {unit.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

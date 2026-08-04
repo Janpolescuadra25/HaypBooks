@@ -108,44 +108,44 @@ export default function PhysicalCountsPage() {
         </div>
       )}
 
-      <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white">
-        {filteredCounts.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-slate-400">No physical counts found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Warehouse</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Count Date</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Variance</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Lines</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredCounts.map((count) => {
-                  const variance = count.varianceTotal ? Number(count.varianceTotal) : null
-                  return (
-                    <tr key={count.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 text-slate-700">{warehouseMap.get(count.warehouseId) ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-700">{format(new Date(count.countDate), 'MMM d, yyyy')}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[count.status] ?? 'bg-slate-100 text-slate-600'}`}>
-                          {count.status ?? '—'}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-3 ${variance !== null && variance < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
-                        {variance !== null ? variance : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">{count.lines?.length ?? 0}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Warehouse</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Count Date</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Variance</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Lines</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredCounts.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-sm text-slate-400">No physical counts found.</td>
+              </tr>
+            ) : (
+              filteredCounts.map((count) => {
+                const variance = count.varianceTotal ? Number(count.varianceTotal) : null
+                return (
+                  <tr key={count.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 text-slate-700">{warehouseMap.get(count.warehouseId) ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{format(new Date(count.countDate), 'MMM d, yyyy')}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[count.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                        {count.status ?? '—'}
+                      </span>
+                    </td>
+                    <td className={`px-4 py-3 ${variance !== null && variance < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                      {variance !== null ? variance : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{count.lines?.length ?? 0}</td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

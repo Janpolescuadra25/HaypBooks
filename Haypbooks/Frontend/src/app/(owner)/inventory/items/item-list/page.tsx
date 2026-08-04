@@ -102,7 +102,7 @@ export default function ItemListPage() {
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Search by name or SKU..."
-            className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2.5 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
           />
         </div>
 

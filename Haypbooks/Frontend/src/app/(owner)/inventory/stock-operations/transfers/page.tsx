@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { format } from 'date-fns'
 import { RefreshCw, ArrowLeftRight } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -82,50 +83,50 @@ export default function TransfersPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        {transactions.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-slate-400">No stock transfers found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Transaction #</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Type</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Reference</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Date</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Lines</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {transactions.map((tx) => {
-                  const totalValue = tx.lines?.reduce((sum: number, l: any) => sum + (Number(l.qty || 0) * Number(l.unitCost || 0)), 0) ?? 0
-                  return (
-                    <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 text-slate-700">{tx.transactionNumber ?? '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${TYPE_STYLES[tx.type] ?? 'bg-slate-100 text-slate-600'}`}>
-                          {tx.type ?? '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">{tx.reference ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-700">{new Date(tx.createdAt).toLocaleDateString()}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${POSTING_STYLES[tx.postingStatus] ?? 'bg-slate-100 text-slate-600'}`}>
-                          {tx.postingStatus ?? '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">{tx.lines?.length ?? 0}</td>
-                      <td className="px-4 py-3 text-slate-900">{formatCurrency(totalValue, currency)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Transaction #</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Type</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Reference</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Date</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Lines</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {transactions.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No stock transfers found.</td>
+              </tr>
+            ) : (
+              transactions.map((tx) => {
+                const totalValue = tx.lines?.reduce((sum: number, l: any) => sum + (Number(l.qty || 0) * Number(l.unitCost || 0)), 0) ?? 0
+                return (
+                  <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 text-slate-700">{tx.transactionNumber ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${TYPE_STYLES[tx.type] ?? 'bg-slate-100 text-slate-600'}`}>
+                        {tx.type ?? '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{tx.reference ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{format(new Date(tx.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${POSTING_STYLES[tx.postingStatus] ?? 'bg-slate-100 text-slate-600'}`}>
+                        {tx.postingStatus ?? '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{tx.lines?.length ?? 0}</td>
+                    <td className="px-4 py-3 text-slate-900">{formatCurrency(totalValue, currency)}</td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

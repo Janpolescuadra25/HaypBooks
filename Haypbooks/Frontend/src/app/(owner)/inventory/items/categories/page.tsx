@@ -73,33 +73,33 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {categories.length === 0 ? (
-        <div className="px-4 py-12 text-center text-sm text-slate-400">No categories found. Categories are derived from items.</div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="px-4 py-4 border-b border-slate-100">
-            <p className="text-sm text-slate-500">{categories.length} categories total</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Category Name</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Items</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {categories.map((cat) => (
-                  <tr key={cat.name} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{cat.name}</td>
-                    <td className="px-4 py-3 text-slate-700">{cat.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="px-4 py-4 border-b border-slate-100">
+          <p className="text-sm text-slate-500">{categories.length} categories total</p>
         </div>
-      )}
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Category Name</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Items</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {categories.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="px-4 py-12 text-center text-sm text-slate-400">No categories found. Categories are derived from items.</td>
+              </tr>
+            ) : (
+              categories.map((cat) => (
+                <tr key={cat.name} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-slate-900">{cat.name}</td>
+                  <td className="px-4 py-3 text-slate-700">{cat.count}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

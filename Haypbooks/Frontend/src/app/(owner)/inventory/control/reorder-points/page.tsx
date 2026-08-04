@@ -88,55 +88,55 @@ export default function ReorderPointsPage() {
         </div>
       )}
 
-      <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white">
-        {rules.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-slate-400">No reorder rules found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Item</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Warehouse</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Reorder Point</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Safety Stock</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Reorder Qty</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Max Stock</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Lead Time</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider">Active</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rules.map((rule) => {
-                  const item = itemMap.get(rule.itemId)
-                  const itemLabel = item ? `${item.name}${item.sku ? ` (${item.sku})` : ''}` : '—'
-                  const warehouseLabel = rule.warehouseId ? warehouseMap.get(rule.warehouseId) ?? '—' : 'All'
-                  const reorderPoint = Number(rule.reorderPoint)
-                  const safetyStockLevel = Number(rule.safetyStockLevel)
-                  const reorderQty = Number(rule.reorderQty)
-                  const maxStockLevel = rule.maxStockLevel ? Number(rule.maxStockLevel) : null
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Item</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Warehouse</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Reorder Point</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Safety Stock</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Reorder Qty</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Max Stock</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Lead Time</th>
+              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Active</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rules.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">No reorder rules found.</td>
+              </tr>
+            ) : (
+              rules.map((rule) => {
+                const item = itemMap.get(rule.itemId)
+                const itemLabel = item ? `${item.name}${item.sku ? ` (${item.sku})` : ''}` : '—'
+                const warehouseLabel = rule.warehouseId ? warehouseMap.get(rule.warehouseId) ?? '—' : 'All'
+                const reorderPoint = Number(rule.reorderPoint)
+                const safetyStockLevel = Number(rule.safetyStockLevel)
+                const reorderQty = Number(rule.reorderQty)
+                const maxStockLevel = rule.maxStockLevel ? Number(rule.maxStockLevel) : null
 
-                  return (
-                    <tr key={rule.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-slate-900">{itemLabel}</td>
-                      <td className="px-4 py-3 text-slate-700">{warehouseLabel}</td>
-                      <td className="px-4 py-3 text-slate-700">{reorderPoint}</td>
-                      <td className="px-4 py-3 text-slate-700">{safetyStockLevel}</td>
-                      <td className="px-4 py-3 text-slate-700">{reorderQty}</td>
-                      <td className="px-4 py-3 text-slate-700">{maxStockLevel !== null ? maxStockLevel : '—'}</td>
-                      <td className="px-4 py-3 text-slate-700">{rule.leadTimeDays ? `${rule.leadTimeDays} days` : '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${rule.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                          {rule.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                return (
+                  <tr key={rule.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-900">{itemLabel}</td>
+                    <td className="px-4 py-3 text-slate-700">{warehouseLabel}</td>
+                    <td className="px-4 py-3 text-slate-700">{reorderPoint}</td>
+                    <td className="px-4 py-3 text-slate-700">{safetyStockLevel}</td>
+                    <td className="px-4 py-3 text-slate-700">{reorderQty}</td>
+                    <td className="px-4 py-3 text-slate-700">{maxStockLevel !== null ? maxStockLevel : '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{rule.leadTimeDays ? `${rule.leadTimeDays} days` : '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${rule.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                        {rule.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

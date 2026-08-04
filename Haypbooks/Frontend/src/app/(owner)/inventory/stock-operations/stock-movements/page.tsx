@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { format } from 'date-fns'
 import { RefreshCw, Search, ArrowLeftRight } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -98,7 +99,7 @@ export default function StockMovementsPage() {
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Search by transaction # or reference..."
-            className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2.5 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
           />
         </div>
 
@@ -154,7 +155,7 @@ export default function StockMovementsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-700">{tx.reference ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-700">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-slate-700">{format(new Date(tx.createdAt), 'MMM d, yyyy')}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${POSTING_STYLES[tx.postingStatus] ?? 'bg-slate-100 text-slate-600'}`}>
                           {tx.postingStatus ?? '—'}
