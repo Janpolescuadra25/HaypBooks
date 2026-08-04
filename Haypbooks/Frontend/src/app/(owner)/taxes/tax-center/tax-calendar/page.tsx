@@ -3,12 +3,13 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { format } from 'date-fns'
 import { RefreshCw, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { taxService } from '@/services/tax.service'
 
 function formatDueDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 function getStatus(dueDate: string) {
@@ -95,9 +96,9 @@ export default function TaxCalendarPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Tax Calendar</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Filing deadlines and tax obligations by year</p>
+        <div className="flex items-center gap-3">
+          <CalendarDays className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Tax Calendar</h2>
         </div>
         <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2">
           <button
@@ -129,8 +130,8 @@ export default function TaxCalendarPage() {
           <h2 className="text-sm font-semibold text-slate-800">Deadlines</h2>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+          <div className="flex h-64 items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-emerald-600" />
           </div>
         ) : !deadlines.length ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-400">
@@ -139,17 +140,17 @@ export default function TaxCalendarPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Form Type</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Description</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Days Remaining</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                <tr>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Form Type</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Description</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Due Date</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Days Remaining</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {deadlines.map((deadline: any) => {
                   const status = getStatus(deadline.dueDate)
                   return (

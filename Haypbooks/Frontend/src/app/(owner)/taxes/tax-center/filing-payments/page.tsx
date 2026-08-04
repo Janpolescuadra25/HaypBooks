@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { format } from 'date-fns'
 import { RefreshCw, FileText, Landmark } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -13,9 +14,13 @@ function formatPeriod(start: string, end: string) {
   const startDate = new Date(start)
   const endDate = new Date(end)
   const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()
-  const startLabel = startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const endLabel = endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: sameMonth ? undefined : 'numeric' })
-  return `${startLabel} – ${endLabel}, ${endDate.getFullYear()}`
+  const startLabel = format(startDate, 'MMM d')
+  const endLabel = sameMonth ? format(endDate, 'MMM d') : format(endDate, 'MMM d, yyyy')
+  return `${startLabel} – ${endLabel}`
+}
+
+function formatDate(date: string) {
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 function remittanceBadge(type: string) {
@@ -25,7 +30,7 @@ function remittanceBadge(type: string) {
     case 'PHILHEALTH':
       return 'bg-emerald-100 text-emerald-700'
     case 'PAGIBIG':
-      return 'bg-purple-100 text-purple-700'
+      return 'bg-slate-100 text-slate-700'
     case 'BIR':
       return 'bg-rose-100 text-rose-700'
     default:
@@ -85,17 +90,16 @@ export default function FilingPaymentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Filing & Payments</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage tax filing batches and government remittances</p>
+        <div className="flex items-center gap-3">
+          <FileText className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Filing & Payments</h2>
         </div>
         <button
           onClick={fetchData}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-xl bg-slate-900 p-2.5 text-white"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
         </button>
       </div>
 
@@ -127,24 +131,24 @@ export default function FilingPaymentsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-100">
-                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Period</th>
-                        <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Tax</th>
-                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                        <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Lines</th>
+                      <tr>
+                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Tax</th>
+                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Lines</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100">
                       {batch.vatReturns.map((item: any) => (
-                        <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                          <td className="px-5 py-3 text-slate-700">{formatPeriod(item.periodStart, item.periodEnd)}</td>
-                          <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.totalTax), currency)}</td>
-                          <td className="px-5 py-3">
+                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-3 text-slate-700">{formatPeriod(item.periodStart, item.periodEnd)}</td>
+                          <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.totalTax), currency)}</td>
+                          <td className="px-4 py-3">
                             <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">{item.status}</span>
                           </td>
-                          <td className="px-5 py-3 text-right text-slate-700">{item.lines?.length ?? 0}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">{item.lines?.length ?? 0}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -164,18 +168,18 @@ export default function FilingPaymentsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-100">
-                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Certificate No.</th>
-                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Period</th>
-                        <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Gross Amount</th>
-                        <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tax Withheld</th>
-                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                        <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Issued</th>
+                      <tr>
+                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Certificate No.</th>
+                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Gross Amount</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Tax Withheld</th>
+                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Issued</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100">
                       {batch.form2307s.map((item: any) => (
                         <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                           <td className="px-5 py-3">
@@ -187,7 +191,7 @@ export default function FilingPaymentsPage() {
                           <td className="px-5 py-3">
                             <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.status === 'ISSUED' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{item.status}</span>
                           </td>
-                          <td className="px-5 py-3 text-slate-700">{item.issuedAt ? new Date(item.issuedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</td>
+                          <td className="px-5 py-3 text-slate-700">{item.issuedAt ? format(new Date(item.issuedAt), 'MMM d, yyyy') : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -214,45 +218,45 @@ export default function FilingPaymentsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Type</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Period</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Employee Share</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Employer Share</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Penalty</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Reference</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Paid</th>
+                <tr>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Type</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Due Date</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Employee Share</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Employer Share</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Total</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Penalty</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Reference</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Paid</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {remittances.map((item) => {
                   const dueDate = new Date(item.dueDate)
                   const isPastDue = !item.paidAt && dueDate.getTime() < new Date().getTime()
                   return (
-                    <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3">
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${remittanceBadge(item.remittanceType)}`}>
                           {item.remittanceType}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-700">{item.period}</td>
-                      <td className={`px-5 py-3 ${isPastDue ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>{new Date(item.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                      <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.employeeShare), currency)}</td>
-                      <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.employerShare), currency)}</td>
-                      <td className="px-5 py-3 text-right text-slate-900 font-semibold">{formatCurrency(Number(item.totalAmount), currency)}</td>
-                      <td className="px-5 py-3 text-right text-slate-700">{Number(item.penaltyAmount) > 0 ? <span className="text-rose-600">{formatCurrency(Number(item.penaltyAmount), currency)}</span> : '—'}</td>
-                      <td className="px-5 py-3">
+                      <td className="px-4 py-3 text-slate-700">{item.period}</td>
+                      <td className={`px-4 py-3 ${isPastDue ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>{formatDate(item.dueDate)}</td>
+                      <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.employeeShare), currency)}</td>
+                      <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.employerShare), currency)}</td>
+                      <td className="px-4 py-3 text-right text-slate-900 font-semibold">{formatCurrency(Number(item.totalAmount), currency)}</td>
+                      <td className="px-4 py-3 text-right text-slate-700">{Number(item.penaltyAmount) > 0 ? <span className="text-rose-600">{formatCurrency(Number(item.penaltyAmount), currency)}</span> : '—'}</td>
+                      <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusBadge(item.status)}`}>
                           {item.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-700">{item.referenceNo ?? '—'}</td>
-                      <td className="px-5 py-3 text-slate-700">{item.paidAt ? new Date(item.paidAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">{item.referenceNo ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">{item.paidAt ? formatDate(item.paidAt) : '—'}</td>
                     </tr>
                   )
                 })}

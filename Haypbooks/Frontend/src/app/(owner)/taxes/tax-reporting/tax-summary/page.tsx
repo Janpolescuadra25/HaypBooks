@@ -3,11 +3,16 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, ArrowLeftRight, Shield } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, ArrowLeftRight, Shield, FileText } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { taxService } from '@/services/tax.service'
 import { formatCurrency } from '@/lib/format'
+import { format } from 'date-fns'
+
+function formatDateTime(date: string) {
+  return format(new Date(date), 'MMM d, yyyy h:mm a')
+}
 
 export default function TaxSummaryPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
@@ -55,9 +60,9 @@ export default function TaxSummaryPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Tax Summary Report</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Detailed breakdown of VAT and withholding tax for the selected period</p>
+        <div className="flex items-center gap-3">
+          <FileText className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Tax Summary Report</h2>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
@@ -139,9 +144,9 @@ export default function TaxSummaryPage() {
           <h2 className="text-sm font-semibold text-slate-800">Summary Breakdown</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <tbody>
-              <tr className="border-b border-slate-100">
+          <table className="w-full">
+            <tbody className="divide-y divide-slate-100">
+              <tr>
                 <td className="px-5 py-3 text-slate-600">Output VAT Collected</td>
                 <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(summary?.outputVat ?? 0, currency)}</td>
               </tr>
@@ -169,7 +174,7 @@ export default function TaxSummaryPage() {
             <tfoot>
               <tr>
                 <td className="px-5 py-3 text-slate-600 font-semibold">Report generated at</td>
-                <td className="px-5 py-3 text-right text-slate-500">{summary?.generatedAt ? new Date(summary.generatedAt).toLocaleString() : '—'}</td>
+                <td className="px-5 py-3 text-right text-slate-500">{summary?.generatedAt ? formatDateTime(summary.generatedAt) : '—'}</td>
               </tr>
             </tfoot>
           </table>

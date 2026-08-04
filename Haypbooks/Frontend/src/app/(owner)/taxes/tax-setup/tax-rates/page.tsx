@@ -3,11 +3,16 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { format } from 'date-fns'
 import { RefreshCw, Plus, Percent, Tag, X } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { taxService, type TaxRate, type TaxCode } from '@/services/tax.service'
 
 const TAX_TYPE_OPTIONS = ['VAT', 'GST', 'SALES_TAX', 'WITHHOLDING', 'EXCISE', 'CUSTOM']
+
+function formatDate(date: string) {
+  return format(new Date(date), 'MMM d, yyyy')
+}
 
 type Tab = 'rates' | 'codes'
 
@@ -112,9 +117,9 @@ export default function TaxRatesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Tax Rates & Codes</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage tax rates and tax codes for your company</p>
+        <div className="flex items-center gap-3">
+          <Percent className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Tax Rates & Codes</h2>
         </div>
         <button
           onClick={fetchData}
@@ -174,7 +179,7 @@ export default function TaxRatesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Name</th>
@@ -184,7 +189,7 @@ export default function TaxRatesPage() {
                     <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Effective To</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {rates.map((rate) => (
                     <tr key={rate.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                       <td className="px-5 py-3 font-medium text-slate-800">{rate.name}</td>
@@ -194,8 +199,8 @@ export default function TaxRatesPage() {
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{rate.taxType}</span>
                         ) : '—'}
                       </td>
-                      <td className="px-5 py-3 text-slate-600">{rate.effectiveFrom ? new Date(rate.effectiveFrom).toISOString().slice(0, 10) : '—'}</td>
-                      <td className="px-5 py-3 text-slate-600">{rate.effectiveTo ? new Date(rate.effectiveTo).toISOString().slice(0, 10) : '—'}</td>
+                      <td className="px-5 py-3 text-slate-600">{rate.effectiveFrom ? formatDate(rate.effectiveFrom) : '—'}</td>
+                      <td className="px-5 py-3 text-slate-600">{rate.effectiveTo ? formatDate(rate.effectiveTo) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -223,7 +228,7 @@ export default function TaxRatesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Code</th>
@@ -232,7 +237,7 @@ export default function TaxRatesPage() {
                     <th className="text-right px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Rates</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {codes.map((code) => (
                     <tr key={code.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                       <td className="px-5 py-3 font-medium text-slate-800">{code.code}</td>

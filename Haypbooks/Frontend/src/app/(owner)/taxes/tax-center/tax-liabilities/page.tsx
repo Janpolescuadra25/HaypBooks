@@ -3,7 +3,8 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { RefreshCw, FileCheck } from 'lucide-react'
+import { format } from 'date-fns'
+import { RefreshCw, FileCheck, Archive } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { taxService } from '@/services/tax.service'
 
@@ -19,15 +20,15 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 function formatPeriod(start: string, end: string) {
   const startDate = new Date(start)
   const endDate = new Date(end)
   const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()
-  const startLabel = startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const endLabel = endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: sameMonth ? undefined : 'numeric' })
+  const startLabel = format(startDate, 'MMM d')
+  const endLabel = sameMonth ? format(endDate, 'MMM d') : format(endDate, 'MMM d, yyyy')
   return `${startLabel} – ${endLabel}, ${endDate.getFullYear()}`
 }
 
@@ -69,9 +70,9 @@ export default function TaxLiabilitiesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Tax Liabilities</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track filing obligations and due dates across all tax authorities</p>
+        <div className="flex items-center gap-3">
+          <Archive className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Tax Liabilities</h2>
         </div>
         <div className="flex flex-wrap gap-2">
           {STATUS_OPTIONS.map((option) => {
@@ -118,19 +119,19 @@ export default function TaxLiabilitiesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Form Type</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Authority</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Period</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Filed</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Paid</th>
+                <tr>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Form Type</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Authority</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Due Date</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Filed</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Paid</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {liabilities.map((liability) => {
                   const due = new Date(liability.dueDate)
                   const isOverdue = liability.status === 'OVERDUE' && due.getTime() < today.getTime()

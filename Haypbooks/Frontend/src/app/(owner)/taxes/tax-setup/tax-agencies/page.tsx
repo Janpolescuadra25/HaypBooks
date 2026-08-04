@@ -3,13 +3,14 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { format } from 'date-fns'
 import { RefreshCw, Building2, MapPin } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { taxService } from '@/services/tax.service'
 
 const JURISDICTION_TYPE_STYLES: Record<string, string> = {
   FEDERAL: 'bg-blue-100 text-blue-700',
-  STATE: 'bg-purple-100 text-purple-700',
+  STATE: 'bg-slate-100 text-slate-600',
   LOCAL: 'bg-amber-100 text-amber-700',
   MUNICIPAL: 'bg-emerald-100 text-emerald-700',
   SPECIAL: 'bg-rose-100 text-rose-700',
@@ -23,7 +24,7 @@ const TAB_OPTIONS = [
 type Tab = (typeof TAB_OPTIONS)[number]['value']
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 export default function TaxAgenciesPage() {
@@ -84,9 +85,9 @@ export default function TaxAgenciesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Tax Agencies & Jurisdictions</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage tax authorities and regional tax jurisdictions</p>
+        <div className="flex items-center gap-3">
+          <Building2 className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Tax Agencies & Jurisdictions</h2>
         </div>
         <button
           onClick={fetchData}
@@ -129,26 +130,30 @@ export default function TaxAgenciesPage() {
           <div className="px-5 py-4 border-b border-slate-100">
             <h2 className="text-sm font-semibold text-slate-800">Agencies</h2>
           </div>
-          {agencyEmpty ? (
-            <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-              <Building2 className="h-8 w-8 mb-2 text-slate-300" />
-              <p className="text-sm">No tax agencies found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Name</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Code</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Type</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Filing Methods</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Upcoming Obligations</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Contact</th>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Name</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Code</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Type</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Filing Methods</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Upcoming Obligations</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Contact</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {agencies.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-400">
+                      <div className="flex flex-col items-center justify-center">
+                        <Building2 className="h-8 w-8 mb-2 text-slate-300" />
+                        <p className="text-sm">No tax agencies found</p>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {agencies.map((agency) => (
+                ) : (
+                  agencies.map((agency) => (
                     <tr key={agency.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                       <td className="px-5 py-3 font-medium text-slate-800">{agency.name}</td>
                       <td className="px-5 py-3">
@@ -176,11 +181,11 @@ export default function TaxAgenciesPage() {
                       </td>
                       <td className="px-5 py-3 text-slate-700">{agency.contactInfo?.email ?? '—'}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -194,7 +199,7 @@ export default function TaxAgenciesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Name</th>
@@ -204,31 +209,42 @@ export default function TaxAgenciesPage() {
                     <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tax Rates</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {jurisdictions.map((jurisdiction) => (
-                    <tr key={jurisdiction.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3 font-medium text-slate-800">{jurisdiction.name}</td>
-                      <td className="px-5 py-3 text-slate-700">{jurisdiction.region ?? '—'}</td>
-                      <td className="px-5 py-3">
-                        <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">
-                          {jurisdiction.code ?? '—'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${jurisdiction.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
-                          {jurisdiction.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-700">
-                        <div className="space-y-1">
-                          <span>{jurisdiction.taxRates?.length ?? 0}</span>
-                          {jurisdiction.taxRates?.length ? (
-                            <span className="text-xs text-slate-500">{jurisdictionRatesText(jurisdiction.taxRates)}</span>
-                          ) : null}
+                <tbody className="divide-y divide-slate-100">
+                  {jurisdictions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-12 text-center text-sm text-slate-400">
+                        <div className="flex flex-col items-center justify-center">
+                          <MapPin className="h-8 w-8 mb-2 text-slate-300" />
+                          <p className="text-sm">No jurisdictions found</p>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    jurisdictions.map((jurisdiction) => (
+                      <tr key={jurisdiction.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                        <td className="px-5 py-3 font-medium text-slate-800">{jurisdiction.name}</td>
+                        <td className="px-5 py-3 text-slate-700">{jurisdiction.region ?? '—'}</td>
+                        <td className="px-5 py-3">
+                          <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">
+                            {jurisdiction.code ?? '—'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${jurisdiction.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                            {jurisdiction.active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-slate-700">
+                          <div className="space-y-1">
+                            <span>{jurisdiction.taxRates?.length ?? 0}</span>
+                            {jurisdiction.taxRates?.length ? (
+                              <span className="text-xs text-slate-500">{jurisdictionRatesText(jurisdiction.taxRates)}</span>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { format } from 'date-fns'
 import { RefreshCw, TrendingUp, TrendingDown, Wallet, FileText } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -17,15 +18,15 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 function formatPeriod(start: string, end: string) {
   const startDate = new Date(start)
   const endDate = new Date(end)
   const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()
-  const startLabel = startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const endLabel = endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: sameMonth ? undefined : 'numeric' })
+  const startLabel = format(startDate, 'MMM d')
+  const endLabel = sameMonth ? format(endDate, 'MMM d') : format(endDate, 'MMM d, yyyy')
   return `${startLabel} – ${endLabel}, ${endDate.getFullYear()}`
 }
 
@@ -93,9 +94,9 @@ export default function VatPayablePage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">VAT Payable</h1>
-          <p className="text-sm text-slate-500 mt-0.5">VAT liability summary and return filing status</p>
+        <div className="flex items-center gap-3">
+          <Wallet className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">VAT Payable</h2>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
@@ -162,9 +163,9 @@ export default function VatPayablePage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100">
+                <tr>
                   <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Form Type</th>
                   <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Authority</th>
                   <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Period</th>
@@ -174,7 +175,7 @@ export default function VatPayablePage() {
                   <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Filed Date</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {returns.map((item) => {
                   const deadline = item.filingDeadline ? new Date(item.filingDeadline) : null
                   const pastDue = deadline && deadline.getTime() < new Date().getTime() && item.status !== 'FILED'
