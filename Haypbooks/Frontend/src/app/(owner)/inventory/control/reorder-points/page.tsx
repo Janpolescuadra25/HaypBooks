@@ -89,7 +89,7 @@ export default function ReorderPointsPage() {
       )}
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <table className="min-w-full text-sm">
+        <table className="w-full">
           <thead>
             <tr>
               <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Item</th>

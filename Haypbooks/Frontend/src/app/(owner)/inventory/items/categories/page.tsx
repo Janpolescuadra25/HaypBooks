@@ -77,7 +77,7 @@ export default function CategoriesPage() {
         <div className="px-4 py-4 border-b border-slate-100">
           <p className="text-sm text-slate-500">{categories.length} categories total</p>
         </div>
-        <table className="w-full text-sm">
+        <table className="w-full">
           <thead>
             <tr>
               <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Category Name</th>

@@ -84,7 +84,7 @@ export default function AdjustmentsPage() {
       )}
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <table className="w-full text-sm">
+        <table className="w-full">
           <thead>
             <tr>
               <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Transaction #</th>

@@ -145,49 +145,49 @@ export default function ItemListPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        {filteredItems.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-slate-400">No inventory items found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">SKU</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Item Name</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Type</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Category</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Sales Price</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Purchase Cost</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Stock on Hand</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">SKU</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Item Name</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Type</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Category</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Sales Price</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Purchase Cost</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Stock on Hand</th>
+              <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredItems.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">No inventory items found.</td>
+              </tr>
+            ) : (
+              filteredItems.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 text-slate-700">{item.sku ?? '—'}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${TYPE_STYLES[item.type] ?? 'bg-slate-100 text-slate-600'}`}>
+                      {item.type ?? '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{item.category ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-900">{item.salesPrice ? formatCurrency(Number(item.salesPrice), currency) : '—'}</td>
+                  <td className="px-4 py-3 text-slate-900">{item.purchaseCost ? formatCurrency(Number(item.purchaseCost), currency) : '—'}</td>
+                  <td className="px-4 py-3 text-slate-700">{stockOnHand(item)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[item.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                      {item.status ?? '—'}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 text-slate-700">{item.sku ?? '—'}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${TYPE_STYLES[item.type] ?? 'bg-slate-100 text-slate-600'}`}>
-                        {item.type ?? '—'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{item.category ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-900">{item.salesPrice ? formatCurrency(Number(item.salesPrice), currency) : '—'}</td>
-                    <td className="px-4 py-3 text-slate-900">{item.purchaseCost ? formatCurrency(Number(item.purchaseCost), currency) : '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{stockOnHand(item)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[item.status] ?? 'bg-slate-100 text-slate-600'}`}>
-                        {item.status ?? '—'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
