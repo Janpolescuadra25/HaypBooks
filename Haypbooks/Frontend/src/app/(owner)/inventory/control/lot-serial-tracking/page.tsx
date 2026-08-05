@@ -87,9 +87,20 @@ export default function LotSerialTrackingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <QrCode className="w-6 h-6 text-emerald-600" />
-        <h2 className="text-lg font-semibold text-slate-800">Lot / Serial Tracking</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <QrCode className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Lot / Serial Tracking</h2>
+        </div>
+        <button
+          type="button"
+          title="Refresh"
+          onClick={() => fetchData()}
+          disabled={loading}
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-4">
@@ -100,7 +111,7 @@ export default function LotSerialTrackingPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by item name, lot or serial number..."
-            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2.5 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
           />
         </div>
 
@@ -112,7 +123,7 @@ export default function LotSerialTrackingPage() {
                 key={option}
                 type="button"
                 onClick={() => setTypeFilter(option as 'ALL' | 'LOT' | 'SERIAL')}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
                 {option}
               </button>
@@ -169,7 +180,7 @@ export default function LotSerialTrackingPage() {
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3 text-sm text-slate-700">{itemMap.get(item.itemId) || '—'}</td>
                     <td className="px-4 py-3 text-sm text-slate-700">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${item.type === 'LOT' ? 'bg-blue-50 text-blue-700' : item.type === 'SERIAL' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.type === 'LOT' ? 'bg-slate-100 text-slate-700' : item.type === 'SERIAL' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'}`}>
                         {item.type || '—'}
                       </span>
                     </td>
@@ -178,8 +189,8 @@ export default function LotSerialTrackingPage() {
                     <td className="px-4 py-3 text-sm text-slate-700">{quantityOnHand.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm text-slate-700">{item.warehouseId ? warehouseMap.get(item.warehouseId) || '—' : '—'}</td>
                     <td className={`px-4 py-3 text-sm ${expiryClass}`}>{expiryText}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      <span className="rounded-full px-2 py-0.5 text-[11px] font-medium bg-slate-100 text-slate-600">
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      <span className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold bg-slate-100 text-slate-700">
                         {item.status || '—'}
                       </span>
                     </td>

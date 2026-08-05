@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { RefreshCw, PackageOpen, LayoutGrid } from 'lucide-react'
+import { RefreshCw, LayoutGrid } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { inventoryService } from '@/services/inventory.service'
 
@@ -52,21 +52,29 @@ export default function BinLocationsPage() {
     return bins.filter((b: any) => b.warehouseId === activeWarehouse)
   }, [bins, activeWarehouse])
 
+  if (companyLoading || loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Bin Locations</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage bin locations within warehouses</p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <LayoutGrid className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Bin Locations</h2>
         </div>
         <button
           type="button"
+          title="Refresh"
           onClick={fetchData}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
-          <LayoutGrid className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
@@ -92,44 +100,39 @@ export default function BinLocationsPage() {
         </div>
       )}
 
-      <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : !filteredBins.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <LayoutGrid className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No bin locations found.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Name</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Code</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Warehouse</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider">Status</th>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Name</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Code</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Warehouse</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredBins.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-12 text-center text-sm text-slate-400">
+                  No bin locations found.
+                </td>
+              </tr>
+            ) : (
+              filteredBins.map((bin) => (
+                <tr key={bin.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900">{bin.name}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{bin.code ?? '—'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{warehouseMap.get(bin.warehouseId) ?? '—'}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${bin.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                      {bin.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredBins.map((bin) => (
-                  <tr key={bin.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-4 font-medium text-slate-900">{bin.name}</td>
-                    <td className="px-5 py-4 text-slate-700">{bin.code ?? '—'}</td>
-                    <td className="px-5 py-4 text-slate-700">{warehouseMap.get(bin.warehouseId) ?? '—'}</td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${bin.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                        {bin.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

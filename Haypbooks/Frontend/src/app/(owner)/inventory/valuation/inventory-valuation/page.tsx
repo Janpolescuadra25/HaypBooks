@@ -76,9 +76,20 @@ export default function InventoryValuationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <BarChart3 className="w-6 h-6 text-emerald-600" />
-        <h2 className="text-lg font-semibold text-slate-800">Inventory Valuation</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Inventory Valuation</h2>
+        </div>
+        <button
+          type="button"
+          title="Refresh"
+          onClick={() => fetchSummary()}
+          disabled={loading}
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -107,7 +118,7 @@ export default function InventoryValuationPage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search by item name or SKU..."
-          className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+          className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2.5 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
         />
       </div>
 
