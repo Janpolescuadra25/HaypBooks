@@ -139,19 +139,7 @@ export default function BudgetListPage() {
     if (budgets.length === 0) {
       return (
         <tr>
-          <td colSpan={7} className="px-4 py-16 text-center">
-            <div className="mx-auto flex max-w-md flex-col items-center gap-3 text-slate-500">
-              <FileText size={36} className="text-slate-300" />
-              <p className="text-lg font-semibold text-slate-900">No budgets yet</p>
-              <p className="text-sm">Create your first budget plan to track spending and forecast future periods.</p>
-              <button
-                onClick={handleNewBudget}
-                className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-              >
-                New Budget
-              </button>
-            </div>
-          </td>
+          <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No items found.</td>
         </tr>
       )
     }
@@ -204,35 +192,54 @@ export default function BudgetListPage() {
     })
   }
 
+  if (companyLoading || loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Budgets</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage and track your budget plans</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <FileText className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Budgets</h2>
         </div>
-        <button
-          onClick={handleNewBudget}
-          className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
-        >
-          <Plus size={16} className="mr-2" /> New Budget
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={fetchBudgets}
+            disabled={loading}
+            title="Refresh"
+            className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleNewBudget}
+            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+          >
+            <Plus size={16} className="mr-2" /> New Budget
+          </button>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-50/80">
-            <tr className="sticky top-0 z-10 text-[11px] font-medium uppercase tracking-wider text-slate-500">
-              <th className="px-4 py-3">Budget Name</th>
-              <th className="px-4 py-3">Scenario</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Fiscal Year</th>
-              <th className="px-4 py-3">Total Amount</th>
-              <th className="px-4 py-3">Lines</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Budget Name</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Scenario</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Fiscal Year</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total Amount</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Lines</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {renderBody()}
           </tbody>
         </table>

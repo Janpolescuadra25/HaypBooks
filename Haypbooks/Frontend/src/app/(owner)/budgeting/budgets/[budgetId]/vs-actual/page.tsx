@@ -94,10 +94,10 @@ export default function BudgetVsActualPage() {
     })
   }, [data])
 
-  if (companyLoading) {
+  if (companyLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+      <div className="flex h-64 items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     )
   }
@@ -112,23 +112,18 @@ export default function BudgetVsActualPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-emerald-600" />
-              <h1 className="text-xl font-semibold text-slate-900">Budget vs Actual</h1>
-            </div>
-            {data?.budget && (
-              <p className="text-sm text-slate-500 mt-0.5">{data.budget.name} — FY {data.budget.fiscalYear}</p>
-            )}
+          <div className="flex items-center gap-3">
+            <BarChart3 className="w-6 h-6 text-emerald-600" />
+            <h2 className="text-lg font-semibold text-slate-800">Budget vs Actual</h2>
           </div>
         </div>
         <button
           onClick={fetchVsActual}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
@@ -214,11 +209,7 @@ export default function BudgetVsActualPage() {
         <div className="px-5 py-4 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-800">Line Item Variance</h2>
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-400">
             <p className="text-sm mb-2">{error}</p>
             <button onClick={fetchVsActual} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">Retry</button>
@@ -230,67 +221,65 @@ export default function BudgetVsActualPage() {
             <p className="text-xs mt-1 text-slate-400">Budget lines with matching actual transactions will appear here</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Account</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Month</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Budgeted</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Actual</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Variance</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Variance %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((row, idx) => {
-                  const variance = Number(row.actual) - Number(row.budgeted)
-                  const budgetedNum = Number(row.budgeted)
-                  const variancePct = budgetedNum !== 0 ? (variance / budgetedNum) * 100 : 0
-                  return (
-                    <tr key={`${row.accountId}-${row.month ?? 'annual'}-${idx}`} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3">
-                        <div>
-                          <span className="font-medium text-slate-800">{row.accountName || '—'}</span>
-                          {row.accountCode && <span className="text-xs text-slate-400 ml-2">{row.accountCode}</span>}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">{formatMonth(row.month)}</td>
-                      <td className="px-5 py-3 text-right text-slate-700">{formatCurrency(Number(row.budgeted), currency)}</td>
-                      <td className="px-5 py-3 text-right text-slate-700">{formatCurrency(Number(row.actual), currency)}</td>
-                      <td className={`px-5 py-3 text-right font-medium ${varianceColor(variance)}`}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          <VarianceIcon value={variance} />
-                          {formatCurrency(Math.abs(variance), currency)}
-                        </div>
-                      </td>
-                      <td className={`px-5 py-3 text-right font-medium ${varianceColor(variance)}`}>
-                        {variancePct !== 0 ? `${variancePct > 0 ? '+' : ''}${variancePct.toFixed(1)}%` : '—'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              {sortedRows.length > 0 && (
-                <tfoot>
-                  <tr className="border-t-2 border-slate-200 bg-slate-50/50">
-                    <td className="px-5 py-3 font-semibold text-slate-800" colSpan={2}>Total</td>
-                    <td className="px-5 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalBudgeted, currency)}</td>
-                    <td className="px-5 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalActual, currency)}</td>
-                    <td className={`px-5 py-3 text-right font-semibold ${varianceColor(kpis.totalVariance)}`}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <VarianceIcon value={kpis.totalVariance} />
-                        {formatCurrency(Math.abs(kpis.totalVariance), currency)}
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Account</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Month</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Budgeted</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Actual</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Variance</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Variance %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {sortedRows.map((row, idx) => {
+                const variance = Number(row.actual) - Number(row.budgeted)
+                const budgetedNum = Number(row.budgeted)
+                const variancePct = budgetedNum !== 0 ? (variance / budgetedNum) * 100 : 0
+                return (
+                  <tr key={`${row.accountId}-${row.month ?? 'annual'}-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div>
+                        <span className="font-medium text-slate-800">{row.accountName || '—'}</span>
+                        {row.accountCode && <span className="text-xs text-slate-400 ml-2">{row.accountCode}</span>}
                       </div>
                     </td>
-                    <td className={`px-5 py-3 text-right font-semibold ${varianceColor(kpis.totalVariance)}`}>
-                      {kpis.totalBudgeted !== 0 ? `${kpis.totalVariance > 0 ? '+' : ''}${((kpis.totalVariance / kpis.totalBudgeted) * 100).toFixed(1)}%` : '—'}
+                    <td className="px-4 py-3 text-slate-600">{formatMonth(row.month)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{formatCurrency(Number(row.budgeted), currency)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{formatCurrency(Number(row.actual), currency)}</td>
+                    <td className={`px-4 py-3 text-right font-medium ${varianceColor(variance)}`}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <VarianceIcon value={variance} />
+                        {formatCurrency(Math.abs(variance), currency)}
+                      </div>
+                    </td>
+                    <td className={`px-4 py-3 text-right font-medium ${varianceColor(variance)}`}>
+                      {variancePct !== 0 ? `${variancePct > 0 ? '+' : ''}${variancePct.toFixed(1)}%` : '—'}
                     </td>
                   </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
+                )
+              })}
+            </tbody>
+            {sortedRows.length > 0 && (
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 bg-slate-50/50">
+                  <td className="px-4 py-3 font-semibold text-slate-800" colSpan={2}>Total</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalBudgeted, currency)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalActual, currency)}</td>
+                  <td className={`px-4 py-3 text-right font-semibold ${varianceColor(kpis.totalVariance)}`}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <VarianceIcon value={kpis.totalVariance} />
+                      {formatCurrency(Math.abs(kpis.totalVariance), currency)}
+                    </div>
+                  </td>
+                  <td className={`px-4 py-3 text-right font-semibold ${varianceColor(kpis.totalVariance)}`}>
+                    {kpis.totalBudgeted !== 0 ? `${kpis.totalVariance > 0 ? '+' : ''}${((kpis.totalVariance / kpis.totalBudgeted) * 100).toFixed(1)}%` : '—'}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
         )}
       </div>
     </div>

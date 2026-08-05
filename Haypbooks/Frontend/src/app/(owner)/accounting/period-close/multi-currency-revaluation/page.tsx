@@ -4,13 +4,14 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { RefreshCw, FileText, Globe, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { format } from 'date-fns'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 export default function MultiCurrencyRevaluationPage() {
@@ -70,41 +71,59 @@ export default function MultiCurrencyRevaluationPage() {
     }, 0)
   }, [fxEntries])
 
+  if (companyLoading || loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Multi-Currency Revaluation</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Review journal entries with foreign currency adjustments</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <FileText className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Multi-Currency Revaluation</h2>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium uppercase tracking-wide text-slate-500">From</label>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium uppercase tracking-wide text-slate-500">To</label>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-            />
-          </div>
-          <button
-            onClick={fetchRevaluation}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Filter
-          </button>
+        <button
+          type="button"
+          onClick={fetchRevaluation}
+          disabled={loading}
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">From</label>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+          />
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">To</label>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={fetchRevaluation}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Filter
+        </button>
       </div>
 
       {error && (
@@ -155,61 +174,51 @@ export default function MultiCurrencyRevaluationPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-800">Revaluation Entries</h2>
-        </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : !fxEntries.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <Globe className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No foreign currency entries found for the selected period</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Entry No.</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Date</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Description</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Currency</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Exchange Rate</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Debit</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Credit</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Lines</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedEntries.map((entry: any) => {
-                  const entryDebit = (entry.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.debit || 0), 0)
-                  const entryCredit = (entry.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.credit || 0), 0)
-                  return (
-                    <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3">
-                        <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">{entry.entryNumber}</span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">{formatDate(entry.date)}</td>
-                      <td className="px-5 py-3 font-medium text-slate-800 truncate max-w-[200px]">{entry.description}</td>
-                      <td className="px-5 py-3">
-                        <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold font-mono text-blue-700">{entry.currency}</span>
-                      </td>
-                      <td className="px-5 py-3 font-mono text-sm text-slate-700">{entry.exchangeRate ? Number(entry.exchangeRate).toFixed(4) : '—'}</td>
-                      <td className="px-5 py-3 font-medium text-slate-900">{formatCurrency(entryDebit, currency)}</td>
-                      <td className="px-5 py-3 font-medium text-slate-900">{formatCurrency(entryCredit, currency)}</td>
-                      <td className="px-5 py-3 text-slate-700">{(entry.lines ?? []).length} lines</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Entry No.</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Date</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Description</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Currency</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Exchange Rate</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total Debit</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total Credit</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Lines</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {sortedEntries.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">No items found.</td>
+              </tr>
+            ) : (
+              sortedEntries.map((entry: any) => {
+                const entryDebit = (entry.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.debit || 0), 0)
+                const entryCredit = (entry.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.credit || 0), 0)
+                return (
+                  <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">{entry.entryNumber}</span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{formatDate(entry.date)}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800 truncate max-w-[200px]">{entry.description}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold font-mono text-blue-700">{entry.currency}</span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-700">{entry.exchangeRate ? Number(entry.exchangeRate).toFixed(4) : '—'}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{formatCurrency(entryDebit, currency)}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{formatCurrency(entryCredit, currency)}</td>
+                    <td className="px-4 py-3 text-slate-700">{(entry.lines ?? []).length} lines</td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
         <div className="px-5 py-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500">
-          Generated at: {reval?.generatedAt ? new Date(reval.generatedAt).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' }) : '—'}
+          Generated at: {reval?.generatedAt ? format(new Date(reval.generatedAt), 'MMM d, yyyy') : '—'}
         </div>
       </div>
     </div>

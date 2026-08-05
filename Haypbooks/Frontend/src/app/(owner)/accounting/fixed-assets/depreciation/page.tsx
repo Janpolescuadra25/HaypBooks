@@ -103,21 +103,29 @@ export default function DepreciationPage() {
     fetchSchedule()
   }, [companyId, selectedAssetId, fetchSchedule])
 
+  if (companyLoading || loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Depreciation</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track depreciation schedules and run periodic entries</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Calculator className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Depreciation</h2>
         </div>
         <button
           type="button"
           onClick={fetchAssets}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
@@ -150,8 +158,8 @@ export default function DepreciationPage() {
           <p className="text-sm">Select an asset to view its depreciation schedule</p>
         </div>
       ) : scheduleLoading ? (
-        <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-24">
-          <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+        <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
+          <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
         </div>
       ) : !schedule ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-24 text-center text-slate-500">

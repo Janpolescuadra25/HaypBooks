@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { RefreshCw, PackageOpen, Building2, PauseCircle, Wrench, XCircle, ShoppingBag } from 'lucide-react'
+import { format } from 'date-fns'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { inventoryService } from '@/services/inventory.service'
@@ -60,19 +61,19 @@ export default function AssetLifecyclePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Asset Lifecycle</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track asset lifecycle stages from acquisition to disposal</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Building2 className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Asset Lifecycle</h2>
         </div>
         <button
           type="button"
           onClick={fetchAssets}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
@@ -119,31 +120,29 @@ export default function AssetLifecyclePage() {
                   <StatusIcon className="h-4 w-4" />
                   <span className={`${config.color}`}>{config.label} ({group.length})</span>
                 </div>
-                <div className={`rounded-2xl border ${config.border} bg-white overflow-hidden`}>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-100">
-                          <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Asset Name</th>
-                          <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Category</th>
-                          <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Acquired</th>
-                          <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Cost</th>
-                          <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Entries</th>
+                <div className={`overflow-hidden rounded-2xl border ${config.border} bg-white`}>
+                  <table className="w-full">
+                    <thead>
+                      <tr>
+                        <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Asset Name</th>
+                        <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Category</th>
+                        <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Acquired</th>
+                        <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Cost</th>
+                        <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Entries</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {group.map((asset) => (
+                        <tr key={asset.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-3 font-medium text-slate-900">{asset.name}</td>
+                          <td className="px-4 py-3 text-slate-700">{asset.category?.name ?? '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">{asset.acquisitionDate ? format(new Date(asset.acquisitionDate), 'MMM d, yyyy') : '—'}</td>
+                          <td className="px-4 py-3 text-slate-900 font-medium">{formatCurrency(Number(asset.cost || 0), currency)}</td>
+                          <td className="px-4 py-3 text-slate-700">{asset._count?.depreciations ?? 0}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {group.map((asset) => (
-                          <tr key={asset.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                            <td className="px-5 py-3 font-medium text-slate-900">{asset.name}</td>
-                            <td className="px-5 py-3 text-slate-700">{asset.category?.name ?? '—'}</td>
-                            <td className="px-5 py-3 text-slate-700">{asset.acquisitionDate ? new Date(asset.acquisitionDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</td>
-                            <td className="px-5 py-3 text-slate-900 font-medium">{formatCurrency(Number(asset.cost || 0), currency)}</td>
-                            <td className="px-5 py-3 text-slate-700">{asset._count?.depreciations ?? 0}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )

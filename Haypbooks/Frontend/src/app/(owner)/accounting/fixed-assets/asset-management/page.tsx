@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { format } from 'date-fns'
 import { Building2, CheckCircle, Wallet, Wrench, RefreshCw, PackageOpen } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -64,13 +65,30 @@ export default function AssetManagementPage() {
   const totalValue = assets.reduce((sum, asset) => sum + Number(asset.cost || 0), 0)
   const maintenanceCount = assets.filter((asset) => asset.status === 'UNDER_MAINTENANCE').length
 
+  if (companyLoading || loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Asset Management</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage fixed assets with status filters and value insights</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Building2 className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Asset Management</h2>
         </div>
+        <button
+          type="button"
+          onClick={fetchAssets}
+          disabled={loading}
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -134,55 +152,48 @@ export default function AssetManagementPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : !filteredAssets.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <PackageOpen className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No fixed assets found.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Asset</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Category</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Acquired</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Cost</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Method</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Useful Life</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Entries</th>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Asset</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Category</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Acquired</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Cost</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Method</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Useful Life</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Entries</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredAssets.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">No items found.</td>
+              </tr>
+            ) : (
+              filteredAssets.map((asset) => (
+                <tr key={asset.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-slate-900">{asset.name}</div>
+                    {asset.description && <div className="text-xs text-slate-500">{asset.description}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{asset.category?.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-700">{asset.acquisitionDate ? format(new Date(asset.acquisitionDate), 'MMM d, yyyy') : '—'}</td>
+                  <td className="px-4 py-3 text-slate-900 font-medium">{formatCurrency(Number(asset.cost || 0), currency)}</td>
+                  <td className="px-4 py-3 text-slate-700">{METHOD_LABELS[asset.depreciationMethod] ?? asset.depreciationMethod}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[asset.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                      {asset.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{asset.usefulLifeMonths ? `${asset.usefulLifeMonths} months` : '—'}</td>
+                  <td className="px-4 py-3 text-slate-700">{asset._count?.depreciations ?? 0}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredAssets.map((asset) => (
-                  <tr key={asset.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3">
-                      <div className="font-medium text-slate-900">{asset.name}</div>
-                      {asset.description && <div className="text-xs text-slate-500">{asset.description}</div>}
-                    </td>
-                    <td className="px-5 py-3 text-slate-700">{asset.category?.name ?? '—'}</td>
-                    <td className="px-5 py-3 text-slate-700">{asset.acquisitionDate ? new Date(asset.acquisitionDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</td>
-                    <td className="px-5 py-3 text-slate-900 font-medium">{formatCurrency(Number(asset.cost || 0), currency)}</td>
-                    <td className="px-5 py-3 text-slate-700">{METHOD_LABELS[asset.depreciationMethod] ?? asset.depreciationMethod}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[asset.status] ?? 'bg-slate-100 text-slate-600'}`}>
-                        {asset.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-slate-700">{asset.usefulLifeMonths ? `${asset.usefulLifeMonths} months` : '—'}</td>
-                    <td className="px-5 py-3 text-slate-700">{asset._count?.depreciations ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

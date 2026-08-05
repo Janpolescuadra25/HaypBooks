@@ -4,15 +4,16 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Archive } from 'lucide-react'
+import { format } from 'date-fns'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { accountingService } from '@/services/accounting.service'
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 function formatDateTime(date: string) {
-  return new Date(date).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+  return format(new Date(date), 'MMM d, yyyy')
 }
 
 function statusBadgeStyle(status: string) {
@@ -66,19 +67,30 @@ export default function CloseArchivePage() {
     fetchPeriods()
   }, [companyId, companyLoading, fetchPeriods])
 
-  if (companyLoading) {
+  if (companyLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+      <div className="flex h-64 items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Close Archive</h1>
-        <p className="text-sm text-slate-500 mt-0.5">History of all closed and locked accounting periods</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Archive className="w-6 h-6 text-emerald-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Close Archive</h2>
+        </div>
+        <button
+          type="button"
+          onClick={() => fetchPeriods()}
+          disabled={loading}
+          title="Refresh"
+          className="rounded-xl bg-slate-900 p-2.5 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
       </div>
 
       {error && (
@@ -87,48 +99,41 @@ export default function CloseArchivePage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : !periods.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <Archive className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No closed periods in the archive</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Period Name</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Start Date</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">End Date</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Closed At</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Duration</th>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Period Name</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Start Date</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">End Date</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Closed At</th>
+              <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Duration</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {periods.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-400">No items found.</td>
+              </tr>
+            ) : (
+              periods.map((period) => (
+                <tr key={period.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-slate-800">{period.name ?? 'Untitled Period'}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatDate(period.startDate)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatDate(period.endDate)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusBadgeStyle(period.status)}`}>
+                      {period.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{period.closedAt ? formatDateTime(period.closedAt) : '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{getDurationLabel(period.startDate, period.endDate)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {periods.map((period) => (
-                  <tr key={period.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-slate-800">{period.name ?? 'Untitled Period'}</td>
-                    <td className="px-5 py-3 text-slate-600">{formatDate(period.startDate)}</td>
-                    <td className="px-5 py-3 text-slate-600">{formatDate(period.endDate)}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusBadgeStyle(period.status)}`}>
-                        {period.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">{period.closedAt ? formatDateTime(period.closedAt) : '—'}</td>
-                    <td className="px-5 py-3 text-slate-600">{getDurationLabel(period.startDate, period.endDate)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
