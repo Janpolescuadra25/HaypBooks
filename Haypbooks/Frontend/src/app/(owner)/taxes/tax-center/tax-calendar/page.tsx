@@ -125,7 +125,7 @@ export default function TaxCalendarPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="px-5 py-4 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-800">Deadlines</h2>
         </div>
@@ -133,49 +133,48 @@ export default function TaxCalendarPage() {
           <div className="flex h-64 items-center justify-center">
             <RefreshCw className="h-8 w-8 animate-spin text-emerald-600" />
           </div>
-        ) : !deadlines.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <CalendarDays className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No filing deadlines for {year}</p>
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Form Type</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Description</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Due Date</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Days Remaining</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {!deadlines.length ? (
                 <tr>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Form Type</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Description</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Due Date</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Days Remaining</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-slate-400">No filing deadlines for {year}</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {deadlines.map((deadline: any) => {
+              ) : (
+                deadlines.map((deadline: any) => {
                   const status = getStatus(deadline.dueDate)
                   return (
-                    <tr key={`${deadline.formType}-${deadline.dueDate}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3">
+                    <tr key={`${deadline.formType}-${deadline.dueDate}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3">
                         <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">
                           {deadline.formType}
                         </span>
                       </td>
-                      <td className="px-5 py-3 font-medium text-slate-800">{deadline.description}</td>
-                      <td className="px-5 py-3 text-slate-600">{formatDueDate(deadline.dueDate)}</td>
-                      <td className={`px-5 py-3 ${getDaysRemainingClasses(deadline.dueDate)}`}>
+                      <td className="px-4 py-3 font-medium text-slate-800">{deadline.description}</td>
+                      <td className="px-4 py-3 text-slate-600">{formatDueDate(deadline.dueDate)}</td>
+                      <td className={`px-4 py-3 ${getDaysRemainingClasses(deadline.dueDate)}`}>
                         {getDaysRemainingLabel(deadline.dueDate)}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${getStatusStyles(status)}`}>
                           {status === 'overdue' ? 'Overdue' : status === 'upcoming' ? 'Upcoming' : 'Scheduled'}
                         </span>
                       </td>
                     </tr>
                   )
-                })}
-              </tbody>
-            </table>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

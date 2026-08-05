@@ -148,7 +148,7 @@ export default function VatPayablePage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="px-5 py-4 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-800">VAT Return Filings</h2>
         </div>
@@ -156,46 +156,45 @@ export default function VatPayablePage() {
           <div className="flex items-center justify-center py-24">
             <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
           </div>
-        ) : !returns.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <FileText className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No VAT returns found</p>
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Form Type</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Authority</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Period</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Filing Deadline</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total Tax</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Filed Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {!returns.length ? (
                 <tr>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Form Type</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Authority</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Period</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Filing Deadline</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Tax</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Filed Date</th>
+                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No VAT returns found.</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {returns.map((item) => {
+              ) : (
+                returns.map((item) => {
                   const deadline = item.filingDeadline ? new Date(item.filingDeadline) : null
                   const pastDue = deadline && deadline.getTime() < new Date().getTime() && item.status !== 'FILED'
                   return (
-                    <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3">
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3">
                         <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">{item.formType}</span>
                       </td>
-                      <td className="px-5 py-3 font-medium text-slate-800">{item.authority?.name}</td>
-                      <td className="px-5 py-3 text-slate-700">{formatPeriod(item.periodStart, item.periodEnd)}</td>
-                      <td className={`px-5 py-3 ${pastDue ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>{item.filingDeadline ? formatDate(item.filingDeadline) : '—'}</td>
-                      <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.totalTax), currency)}</td>
-                      <td className="px-5 py-3"><span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[item.status] ?? 'bg-slate-100 text-slate-600'}`}>{item.status}</span></td>
-                      <td className="px-5 py-3 text-slate-700">{item.filedAt ? formatDate(item.filedAt) : '—'}</td>
+                      <td className="px-4 py-3 font-medium text-slate-800">{item.authority?.name}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatPeriod(item.periodStart, item.periodEnd)}</td>
+                      <td className={`px-4 py-3 ${pastDue ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>{item.filingDeadline ? formatDate(item.filingDeadline) : '—'}</td>
+                      <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.totalTax), currency)}</td>
+                      <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[item.status] ?? 'bg-slate-100 text-slate-600'}`}>{item.status}</span></td>
+                      <td className="px-4 py-3 text-slate-700">{item.filedAt ? formatDate(item.filedAt) : '—'}</td>
                     </tr>
                   )
-                })}
-              </tbody>
-            </table>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

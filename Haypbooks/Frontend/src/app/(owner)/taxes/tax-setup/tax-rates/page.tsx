@@ -178,34 +178,32 @@ export default function TaxRatesPage() {
               <p className="text-xs mt-1">Click "Add Tax Rate" to create your first tax rate</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Rate</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Effective From</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Effective To</th>
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Name</th>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Rate</th>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</th>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Effective From</th>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Effective To</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rates.map((rate) => (
+                  <tr key={rate.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-800">{rate.name}</td>
+                    <td className="px-4 py-3 text-slate-700">{Number(rate.rate).toFixed(2)}%</td>
+                    <td className="px-4 py-3">
+                      {rate.taxType ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{rate.taxType}</span>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{rate.effectiveFrom ? formatDate(rate.effectiveFrom) : '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{rate.effectiveTo ? formatDate(rate.effectiveTo) : '—'}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {rates.map((rate) => (
-                    <tr key={rate.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3 font-medium text-slate-800">{rate.name}</td>
-                      <td className="px-5 py-3 text-slate-700">{Number(rate.rate).toFixed(2)}%</td>
-                      <td className="px-5 py-3">
-                        {rate.taxType ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{rate.taxType}</span>
-                        ) : '—'}
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">{rate.effectiveFrom ? formatDate(rate.effectiveFrom) : '—'}</td>
-                      <td className="px-5 py-3 text-slate-600">{rate.effectiveTo ? formatDate(rate.effectiveTo) : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       ) : (
@@ -227,32 +225,30 @@ export default function TaxRatesPage() {
               <p className="text-xs mt-1">Click "Add Tax Code" to create your first tax code</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Code</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Default</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Rates</th>
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Code</th>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Name</th>
+                  <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Default</th>
+                  <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Rates</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {codes.map((code) => (
+                  <tr key={code.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-800">{code.code}</td>
+                    <td className="px-4 py-3 text-slate-700">{code.name}</td>
+                    <td className="px-4 py-3">
+                      {code.isDefault ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Default</span>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600">{code.rates?.length ?? 0}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {codes.map((code) => (
-                    <tr key={code.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3 font-medium text-slate-800">{code.code}</td>
-                      <td className="px-5 py-3 text-slate-700">{code.name}</td>
-                      <td className="px-5 py-3">
-                        {code.isDefault ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Default</span>
-                        ) : '—'}
-                      </td>
-                      <td className="px-5 py-3 text-right text-slate-600">{code.rates?.length ?? 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       )}

@@ -139,46 +139,44 @@ export default function TaxSummaryPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="px-5 py-4 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-800">Summary Breakdown</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <tbody className="divide-y divide-slate-100">
-              <tr>
-                <td className="px-5 py-3 text-slate-600">Output VAT Collected</td>
-                <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(summary?.outputVat ?? 0, currency)}</td>
-              </tr>
-              <tr className="border-b border-slate-100">
-                <td className="px-5 py-3 text-slate-600">Less: Input VAT Paid</td>
-                <td className="px-5 py-3 text-right text-slate-900 font-medium">-{formatCurrency(summary?.inputVat ?? 0, currency)}</td>
-              </tr>
-              <tr className="border-b border-slate-100">
-                <td className="px-5 py-3 text-slate-600">Net VAT</td>
-                <td className={`px-5 py-3 text-right font-semibold ${netVatClass}`}>{formatCurrency(summary?.netVat ?? 0, currency)}</td>
-              </tr>
-              <tr className="border-b border-slate-100">
-                <td className="px-5 py-3 text-slate-600">Total Withholding Tax</td>
-                <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(summary?.totalWithholding ?? 0, currency)}</td>
-              </tr>
-              <tr className="border-b border-slate-100">
-                <td className="px-5 py-3 text-slate-600">VAT Payable</td>
-                <td className={`px-5 py-3 text-right font-semibold ${summary?.vatPayable > 0 ? 'text-emerald-700' : 'text-slate-900'}`}>{formatCurrency(summary?.vatPayable ?? 0, currency)}</td>
-              </tr>
-              <tr>
-                <td className="px-5 py-3 text-slate-600">VAT Refundable</td>
-                <td className={`px-5 py-3 text-right font-semibold ${summary?.vatRefundable > 0 ? 'text-emerald-700' : 'text-slate-900'}`}>{formatCurrency(summary?.vatRefundable ?? 0, currency)}</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td className="px-5 py-3 text-slate-600 font-semibold">Report generated at</td>
-                <td className="px-5 py-3 text-right text-slate-500">{summary?.generatedAt ? formatDateTime(summary.generatedAt) : '—'}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <table className="w-full">
+          <tbody className="divide-y divide-slate-100">
+            <tr>
+              <td className="px-4 py-3 text-slate-600">Output VAT Collected</td>
+              <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(summary?.outputVat ?? 0, currency)}</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 text-slate-600">Less: Input VAT Paid</td>
+              <td className="px-4 py-3 text-right text-slate-900 font-medium">-{formatCurrency(summary?.inputVat ?? 0, currency)}</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 text-slate-600">Net VAT</td>
+              <td className={`px-4 py-3 text-right font-semibold ${netVatClass}`}>{formatCurrency(summary?.netVat ?? 0, currency)}</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 text-slate-600">Total Withholding Tax</td>
+              <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(summary?.totalWithholding ?? 0, currency)}</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 text-slate-600">VAT Payable</td>
+              <td className={`px-4 py-3 text-right font-semibold ${summary?.vatPayable > 0 ? 'text-emerald-700' : 'text-slate-900'}`}>{formatCurrency(summary?.vatPayable ?? 0, currency)}</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 text-slate-600">VAT Refundable</td>
+              <td className={`px-4 py-3 text-right font-semibold ${summary?.vatRefundable > 0 ? 'text-emerald-700' : 'text-slate-900'}`}>{formatCurrency(summary?.vatRefundable ?? 0, currency)}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td className="px-4 py-3 text-slate-600 font-semibold">Report generated at</td>
+              <td className="px-4 py-3 text-right text-slate-500">{summary?.generatedAt ? formatDateTime(summary.generatedAt) : '—'}</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   )

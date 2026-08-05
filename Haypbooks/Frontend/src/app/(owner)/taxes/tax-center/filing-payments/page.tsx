@@ -95,6 +95,8 @@ export default function FilingPaymentsPage() {
           <h2 className="text-lg font-semibold text-slate-800">Filing & Payments</h2>
         </div>
         <button
+          type="button"
+          title="Refresh"
           onClick={fetchData}
           disabled={loading}
           className="rounded-xl bg-slate-900 p-2.5 text-white"
@@ -120,90 +122,84 @@ export default function FilingPaymentsPage() {
           </div>
         ) : (
           <div className="space-y-6 p-5">
-            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-800">DRAFT VAT Returns</h3>
               </div>
-              {!batch?.vatReturns?.length ? (
-                <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-                  <FileText className="h-8 w-8 mb-2 text-slate-300" />
-                  <p className="text-sm">No DRAFT VAT returns</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr>
-                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
-                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Tax</th>
-                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
-                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Lines</th>
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Period</th>
+                    <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total Tax</th>
+                    <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                    <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Lines</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {!batch?.vatReturns?.length ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-12 text-center text-sm text-slate-400">No DRAFT VAT returns found.</td>
+                    </tr>
+                  ) : (
+                    batch.vatReturns.map((item: any) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3 text-slate-700">{formatPeriod(item.periodStart, item.periodEnd)}</td>
+                        <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.totalTax), currency)}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">{item.status}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right text-slate-700">{item.lines?.length ?? 0}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {batch.vatReturns.map((item: any) => (
-                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-4 py-3 text-slate-700">{formatPeriod(item.periodStart, item.periodEnd)}</td>
-                          <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.totalTax), currency)}</td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">{item.status}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right text-slate-700">{item.lines?.length ?? 0}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-800">Form 2307 Certificates</h3>
               </div>
-              {!batch?.form2307s?.length ? (
-                <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-                  <FileText className="h-8 w-8 mb-2 text-slate-300" />
-                  <p className="text-sm">No Form 2307 certificates</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr>
-                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Certificate No.</th>
-                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
-                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Gross Amount</th>
-                        <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Tax Withheld</th>
-                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
-                        <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Issued</th>
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Certificate No.</th>
+                    <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Period</th>
+                    <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Gross Amount</th>
+                    <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Tax Withheld</th>
+                    <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                    <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Issued</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {!batch?.form2307s?.length ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-400">No Form 2307 certificates found.</td>
+                    </tr>
+                  ) : (
+                    batch.form2307s.map((item: any) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">{item.certificateNumber}</span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{item.period}</td>
+                        <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.amount), currency)}</td>
+                        <td className="px-4 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.withheldAmount), currency)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.status === 'ISSUED' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{item.status}</span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{item.issuedAt ? format(new Date(item.issuedAt), 'MMM d, yyyy') : '—'}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {batch.form2307s.map((item: any) => (
-                        <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                          <td className="px-5 py-3">
-                            <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">{item.certificateNumber}</span>
-                          </td>
-                          <td className="px-5 py-3 text-slate-700">{item.period}</td>
-                          <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.amount), currency)}</td>
-                          <td className="px-5 py-3 text-right text-slate-900 font-medium">{formatCurrency(Number(item.withheldAmount), currency)}</td>
-                          <td className="px-5 py-3">
-                            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.status === 'ISSUED' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{item.status}</span>
-                          </td>
-                          <td className="px-5 py-3 text-slate-700">{item.issuedAt ? format(new Date(item.issuedAt), 'MMM d, yyyy') : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-800">Government Remittances</h2>
         </div>
@@ -211,30 +207,29 @@ export default function FilingPaymentsPage() {
           <div className="flex items-center justify-center py-24">
             <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
           </div>
-        ) : !remittances.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <Landmark className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No remittances found</p>
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Period</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Due Date</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Employee Share</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Employer Share</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total</th>
+                <th className="text-right text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Penalty</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Reference</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Paid</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {!remittances.length ? (
                 <tr>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Type</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Due Date</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Employee Share</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Employer Share</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Total</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Penalty</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Reference</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Paid</th>
+                  <td colSpan={10} className="px-4 py-12 text-center text-sm text-slate-400">No remittances found.</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {remittances.map((item) => {
+              ) : (
+                remittances.map((item) => {
                   const dueDate = new Date(item.dueDate)
                   const isPastDue = !item.paidAt && dueDate.getTime() < new Date().getTime()
                   return (
@@ -259,10 +254,10 @@ export default function FilingPaymentsPage() {
                       <td className="px-4 py-3 text-slate-700">{item.paidAt ? formatDate(item.paidAt) : '—'}</td>
                     </tr>
                   )
-                })}
-              </tbody>
-            </table>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

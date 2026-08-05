@@ -96,7 +96,7 @@ export default function TaxLiabilitiesPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-800">Liabilities</h2>
           <button
@@ -112,57 +112,56 @@ export default function TaxLiabilitiesPage() {
           <div className="flex items-center justify-center py-24">
             <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
           </div>
-        ) : !liabilities.length ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-            <FileCheck className="h-8 w-8 mb-2 text-slate-300" />
-            <p className="text-sm">No {statusFilter === 'All' ? 'tax liabilities' : `${statusFilter.toLowerCase()} liabilities`} found</p>
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Form Type</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Authority</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Period</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Due Date</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Filed</th>
+                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Paid</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {!liabilities.length ? (
                 <tr>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Form Type</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Authority</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Period</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Due Date</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Filed</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-slate-500">Paid</th>
+                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No {statusFilter === 'All' ? 'tax liabilities' : `${statusFilter.toLowerCase()} liabilities`} found</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {liabilities.map((liability) => {
+              ) : (
+                liabilities.map((liability) => {
                   const due = new Date(liability.dueDate)
                   const isOverdue = liability.status === 'OVERDUE' && due.getTime() < today.getTime()
                   return (
-                    <tr key={liability.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3">
+                    <tr key={liability.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3">
                         <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold font-mono text-slate-600">
                           {liability.formType}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-4 py-3">
                         <div>
                           <div className="font-medium text-slate-800">{liability.authority?.name}</div>
                           <div className="text-xs text-slate-500">{liability.authority?.code}</div>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-slate-700">{formatPeriod(liability.periodStart, liability.periodEnd)}</td>
-                      <td className={`px-5 py-3 ${isOverdue ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>{formatDate(liability.dueDate)}</td>
-                      <td className="px-5 py-3">
+                      <td className="px-4 py-3 text-slate-700">{formatPeriod(liability.periodStart, liability.periodEnd)}</td>
+                      <td className={`px-4 py-3 ${isOverdue ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>{formatDate(liability.dueDate)}</td>
+                      <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[liability.status] ?? 'bg-slate-100 text-slate-600'}`}>
                           {liability.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-700">{liability.filedAt ? formatDate(liability.filedAt) : '—'}</td>
-                      <td className="px-5 py-3 text-slate-700">{liability.paidAt ? formatDate(liability.paidAt) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">{liability.filedAt ? formatDate(liability.filedAt) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">{liability.paidAt ? formatDate(liability.paidAt) : '—'}</td>
                     </tr>
                   )
-                })}
-              </tbody>
-            </table>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
