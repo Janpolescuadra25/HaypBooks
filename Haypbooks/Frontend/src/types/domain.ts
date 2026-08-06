@@ -391,6 +391,50 @@ export interface BillApproval {
   note?: string
 }
 
+export interface ApprovalRequest {
+  id: string
+  type: 'purchase_order' | 'bill' | 'expense_report' | 'payroll_run' | 'payment'
+  status: 'pending' | 'approved' | 'rejected' | 'on_hold' | 'delegated'
+  title: string
+  description?: string
+  requesterId: string
+  requesterName: string
+  amount: number
+  currency: string
+  submittedAt: string
+  companyId: string
+  entityType: string
+  entityId: string
+  assignedToId?: string
+  assignedToName?: string
+  daysPending?: number
+  escalated?: boolean
+  rejectionReason?: string
+  approvedBy?: string
+  approvedAt?: string
+  rejectedBy?: string
+  rejectedAt?: string
+}
+
+export interface Task {
+  id: string
+  title: string
+  description?: string
+  status: 'open' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  assignedToId?: string
+  assignedToName?: string
+  assignedById?: string
+  assignedByName?: string
+  dueDate?: string
+  completedAt?: string
+  companyId: string
+  entityType?: string
+  entityId?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DatabaseState {
   accounts: Account[]
   transactions: Transaction[]
