@@ -1,9 +1,9 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 7, 2026  
-**Branch:** `main` (42 commits ahead of origin)  
+**Branch:** `main` (45 commits ahead of origin)  
 **Total Built Pages:** ~270  
-**ComingSoon Stubs Remaining:** 77  
-**Service Files:** 17  
+**ComingSoon Stubs Remaining:** 76  
+**Service Files:** 18  
 
 ---
 
@@ -52,6 +52,14 @@
 
 ---
 
+## Plan E: Tasks & Approvals (IN PROGRESS)
+
+- **E-1** ✅ — Service file (`tasks-approvals.service.ts`, 9 methods), domain types (`ApprovalRequest`, `Task`), my-approvals Pattern A page (8-col table, filter pills, approve/reject, RejectionReasonModal, escalation indicator)
+- **E-2** — Build 4 my-work list pages (my-tasks, my-exceptions, overdue-items, calendar)
+- **E-3** — Build 5 management list pages (approval-queue, approval-history, delegated-tasks, team-tasks, task-templates)
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -73,7 +81,7 @@
 | Home Dashboard | 5 | No chart library installed; 5 stubs need visualizations. Main dashboard already built (OwnerDashboard.tsx). | 3-5 |
 | Settings | 8 | No form gold standard yet | 2-4 |
 | Reporting | 10 | Chart library, export functionality | 3-5 |
-| Tasks & Approvals | 9 | Pre-flight audit; can reuse 14A-2 action pattern | 2-4 |
+| Tasks & Approvals | 9 remaining (1 built) | IN PROGRESS — E-1 complete (service + types + my-approvals). E-2/E-3 pending. | 2-4 |
 | Compliance | 4 | Pre-flight audit | 2-3 |
 | Automation | 5 | Pre-flight audit | 2-3 |
 | Integrations | 8 | Pre-flight audit | 3-4 |
@@ -95,7 +103,7 @@
 
 ---
 
-## Commit History (Plan C)
+## Commit History
 
 | Commit | Batch | Description |
 |---|---|---|
@@ -104,7 +112,10 @@
 | `65119adc` | C-1-fix | Complete structural normalization for Inventory |
 | `cc2365ac` | C-2 | Normalize 10 Tax pages (11 systematic fixes) |
 | `351908ff` | C-2-fix | Structural fixes for 12 Tax module tables (S1/S2/S3/Fix6/Fix7/outer-div) |
-| `8912763`2 | C-3 | Normalize 8 Accounting + Budgeting pages to Pattern A (15-fix recipe) |
+| `89127632` | C-3 | Normalize 8 Accounting + Budgeting pages to Pattern A (15-fix recipe) |
 | `389078fc` | C-4 | Normalize 3 special case inventory files (lot-serial-tracking, inventory-valuation, bin-locations) |
 | `c4698373` | docs | Update Road_Map.md — Plan C complete, condense and align metrics |
 | `ab5a289b` | D | Remove dead code, fix ComingSoonPage palette drift, remove stale config |
+| `2e0352b9` | docs | Update Road_Map.md — add Plan D, fix tech debt #4 |
+| `b5349eeb` | security | Change RBAC default role from 'admin' to 'viewer' |
+| `fc7a9e4b` | E-1 | Add tasks-approvals service, domain types, my-approvals page |
