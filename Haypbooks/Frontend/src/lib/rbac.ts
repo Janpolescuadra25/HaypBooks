@@ -12,8 +12,8 @@ export function getRoleOverride(): Role | undefined { return roleOverride }
 export function getRoleFromCookies(): Role {
   if (roleOverride && ROLE_PERMISSIONS[roleOverride]) return roleOverride
   if (typeof window === 'undefined') {
-    // Server import not used here to stay client-safe; default to admin for universal contexts.
-    return 'admin'
+    // Server-side: default to least privilege when no role cookie is available.
+    return 'viewer'
   }
   try {
     const cookie = document.cookie || ''
@@ -23,7 +23,7 @@ export function getRoleFromCookies(): Role {
       if (ROLE_PERMISSIONS[val]) return val
     }
   } catch { /* ignore */ }
-  return 'admin'
+  return 'viewer'
 }
 
 export function getPermissionsForRole(role: Role): Permission[] { return ROLE_PERMISSIONS[role] || [] }

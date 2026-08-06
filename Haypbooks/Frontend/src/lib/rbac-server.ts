@@ -8,9 +8,9 @@ export function getRoleFromCookies(): Role {
     const override = getRoleOverride()
     if (override && ROLE_PERMISSIONS[override]) return override
     const role = cookies().get('role')?.value as Role | undefined
-    return role && ROLE_PERMISSIONS[role] ? role : 'admin'
+    return role && ROLE_PERMISSIONS[role] ? role : 'viewer'
   } catch {
-    return 'admin'
+    return 'viewer'
   }
 }
 
