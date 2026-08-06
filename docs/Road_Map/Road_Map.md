@@ -1,6 +1,6 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 7, 2026  
-**Branch:** `main` (40 commits ahead of origin)  
+**Branch:** `main` (42 commits ahead of origin)  
 **Total Built Pages:** ~270  
 **ComingSoon Stubs Remaining:** 77  
 **Service Files:** 17  
@@ -42,6 +42,16 @@
 
 ---
 
+## Plan D: Dead Code Cleanup (COMPLETE ✅)
+
+- Deleted 7 dead components (AccountSplitModal, BulkActionBar, DataPage, EmptyStateEnhanced, DashboardHeader, GlassCard, EdgeInset) — 1,225 lines removed
+- Deleted 3 orphaned test files
+- Deleted stale jest.search.config.js
+- Fixed ComingSoonPage.tsx: gray-* → slate-* (4 classes, fixes 77 stub pages)
+- HaypDateRangePicker.tsx kept (active dependency of HaypDataTable)
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -77,7 +87,7 @@
 1. ~~**Header pattern drift**~~ — ✅ Resolved. 31 pages normalized via Plan C (C-1 through C-4)
 2. ~~**Table styling drift**~~ — ✅ Resolved. S1-S4 structural fixes applied across all Plan C batches
 3. **Missing shared components** — LoadingSpinner, FilterPills not yet extracted
-4. **DashboardHeader.tsx + GlassCard.tsx** — 0-byte files, NOT imported anywhere. Main dashboard already built via OwnerDashboard.tsx (18KB, fully functional). Actual blockers: 5 ComingSoon stubs need chart library + domain visualizations
+4. ~~**DashboardHeader.tsx + GlassCard.tsx**~~ — ✅ Deleted in Plan D (dead code). Main dashboard already built via OwnerDashboard.tsx (18KB, fully functional). Actual blockers: 5 ComingSoon stubs need chart library + domain visualizations
 5. **108 HaypDataTable pages** (Expenses, Sales) — Different pattern, intentionally not unified
 6. **Employees page** — Uses `gray-*`, raw `fetch()`, `Loader2` — needs full rebuild (C-5 deferred)
 7. **3 custom detail pages** — chart-of-accounts, journal-entries/[id], budgets/[budgetId] — too custom for Plan C
@@ -94,5 +104,7 @@
 | `65119adc` | C-1-fix | Complete structural normalization for Inventory |
 | `cc2365ac` | C-2 | Normalize 10 Tax pages (11 systematic fixes) |
 | `351908ff` | C-2-fix | Structural fixes for 12 Tax module tables (S1/S2/S3/Fix6/Fix7/outer-div) |
-| `89127632` | C-3 | Normalize 8 Accounting + Budgeting pages to Pattern A (15-fix recipe) |
+| `8912763`2 | C-3 | Normalize 8 Accounting + Budgeting pages to Pattern A (15-fix recipe) |
 | `389078fc` | C-4 | Normalize 3 special case inventory files (lot-serial-tracking, inventory-valuation, bin-locations) |
+| `c4698373` | docs | Update Road_Map.md — Plan C complete, condense and align metrics |
+| `ab5a289b` | D | Remove dead code, fix ComingSoonPage palette drift, remove stale config |
