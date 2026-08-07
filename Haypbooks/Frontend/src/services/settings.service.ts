@@ -41,4 +41,37 @@ export const settingsService = {
 
   createBackup: (companyId: string) =>
     apiClient.post(`/companies/${companyId}/settings/backups`),
+
+  // User Management
+  getCompanyUsers: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/users`),
+
+  createCompanyUser: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/users`, data),
+
+  updateCompanyUser: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/users/${id}`, data),
+
+  deleteCompanyUser: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/users/${id}`),
+
+  // Roles & Permissions
+  getRoles: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/roles`),
+
+  createRole: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/roles`, data),
+
+  updateRole: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/roles/${id}`, data),
+
+  deleteRole: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/roles/${id}`),
+
+  // Two-Factor Authentication
+  getTwoFactorConfig: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/settings/two-factor`),
+
+  updateTwoFactorConfig: (companyId: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/settings/two-factor`, data),
 }
