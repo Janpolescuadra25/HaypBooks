@@ -14,4 +14,31 @@ export const settingsService = {
 
   updateFiscalYearSetup: (companyId: string, data: any) =>
     apiClient.put(`/companies/${companyId}/settings/fiscal-year`, data),
+
+  // Numbering Sequences
+  getNumberingSequences: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/settings/numbering-sequences`),
+
+  updateNumberingSequence: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/settings/numbering-sequences/${id}`, data),
+
+  // Custom Fields
+  getCustomFields: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/settings/custom-fields`),
+
+  createCustomField: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/settings/custom-fields`, data),
+
+  updateCustomField: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/settings/custom-fields/${id}`, data),
+
+  deleteCustomField: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/settings/custom-fields/${id}`),
+
+  // Data Backup
+  getBackupHistory: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/settings/backups`),
+
+  createBackup: (companyId: string) =>
+    apiClient.post(`/companies/${companyId}/settings/backups`),
 }
