@@ -384,6 +384,32 @@ export interface CompanySettings {
   closePassword?: string
 }
 
+export interface CompanyDetails {
+  id: string;
+  companyName: string;
+  legalName: string;
+  taxId: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+  email: string;
+  website: string;
+  industry: string;
+}
+
+export interface FiscalYearConfig {
+  id: string;
+  companyId: string;
+  startMonth: number;
+  endMonth: number;
+  currentFiscalYear: number;
+  periodNamingConvention: 'month' | 'period';
+  autoClosePeriods: boolean;
+}
+
 export interface BillApproval {
   status: 'pending' | 'approved' | 'rejected'
   by?: string
