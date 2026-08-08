@@ -34,4 +34,32 @@ export const integrationService = {
   // Integration Logs (1 method)
   getIntegrationLogs: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/integrations/logs`),
+
+  // Export Data (4 methods)
+  getExportJobs: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/integrations/exports`),
+  createExportJob: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/integrations/exports`, data),
+  downloadExport: (companyId: string, id: string) =>
+    apiClient.get(`/companies/${companyId}/integrations/exports/${id}/download`),
+  deleteExportJob: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/integrations/exports/${id}`),
+
+  // Import Data (4 methods)
+  getImportJobs: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/integrations/imports`),
+  createImportJob: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/integrations/imports`, data),
+  getImportJobStatus: (companyId: string, id: string) =>
+    apiClient.get(`/companies/${companyId}/integrations/imports/${id}`),
+  deleteImportJob: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/integrations/imports/${id}`),
+
+  // Marketplace (1 method)
+  getMarketplaceApps: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/integrations/marketplace`),
+
+  // Developer Sandbox (1 method)
+  sendSandboxRequest: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/integrations/sandbox/request`, data),
 }
