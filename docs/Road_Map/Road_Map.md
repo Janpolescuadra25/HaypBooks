@@ -1,13 +1,13 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 8, 2026  
-**Branch:** `main` (61 commits ahead of origin)  
+**Branch:** `main` (64 commits ahead of origin)  
 **Total Built Pages:** ~284  
-**ComingSoon Stubs Remaining:** 48  
-**Service Files:** 22  
+**ComingSoon Stubs Remaining:** 40  
+**Service Files:** 23  
 
 ---
 
-## Completed Modules (16)
+## Completed Modules (17)
 
 | Module | Batches | Pages Built | Service File | Status |
 |---|---|---|---|---|
@@ -27,6 +27,7 @@
 | Banking | pre-roadmap | 20 | banking.service.ts (45 methods) | ✅ Complete |
 | Accountant Workspace | H | 1 | accountant-workspace.service.ts (4 methods) | ✅ Complete |
 | Automation | I-1/I-2 | 6 | automation.service.ts (20 methods) | ✅ Complete |
+| Integrations | J-1/J-2 | 8 | integration.service.ts (23 methods) | ✅ Complete |
 
 ---
 
@@ -94,6 +95,12 @@
 
 ---
 
+## Plan J: Integrations (COMPLETE ✅)
+- J-1: API Keys, Webhooks, Installed Apps, Integration Logs (4 pages) ✅
+- J-2: Export Data, Import Data, App Marketplace, Developer Sandbox (4 pages) ✅
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -108,13 +115,12 @@
 
 ---
 
-## Future Modules (Post-Plan I)
+## Future Modules (Post-Plan J)
 
 | Module | Stubs | Blocker | Est. Batches |
 |---|---|---|---|
 | Home Dashboard | 5 | No chart library installed; 5 stubs need visualizations. Main dashboard already built (OwnerDashboard.tsx). | 3-5 |
 | Reporting | 10 | Chart library, export functionality | 3-5 |
-| Integrations | 8 | Pre-flight audit | 3-4 |
 
 ---
 
@@ -161,3 +167,6 @@
 | `650f64ab` | docs | Consolidate roadmap — Plan H complete, Banking and Accountant Workspace to Completed Modules |
 | `112e699f` | I-1 | Add automation service + workflow/rules/ai-bookkeeping pages |
 | `27065d18` | I-2 | Add smart-matching, automation-logs, error-queue pages (Automation complete) |
+| `4c626883` | docs | Consolidate roadmap — Plan I complete, Automation to Completed Modules |
+| `a391baac` | J-1 | Create integration service + api-keys, webhooks, installed-apps, integration-logs |
+| `fd225b02` | J-2 | Export-data, import-data, app-marketplace, developer-sandbox (Integrations complete) |
