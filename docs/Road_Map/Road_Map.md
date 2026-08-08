@@ -1,13 +1,13 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 8, 2026  
-**Branch:** `main` (56 commits ahead of origin)  
+**Branch:** `main` (58 commits ahead of origin)  
 **Total Built Pages:** ~284  
-**ComingSoon Stubs Remaining:** 56  
-**Service Files:** 20  
+**ComingSoon Stubs Remaining:** 54  
+**Service Files:** 21  
 
 ---
 
-## Completed Modules (13)
+## Completed Modules (15)
 
 | Module | Batches | Pages Built | Service File | Status |
 |---|---|---|---|---|
@@ -24,6 +24,8 @@
 | Tasks & Approvals | E-1/E-2/E-3 | 10 | tasks-approvals.service.ts (9 methods) | ✅ Complete |
 | Settings | F-1/F-2/F-3 | 12 | settings.service.ts (22 methods) | ✅ Complete |
 | Compliance | G-1/G-2 | 6 | compliance.service.ts (20 methods) | ✅ Complete |
+| Banking | pre-roadmap | 20 | banking.service.ts (45 methods) | ✅ Complete |
+| Accountant Workspace | H | 1 | accountant-workspace.service.ts (4 methods) | ✅ Complete |
 
 ---
 
@@ -79,6 +81,12 @@
 
 ---
 
+## Plan H: Banking + Accountant Workspace (COMPLETE ✅)
+- Banking: Statement Archive (1 page) ✅
+- Accountant Workspace: Client Requests (1 page) ✅
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -93,7 +101,7 @@
 
 ---
 
-## Future Modules (Post-Plan G)
+## Future Modules (Post-Plan H)
 
 | Module | Stubs | Blocker | Est. Batches |
 |---|---|---|---|
@@ -101,8 +109,6 @@
 | Reporting | 10 | Chart library, export functionality | 3-5 |
 | Automation | 5 | Pre-flight audit | 2-3 |
 | Integrations | 8 | Pre-flight audit | 3-4 |
-| Banking (remaining) | 1 | Pre-flight audit | 1-2 |
-| Accountant Workspace | 1 | Pre-flight audit | 1 |
 
 ---
 
@@ -144,3 +150,5 @@
 | `4e1b87d5` | G-1 | Add compliance service + internal-controls, control-testing, policy-management |
 | `19bbf943` | G-1-fix | Remove as const from constant arrays to fix tsc errors |
 | `5296439c` | G-2 | Add monitoring pages — issue-tracking and fraud-detection-rules |
+| `6b6d4b6e` | docs | Consolidate roadmap — Plan G complete, Compliance to Completed Modules |
+| `168cee6b` | H | Add statement archive + client requests pages (Banking + Accountant Workspace complete) |
