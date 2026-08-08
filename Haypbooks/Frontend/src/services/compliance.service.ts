@@ -30,4 +30,24 @@ export const complianceService = {
     apiClient.put(`/companies/${companyId}/compliance/policies/${id}`, data),
   deletePolicy: (companyId: string, id: string) =>
     apiClient.delete(`/companies/${companyId}/compliance/policies/${id}`),
+
+  // --- Issue Tracking (4 methods) ---
+  getIssues: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/compliance/issues`),
+  createIssue: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/compliance/issues`, data),
+  updateIssue: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/compliance/issues/${id}`, data),
+  deleteIssue: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/compliance/issues/${id}`),
+
+  // --- Fraud Detection Rules (4 methods) ---
+  getFraudRules: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/compliance/fraud-rules`),
+  createFraudRule: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/compliance/fraud-rules`, data),
+  updateFraudRule: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/compliance/fraud-rules/${id}`, data),
+  deleteFraudRule: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/compliance/fraud-rules/${id}`),
 }
