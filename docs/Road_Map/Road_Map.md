@@ -1,13 +1,13 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 8, 2026  
-**Branch:** `main` (48 commits ahead of origin)  
-**Total Built Pages:** ~270  
-**ComingSoon Stubs Remaining:** 69  
-**Service Files:** 18  
+**Branch:** `main` (52 commits ahead of origin)  
+**Total Built Pages:** ~278  
+**ComingSoon Stubs Remaining:** 61  
+**Service Files:** 19  
 
 ---
 
-## Completed Modules (11)
+## Completed Modules (12)
 
 | Module | Batches | Pages Built | Service File | Status |
 |---|---|---|---|---|
@@ -22,6 +22,7 @@
 | Projects | 13A-1-4 | 8 | projects.service.ts (9 methods) | ⚠️ 6 deferred |
 | Time | 14A-1/2 | 4 | time.service.ts (7 methods) | ⚠️ 1 deferred |
 | Tasks & Approvals | E-1/E-2/E-3 | 10 | tasks-approvals.service.ts (9 methods) | ✅ Complete |
+| Settings | F-1/F-2/F-3 | 12 | settings.service.ts (22 methods) | ✅ Complete |
 
 ---
 
@@ -61,6 +62,15 @@
 
 ---
 
+---
+
+## Plan F: Settings (COMPLETE ✅)
+- F-1: Form gold standard — company-details, fiscal-year-setup (2 pages) ✅
+- F-2: Table+modal pattern — numbering-sequences, custom-fields, data-backup (3 pages) ✅
+- F-3: User security — user-management, roles-permissions, two-factor-auth (3 pages) ✅
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -75,12 +85,11 @@
 
 ---
 
-## Future Modules (Post-Plan C)
+## Future Modules (Post-Plan F)
 
 | Module | Stubs | Blocker | Est. Batches |
 |---|---|---|---|
 | Home Dashboard | 5 | No chart library installed; 5 stubs need visualizations. Main dashboard already built (OwnerDashboard.tsx). | 3-5 |
-| Settings | 8 | No form gold standard yet | 2-4 |
 | Reporting | 10 | Chart library, export functionality | 3-5 |
 | Compliance | 4 | Pre-flight audit | 2-3 |
 | Automation | 5 | Pre-flight audit | 2-3 |
@@ -121,3 +130,6 @@
 | `fc7a9e4b` | E-1 | Add tasks-approvals service, domain types, my-approvals page |
 | `c55ea3fe` | E-2 | Build 4 my-work list pages |
 | `27a3aba1` | E-3 | Build 5 management list pages, module complete |
+| `1b302b7e` | F-1 | Establish form gold standard with company-details & fiscal-year-setup |
+| `a6c16011` | F-2 | Table+modal pattern with numbering-sequences, custom-fields, data-backup |
+| `bfe3e938` | F-3 | User security pages, Settings module complete (12/12) |
