@@ -7,4 +7,8 @@ export const homeService = {
     apiClient.post(`/companies/${companyId}/home/notifications/${id}/read`),
   markAllAsRead: (companyId: string) =>
     apiClient.post(`/companies/${companyId}/home/notifications/read-all`),
+  getBusinessHealth: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/home/business-health`),
+  getPerformance: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/home/performance`),
 }
