@@ -1,13 +1,13 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 8, 2026  
-**Branch:** `main` (58 commits ahead of origin)  
+**Branch:** `main` (61 commits ahead of origin)  
 **Total Built Pages:** ~284  
-**ComingSoon Stubs Remaining:** 54  
-**Service Files:** 21  
+**ComingSoon Stubs Remaining:** 48  
+**Service Files:** 22  
 
 ---
 
-## Completed Modules (15)
+## Completed Modules (16)
 
 | Module | Batches | Pages Built | Service File | Status |
 |---|---|---|---|---|
@@ -26,6 +26,7 @@
 | Compliance | G-1/G-2 | 6 | compliance.service.ts (20 methods) | ✅ Complete |
 | Banking | pre-roadmap | 20 | banking.service.ts (45 methods) | ✅ Complete |
 | Accountant Workspace | H | 1 | accountant-workspace.service.ts (4 methods) | ✅ Complete |
+| Automation | I-1/I-2 | 6 | automation.service.ts (20 methods) | ✅ Complete |
 
 ---
 
@@ -87,6 +88,12 @@
 
 ---
 
+## Plan I: Automation (COMPLETE ✅)
+- I-1: Workflow Builder, Smart Rules, AI Bookkeeping (3 pages) ✅
+- I-2: Smart Matching, Automation Logs, Error Queue (3 pages) ✅
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -101,13 +108,12 @@
 
 ---
 
-## Future Modules (Post-Plan H)
+## Future Modules (Post-Plan I)
 
 | Module | Stubs | Blocker | Est. Batches |
 |---|---|---|---|
 | Home Dashboard | 5 | No chart library installed; 5 stubs need visualizations. Main dashboard already built (OwnerDashboard.tsx). | 3-5 |
 | Reporting | 10 | Chart library, export functionality | 3-5 |
-| Automation | 5 | Pre-flight audit | 2-3 |
 | Integrations | 8 | Pre-flight audit | 3-4 |
 
 ---
@@ -152,3 +158,6 @@
 | `5296439c` | G-2 | Add monitoring pages — issue-tracking and fraud-detection-rules |
 | `6b6d4b6e` | docs | Consolidate roadmap — Plan G complete, Compliance to Completed Modules |
 | `168cee6b` | H | Add statement archive + client requests pages (Banking + Accountant Workspace complete) |
+| `650f64ab` | docs | Consolidate roadmap — Plan H complete, Banking and Accountant Workspace to Completed Modules |
+| `112e699f` | I-1 | Add automation service + workflow/rules/ai-bookkeeping pages |
+| `27065d18` | I-2 | Add smart-matching, automation-logs, error-queue pages (Automation complete) |
