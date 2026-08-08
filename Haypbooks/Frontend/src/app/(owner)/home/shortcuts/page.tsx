@@ -1,10 +1,7 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+'use client'
 
-export default function Page() {
-  return (
-    <ComingSoon
-      featureName="Shortcuts"
-      estimatedTime="Q2 2026"
-    />
-  )
+import ShortcutsClient from '@/app/shortcuts/ShortcutsClient'
+
+export default function ShortcutsPage() {
+  return <ShortcutsClient />
 }

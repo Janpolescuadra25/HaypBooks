@@ -1,10 +1,7 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+'use client'
 
-export default function Page() {
-  return (
-    <ComingSoon
-      featureName="Setup Center"
-      estimatedTime="Q2 2026"
-    />
-  )
+import SetupCenter from '@/components/owner/SetupCenter'
+
+export default function SetupCenterPage() {
+  return <SetupCenter />
 }
