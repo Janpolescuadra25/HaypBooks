@@ -30,4 +30,26 @@ export const automationService = {
     apiClient.put(`/companies/${companyId}/automation/ai-suggestions/${id}/reject`),
   batchApproveSuggestions: (companyId: string, ids: string[]) =>
     apiClient.post(`/companies/${companyId}/automation/ai-suggestions/batch-approve`, { ids }),
+
+  // --- Smart Matching (4 methods) ---
+  getSmartMatchingRules: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/automation/smart-matching`),
+  createSmartMatchingRule: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/automation/smart-matching`, data),
+  updateSmartMatchingRule: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/automation/smart-matching/${id}`, data),
+  deleteSmartMatchingRule: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/automation/smart-matching/${id}`),
+
+  // --- Automation Logs (2 methods) ---
+  getAutomationLogs: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/automation/logs`),
+  getAutomationLogDetails: (companyId: string, id: string) =>
+    apiClient.get(`/companies/${companyId}/automation/logs/${id}`),
+
+  // --- Error Queue (2 methods) ---
+  getErrorQueue: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/automation/error-queue`),
+  resolveError: (companyId: string, id: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/automation/error-queue/${id}/resolve`, data),
 }
