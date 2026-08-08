@@ -130,4 +130,14 @@ export const bankingService = {
 
   deleteSmartRule: (companyId: string, id: string) =>
     apiClient.delete(`/companies/${companyId}/banking/smart-rules/${id}`),
+
+  // --- Bank Statements (4 methods) ---
+  getBankStatements: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/banking/statements`),
+  createBankStatement: (companyId: string, data: any) =>
+    apiClient.post(`/companies/${companyId}/banking/statements`, data),
+  updateBankStatement: (companyId: string, id: string, data: any) =>
+    apiClient.put(`/companies/${companyId}/banking/statements/${id}`, data),
+  deleteBankStatement: (companyId: string, id: string) =>
+    apiClient.delete(`/companies/${companyId}/banking/statements/${id}`),
 }
