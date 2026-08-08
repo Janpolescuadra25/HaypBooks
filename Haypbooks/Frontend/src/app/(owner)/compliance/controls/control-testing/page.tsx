@@ -4,9 +4,9 @@ import { complianceService } from '@/services/compliance.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import HaypModal from '@/components/shared/HaypModal'
 
-const TEST_STATUSES = ['Passed', 'Failed', 'In Progress', 'Not Tested'] as const
+const TEST_STATUSES = ['Passed', 'Failed', 'In Progress', 'Not Tested']
 
-const REVIEW_FREQUENCIES = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual'] as const
+const REVIEW_FREQUENCIES = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual']
 
 const TEST_STATUS_BADGE: Record<string, string> = {
   Passed: 'bg-emerald-50 text-emerald-700',

@@ -11,7 +11,7 @@ const POLICY_CATEGORIES = [
   'Information Security',
   'HR',
   'Environmental',
-] as const
+]
 
 const POLICY_STATUS_BADGE: Record<string, string> = {
   Active: 'bg-emerald-50 text-emerald-700',

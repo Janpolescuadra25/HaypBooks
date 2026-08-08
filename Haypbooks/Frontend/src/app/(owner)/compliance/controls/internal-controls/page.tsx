@@ -10,7 +10,7 @@ const CONTROL_CATEGORIES = [
   'Corrective',
   'Administrative',
   'Technical',
-] as const
+]
 
 const CONTROL_TYPES = [
   'Authorization',
@@ -19,7 +19,7 @@ const CONTROL_TYPES = [
   'Review',
   'Approval',
   'Segregation of Duties',
-] as const
+]
 
 const RISK_BADGE_CLASSES: Record<string, string> = {
   High: 'bg-rose-50 text-rose-700',
