@@ -1,13 +1,13 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 8, 2026  
-**Branch:** `main` (52 commits ahead of origin)  
-**Total Built Pages:** ~278  
-**ComingSoon Stubs Remaining:** 61  
-**Service Files:** 19  
+**Branch:** `main` (56 commits ahead of origin)  
+**Total Built Pages:** ~284  
+**ComingSoon Stubs Remaining:** 56  
+**Service Files:** 20  
 
 ---
 
-## Completed Modules (12)
+## Completed Modules (13)
 
 | Module | Batches | Pages Built | Service File | Status |
 |---|---|---|---|---|
@@ -23,6 +23,7 @@
 | Time | 14A-1/2 | 4 | time.service.ts (7 methods) | ⚠️ 1 deferred |
 | Tasks & Approvals | E-1/E-2/E-3 | 10 | tasks-approvals.service.ts (9 methods) | ✅ Complete |
 | Settings | F-1/F-2/F-3 | 12 | settings.service.ts (22 methods) | ✅ Complete |
+| Compliance | G-1/G-2 | 6 | compliance.service.ts (20 methods) | ✅ Complete |
 
 ---
 
@@ -71,6 +72,13 @@
 
 ---
 
+## Plan G: Compliance (COMPLETE ✅)
+- G-1: Controls — internal-controls, control-testing, policy-management (3 pages) ✅
+- G-2: Monitoring — issue-tracking, fraud-detection-rules (2 pages) ✅
+- Pre-existing: audit-log-analysis (Ledger Health Monitor) ✅
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -85,13 +93,12 @@
 
 ---
 
-## Future Modules (Post-Plan F)
+## Future Modules (Post-Plan G)
 
 | Module | Stubs | Blocker | Est. Batches |
 |---|---|---|---|
 | Home Dashboard | 5 | No chart library installed; 5 stubs need visualizations. Main dashboard already built (OwnerDashboard.tsx). | 3-5 |
 | Reporting | 10 | Chart library, export functionality | 3-5 |
-| Compliance | 4 | Pre-flight audit | 2-3 |
 | Automation | 5 | Pre-flight audit | 2-3 |
 | Integrations | 8 | Pre-flight audit | 3-4 |
 | Banking (remaining) | 1 | Pre-flight audit | 1-2 |
@@ -133,3 +140,7 @@
 | `1b302b7e` | F-1 | Establish form gold standard with company-details & fiscal-year-setup |
 | `a6c16011` | F-2 | Table+modal pattern with numbering-sequences, custom-fields, data-backup |
 | `bfe3e938` | F-3 | User security pages, Settings module complete (12/12) |
+| `7f9a3a2c` | docs | Consolidate roadmap — Plan F complete, Settings to Completed Modules |
+| `4e1b87d5` | G-1 | Add compliance service + internal-controls, control-testing, policy-management |
+| `19bbf943` | G-1-fix | Remove as const from constant arrays to fix tsc errors |
+| `5296439c` | G-2 | Add monitoring pages — issue-tracking and fraud-detection-rules |
