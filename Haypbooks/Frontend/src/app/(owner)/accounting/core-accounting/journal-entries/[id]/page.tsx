@@ -14,6 +14,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import AccountSelect from '@/components/accounting/AccountSelect'
+import RejectionReasonModal from '@/components/shared/RejectionReasonModal'
 
 interface JELine {
   id?: string
@@ -90,6 +91,7 @@ export default function JournalEntryDetailPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [saveError, setSaveError] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
+  const [showVoidReasonModal, setShowVoidReasonModal] = useState(false)
   const [recurrenceInterval, setRecurrenceInterval] = useState<'Monthly' | 'Quarterly' | 'Yearly'>('Monthly')
   const [attachments, setAttachments] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -97,9 +99,9 @@ export default function JournalEntryDetailPage() {
     const dateSource = editDate || new Date().toISOString().split('T')[0]
     const next = new Date(dateSource)
     next.setDate(1)
-    next.setMonth(next.getMonth() + 1)
+    next.setMonth(next.getMonth() + (recurrenceInterval === 'Quarterly' ? 3 : recurrenceInterval === 'Yearly' ? 12 : 1))
     return next.toISOString().split('T')[0]
-  }, [editDate])
+  }, [editDate, recurrenceInterval])
 
   const fetchEntry = useCallback(async () => {
     if (!companyId || !params?.id) return
@@ -199,6 +201,7 @@ export default function JournalEntryDetailPage() {
 
   const handlePost = async () => {
     if (!companyId || !entry) return
+    if (!window.confirm('Posting this journal entry will make it permanent. Continue?')) return
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${entry.id}/post`)
       fetchEntry()
@@ -207,11 +210,15 @@ export default function JournalEntryDetailPage() {
     }
   }
 
-  const handleVoid = async () => {
+  const handleVoid = () => {
+    setShowVoidReasonModal(true)
+  }
+
+  const handleConfirmVoid = async (reason: string) => {
     if (!companyId || !entry) return
-    if (!window.confirm('Void this posted entry? A reversal entry will be created and this cannot be undone.')) return
+    setShowVoidReasonModal(false)
     try {
-      await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${entry.id}/void`, { reason: 'Voided by user' })
+      await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${entry.id}/void`, { reason })
       fetchEntry()
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to void entry')
@@ -700,6 +707,13 @@ export default function JournalEntryDetailPage() {
           </div>
         </div>
       )}
+      <RejectionReasonModal
+        open={showVoidReasonModal}
+        onClose={() => setShowVoidReasonModal(false)}
+        onConfirm={handleConfirmVoid}
+        title="Void journal entry"
+        description="Provide a reason for voiding this journal entry. A reversal entry will be created."
+      />
     </div>
   )
 }

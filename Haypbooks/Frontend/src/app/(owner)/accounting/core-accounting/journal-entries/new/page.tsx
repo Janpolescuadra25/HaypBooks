@@ -55,9 +55,9 @@ export default function NewJournalEntryPage() {
     if (!date) return new Date().toISOString().split('T')[0]
     const next = new Date(date)
     next.setDate(1)
-    next.setMonth(next.getMonth() + 1)
+    next.setMonth(next.getMonth() + (recurrenceInterval === 'Quarterly' ? 3 : recurrenceInterval === 'Yearly' ? 12 : 1))
     return next.toISOString().split('T')[0]
-  }, [date])
+  }, [date, recurrenceInterval])
 
   const safeBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 2) {

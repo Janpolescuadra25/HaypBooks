@@ -175,26 +175,20 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
 
                       <ul className="space-y-2 text-sm">
                         <li>
-                          <a href="#" className="flex items-center gap-3 text-slate-700 hover:text-slate-900">
+                          <a href="/settings/company-profile/company-details" className="w-full text-left flex items-center gap-3 text-slate-700 hover:text-slate-900">
                             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                             ACCOUNT PROFILE
                           </a>
                         </li>
                         <li>
-                          <a href="#" className="flex items-center gap-3 text-slate-700 hover:text-slate-900">
-                            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" /></svg>
-                            BILLING & USAGE
-                          </a>
-                        </li>
-                        <li>
-                          <a href="#" className="flex items-center gap-3 text-slate-700 hover:text-slate-900">
+                          <a href="/settings/users-security/user-management" className="w-full text-left flex items-center gap-3 text-slate-700 hover:text-slate-900">
                             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v6l4 2 4-2V7" /></svg>
                             TEAM MANAGEMENT
                           </a>
                         </li>
 
                         <li>
-                          <a href="#" className="flex items-center gap-3 text-slate-700 hover:text-slate-900">
+                          <a href="/settings/users-security/two-factor-auth" className="w-full text-left flex items-center gap-3 text-slate-700 hover:text-slate-900">
                             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c1.657 0 3-1.567 3-3.5S13.657 4 12 4s-3 1.567-3 3.5S10.343 11 12 11z" /></svg>
                             SECURITY VAULT
                           </a>
@@ -240,21 +234,14 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
 
               {/* Second bar: quick actions */}
               <div className="mt-2 flex items-center gap-3">
-                <button className={`${navButtonClass} bg-emerald-600 text-white rounded-full font-semibold shadow-sm`} style={navButtonStyle}>
-                  <svg className="" style={navIconStyle} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                  </svg>
-                  <span className={`${isCompact ? 'sr-only' : ''}`}>PORTFOLIO</span>
-                </button>
-
-                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`} style={navButtonStyle}>
+                <button type="button" onClick={() => router.push('/tasks-approvals/my-work/my-tasks')} className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`} style={navButtonStyle}>
                   <svg className="" style={navIconStyle} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
                   <span className={`${isCompact ? 'sr-only' : ''}`}>TASK REMINDER</span>
                 </button>
 
-                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`} style={navButtonStyle}>
+                <button type="button" onClick={() => router.push('/banking/reconciliation/reconcile')} className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`} style={navButtonStyle}>
                   <svg className="" style={navIconStyle} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                   </svg>

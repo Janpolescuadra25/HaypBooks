@@ -90,14 +90,15 @@ function formatRange(type: AccountType) {
 
 function getTypeRowStyle(type: string): string {
   if (!type) return 'border-l-4 border-l-gray-300 bg-gray-50/30 hover:bg-gray-100/60'
-  switch (type.toUpperCase()) {
+  const normalized = type.trim().toUpperCase()
+  switch (normalized) {
     case 'ASSET':     return 'border-l-4 border-l-blue-500 bg-blue-50/30 hover:bg-blue-50/60'
     case 'LIABILITY': return 'border-l-4 border-l-purple-500 bg-purple-50/30 hover:bg-purple-50/60'
     case 'EQUITY':    return 'border-l-4 border-l-green-500 bg-green-50/30 hover:bg-green-50/60'
     case 'REVENUE':   return 'border-l-4 border-l-teal-500 bg-teal-50/30 hover:bg-teal-50/60'
     case 'EXPENSE':   return 'border-l-4 border-l-red-500 bg-red-50/30 hover:bg-red-50/60'
     default:
-      if (type.startsWith('CONTRA_')) return 'border-l-4 border-l-orange-500 bg-orange-50/30 hover:bg-orange-50/60'
+      if (normalized.startsWith('CONTRA')) return 'border-l-4 border-l-orange-500 bg-orange-50/30 hover:bg-orange-50/60'
       return 'border-l-4 border-l-gray-300 bg-gray-50/30 hover:bg-gray-100/60'
   }
 }
@@ -655,17 +656,29 @@ function ImportModal({ onClose, onImported, companyId }: { onClose: () => void; 
         }
         const dataRows = lines.slice(1).filter(r => r[codeIdx]?.trim() && r[nameIdx]?.trim())
         let count = 0
-        for (const r of dataRows) {
+        const failures: { row: number; message: string }[] = []
+        for (let rowIndex = 0; rowIndex < dataRows.length; rowIndex++) {
+          const r = dataRows[rowIndex]
           const accType = (r[typeIdx] as AccountType) || 'Asset'
           const normalSide = sideIdx >= 0 ? r[sideIdx] : (['Asset', 'Expense'].includes(accType) ? 'Debit' : 'Credit')
-          await apiClient.post(`/companies/${companyId}/accounting/accounts`, {
-            code: r[codeIdx],
-            name: r[nameIdx],
-            type: accType,
-            normalSide,
-            description: descIdx >= 0 ? r[descIdx] : undefined,
-          }).catch(() => {})
-          count++
+          try {
+            await apiClient.post(`/companies/${companyId}/accounting/accounts`, {
+              code: r[codeIdx],
+              name: r[nameIdx],
+              type: accType,
+              normalSide,
+              description: descIdx >= 0 ? r[descIdx] : undefined,
+            })
+            count++
+          } catch (error: any) {
+            failures.push({ row: rowIndex + 2, message: error?.response?.data?.message ?? error?.message ?? 'Unknown import error' })
+          }
+        }
+        if (failures.length > 0) {
+          const row = failures[0]
+          setError(`Import failed on row ${row.row}: ${row.message}`)
+          setImporting(false)
+          return
         }
         setSuccess(`Imported ${count} account${count !== 1 ? 's' : ''} successfully`)
         setTimeout(() => { onImported(); onClose() }, 1500)
