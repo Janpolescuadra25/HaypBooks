@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, ChevronRight, Star } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { navigationData, NavSection, NavItem } from './ownerNavConfig'
 import { useCompany } from '@/hooks/use-company'
 import { motion, AnimatePresence } from 'motion/react'

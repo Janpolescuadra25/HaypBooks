@@ -1,4 +1,4 @@
-import ComingSoon from '@/components/owner/ComingSoon'
+import ComingSoon from '@/components/ui/ComingSoonPage'
 import { ownerNav } from '@/components/owner/ownerNavConfig'
 
 type SectionComingSoonProps = {
@@ -27,5 +27,5 @@ function resolveTitle(sectionId: string, slug: string[] | undefined): string {
 }
 
 export default function SectionComingSoon({ sectionId, params, ent = false }: SectionComingSoonProps) {
-  return <ComingSoon title={resolveTitle(sectionId, params.slug)} ent={ent} />
+  return <ComingSoon featureName={resolveTitle(sectionId, params.slug)} ent={ent} />
 }

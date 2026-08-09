@@ -1,4 +1,3 @@
-import { ColumnDef, SortingState, ColumnOrderState, VisibilityState, RowSelectionState, ColumnSizingState } from '@tanstack/react-table'
 import { LucideIcon } from 'lucide-react'
 import React from 'react'
 

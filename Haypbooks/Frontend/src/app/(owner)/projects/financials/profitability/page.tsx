@@ -1,5 +1,5 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+import ComingSoon from '@/components/ui/ComingSoonPage'
 
 export default function Page() {
-  return <TabComingSoon title="Project Profitability" />
+  return <ComingSoon featureName="Project Profitability" />
 }
