@@ -75,6 +75,41 @@
 ### Post-Reporting: Deployment
 See "Deployment Roadmap" section below.
 
+### Plan M: HB_Owner Dashboard + Architecture Restructure (POST-L-2)
+
+**Problem:** The current `(owner)` route treats the SaaS platform owner (JP) the same as a client. The platform owner should have a confidential admin dashboard separate from client-facing apps.
+
+**Architecture Change:**
+```
+CURRENT (wrong):
+  Login → Workspace Selection → (owner)/dashboard  (owner treated as client)
+
+CORRECT:
+  Owner credentials → HB_Owner dashboard (confidential, no workspace selection)
+  Client credentials → Workspace Selection (HB_Online ↔ HB_Practice_Hub) → respective dashboard
+```
+
+**M-1: Route Restructure**
+- Rename or clarify `(owner)/` route group to represent HB_Online (client-facing app)
+- Rename `practice-hub/` to HB_Practice_Hub (accountant-facing app)
+- Create new `(hb-owner)/` route group — confidential, NOT in workspace selection
+- Update login flow: backend checks for "platform_owner" role → redirect to HB_Owner or workspace selection
+- Keep workspace selection between HB_Online and HB_Practice_Hub only
+
+**M-2: HB_Owner Dashboard — Core Pages**
+- Overview dashboard (total clients, users, subscriptions, MRR, system health, activity feed)
+- Client management (list all companies, search/filter, suspend, reactivate, delete, read-only access to client books)
+- Subscription plan management (create/edit plans, pricing, upgrade/downgrade clients, payment history)
+- User management (global user list, block/unblock by email or domain, delete, login history, force password reset)
+- Activity & security (global audit log, login tracking, failed attempts, blocked domains, IP management)
+
+**M-3: HB_Owner Dashboard — Advanced Pages**
+- Platform configuration (feature flags, maintenance mode, announcement banner, email templates, API rate limits, storage quotas)
+- Analytics (user growth, revenue trends, feature usage, churn analysis, most active clients)
+- Support tools (support tickets, client feedback, impersonation mode for debugging)
+
+**Dependencies:** Requires backend role system (platform_owner role), multi-tenant admin API endpoints, subscription management backend. This is a major architectural plan that spans both frontend and backend.
+
 ### Deferred (22+ stubs, backend-blocked)
 These require backend Prisma models, controllers, and services before frontend can be built. Tracked in Deferred Stubs table above. Will be addressed as dedicated module-specific backend+frontend plans.
 
@@ -94,6 +129,13 @@ These require backend Prisma models, controllers, and services before frontend c
 10. **Reporting error states not rendered** — 6 category report pages capture `error` state but never render it in JSX. Errors are silently swallowed.
 11. **Reporting backend endpoints missing** — 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD endpoints don't exist on backend. Same category as 22 deferred stubs.
 12. **Heavy `any` typing in reporting service** — No TypeScript interfaces for report row shapes or request/response payloads.
+13. **Dead code: 8 unused component files** — Toaster.tsx, CenteredModal.tsx, Breadcrumbs.tsx, BackButton.tsx, BackBar.tsx, StatusBadge.tsx (root-level), layout/tabs/SectionTabBar.tsx, layout/tabs/SectionBreadcrumb.tsx — all have zero imports
+14. **Dual toast systems** — ToastProvider.tsx (canonical, 40+ consumers) and ui/Toast.tsx (4 expenses layouts) export same names with different APIs and z-indices; Toaster.tsx (third, dead code) pollutes window global
+15. **TopBar.tsx has non-functional buttons** — "PORTFOLIO", "TASK REMINDER", "RECONCILE ACCOUNTS" are decorative (onClick does nothing); user menu links are `href="#"` to non-existent pages
+16. **HaypReportTable customize panel is cosmetic** — Number format, show cents, negative format, row height toggles don't affect rendering; console.log left in production code
+17. **Three "coming soon" components** — TabComingSoon.tsx, ComingSoonPage.tsx, TabPlaceholder.tsx serve the same purpose with different UIs
+18. **OwnerSidebar has dead Star import** — lucide-react Star imported but never used
+19. **HaypDataTable.types.ts has dead tanstack imports** — ColumnDef, SortingState, ColumnOrderState, VisibilityState, RowSelectionState, ColumnSizingState imported but unused
 
 ---
 
