@@ -1,6 +1,6 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 9, 2026  
-**Branch:** `main` (76 commits ahead of origin)  
+**Branch:** `main` (80 commits ahead of origin)  
 **Total Built Pages:** 349  
 **ComingSoon Stubs Remaining:** 26  
 **Service Files:** 25  
@@ -64,21 +64,16 @@
 
 ## Next Plans
 
-### Immediate: N-2 — Frontend Cleanup Sprint
+### Immediate: N-3 — Code Quality Cleanup
 
 | Task | Type | Description |
 |---|---|---|
-| JE void reason UI | UX | Add reason modal for journal entry void action |
-| JE post confirmation | UX | Add confirmation dialog before posting a journal entry |
-| Recurrence logic | Bug | Fix yearly/quarterly next-run date calculation (always +1 month) |
-| Contra account styling | UI | Fix getTypeRowStyle CONTRA_ underscore-to-space matching |
-| CSV import error display | Data | Track failed rows separately, show per-row error count |
-| Delete 8 dead component files | Cleanup | Remove Toaster, CenteredModal, Breadcrumbs, BackButton, BackBar, StatusBadge, SectionTabBar, SectionBreadcrumb |
-| Merge dual toast systems | Architecture | Consolidate ui/Toast.tsx layouts into canonical ToastProvider.tsx |
-| Fix TopBar buttons | UX | Wire non-functional decorative buttons to real routes or remove them |
-| Fix HaypReportTable panel | Code | Wire cosmetic customize toggles to real behavior or remove panel |
+| Remove `as any` casts in accounting | Type safety | Replace ~30 `as any` / `catch (e: any)` with proper types across 4 accounting files |
+| Remove dead `Star` import in OwnerSidebar | Dead code | Unused lucide-react `Star` import in sidebar component |
+| Remove dead tanstack imports in HaypDataTable.types | Dead code | Unused `@tanstack/react-table` type imports |
+| Consolidate 3 coming-soon components | Redundancy | Merge redundant ComingSoon/ComingSoonPage/ComingSoonCard into 1 |
 
-### Plan N: Accounting Module Fixes (N-1 ✅ Complete, N-2/N-3 Pending)
+### Plan N: Accounting Module Fixes (N-1 ✅, N-2 ✅, N-3 Pending)
 Section 2 audit found 30 issues (7 critical, 13 significant, 10 minor). Top priorities:
 - **N-1: Data-loss hotfixes** — Fix attachment upload, customerId payload, COA modal fields, remove console.logs (7 critical items)
 - **N-2: UX improvements** — Add void reason modal, post confirmation, fix recurrence logic, fix contra styling, fix CSV import error reporting (13 significant items)
@@ -142,10 +137,10 @@ These require backend Prisma models, controllers, and services before frontend c
 10. ~~**Reporting error states not rendered** — 6 category report pages capture `error` state but never render it in JSX. Errors are silently swallowed.~~ — ✅ Resolved (L-2, commit 0957d91e)
 11. **Reporting backend endpoints missing** — 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD endpoints don't exist on backend. Same category as 22 deferred stubs.
 12. **Heavy `any` typing in reporting service** — No TypeScript interfaces for report row shapes or request/response payloads.
-13. **Dead code: 8 unused component files** — Toaster.tsx, CenteredModal.tsx, Breadcrumbs.tsx, BackButton.tsx, BackBar.tsx, StatusBadge.tsx (root-level), layout/tabs/SectionTabBar.tsx, layout/tabs/SectionBreadcrumb.tsx — all have zero imports
-14. **Dual toast systems** — ToastProvider.tsx (canonical, 40+ consumers) and ui/Toast.tsx (4 expenses layouts) export same names with different APIs and z-indices; Toaster.tsx (third, dead code) pollutes window global
-15. **TopBar.tsx has non-functional buttons** — "PORTFOLIO", "TASK REMINDER", "RECONCILE ACCOUNTS" are decorative (onClick does nothing); user menu links are `href="#"` to non-existent pages
-16. **HaypReportTable customize panel is cosmetic** — Number format, show cents, negative format, row height toggles don't affect rendering; console.log left in production code
+13. ~~**Dead code: 8 unused component files** — Toaster.tsx, CenteredModal.tsx, Breadcrumbs.tsx, BackButton.tsx, BackBar.tsx, StatusBadge.tsx (root-level), layout/tabs/SectionTabBar.tsx, layout/tabs/SectionBreadcrumb.tsx — all have zero imports~~ — ✅ Resolved (N-2, commit 2c11c32d)
+14. ~~**Dual toast systems** — ToastProvider.tsx (canonical, 40+ consumers) and ui/Toast.tsx (4 expenses layouts) export same names with different APIs and z-indices; Toaster.tsx (third, dead code) pollutes window global~~ — ✅ Resolved (N-2, commit c9b450e8)
+15. ~~**TopBar.tsx has non-functional buttons** — "PORTFOLIO", "TASK REMINDER", "RECONCILE ACCOUNTS" are decorative (onClick does nothing); user menu links are `href="#"` to non-existent pages~~ — ✅ Resolved (N-2, commit 69f856ad)
+16. ~~**HaypReportTable customize panel is cosmetic** — Number format, show cents, negative format, row height toggles don't affect rendering; console.log left in production code~~ — ✅ Resolved (N-2, commit 2c11c32d)
 17. **Three "coming soon" components** — TabComingSoon.tsx, ComingSoonPage.tsx, TabPlaceholder.tsx serve the same purpose with different UIs
 18. **OwnerSidebar has dead Star import** — lucide-react Star imported but never used
 19. **HaypDataTable.types.ts has dead tanstack imports** — ColumnDef, SortingState, ColumnOrderState, VisibilityState, RowSelectionState, ColumnSizingState imported but unused
@@ -153,10 +148,10 @@ These require backend Prisma models, controllers, and services before frontend c
 21. ~~**JE customerId silently dropped from payload** — Form collects customer per line but `validLines.map()` only sends accountId/debit/credit/description. (Accounting audit #2)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
 22. ~~**COA modal drops 4 form fields on save** — handleSave sends only {code, name, type}; parentId, description, isHeader, normalSide collected in form are silently discarded. (Accounting audit #4)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
 23. ~~**console.log leaks financial data** — journal-entries/new page logs full JE payload (amounts, accounts) to browser console. 3 more in GeneralLedgerPage. (Accounting audit #5, #6)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
-24. **Contra account styling never applies** — `getTypeRowStyle` checks `CONTRA_` (underscore) but types use spaces (`Contra Asset`). Falls through to gray. (Accounting audit #7)
-25. **Recurrence next-run always +1 month** — Yearly/Quarterly JEs show next run as next month regardless of interval. (Accounting audit #8)
-26. **JE void has no reason UI** — Hardcoded `{reason:'Voided by user'}`; Post action has no confirmation dialog. (Accounting audit #13, #14)
-27. **COA CSV import swallows per-row errors** — Failed imports reported as successful. (Accounting audit #16)
+24. ~~**Contra account styling never applies** — `getTypeRowStyle` checks `CONTRA_` (underscore) but types use spaces (`Contra Asset`). Falls through to gray. (Accounting audit #7)~~ — ✅ Resolved (N-2, commit 69f856ad)
+25. ~~**Recurrence next-run always +1 month** — Yearly/Quarterly JEs show next run as next month regardless of interval. (Accounting audit #8)~~ — ✅ Resolved (N-2, commit 69f856ad)
+26. ~~**JE void has no reason UI** — Hardcoded `{reason:'Voided by user'}`; Post action has no confirmation dialog. (Accounting audit #13, #14)~~ — ✅ Resolved (N-2, commit 69f856ad)
+27. ~~**COA CSV import swallows per-row errors** — Failed imports reported as successful. (Accounting audit #16)~~ — ✅ Resolved (N-2, commit 69f856ad)
 28. **Inconsistent API verbs** — Account deactivate uses DELETE, reactivate uses PUT for same state toggle. (Accounting audit #17)
 29. **30+ `as any` / `catch (e: any)` in accounting module** — Reduces TypeScript safety across all accounting pages. (Accounting audit #10, #11, #27)
 
