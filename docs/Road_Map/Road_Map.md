@@ -1,8 +1,8 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 9, 2026  
-**Branch:** `main` (72 commits ahead of origin)  
-**Total Built Pages:** 347  
-**ComingSoon Stubs Remaining:** 28  
+**Branch:** `main` (76 commits ahead of origin)  
+**Total Built Pages:** 349  
+**ComingSoon Stubs Remaining:** 26  
 **Service Files:** 25  
 
 ---
@@ -28,23 +28,23 @@
 | Accountant Workspace | H | 1 | accountant-workspace.service.ts (4 methods) | ✅ Complete |
 | Automation | I-1/I-2 | 6 | automation.service.ts (20 methods) | ✅ Complete |
 | Integrations | J-1/J-2 | 8 | integration.service.ts (23 methods) | ✅ Complete |
-| Reporting | L-1 | 8 | reporting.service.ts (20 methods) | ⚠️ L-1 complete, URL convention needs fix, backend endpoints pending |
+| Reporting | L-1 | 8 | reporting.service.ts (20 methods) | ✅ Complete (L-1 + L-2) |
 | Home Dashboard | K-1/K-2 | 6 | home.service.ts (5 methods) | ✅ Complete |
 
 ---
 
-## Plan L: Reporting (IN PROGRESS)
+## Plan L: Reporting (✅ COMPLETE)
 
 ### L-1: ✅ Complete (commit 62e6396f)
 - Created `reporting.service.ts` (20 methods: 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD)
 - Built 6 category report pages: banking, expense, inventory, payroll, project, sales — each with date-range filter, data table with totals, CSV export
 - Built 2 CRUD pages (table+modal pattern): custom-reports, scheduled-reports — full create/edit/delete with modal
 
-### L-2: ⏳ Pending
-- Fix URL convention in `reporting.service.ts` (change `/companies/${companyId}/reporting/*` → `/reporting/*` with `{ params: { companyId } }` to match existing pattern)
-- Fix error state rendering in 6 category report pages
-- Build `analytics/analytics-dashboards/page.tsx` — chart dashboard with recharts
-- Build `custom-reports/report-builder/page.tsx` — hybrid form + preview tool
+### L-2: ✅ Complete (commit 0957d91e)
+- Fixed URL convention in reporting.service.ts (20 methods → /reporting/* with query params)
+- Added error state rendering with retry button to 6 category report pages
+- Built analytics/analytics-dashboards — recharts KPI cards, bar + line charts, mock data
+- Built custom-reports/report-builder — form + live preview, dynamic columns/filters, CSV download
 
 ---
 
@@ -64,15 +64,21 @@
 
 ## Next Plans
 
-### Immediate: L-2 — Reporting Completion
+### Immediate: N-2 — Frontend Cleanup Sprint
+
 | Task | Type | Description |
 |---|---|---|
-| Fix URL convention | Hotfix | reporting.service.ts endpoints → match `/reporting/*` with query param pattern |
-| Fix error rendering | Hotfix | Add error state JSX to 6 category report pages |
-| Analytics Dashboards | New page | Chart dashboard (recharts) — revenue trends, expense breakdown, KPIs |
-| Report Builder | New page | Hybrid form + preview — select data source, columns, filters, preview generated report |
+| JE void reason UI | UX | Add reason modal for journal entry void action |
+| JE post confirmation | UX | Add confirmation dialog before posting a journal entry |
+| Recurrence logic | Bug | Fix yearly/quarterly next-run date calculation (always +1 month) |
+| Contra account styling | UI | Fix getTypeRowStyle CONTRA_ underscore-to-space matching |
+| CSV import error display | Data | Track failed rows separately, show per-row error count |
+| Delete 8 dead component files | Cleanup | Remove Toaster, CenteredModal, Breadcrumbs, BackButton, BackBar, StatusBadge, SectionTabBar, SectionBreadcrumb |
+| Merge dual toast systems | Architecture | Consolidate ui/Toast.tsx layouts into canonical ToastProvider.tsx |
+| Fix TopBar buttons | UX | Wire non-functional decorative buttons to real routes or remove them |
+| Fix HaypReportTable panel | Code | Wire cosmetic customize toggles to real behavior or remove panel |
 
-### Plan N: Accounting Module Fixes (POST-L-2)
+### Plan N: Accounting Module Fixes (N-1 ✅ Complete, N-2/N-3 Pending)
 Section 2 audit found 30 issues (7 critical, 13 significant, 10 minor). Top priorities:
 - **N-1: Data-loss hotfixes** — Fix attachment upload, customerId payload, COA modal fields, remove console.logs (7 critical items)
 - **N-2: UX improvements** — Add void reason modal, post confirmation, fix recurrence logic, fix contra styling, fix CSV import error reporting (13 significant items)
@@ -132,8 +138,8 @@ These require backend Prisma models, controllers, and services before frontend c
 6. **Employees page** — Uses `gray-*`, raw `fetch()`, `Loader2` — needs full rebuild (C-5 deferred)
 7. **3 custom detail pages** — chart-of-accounts, journal-entries/[id], budgets/[budgetId] — too custom for Plan C
 8. **Backend schema drift** — TimeEntry, TimerSession, ProjectMilestone field name mismatches
-9. **Reporting URL convention mismatch** — `reporting.service.ts` uses `/companies/${companyId}/reporting/*` but all existing reporting pages and the backend controller use `/reporting/*` with `companyId` as query param. Frontend pages will 404 until fixed.
-10. **Reporting error states not rendered** — 6 category report pages capture `error` state but never render it in JSX. Errors are silently swallowed.
+9. ~~**Reporting URL convention mismatch** — `reporting.service.ts` uses `/companies/${companyId}/reporting/*` but all existing reporting pages and the backend controller use `/reporting/*` with `companyId` as query param. Frontend pages will 404 until fixed.~~ — ✅ Resolved (L-2, commit 0957d91e)
+10. ~~**Reporting error states not rendered** — 6 category report pages capture `error` state but never render it in JSX. Errors are silently swallowed.~~ — ✅ Resolved (L-2, commit 0957d91e)
 11. **Reporting backend endpoints missing** — 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD endpoints don't exist on backend. Same category as 22 deferred stubs.
 12. **Heavy `any` typing in reporting service** — No TypeScript interfaces for report row shapes or request/response payloads.
 13. **Dead code: 8 unused component files** — Toaster.tsx, CenteredModal.tsx, Breadcrumbs.tsx, BackButton.tsx, BackBar.tsx, StatusBadge.tsx (root-level), layout/tabs/SectionTabBar.tsx, layout/tabs/SectionBreadcrumb.tsx — all have zero imports
@@ -143,10 +149,10 @@ These require backend Prisma models, controllers, and services before frontend c
 17. **Three "coming soon" components** — TabComingSoon.tsx, ComingSoonPage.tsx, TabPlaceholder.tsx serve the same purpose with different UIs
 18. **OwnerSidebar has dead Star import** — lucide-react Star imported but never used
 19. **HaypDataTable.types.ts has dead tanstack imports** — ColumnDef, SortingState, ColumnOrderState, VisibilityState, RowSelectionState, ColumnSizingState imported but unused
-20. **JE attachments are discarded on create/edit** — File input only increments `attachmentCount`; actual files never uploaded to backend. journal-entries/new and journal-entries/[id] both affected. (Accounting audit #1, #3)
-21. **JE customerId silently dropped from payload** — Form collects customer per line but `validLines.map()` only sends accountId/debit/credit/description. (Accounting audit #2)
-22. **COA modal drops 4 form fields on save** — handleSave sends only {code, name, type}; parentId, description, isHeader, normalSide collected in form are silently discarded. (Accounting audit #4)
-23. **console.log leaks financial data** — journal-entries/new page logs full JE payload (amounts, accounts) to browser console. 3 more in GeneralLedgerPage. (Accounting audit #5, #6)
+20. ~~**JE attachments are discarded on create/edit** — File input only increments `attachmentCount`; actual files never uploaded to backend. journal-entries/new and journal-entries/[id] both affected. (Accounting audit #1, #3)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
+21. ~~**JE customerId silently dropped from payload** — Form collects customer per line but `validLines.map()` only sends accountId/debit/credit/description. (Accounting audit #2)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
+22. ~~**COA modal drops 4 form fields on save** — handleSave sends only {code, name, type}; parentId, description, isHeader, normalSide collected in form are silently discarded. (Accounting audit #4)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
+23. ~~**console.log leaks financial data** — journal-entries/new page logs full JE payload (amounts, accounts) to browser console. 3 more in GeneralLedgerPage. (Accounting audit #5, #6)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
 24. **Contra account styling never applies** — `getTypeRowStyle` checks `CONTRA_` (underscore) but types use spaces (`Contra Asset`). Falls through to gray. (Accounting audit #7)
 25. **Recurrence next-run always +1 month** — Yearly/Quarterly JEs show next run as next month regardless of interval. (Accounting audit #8)
 26. **JE void has no reason UI** — Hardcoded `{reason:'Voided by user'}`; Post action has no confirmation dialog. (Accounting audit #13, #14)
@@ -197,6 +203,8 @@ These require backend Prisma models, controllers, and services before frontend c
 | `3b054483` | docs | Add Cloudflare R2 + detailed deployment guide to roadmap |
 | `8979e51b` | docs | Add Section 1 audit findings + HB_Owner architectural plan to roadmap |
 | `fb813da4` | docs | Add accounting module audit findings (30 issues) to roadmap |
+| `0957d91e` | L-2 | feat(reporting): complete L-2 — fix URL convention, error rendering, add analytics dashboards + report builder |
+| `3aee1f1e` | N-1 | fix(accounting): N-1 critical hotfixes — attachment upload, customerId payload, COA modal fields, remove console.logs |
 
 ## Deployment Roadmap
 
@@ -424,4 +432,4 @@ After all DNS records propagate, verify each service:
 ### Render Deployment Note
 The backend has a monorepo dependency (`"haypbooks-frontend": "file:../Frontend"` in Backend's package.json). The Render service root must be set to `Haypbooks/` (the monorepo root, not `Haypbooks/Backend/`). Build command: `cd Backend && npm install && npm run build`. Start command: `cd Backend && node dist/main.js`. **Render's filesystem is ephemeral** — any files saved to local disk (including multer uploads) are lost on every deploy or restart, which is why R2 integration is a production requirement.
 
-**Status:** Deployment prompts will be prepared after Plan L-2 completes and the frontend reaches its final state. JP will execute these steps manually. R2 backend integration is a prerequisite for the file upload testing step.
+**Status:** Plan L complete. Frontend ready for deployment after R2 backend integration. JP executes deployment steps manually.
