@@ -1,13 +1,13 @@
 # HaypBooks Frontend Roadmap
-**Last Updated:** August 8, 2026  
+**Last Updated:** August 9, 2026  
 **Branch:** `main` (67 commits ahead of origin)  
-**Total Built Pages:** ~284  
-**ComingSoon Stubs Remaining:** 35  
-**Service Files:** 24  
+**Total Built Pages:** ~292  
+**ComingSoon Stubs Remaining:** 28  
+**Service Files:** 25  
 
 ---
 
-## Completed Modules (18)
+## Completed Modules (19)
 
 | Module | Batches | Pages Built | Service File | Status |
 |---|---|---|---|---|
@@ -28,84 +28,23 @@
 | Accountant Workspace | H | 1 | accountant-workspace.service.ts (4 methods) | ✅ Complete |
 | Automation | I-1/I-2 | 6 | automation.service.ts (20 methods) | ✅ Complete |
 | Integrations | J-1/J-2 | 8 | integration.service.ts (23 methods) | ✅ Complete |
+| Reporting | L-1 | 8 | reporting.service.ts (20 methods) | ⚠️ L-1 complete, URL convention needs fix, backend endpoints pending |
 | Home Dashboard | K-1/K-2 | 6 | home.service.ts (5 methods) | ✅ Complete |
 
 ---
 
-## Plan C: Cross-Module QA (COMPLETE ✅)
+## Plan L: Reporting (IN PROGRESS)
 
-**Purpose:** Normalized 31 older pages across Inventory, Tax, and Accounting/Budgeting to match Pattern A (payroll gold standard).
+### L-1: ✅ Complete (commit 62e6396f)
+- Created `reporting.service.ts` (20 methods: 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD)
+- Built 6 category report pages: banking, expense, inventory, payroll, project, sales — each with date-range filter, data table with totals, CSV export
+- Built 2 CRUD pages (table+modal pattern): custom-reports, scheduled-reports — full create/edit/delete with modal
 
-**Gold standard file:** `src/app/(owner)/payroll-workforce/payroll-taxes/government-contributions/page.tsx`
-
-**Batches completed:**
-- C-1 + C-1-fix: 10 Inventory pages (11 class swaps + S1-S4 structural + date + search)
-- C-2 + C-2-fix: 10 Tax pages (same recipe)
-- C-3: 8 Accounting + Budgeting pages (full 15-fix recipe)
-- C-4: 3 special case inventory files (lot-serial-tracking, inventory-valuation, bin-locations)
-- C-5: Employees page — ⏸️ Deferred (needs full rebuild, different complexity)
-- 2 banking files (transactions, register) — permanently deferred (specialized workflow UIs)
-
-> The 15-fix recipe and detailed sub-batch specs are preserved in git commit history.
-
----
-
-## Plan D: Dead Code Cleanup (COMPLETE ✅)
-
-- Deleted 7 dead components (AccountSplitModal, BulkActionBar, DataPage, EmptyStateEnhanced, DashboardHeader, GlassCard, EdgeInset) — 1,225 lines removed
-- Deleted 3 orphaned test files
-- Deleted stale jest.search.config.js
-- Fixed ComingSoonPage.tsx: gray-* → slate-* (4 classes, fixes 77 stub pages)
-- HaypDateRangePicker.tsx kept (active dependency of HaypDataTable)
-
----
-
-## Plan E: Tasks & Approvals (COMPLETE ✅)
-
-- **E-1** ✅ — Service file (`tasks-approvals.service.ts`, 9 methods), domain types (`ApprovalRequest`, `Task`), my-approvals Pattern A page (8-col table, filter pills, approve/reject, RejectionReasonModal, escalation indicator)
-- **E-2** ✅ — Build 4 my-work list pages (my-tasks, my-exceptions, overdue-items, calendar)
-- **E-3** ✅ — Build 5 management list pages (approval-queue, approval-history, delegated-tasks, team-tasks, task-templates)
-
----
-
----
-
-## Plan F: Settings (COMPLETE ✅)
-- F-1: Form gold standard — company-details, fiscal-year-setup (2 pages) ✅
-- F-2: Table+modal pattern — numbering-sequences, custom-fields, data-backup (3 pages) ✅
-- F-3: User security — user-management, roles-permissions, two-factor-auth (3 pages) ✅
-
----
-
-## Plan G: Compliance (COMPLETE ✅)
-- G-1: Controls — internal-controls, control-testing, policy-management (3 pages) ✅
-- G-2: Monitoring — issue-tracking, fraud-detection-rules (2 pages) ✅
-- Pre-existing: audit-log-analysis (Ledger Health Monitor) ✅
-
----
-
-## Plan H: Banking + Accountant Workspace (COMPLETE ✅)
-- Banking: Statement Archive (1 page) ✅
-- Accountant Workspace: Client Requests (1 page) ✅
-
----
-
-## Plan I: Automation (COMPLETE ✅)
-- I-1: Workflow Builder, Smart Rules, AI Bookkeeping (3 pages) ✅
-- I-2: Smart Matching, Automation Logs, Error Queue (3 pages) ✅
-
----
-
-## Plan J: Integrations (COMPLETE ✅)
-- J-1: API Keys, Webhooks, Installed Apps, Integration Logs (4 pages) ✅
-- J-2: Export Data, Import Data, App Marketplace, Developer Sandbox (4 pages) ✅
-
----
-
-## Plan K: Home Dashboard (COMPLETE ✅)
-- K-1: Setup Center, Shortcuts, Notifications (3 chart-free pages) ✅
-- K-2: Business Health, Performance (2 chart pages with recharts) ✅
-- Pre-existing: Dashboard (OwnerDashboard.tsx) ✅
+### L-2: ⏳ Pending
+- Fix URL convention in `reporting.service.ts` (change `/companies/${companyId}/reporting/*` → `/reporting/*` with `{ params: { companyId } }` to match existing pattern)
+- Fix error state rendering in 6 category report pages
+- Build `analytics/analytics-dashboards/page.tsx` — chart dashboard with recharts
+- Build `custom-reports/report-builder/page.tsx` — hybrid form + preview tool
 
 ---
 
@@ -123,11 +62,21 @@
 
 ---
 
-## Future Modules (Post-Plan K)
+## Next Plans
 
-| Module | Stubs | Blocker | Est. Batches |
-|---|---|---|---|
-| Reporting | 10 | Export functionality | 3-5 |
+### Immediate: L-2 — Reporting Completion
+| Task | Type | Description |
+|---|---|---|
+| Fix URL convention | Hotfix | reporting.service.ts endpoints → match `/reporting/*` with query param pattern |
+| Fix error rendering | Hotfix | Add error state JSX to 6 category report pages |
+| Analytics Dashboards | New page | Chart dashboard (recharts) — revenue trends, expense breakdown, KPIs |
+| Report Builder | New page | Hybrid form + preview — select data source, columns, filters, preview generated report |
+
+### Post-Reporting: Deployment
+See "Deployment Roadmap" section below.
+
+### Deferred (22+ stubs, backend-blocked)
+These require backend Prisma models, controllers, and services before frontend can be built. Tracked in Deferred Stubs table above. Will be addressed as dedicated module-specific backend+frontend plans.
 
 ---
 
@@ -141,6 +90,10 @@
 6. **Employees page** — Uses `gray-*`, raw `fetch()`, `Loader2` — needs full rebuild (C-5 deferred)
 7. **3 custom detail pages** — chart-of-accounts, journal-entries/[id], budgets/[budgetId] — too custom for Plan C
 8. **Backend schema drift** — TimeEntry, TimerSession, ProjectMilestone field name mismatches
+9. **Reporting URL convention mismatch** — `reporting.service.ts` uses `/companies/${companyId}/reporting/*` but all existing reporting pages and the backend controller use `/reporting/*` with `companyId` as query param. Frontend pages will 404 until fixed.
+10. **Reporting error states not rendered** — 6 category report pages capture `error` state but never render it in JSX. Errors are silently swallowed.
+11. **Reporting backend endpoints missing** — 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD endpoints don't exist on backend. Same category as 22 deferred stubs.
+12. **Heavy `any` typing in reporting service** — No TypeScript interfaces for report row shapes or request/response payloads.
 
 ---
 
@@ -180,3 +133,233 @@
 | `6b8f0a7d` | docs | Consolidate roadmap — Plan J complete, Integrations to Completed Modules |
 | `23aa6c85` | K-1 | Setup-center, shortcuts, notifications (3 chart-free dashboard pages) |
 | `a1f55791` | K-2 | Install recharts + business-health and performance dashboard pages |
+| `a5c79d8b` | docs | Consolidate roadmap — Plan K complete, Home Dashboard to Completed Modules |
+| `62e6396f` | L-1 | feat(reporting): add reporting service + 8 pages — L-1 (6 category reports + 2 CRUD) |
+
+## Deployment Roadmap
+
+### Tagline
+"HaypBooks — the heartbeat of your business"
+
+### Stack
+| Service | Purpose | Provider |
+|---|---|---|
+| Frontend | Next.js app, auto-deploys from GitHub | Vercel |
+| Backend | API server, connects to Neon | Render.com |
+| Database | Serverless PostgreSQL | Neon |
+| Email | Transactional emails (invoices, receipts, notifications) | SendGrid |
+| File Storage | Attachment uploads (receipts, documents, invoices) | Cloudflare R2 |
+| DNS | Domain management | Porkbun (haypbooks.com) |
+
+### ⚠️ Deployment Prerequisites
+Before deploying, the following backend code changes are required:
+
+1. **R2 Integration (REQUIRED — Render has an ephemeral filesystem)**
+   - Render's filesystem is ephemeral — files saved to local disk are **lost on every deploy or restart**
+   - The current backend uses multer `diskStorage` saving to `uploads/attachments/` — this will NOT work on Render
+   - Required changes:
+     - Install `@aws-sdk/client-s3` in Backend (`npm install @aws-sdk/client-s3`)
+     - Replace multer `diskStorage` with S3-compatible upload in `attachments.controller.ts` using the R2 endpoint
+     - Add R2 env vars to `Haypbooks/Backend/.env.production.example`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
+     - Update the `fileUrl` stored in database from local path to R2 public URL
+   - This should be completed as a dedicated task before production deployment
+
+### Deployment Order
+1. **Neon** → Create database, get connection string, run migrations
+2. **Cloudflare R2** → Create bucket, get credentials, configure CORS
+3. **Render** → Deploy backend, set all env vars (including R2 vars after integration)
+4. **SendGrid** → Get API key, configure domain authentication
+5. **Vercel** → Connect GitHub repo, set env vars, deploy
+6. **Porkbun** → Configure all DNS records (Vercel, Render, SendGrid, R2)
+7. **Testing** → End-to-end verification of all integrations
+
+### Environment Variables
+Source of truth: `Haypbooks/Backend/.env.production.example` and `Haypbooks/Frontend/.env.local.example`.
+
+**Critical production overrides** (set in each platform's dashboard, never committed to git):
+
+**Backend (Render):**
+| Variable | Value | Notes |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://[user]:[pass]@[host]/[db]?sslmode=require` | From Neon dashboard |
+| `SENDGRID_API_KEY` | `SG.xxxxxxxxxxxx` | From SendGrid dashboard |
+| `SENDGRID_FROM` | `noreply@haypbooks.com` | Verified sender in SendGrid |
+| `JWT_SECRET` | Random 64-char string | Generate with `openssl rand -hex 32` |
+| `JWT_REFRESH_SECRET` | Random 64-char string | Generate with `openssl rand -hex 32` |
+| `HMAC_KEY` | Random 64 hex chars | Phone number hashing — `openssl rand -hex 32` |
+| `FIELD_ENCRYPTION_KEY` | Random 64 hex chars | Sensitive field encryption — `openssl rand -hex 32` |
+| `CORS_ORIGINS` | `https://haypbooks.com` | Frontend URL |
+| `FRONTEND_URL` | `https://haypbooks.com` | Used in email links and CORS |
+| `PORT` | `4000` | Backend port |
+| `R2_ACCOUNT_ID` | Cloudflare account ID | From R2 dashboard — **requires backend R2 integration first** |
+| `R2_ACCESS_KEY_ID` | R2 API access key | From R2 dashboard → Manage R2 API Tokens — **requires backend R2 integration first** |
+| `R2_SECRET_ACCESS_KEY` | R2 API secret key | From R2 dashboard → Manage R2 API Tokens — **requires backend R2 integration first** |
+| `R2_BUCKET_NAME` | `haypbooks-attachments` | Your bucket name — **requires backend R2 integration first** |
+| `R2_PUBLIC_URL` | `https://attachments.haypbooks.com` | Public URL for uploaded files — **requires backend R2 integration first** |
+
+**Frontend (Vercel):**
+| Variable | Value | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `https://api.haypbooks.com` | Backend API URL |
+| `NEXT_PUBLIC_USE_MOCK_API` | `false` | Must be false in production |
+| `NEXT_PUBLIC_ENABLE_TAGS` | `true` | Feature flag |
+| `NEXT_PUBLIC_SITE_URL` | `https://haypbooks.com` | Used by server-url.ts |
+
+---
+
+### Step-by-Step Deployment Guide
+
+#### 1. Neon — Database Setup
+1. Go to [neon.tech](https://neon.tech) and sign up / log in
+2. Click **"Create Project"**
+3. Name it `haypbooks-db`, choose the closest region to your users
+4. Select **"Plan"** — Free tier is fine to start, upgrade as needed
+5. After creation, copy the **connection string** (format: `postgresql://[user]:[pass]@[ep-xxx].us-east-2.aws.neon.tech/[db]?sslmode=require`)
+6. Go to the **"Branches"** tab — ensure you have a `main` branch (default)
+7. Go to **"Connection Pooling"** (under Settings) — enable it for better performance. The pooled connection string uses port `5432` with `-pooler` in the hostname
+8. Save the connection string — you'll need it for Render env vars
+9. **For Prisma migrations:** After deploying Render, SSH into the Render service or run locally with the production DATABASE_URL:
+   ```
+   npx prisma migrate deploy
+   ```
+
+#### 2. Cloudflare R2 — File Storage Setup
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) and sign up / log in
+2. In the left sidebar, click **"R2 Object Storage"**
+3. Click **"Create Bucket"**
+4. Bucket name: `haypbooks-attachments` (must be globally unique)
+5. Choose the closest location to your users
+6. After creation, go to the bucket **Settings** tab
+7. **Configure CORS policy:**
+   - Go to Settings → CORS Policy
+   - Add the following CORS configuration:
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://haypbooks.com", "https://www.haypbooks.com"],
+       "AllowedMethods": ["GET", "PUT", "DELETE", "HEAD"],
+       "AllowedHeaders": ["*"],
+       "MaxAgeSeconds": 86400
+     }
+   ]
+   ```
+8. **Get API credentials:**
+   - Go to R2 → **Manage R2 API Tokens** (top right)
+   - Click **"Create API Token"**
+   - Permissions: **Object Read & Write**
+   - Specify bucket: `haypbooks-attachments` (or apply to all)
+   - Copy the **Access Key ID** and **Secret Access Key** — save these securely
+   - Also note your **Cloudflare Account ID** (visible in the R2 dashboard URL or any API token page)
+9. **(Optional) Custom domain for attachments:**
+   - In the bucket settings, go to **"Custom Domains"**
+   - Click **"Connect Domain"** → enter `attachments.haypbooks.com`
+   - Cloudflare will provide DNS records to add at Porkbun (see step 6)
+10. **Note:** R2 bucket setup can be done now, but the **backend code integration** (replacing multer diskStorage with S3 upload) must be completed before uploads will work in production. See "Deployment Prerequisites" above.
+
+#### 3. Render — Backend Deployment
+1. Go to [render.com](https://render.com) and sign up / log in (GitHub SSO recommended)
+2. Click **"New"** → **"Web Service"**
+3. Connect your GitHub repository (`Janpolescuadra25/HaypBooks`)
+4. **Configure the service:**
+   - **Name:** `haypbooks-api`
+   - **Root Directory:** `Haypbooks` (monorepo root — required because Backend's package.json has `"haypbooks-frontend": "file:../Frontend"`)
+   - **Build Command:** `cd Backend && npm install && npm run build`
+   - **Start Command:** `cd Backend && node dist/main.js`
+   - **Instance Type:** Free to start (Starter $7/mo recommended for production — free tier spins down after 15 min inactivity causing ~30s cold starts, and **has an ephemeral filesystem** so local file uploads are lost on every deploy)
+5. **Environment variables** — Add ALL backend env vars from the table above (DATABASE_URL, SENDGRID_API_KEY, JWT_SECRET, etc.)
+   - Add R2 vars only after completing the backend R2 integration (see Prerequisites)
+6. Click **"Create Web Service"**
+7. Wait for the build to complete. Monitor the build logs for errors.
+8. After successful deploy, copy the service URL (e.g., `https://haypbooks-api.onrender.com`)
+9. **If build fails:** Common issues:
+    - TypeScript errors — run `cd Backend && npx tsc --noEmit` locally to check
+    - Missing env vars at build time — some build steps may need vars set early
+    - Monorepo path issue — verify root directory is `Haypbooks`, not `Haypbooks/Backend`
+
+#### 4. SendGrid — Email Setup
+1. Go to [sendgrid.com](https://sendgrid.com) and sign up (free tier allows 100 emails/day)
+2. Complete account verification (email confirmation)
+3. Go to **Settings** → **Sender Authentication**
+4. **Domain Authentication (recommended over single sender):**
+   - Click **"Get Started"** under "Domain Authentication"
+   - Enter domain: `haypbooks.com`
+   - SendGrid will generate DNS records (TXT and CNAME records for SPF and DKIM)
+   - **Do NOT add these to Porkbun yet** — do it in step 6 alongside all other DNS records
+5. **Single Sender Verification (quick alternative):**
+   - Go to Settings → **Sender Authentication** → **Single Sender Verification**
+   - Add: `noreply@haypbooks.com`
+   - SendGrid will send a verification email — click the link
+6. **Get API Key:**
+   - Go to **Settings** → **API Keys**
+   - Click **"Create API Key"**
+   - Name: `HaypBooks Production`
+   - Permissions: **Restricted Access** → select "Mail Send" → "Full Access"
+   - Copy the API key (shown only once) — add to Render env vars as `SENDGRID_API_KEY`
+
+#### 5. Vercel — Frontend Deployment
+1. Go to [vercel.com](https://vercel.com) and sign up / log in (GitHub SSO recommended)
+2. Click **"Add New"** → **"Project"**
+3. Import your GitHub repository (`Janpolescuadra25/HaypBooks`)
+4. **Configure the project:**
+   - **Framework Preset:** Next.js (auto-detected)
+   - **Root Directory:** Click "Edit" → select `Haypbooks/Frontend`
+   - **Build Command:** `npm run build` (default, should auto-detect)
+   - **Output Directory:** Leave default (`.next`)
+5. **Environment Variables** — Add ALL frontend env vars from the table above (NEXT_PUBLIC_API_URL, NEXT_PUBLIC_USE_MOCK_API=false, etc.)
+6. Click **"Deploy"**
+7. Wait for the build to complete
+8. After deploy, Vercel assigns a preview URL (e.g., `haypbooks-frontend.vercel.app`)
+9. Go to **Project Settings** → **Domains**
+10. Add: `haypbooks.com` and `www.haypbooks.com`
+11. Vercel will show DNS records needed — add them at Porkbun in step 6
+
+#### 6. Porkbun — DNS Configuration
+1. Go to [porkbun.com](https://porkbun.com) and log in
+2. Go to your domain `haypbooks.com` → **DNS Management**
+3. **Remove any existing records** that conflict with the ones below (check carefully)
+
+4. **Add Vercel records:**
+   | Type | Name | Value | Notes |
+   |---|---|---|---|
+   | A | `@` | `76.76.21.21` | Points haypbooks.com to Vercel |
+   | CNAME | `www` | `cname.vercel-dns.com` | Points www subdomain to Vercel |
+
+5. **Add Render record:**
+   | Type | Name | Value | Notes |
+   |---|---|---|---|
+   | CNAME | `api` | `haypbooks-api.onrender.com` | Points api.haypbooks.com to Render backend |
+
+6. **Add SendGrid records** (from SendGrid Dashboard → Settings → Sender Authentication → your domain → "View DNS Records"):
+   | Type | Name | Value | Notes |
+   |---|---|---|---|
+   | TXT | `@` | (from SendGrid) | SPF record — copy exact value from SendGrid dashboard |
+   | CNAME | (from SendGrid) | (from SendGrid) | DKIM record 1 — copy exact hostname and value from SendGrid |
+   | CNAME | (from SendGrid) | (from SendGrid) | DKIM record 2 — copy exact hostname and value from SendGrid |
+   | CNAME | (from SendGrid) | (from SendGrid) | DKIM record 3 — copy exact hostname and value from SendGrid |
+
+   **Important:** SendGrid generates unique DNS records per domain. Do NOT guess the values — always copy the exact hostnames and values from your SendGrid dashboard's "View DNS Records" button.
+
+7. **Add Cloudflare R2 records** (if using custom domain for attachments):
+   | Type | Name | Value | Notes |
+   |---|---|---|---|
+   | CNAME | `attachments` | (from Cloudflare R2 custom domain setup) | Provided in R2 bucket settings → Custom Domains |
+
+8. **Wait for DNS propagation** — can take up to 48 hours, usually 5-30 minutes
+
+9. **Verify DNS:** Use [dnschecker.org](https://dnschecker.org) to check each record
+
+#### 7. Post-Deployment Testing
+After all DNS records propagate, verify each service:
+
+- **Frontend:** Visit `https://haypbooks.com` — should load the HaypBooks app
+- **Backend API:** Visit `https://api.haypbooks.com/api` or any health endpoint — should return a response (not a browser error)
+- **Auth flow:** Sign up / log in on the frontend — should hit the backend API successfully
+- **Database:** Create a test company after login — data should persist (verify by refreshing)
+- **Email:** Trigger a transactional email (e.g., send an invoice) — check email arrives at the recipient
+- **File upload:** Upload a receipt/attachment — **requires R2 backend integration first** (see Prerequisites). After integration, verify file is stored in R2 and retrievable via the public URL
+- **CORS:** Verify no CORS errors in browser console (both frontend↔backend and frontend↔R2)
+
+### Render Deployment Note
+The backend has a monorepo dependency (`"haypbooks-frontend": "file:../Frontend"` in Backend's package.json). The Render service root must be set to `Haypbooks/` (the monorepo root, not `Haypbooks/Backend/`). Build command: `cd Backend && npm install && npm run build`. Start command: `cd Backend && node dist/main.js`. **Render's filesystem is ephemeral** — any files saved to local disk (including multer uploads) are lost on every deploy or restart, which is why R2 integration is a production requirement.
+
+**Status:** Deployment prompts will be prepared after Plan L-2 completes and the frontend reaches its final state. JP will execute these steps manually. R2 backend integration is a prerequisite for the file upload testing step.
