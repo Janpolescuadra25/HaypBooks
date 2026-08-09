@@ -1,13 +1,13 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 8, 2026  
-**Branch:** `main` (64 commits ahead of origin)  
+**Branch:** `main` (67 commits ahead of origin)  
 **Total Built Pages:** ~284  
-**ComingSoon Stubs Remaining:** 40  
-**Service Files:** 23  
+**ComingSoon Stubs Remaining:** 35  
+**Service Files:** 24  
 
 ---
 
-## Completed Modules (17)
+## Completed Modules (18)
 
 | Module | Batches | Pages Built | Service File | Status |
 |---|---|---|---|---|
@@ -28,6 +28,7 @@
 | Accountant Workspace | H | 1 | accountant-workspace.service.ts (4 methods) | ✅ Complete |
 | Automation | I-1/I-2 | 6 | automation.service.ts (20 methods) | ✅ Complete |
 | Integrations | J-1/J-2 | 8 | integration.service.ts (23 methods) | ✅ Complete |
+| Home Dashboard | K-1/K-2 | 6 | home.service.ts (5 methods) | ✅ Complete |
 
 ---
 
@@ -101,6 +102,13 @@
 
 ---
 
+## Plan K: Home Dashboard (COMPLETE ✅)
+- K-1: Setup Center, Shortcuts, Notifications (3 chart-free pages) ✅
+- K-2: Business Health, Performance (2 chart pages with recharts) ✅
+- Pre-existing: Dashboard (OwnerDashboard.tsx) ✅
+
+---
+
 ## Deferred Stubs (22 total)
 
 | Module | Stubs | Reason |
@@ -115,12 +123,11 @@
 
 ---
 
-## Future Modules (Post-Plan J)
+## Future Modules (Post-Plan K)
 
 | Module | Stubs | Blocker | Est. Batches |
 |---|---|---|---|
-| Home Dashboard | 5 | No chart library installed; 5 stubs need visualizations. Main dashboard already built (OwnerDashboard.tsx). | 3-5 |
-| Reporting | 10 | Chart library, export functionality | 3-5 |
+| Reporting | 10 | Export functionality | 3-5 |
 
 ---
 
@@ -170,3 +177,6 @@
 | `4c626883` | docs | Consolidate roadmap — Plan I complete, Automation to Completed Modules |
 | `a391baac` | J-1 | Create integration service + api-keys, webhooks, installed-apps, integration-logs |
 | `fd225b02` | J-2 | Export-data, import-data, app-marketplace, developer-sandbox (Integrations complete) |
+| `6b8f0a7d` | docs | Consolidate roadmap — Plan J complete, Integrations to Completed Modules |
+| `23aa6c85` | K-1 | Setup-center, shortcuts, notifications (3 chart-free dashboard pages) |
+| `a1f55791` | K-2 | Install recharts + business-health and performance dashboard pages |
