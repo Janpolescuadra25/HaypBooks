@@ -1,7 +1,7 @@
 # HaypBooks Frontend Roadmap
 **Last Updated:** August 9, 2026  
-**Branch:** `main` (67 commits ahead of origin)  
-**Total Built Pages:** ~292  
+**Branch:** `main` (72 commits ahead of origin)  
+**Total Built Pages:** 347  
 **ComingSoon Stubs Remaining:** 28  
 **Service Files:** 25  
 
@@ -194,6 +194,9 @@ These require backend Prisma models, controllers, and services before frontend c
 | `a1f55791` | K-2 | Install recharts + business-health and performance dashboard pages |
 | `a5c79d8b` | docs | Consolidate roadmap — Plan K complete, Home Dashboard to Completed Modules |
 | `62e6396f` | L-1 | feat(reporting): add reporting service + 8 pages — L-1 (6 category reports + 2 CRUD) |
+| `3b054483` | docs | Add Cloudflare R2 + detailed deployment guide to roadmap |
+| `8979e51b` | docs | Add Section 1 audit findings + HB_Owner architectural plan to roadmap |
+| `fb813da4` | docs | Add accounting module audit findings (30 issues) to roadmap |
 
 ## Deployment Roadmap
 
