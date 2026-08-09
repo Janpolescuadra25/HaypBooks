@@ -1,5 +1,5 @@
 # HaypBooks Frontend Roadmap
-> **Last Updated:** August 10, 2026 | **Branch:** `main` (81 commits ahead) | **349 built pages** | **26 ComingSoon stubs** | **25 service files**
+> **Last Updated:** August 10, 2026 | **Branch:** `main` (84 commits ahead) | **349 built pages** | **26 ComingSoon stubs** | **25 service files**
 
 ---
 
@@ -60,18 +60,17 @@
 
 ## Next Plans
 
-### Immediate: N-3 — Code Quality Cleanup
+### Immediate: Deployment Preparation
 
-| # | Task | Files | Tech Debt |
-|---|---|---|---|
-| 1 | Remove `as any` casts — replace with proper TypeScript types | 15 files in `accounting/` (40 instances) | #29 |
-| 2 | Remove dead `Star` import | `OwnerSidebar.tsx` (L6) | #18 |
-| 3 | Remove dead tanstack imports | `HaypDataTable.types.ts` (L1) | #19 |
-| 4 | Remove dead `TabPlaceholder.tsx` (zero imports) | `layout/tabs/TabPlaceholder.tsx` | #17 |
-| 5 | Consolidate 4 coming-soon components into canonical `ComingSoonPage.tsx` — re-point 9 consumers (7 from `TabComingSoon`, 2 from `owner/ComingSoon`) | `shared/TabComingSoon.tsx`, `owner/ComingSoon.tsx`, `owner/SectionComingSoon.tsx` | #17 |
-| 6 | Remove `as any` casts in reporting service | `reporting.service.ts` | #12 |
+The frontend is now clean — all Plans L, N-1, N-2, N-3 are complete. Next steps:
+1. R2 backend integration (install `@aws-sdk/client-s3`, replace multer `diskStorage`)
+2. Set up infrastructure (Neon, Cloudflare R2, Render, SendGrid, Vercel, Porkbun DNS)
+3. Deploy backend to Render, frontend to Vercel
+4. Post-deployment testing
 
-### Plan N: Accounting Module Fixes (N-1 ✅, N-2 ✅, N-3 Pending)
+See "Deployment Roadmap" section below for full step-by-step guide.
+
+### Plan N: Accounting Module Fixes (N-1 ✅, N-2 ✅, N-3 ✅ — COMPLETE)
 Section 2 audit found 30 issues (7 critical, 13 significant, 10 minor). Top priorities:
 - **N-1: Data-loss hotfixes** — Fix attachment upload, customerId payload, COA modal fields, remove console.logs (7 critical items)
 - **N-2: UX improvements** — Add void reason modal, post confirmation, fix recurrence logic, fix contra styling, fix CSV import error reporting (13 significant items)
@@ -134,14 +133,14 @@ These require backend Prisma models, controllers, and services before frontend c
 9. ~~**Reporting URL convention mismatch** — `reporting.service.ts` uses `/companies/${companyId}/reporting/*` but all existing reporting pages and the backend controller use `/reporting/*` with `companyId` as query param. Frontend pages will 404 until fixed.~~ — ✅ Resolved (L-2, commit 0957d91e)
 10. ~~**Reporting error states not rendered** — 6 category report pages capture `error` state but never render it in JSX. Errors are silently swallowed.~~ — ✅ Resolved (L-2, commit 0957d91e)
 11. **Reporting backend endpoints missing** — 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD endpoints don't exist on backend. Same category as 22 deferred stubs.
-12. **Heavy `any` typing in reporting service** — No TypeScript interfaces for report row shapes or request/response payloads.
+12. ~~**Heavy `any` typing in reporting service**~~ — ✅ Resolved (N-3, commit `a323f5fc`)
 13. ~~**Dead code: 8 unused component files** — Toaster.tsx, CenteredModal.tsx, Breadcrumbs.tsx, BackButton.tsx, BackBar.tsx, StatusBadge.tsx (root-level), layout/tabs/SectionTabBar.tsx, layout/tabs/SectionBreadcrumb.tsx — all have zero imports~~ — ✅ Resolved (N-2, commit 2c11c32d)
 14. ~~**Dual toast systems** — ToastProvider.tsx (canonical, 40+ consumers) and ui/Toast.tsx (4 expenses layouts) export same names with different APIs and z-indices; Toaster.tsx (third, dead code) pollutes window global~~ — ✅ Resolved (N-2, commit c9b450e8)
 15. ~~**TopBar.tsx has non-functional buttons** — "PORTFOLIO", "TASK REMINDER", "RECONCILE ACCOUNTS" are decorative (onClick does nothing); user menu links are `href="#"` to non-existent pages~~ — ✅ Resolved (N-2, commit 69f856ad)
 16. ~~**HaypReportTable customize panel is cosmetic** — Number format, show cents, negative format, row height toggles don't affect rendering; console.log left in production code~~ — ✅ Resolved (N-2, commit 2c11c32d)
-17. **Three "coming soon" components** — TabComingSoon.tsx, ComingSoonPage.tsx, TabPlaceholder.tsx serve the same purpose with different UIs
-18. **OwnerSidebar has dead Star import** — lucide-react Star imported but never used
-19. **HaypDataTable.types.ts has dead tanstack imports** — ColumnDef, SortingState, ColumnOrderState, VisibilityState, RowSelectionState, ColumnSizingState imported but unused
+17. ~~**Three "coming soon" components**~~ — ✅ Resolved (N-3, commit `a323f5fc`)
+18. ~~**OwnerSidebar has dead Star import**~~ — ✅ Resolved (N-3, commit `a323f5fc`)
+19. ~~**HaypDataTable.types.ts has dead tanstack imports**~~ — ✅ Resolved (N-3, commit `a323f5fc`)
 20. ~~**JE attachments are discarded on create/edit** — File input only increments `attachmentCount`; actual files never uploaded to backend. journal-entries/new and journal-entries/[id] both affected. (Accounting audit #1, #3)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
 21. ~~**JE customerId silently dropped from payload** — Form collects customer per line but `validLines.map()` only sends accountId/debit/credit/description. (Accounting audit #2)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
 22. ~~**COA modal drops 4 form fields on save** — handleSave sends only {code, name, type}; parentId, description, isHeader, normalSide collected in form are silently discarded. (Accounting audit #4)~~ — ✅ Resolved (N-1, commit 3aee1f1e)
@@ -151,7 +150,7 @@ These require backend Prisma models, controllers, and services before frontend c
 26. ~~**JE void has no reason UI** — Hardcoded `{reason:'Voided by user'}`; Post action has no confirmation dialog. (Accounting audit #13, #14)~~ — ✅ Resolved (N-2, commit 69f856ad)
 27. ~~**COA CSV import swallows per-row errors** — Failed imports reported as successful. (Accounting audit #16)~~ — ✅ Resolved (N-2, commit 69f856ad)
 28. **Inconsistent API verbs** — Account deactivate uses DELETE, reactivate uses PUT for same state toggle. (Accounting audit #17)
-29. **30+ `as any` / `catch (e: any)` in accounting module** — Reduces TypeScript safety across all accounting pages. (Accounting audit #10, #11, #27)
+29. ~~**30+ `as any` / `catch (e: any)` in accounting module**~~ — ✅ Resolved (N-3, commit `73ff563d`)
 
 ---
 
@@ -181,7 +180,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Accounting Module
+### Accounting Module
 
 **Target Output:** A fully functional double-entry accounting system that a CPA can use daily without workarounds.
 
@@ -294,7 +293,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Banking Module
+### Banking Module
 
 **Target Output:** Complete bank account management with reconciliation, transfers, and transaction tracking.
 
@@ -345,7 +344,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Sales Module
+### Sales Module
 
 **Target Output:** End-to-end sales pipeline from quote to cash receipt with tax, discount, and inventory integration.
 
@@ -425,7 +424,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Expenses Module
+### Expenses Module
 
 **Target Output:** Complete purchase-to-pay cycle with vendor management, bill approval, payment processing, and expense tracking.
 
@@ -504,7 +503,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Inventory Module
+### Inventory Module
 
 **Target Output:** Complete inventory management with stock tracking, valuation, and sales/purchase integration.
 
@@ -554,7 +553,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Payroll Module
+### Payroll Module
 
 **Target Output:** Full payroll processing with employee management, tax calculations, and compliance reporting.
 
@@ -598,7 +597,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Projects Module
+### Projects Module
 
 **Target Output:** Project-based accounting with budgeting, time tracking, and profitability analysis.
 
@@ -634,7 +633,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Reporting Module ✅ COMPLETE (L-1 + L-2)
+### Reporting Module ✅ COMPLETE (L-1 + L-2)
 
 **Target Output:** Comprehensive reporting suite with 20+ report types, custom report builder, and analytics dashboards.
 
@@ -668,7 +667,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Settings Module
+### Settings Module
 
 **Target Output:** Complete organization settings with user management, security, and customization.
 
@@ -717,7 +716,7 @@ Each module output spec is assessed from these perspectives:
 
 ---
 
-#### ### Tasks & Approvals Module
+### Tasks & Approvals Module
 
 **Target Output:** Workflow automation with task management, approval queues, and notification system.
 
@@ -789,6 +788,16 @@ Each module output spec is assessed from these perspectives:
 | `fb813da4` | docs | Add accounting module audit findings (30 issues) to roadmap |
 | `0957d91e` | L-2 | feat(reporting): complete L-2 — fix URL convention, error rendering, add analytics dashboards + report builder |
 | `3aee1f1e` | N-1 | fix(accounting): N-1 critical hotfixes — attachment upload, customerId payload, COA modal fields, remove console.logs |
+| `11274edb` | docs | chore: clean up working tree — remove Vite prototype docs, ignore root clutter |
+| `a48c1f67` | docs | docs: update roadmap metrics (347 pages, 72 commits ahead, 3 missing history entries) |
+| `483eb6c4` | docs | docs: update roadmap — L-2 + N-1 complete, 6 tech debt items resolved, N-2 shaped |
+| `2c11c32d` | N-2 | chore: delete 8 dead component files + clean up HaypReportTable cosmetic panel |
+| `c9b450e8` | N-2 | refactor(toast): merge dual toast systems into canonical ToastProvider |
+| `69f856ad` | N-2 | fix(accounting): N-2 UX improvements — void reason, post confirm, recurrence, contra styling, CSV errors, TopBar buttons |
+| `ab79e6bb` | docs | docs: update roadmap — N-2 complete, 8 tech debt items resolved, N-3 shaped |
+| `87d3ff52` | docs | docs: add module output specifications with 11-perspective evaluation framework |
+| `73ff563d` | N-3 | refactor(accounting): replace 'as any' casts with proper TypeScript types |
+| `a323f5fc` | N-3 | refactor: remove dead code and consolidate coming-soon components |
 
 ## Deployment Roadmap
 
@@ -1016,4 +1025,4 @@ After all DNS records propagate, verify each service:
 ### Render Deployment Note
 The backend has a monorepo dependency (`"haypbooks-frontend": "file:../Frontend"` in Backend's package.json). The Render service root must be set to `Haypbooks/` (the monorepo root, not `Haypbooks/Backend/`). Build command: `cd Backend && npm install && npm run build`. Start command: `cd Backend && node dist/main.js`. **Render's filesystem is ephemeral** — any files saved to local disk (including multer uploads) are lost on every deploy or restart, which is why R2 integration is a production requirement.
 
-**Status:** Plan L complete. Frontend ready for deployment after R2 backend integration. JP executes deployment steps manually.
+**Status:** Plans L, N-1, N-2, N-3 complete. Frontend fully cleaned. Ready for R2 backend integration and deployment.
