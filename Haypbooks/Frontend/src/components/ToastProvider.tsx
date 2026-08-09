@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
-type ToastType = 'success' | 'error' | 'info'
+type ToastType = 'success' | 'error' | 'warning' | 'info'
 
 interface Toast {
   id: string
@@ -17,6 +17,7 @@ interface ToastContextValue {
   push: (toast: Omit<Toast, 'id' | 'createdAt' | 'expiresAt' | 'ttl'> & { ttl?: number }) => void
   success: (message: string, ttl?: number) => void
   error: (message: string, ttl?: number) => void
+  warning: (message: string, ttl?: number) => void
   info: (message: string, ttl?: number) => void
 }
 
@@ -30,6 +31,8 @@ function getAccentClasses(type: ToastType) {
       return { border: 'border-emerald-300', accent: 'bg-emerald-500' }
     case 'error':
       return { border: 'border-rose-300', accent: 'bg-rose-500' }
+    case 'warning':
+      return { border: 'border-amber-300', accent: 'bg-amber-500' }
     default:
       return { border: 'border-sky-300', accent: 'bg-sky-500' }
   }
@@ -60,9 +63,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const success = useCallback((message: string, ttl = DEFAULT_TTL) => push({ type: 'success', message, ttl }), [push])
   const error = useCallback((message: string, ttl = DEFAULT_TTL) => push({ type: 'error', message, ttl }), [push])
   const info = useCallback((message: string, ttl = DEFAULT_TTL) => push({ type: 'info', message, ttl }), [push])
+  const warning = useCallback((message: string, ttl = DEFAULT_TTL) => push({ type: 'warning', message, ttl }), [push])
   const contextValue = useMemo(
-    () => ({ push, success, error, info }),
-    [push, success, error, info],
+    () => ({ push, success, error, warning, info }),
+    [push, success, error, warning, info],
   )
 
   useEffect(() => {
@@ -136,7 +140,7 @@ export function useToast() {
   const noop = () => {}
 
   if (typeof window === 'undefined' || !ctx) {
-    return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue
+    return { push: noop, success: noop, error: noop, warning: noop, info: noop } as unknown as ToastContextValue
   }
 
   return ctx
