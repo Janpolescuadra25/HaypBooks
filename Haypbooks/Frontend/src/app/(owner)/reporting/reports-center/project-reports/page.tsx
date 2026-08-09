@@ -129,6 +129,18 @@ export default function Page() {
         </div>
       )}
 
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm text-red-600">{error}</p>
+          <button
+            onClick={fetchReport}
+            className="mt-2 text-sm font-medium text-red-600 underline hover:text-red-800"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
       {data.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
           No report data available for the selected period
