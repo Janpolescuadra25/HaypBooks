@@ -59,3 +59,9 @@ tsc-out.txt
 logs/
 node_modules/
 docs/erpnext/
+# Reference docs (not part of the project)
+docs/Quickbooks_api/
+docs/Stripes/
+
+# Root clutter
+dummy.txt
