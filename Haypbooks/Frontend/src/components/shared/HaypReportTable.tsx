@@ -95,12 +95,7 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
   const [tableWidth, setTableWidth] = useState(0);
   const [columnWidths, setColumnWidths] = useState<Map<string, number>>(() => new Map());
   const [resizing, setResizing] = useState<{ key: string; startX: number; startWidth: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<'data' | 'visual'>('data');
   const [internalHiddenColumns, setInternalHiddenColumns] = useState<string[]>([]);
-  const [numberFormat, setNumberFormat] = useState<'comma' | 'plain'>('comma');
-  const [showCents, setShowCents] = useState(true);
-  const [negativeFormat, setNegativeFormat] = useState<'parentheses' | 'minus'>('parentheses');
-  const [rowHeight, setRowHeight] = useState<'comfortable' | 'normal' | 'compact'>('normal');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const scrollProxyContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollProxyWidthRef = useRef<HTMLDivElement | null>(null);
@@ -279,7 +274,6 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
                       key={col.key}
                       data-column-key={col.key}
                       onClick={() => {
-                        console.log('[HRT] th clicked, col.key:', col.key, 'sortable:', col.sortable, 'onSort exists:', !!onSort)
                         if (col.sortable && onSort) onSort(col.key)
                       }}
                       className={`relative px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 last:border-r-0 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${col.className || ''} ${col.sortable ? 'cursor-pointer hover:bg-slate-50 hover:text-slate-600 transition-colors select-none' : ''}`}
@@ -345,23 +339,11 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
               </button>
             </div>
             <div className="flex border-b border-slate-100">
-              <button
-                type="button"
-                onClick={() => setActiveTab('data')}
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'data' ? 'text-slate-900 border-b-2 border-brand-emerald' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Data
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('visual')}
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'visual' ? 'text-slate-900 border-b-2 border-brand-emerald' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Visual
-              </button>
+              <div className="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-900 border-b-2 border-brand-emerald">
+                Customize
+              </div>
             </div>
             <div className="flex-1 overflow-auto p-4 space-y-4">
-              {activeTab === 'data' ? (
                 <div className="space-y-6">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Columns</p>
@@ -407,92 +389,6 @@ export const HaypReportTable: React.FC<HaypReportTableProps> & {
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Number Format</p>
-                    <div className="mt-3 space-y-2">
-                      {[
-                        { key: 'comma', label: '1,000.00' },
-                        { key: 'plain', label: '1000.00' },
-                      ].map((option) => (
-                        <label key={option.key} className="flex items-center gap-2 px-4 py-2 cursor-pointer">
-                          <div className={`w-4 h-4 rounded-full border-2 ${numberFormat === option.key ? 'border-brand-emerald bg-brand-emerald' : 'border-slate-300'} flex items-center justify-center`}>
-                            {numberFormat === option.key && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </div>
-                          <span className="text-xs font-medium text-slate-700">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Show Cents</p>
-                    <button
-                      type="button"
-                      onClick={() => setShowCents((prev) => !prev)}
-                      className={`mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-full border ${showCents ? 'border-brand-emerald bg-brand-emerald/10 text-brand-emerald' : 'border-slate-200 text-slate-600'}`}
-                    >
-                      <span className={`w-4 h-4 rounded-full border ${showCents ? 'border-brand-emerald bg-brand-emerald' : 'border-slate-300 bg-white'}`} />
-                      <span className="text-xs font-medium">{showCents ? 'On' : 'Off'}</span>
-                    </button>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Negative Format</p>
-                    <div className="mt-3 space-y-2">
-                      {[
-                        { key: 'parentheses', label: '(123.45)' },
-                        { key: 'minus', label: '-123.45' },
-                      ].map((option) => (
-                        <label key={option.key} className="flex items-center gap-2 px-4 py-2 cursor-pointer">
-                          <div className={`w-4 h-4 rounded-full border-2 ${negativeFormat === option.key ? 'border-brand-emerald bg-brand-emerald' : 'border-slate-300'} flex items-center justify-center`}>
-                            {negativeFormat === option.key && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </div>
-                          <span className="text-xs font-medium text-slate-700">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Layout</p>
-                    <div className="mt-3 space-y-2">
-                      {[
-                        { key: 'Standard', label: 'Standard' },
-                        { key: 'Compact', label: 'Compact' },
-                      ].map((option) => (
-                        <button
-                          key={option.key}
-                          type="button"
-                          onClick={() => onLayoutChange?.(option.key as 'Standard' | 'Compact')}
-                          className={`w-full text-left px-4 py-2 rounded-lg border ${layout === option.key ? 'border-brand-emerald bg-brand-emerald/10 text-brand-emerald' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                        >
-                          <span className="text-xs font-medium">{option.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {layout === 'Standard' && (
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Row Height</p>
-                      <div className="mt-3 space-y-2">
-                        {[
-                          { key: 'comfortable', label: 'Comfortable' },
-                          { key: 'normal', label: 'Normal' },
-                          { key: 'compact', label: 'Compact' },
-                        ].map((option) => (
-                          <button
-                            key={option.key}
-                            type="button"
-                            onClick={() => setRowHeight(option.key as 'comfortable' | 'normal' | 'compact')}
-                            className={`w-full text-left px-4 py-2 rounded-lg border ${rowHeight === option.key ? 'border-brand-emerald bg-brand-emerald/10 text-brand-emerald' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                          >
-                            <span className="text-xs font-medium">{option.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
