@@ -192,7 +192,6 @@ export default function GeneralLedgerPage() {
   }, [sortDir])
 
   const handleSort = (field: SortField) => {
-    console.log('[GL-SORT] handleSort called:', field, 'current:', sortField, sortDir)
     if (sortField === field) {
       setSortDir((currentDir) => currentDir === 'asc' ? 'desc' : 'asc')
     } else {
@@ -329,7 +328,6 @@ export default function GeneralLedgerPage() {
 
   // sortedEntries must be declared here (before early returns) to satisfy Rules of Hooks
   const sortedEntries = useMemo(() => {
-    console.log('[GL-SORT] sortedEntries computing, sortField:', sortField, 'sortDir:', sortDir, 'entries count:', (glData?.entries ?? []).length)
     const arr = [...(glData?.entries ?? [])]
     const mod = sortDir === 'asc' ? 1 : -1
     arr.sort((a, b) => {
@@ -611,7 +609,6 @@ export default function GeneralLedgerPage() {
           sortField={sortField}
           sortDir={sortDir}
           onSort={(key) => {
-            console.log('[GL] onSort received:', key)
             handleSort(key as any)
           }}
           onDownload={handleExport}

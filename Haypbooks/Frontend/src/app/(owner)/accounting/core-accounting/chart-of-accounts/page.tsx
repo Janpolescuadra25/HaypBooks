@@ -355,6 +355,7 @@ function AccountModal({
     parentId: account?.parentId ?? defaultParentId ?? '',
     description: account?.description ?? '',
     isHeader: account?.isHeader ?? false,
+    normalSide: account?.normalSide ?? 'Debit' as NormalSide,
   })
 
   const parentType = useMemo(() => {
@@ -371,8 +372,13 @@ function AccountModal({
     if (parentType && parentType !== newType) {
       return
     }
-    setForm(f => ({ ...f, type: newType }))
+    setForm(f => ({ ...f, type: newType, normalSide: AUTO_NORMAL_SIDE[newType] }))
   }
+
+  useEffect(() => {
+    if (!parentType) return
+    setForm(f => ({ ...f, type: parentType, normalSide: AUTO_NORMAL_SIDE[parentType] }))
+  }, [parentType])
 
   const hasTransactions = Boolean(account?.balance && account.balance !== 0)
 
@@ -410,6 +416,10 @@ function AccountModal({
       code: form.code.trim(),
       name: form.name.trim(),
       type: form.type,
+      parentId: form.parentId || null,
+      description: form.description || '',
+      isHeader: form.isHeader || false,
+      normalSide: form.normalSide || 'Debit',
     }
     setSaving(true)
     setError('')
@@ -511,6 +521,22 @@ function AccountModal({
               {hasTransactions && (
                 <p className="text-xs text-rose-600 mt-1">Cannot change account type once the account has transactions (balance is non-zero).</p>
               )}
+              <div className="mt-4">
+                <label htmlFor="coa-normal-side" className="block text-xs font-semibold text-slate-700 mb-1.5">Normal Balance</label>
+                <select
+                  id="coa-normal-side"
+                  value={form.normalSide}
+                  onChange={e => setForm(f => ({ ...f, normalSide: e.target.value as NormalSide }))}
+                  disabled={!!parentType}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                >
+                  <option value="Debit">Debit</option>
+                  <option value="Credit">Credit</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  {parentType ? 'Normal balance is inherited from the parent account type.' : `Default normal balance for ${form.type} accounts.`}
+                </p>
+              </div>
             </div>
           </div>
 

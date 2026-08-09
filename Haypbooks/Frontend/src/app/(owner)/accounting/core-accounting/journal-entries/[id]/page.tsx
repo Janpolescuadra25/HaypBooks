@@ -21,6 +21,7 @@ interface JELine {
   account?: { id: string; code?: string; name?: string }
   accountName?: string
   accountCode?: string
+  customerId?: string
   debit: number
   credit: number
   description?: string
@@ -48,6 +49,12 @@ interface Account {
   code: string
   name: string
   type?: string
+}
+
+interface Customer {
+  id: string
+  displayName?: string
+  contact?: { id: string; displayName: string }
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -78,12 +85,13 @@ export default function JournalEntryDetailPage() {
   const [editDate, setEditDate] = useState('')
   const [editMemo, setEditMemo] = useState('')
   const [editReference, setEditReference] = useState('')
-  const [editLines, setEditLines] = useState<Array<{ accountId: string; debit: string; credit: string; description: string }>>([])
+  const [editLines, setEditLines] = useState<Array<{ accountId: string; customerId?: string; debit: string; credit: string; description: string }>>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [saveError, setSaveError] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceInterval, setRecurrenceInterval] = useState<'Monthly' | 'Quarterly' | 'Yearly'>('Monthly')
-  const [attachmentCount, setAttachmentCount] = useState(0)
+  const [attachments, setAttachments] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const nextRunDate = useMemo(() => {
     const dateSource = editDate || new Date().toISOString().split('T')[0]
@@ -114,6 +122,10 @@ export default function JournalEntryDetailPage() {
     apiClient.get(`/companies/${companyId}/accounting/accounts`)
       .then(({ data }) => setAccounts(Array.isArray(data) ? data : (data.accounts ?? [])))
       .catch(() => {})
+
+    apiClient.get(`/companies/${companyId}/contacts/customers`)
+      .then(({ data }) => setCustomers(Array.isArray(data) ? data : (data.items ?? data.customers ?? [])))
+      .catch(() => {})
   }, [companyId])
 
   const enterEditMode = () => {
@@ -123,13 +135,14 @@ export default function JournalEntryDetailPage() {
     setEditReference((entry as any).reference ?? '')
     setEditLines((entry.lines ?? []).map(l => ({
       accountId: l.accountId,
+      customerId: (l as any).customerId ?? '',
       debit: l.debit ? String(l.debit) : '',
       credit: l.credit ? String(l.credit) : '',
       description: l.description ?? '',
     })))
     setIsRecurring(Boolean(entry.recurrenceSchedule))
     setRecurrenceInterval(entry.recurrenceSchedule?.startsWith('Quarterly') ? 'Quarterly' : entry.recurrenceSchedule?.startsWith('Yearly') ? 'Yearly' : 'Monthly')
-    setAttachmentCount(entry.attachmentCount ?? 0)
+    setAttachments([])
     setEditMode(true)
     setSaveError('')
   }
@@ -155,19 +168,26 @@ export default function JournalEntryDetailPage() {
     setSaving(true)
     setSaveError('')
     try {
-      await apiClient.put(`/companies/${companyId}/accounting/journal-entries/${params?.id}`, {
+      const response = await apiClient.put(`/companies/${companyId}/accounting/journal-entries/${params?.id}`, {
         date: editDate,
         description: editMemo,
         reference: editReference,
         recurrenceSchedule: isRecurring ? `${recurrenceInterval} / ${nextRunDate}` : undefined,
-        attachmentCount: attachmentCount > 0 ? attachmentCount : undefined,
         lines: validLines.map(l => ({
           accountId: l.accountId,
           debit: Number(l.debit) || 0,
           credit: Number(l.credit) || 0,
           description: l.description,
+          customerId: l.customerId,
         })),
       })
+      if (attachments.length > 0) {
+        const formData = new FormData()
+        attachments.forEach((file) => formData.append('files', file))
+        formData.append('entityType', 'journal-entry')
+        formData.append('entityId', response.data.id)
+        await apiClient.post(`/companies/${companyId}/attachments/upload`, formData)
+      }
       setEditMode(false)
       fetchEntry()
     } catch (e: any) {
@@ -203,6 +223,7 @@ export default function JournalEntryDetailPage() {
     const desc = encodeURIComponent(entry.description ?? entry.memo ?? '')
     const linesPayload = (entry.lines ?? []).map(l => ({
       accountId: l.accountId,
+      customerId: (l as any).customerId ?? '',
       debit: l.debit,
       credit: l.credit,
       description: l.description ?? '',
@@ -513,7 +534,7 @@ export default function JournalEntryDetailPage() {
                   >
                     <Upload size={14} /> Add files
                   </button>
-                  <span className="text-xs text-slate-500">{attachmentCount} attached</span>
+                  <span className="text-xs text-slate-500">{attachments.length} file(s) selected</span>
                 </div>
               </div>
               <input
@@ -524,7 +545,7 @@ export default function JournalEntryDetailPage() {
                 onChange={(event) => {
                   const files = event.target.files
                   if (!files) return
-                  setAttachmentCount((prev) => prev + files.length)
+                  setAttachments((prev) => [...prev, ...Array.from(files)])
                 }}
               />
             </div>
@@ -544,8 +565,9 @@ export default function JournalEntryDetailPage() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-100 border-b border-gray-300">
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-[38%]">Account</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-[28%]">Account</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200">Description</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-44">Customer</th>
                     <th className="text-right px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-36">Debit</th>
                     <th className="text-right px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-36">Credit</th>
                     <th className="w-10"></th>
@@ -568,6 +590,22 @@ export default function JournalEntryDetailPage() {
                           placeholder="Note"
                           className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                         />
+                      </td>
+                      <td className="px-3 py-1.5 border-r border-gray-100">
+                        <select
+                          value={line.customerId || ''}
+                          onChange={e => updateLine(idx, 'customerId', e.target.value)}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        >
+                          <option value="">Customer (optional)</option>
+                          {customers.map(customer => {
+                            const display = customer.displayName || customer.contact?.displayName || 'Unnamed'
+                            const id = customer.id || customer.contact?.id || ''
+                            return (
+                              <option key={id} value={id}>{display}</option>
+                            )
+                          })}
+                        </select>
                       </td>
                       <td className="px-3 py-1.5 border-r border-gray-100">
                         <input
@@ -608,7 +646,7 @@ export default function JournalEntryDetailPage() {
                   <tr className="border-t-2 border-gray-300 bg-gray-50">
                     <td colSpan={2} className="px-4 py-3">
                       <button
-                        onClick={() => setEditLines(prev => [...prev, { accountId: '', debit: '', credit: '', description: '' }])}
+                        onClick={() => setEditLines(prev => [...prev, { accountId: '', customerId: '', debit: '', credit: '', description: '' }])}
                         className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1"
                       >
                         <Plus size={13} /> Add Line

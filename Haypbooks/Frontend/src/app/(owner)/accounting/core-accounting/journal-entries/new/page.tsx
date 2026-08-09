@@ -49,7 +49,7 @@ export default function NewJournalEntryPage() {
   const [copyBanner, setCopyBanner] = useState(false)
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceInterval, setRecurrenceInterval] = useState<'Monthly' | 'Quarterly' | 'Yearly'>('Monthly')
-  const [attachmentCount, setAttachmentCount] = useState(0)
+  const [attachments, setAttachments] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const nextRunDate = useMemo(() => {
     if (!date) return new Date().toISOString().split('T')[0]
@@ -81,13 +81,14 @@ export default function NewJournalEntryPage() {
         if (Array.isArray(parsed) && parsed.length >= 2) {
           setLines(parsed.map((l: any) => ({
             accountId: l.accountId ?? '',
-            customerId: '',
+            customerId: l.customerId ?? '',
             debit: l.debit ? String(l.debit) : '',
             credit: l.credit ? String(l.credit) : '',
             description: l.description ?? '',
           })))
         }
       } catch {}
+
     }
     setDate(new Date().toISOString().split('T')[0])
     setReference('')
@@ -172,20 +173,25 @@ export default function NewJournalEntryPage() {
       reference,
       postingStatus: status,
       recurrenceSchedule: isRecurring ? `${recurrenceInterval} / ${nextRunDate}` : undefined,
-      attachmentCount: attachmentCount > 0 ? attachmentCount : undefined,
       lines: validLines.map(l => ({
         accountId: l.accountId,
         debit: Number(l.debit) || 0,
         credit: Number(l.credit) || 0,
         description: l.description,
+        customerId: l.customerId,
       })),
     }
-    console.log('[JE-SUBMIT] lines state:', JSON.stringify(lines, null, 2))
-    console.log('[JE-SUBMIT] payload:', JSON.stringify(payload, null, 2))
     setSaving(true)
     setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/accounting/journal-entries`, payload)
+      const response = await apiClient.post(`/companies/${companyId}/accounting/journal-entries`, payload)
+      if (attachments.length > 0) {
+        const formData = new FormData()
+        attachments.forEach((file) => formData.append('files', file))
+        formData.append('entityType', 'journal-entry')
+        formData.append('entityId', response.data.id)
+        await apiClient.post(`/companies/${companyId}/attachments/upload`, formData)
+      }
       router.push('/accounting/core-accounting/journal-entries')
     } catch (e: unknown) {
       const error = e as any
@@ -333,7 +339,7 @@ export default function NewJournalEntryPage() {
                 >
                   <Upload size={14} /> Upload
                 </button>
-                <span className="text-xs text-slate-500">{attachmentCount} attached</span>
+                <span className="text-xs text-slate-500">{attachments.length} file(s) selected</span>
               </div>
             </div>
             <input
@@ -344,7 +350,7 @@ export default function NewJournalEntryPage() {
               onChange={(event) => {
                 const files = event.target.files
                 if (!files) return
-                setAttachmentCount((prev) => prev + files.length)
+                setAttachments((prev) => [...prev, ...Array.from(files)])
               }}
             />
           </div>
