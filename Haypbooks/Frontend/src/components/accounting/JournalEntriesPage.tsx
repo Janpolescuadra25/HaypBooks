@@ -194,8 +194,9 @@ export default function JournalEntriesPage() {
       setEntries(Array.isArray(data) ? data : data.journalEntries ?? data.entries ?? [])
       setError('')
       setPage(1)
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load journal entries')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load journal entries')
     } finally {
       setLoading(false)
     }
@@ -265,8 +266,9 @@ export default function JournalEntriesPage() {
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${id}/post`)
       fetchEntries()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to post entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to post entry')
     }
   }, [companyId, fetchEntries])
 
@@ -275,8 +277,9 @@ export default function JournalEntriesPage() {
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${id}/void`, { reason: 'Voided by user' })
       fetchEntries()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to void entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to void entry')
     }
   }, [companyId, fetchEntries])
 
@@ -302,8 +305,9 @@ export default function JournalEntriesPage() {
     try {
       await apiClient.delete(`/companies/${companyId}/accounting/journal-entries/${id}`)
       fetchEntries()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to delete entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to delete entry')
     }
   }, [companyId, fetchEntries])
 

@@ -125,7 +125,19 @@ export default function JournalAuditLog({ companyId, entryId, open, onOpenChange
         const { data } = await apiClient.get(
           `/companies/${companyId}/accounting/journal-entries/${entryId}/activity`
         )
-        const events: AuditEntry[] = (data?.events ?? []).map((e: any) => ({
+        const events: AuditEntry[] = (data?.events ?? []).map((e: unknown) => {
+          const event = e as { id: string; action: string; user?: { name?: string; email?: string } | null; createdAt?: string; lines?: AuditLine[]; synthetic?: boolean }
+          return {
+            id: event.id,
+            action: event.action,
+            tableName: 'JournalEntry',
+            performedBy: event.user?.name ?? event.user?.email ?? 'System',
+            performedAt: event.createdAt,
+            lines: event.lines ?? [],
+            synthetic: event.synthetic,
+            user: event.user,
+          }
+        })
           id: e.id,
           action: e.action,
           tableName: 'JournalEntry',
@@ -143,8 +155,9 @@ export default function JournalAuditLog({ companyId, entryId, open, onOpenChange
         )
         setLogs(Array.isArray(data) ? data : [])
       }
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load audit log')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load audit log')
     } finally {
       setLoading(false)
     }

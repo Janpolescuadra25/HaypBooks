@@ -10,6 +10,27 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
 
+interface FxLine {
+  debit?: number | string
+  credit?: number | string
+}
+
+interface FxEntry {
+  id: string
+  currency?: string
+  date?: string
+  description?: string
+  exchangeRate?: number | string
+  lines?: FxLine[]
+  entryNumber?: string
+  createdAt?: string
+}
+
+interface RevaluationData {
+  entries?: FxEntry[]
+  generatedAt?: string
+}
+
 function formatDate(date: string) {
   return format(new Date(date), 'MMM d, yyyy')
 }
@@ -19,7 +40,7 @@ export default function MultiCurrencyRevaluationPage() {
   const { currency } = useCompanyCurrency()
   const [from, setFrom] = useState(() => `${new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)}`)
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10))
-  const [reval, setReval] = useState<any | null>(null)
+  const [reval, setReval] = useState<RevaluationData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,8 +51,9 @@ export default function MultiCurrencyRevaluationPage() {
     try {
       const { data } = await accountingService.getMultiCurrencyRevaluation(companyId, { from, to })
       setReval(data)
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load multi-currency revaluation data')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      setError(apiErr?.message || 'Failed to load multi-currency revaluation data')
     } finally {
       setLoading(false)
     }
@@ -47,27 +69,27 @@ export default function MultiCurrencyRevaluationPage() {
   }, [companyId, companyLoading, fetchRevaluation])
 
   const fxEntries = useMemo(() => {
-    const entries = reval?.entries ?? []
-    return entries.filter((entry: any) => entry.currency)
+    const entries = reval?.entries ?? [] as FxEntry[]
+    return entries.filter((entry) => Boolean(entry.currency))
   }, [reval])
 
   const sortedEntries = useMemo(() => {
-    return [...fxEntries].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return [...fxEntries].sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
   }, [fxEntries])
 
   const currenciesCount = useMemo(() => {
-    return new Set(fxEntries.map((entry: any) => entry.currency)).size
+    return new Set(fxEntries.map((entry) => entry.currency)).size
   }, [fxEntries])
 
   const totalDebit = useMemo(() => {
-    return fxEntries.reduce((sum: number, entry: any) => {
-      return sum + (entry.lines ?? []).reduce((lineSum: number, line: any) => lineSum + Number(line.debit || 0), 0)
+    return fxEntries.reduce((sum: number, entry) => {
+      return sum + (entry.lines ?? []).reduce((lineSum: number, line) => lineSum + Number(line.debit || 0), 0)
     }, 0)
   }, [fxEntries])
 
   const totalCredit = useMemo(() => {
-    return fxEntries.reduce((sum: number, entry: any) => {
-      return sum + (entry.lines ?? []).reduce((lineSum: number, line: any) => lineSum + Number(line.credit || 0), 0)
+    return fxEntries.reduce((sum: number, entry) => {
+      return sum + (entry.lines ?? []).reduce((lineSum: number, line) => lineSum + Number(line.credit || 0), 0)
     }, 0)
   }, [fxEntries])
 
@@ -194,9 +216,9 @@ export default function MultiCurrencyRevaluationPage() {
                 <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">No items found.</td>
               </tr>
             ) : (
-              sortedEntries.map((entry: any) => {
-                const entryDebit = (entry.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.debit || 0), 0)
-                const entryCredit = (entry.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.credit || 0), 0)
+              sortedEntries.map((entry) => {
+                const entryDebit = (entry.lines ?? []).reduce((sum: number, line) => sum + Number(line.debit || 0), 0)
+                const entryCredit = (entry.lines ?? []).reduce((sum: number, line) => sum + Number(line.credit || 0), 0)
                 return (
                   <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3">

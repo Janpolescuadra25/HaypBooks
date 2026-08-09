@@ -35,8 +35,9 @@ export default function AccountingPeriodsPage() {
       const { data } = await apiClient.get(`/companies/${companyId}/accounting/periods`)
       setPeriods(Array.isArray(data) ? data : data.periods ?? [])
       setError('')
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load periods')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load periods')
     } finally {
       setLoading(false)
     }
@@ -49,8 +50,9 @@ export default function AccountingPeriodsPage() {
     try {
       await apiClient.post(`/companies/${companyId}/accounting/periods/${id}/close`)
       fetchPeriods()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to close period')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to close period')
     }
   }
 
@@ -59,8 +61,9 @@ export default function AccountingPeriodsPage() {
     try {
       await apiClient.post(`/companies/${companyId}/accounting/periods/${id}/reopen`)
       fetchPeriods()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to reopen period')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to reopen period')
     }
   }
 
@@ -161,8 +164,9 @@ function PeriodFormModal({ companyId, onClose, onSaved }: { companyId: string; o
     try {
       await apiClient.post(`/companies/${companyId}/accounting/periods`, { name, startDate, endDate })
       onSaved()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to create period')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to create period')
     } finally {
       setSaving(false)
     }

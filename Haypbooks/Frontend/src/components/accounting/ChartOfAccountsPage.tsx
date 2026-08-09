@@ -72,8 +72,9 @@ export default function ChartOfAccountsPage() {
       })
       setAccounts(Array.isArray(data) ? data : data.accounts ?? [])
       setError('')
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load accounts')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load accounts')
     } finally {
       setLoading(false)
     }
@@ -109,8 +110,9 @@ export default function ChartOfAccountsPage() {
     try {
       await apiClient.delete(`/companies/${companyId}/accounting/accounts/${id}`)
       fetchAccounts()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to delete account')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to delete account')
     }
   }
 
@@ -130,8 +132,9 @@ export default function ChartOfAccountsPage() {
       await apiClient.post(`/companies/${companyId}/accounting/accounts/seed-default`)
       await fetchAccounts(true)
       setExpandedTypes(new Set(ACCOUNT_TYPES.map(t => t.value)))
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to seed default accounts')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to seed default accounts')
     } finally {
       setSeeding(false)
     }
@@ -350,7 +353,7 @@ function AccountFormModal({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const set = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }))
+  const set = (field: string, value: string | boolean | number | null) => setForm(prev => ({ ...prev, [field]: value }))
 
   const parentOptions = accounts.filter(a => a.type === form.type && a.id !== account?.id)
 
@@ -375,8 +378,9 @@ function AccountFormModal({
         await apiClient.post(`/companies/${companyId}/accounting/accounts`, payload)
       }
       onSaved()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to save account')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to save account')
     } finally {
       setSaving(false)
     }

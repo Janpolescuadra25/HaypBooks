@@ -8,6 +8,14 @@ import { format } from 'date-fns'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { accountingService } from '@/services/accounting.service'
 
+type ArchivePeriod = {
+  id: string
+  status: 'OPEN' | 'CLOSED' | 'LOCKED'
+  name?: string
+  startDate?: string
+  endDate?: string
+}
+
 function formatDate(date: string) {
   return format(new Date(date), 'MMM d, yyyy')
 }
@@ -39,7 +47,7 @@ function getDurationLabel(startDate: string, endDate: string) {
 
 export default function CloseArchivePage() {
   const { companyId, loading: companyLoading } = useCompanyId()
-  const [periods, setPeriods] = useState<any[]>([])
+  const [periods, setPeriods] = useState<ArchivePeriod[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,9 +58,10 @@ export default function CloseArchivePage() {
     try {
       const { data } = await accountingService.listPeriods(companyId)
       const periodsData = Array.isArray(data) ? data : (data?.data ?? [])
-      setPeriods(periodsData.filter((period: any) => period.status === 'CLOSED' || period.status === 'LOCKED'))
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load archive periods')
+      setPeriods((periodsData as ArchivePeriod[]).filter((period) => period.status === 'CLOSED' || period.status === 'LOCKED'))
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      setError(apiErr?.message || 'Failed to load archive periods')
     } finally {
       setLoading(false)
     }

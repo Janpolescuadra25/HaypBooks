@@ -9,7 +9,25 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useToast } from '@/components/ToastProvider'
 import { inventoryService } from '@/services/inventory.service'
 import { formatCurrency } from '@/lib/format'
+interface DepreciationEntry {
+  id: string
+  periodStart: string
+  periodEnd: string
+  amount?: number | string
+  createdAt?: string
+}
 
+interface DepreciationSchedule {
+  name?: string
+  depreciationMethod?: string
+  usefulLifeMonths?: number
+  cost?: number | string
+  salvageValue?: number | string
+  depreciableBase?: number | string
+  monthlyDepreciation?: number | string
+  totalDepreciated?: number | string
+  posted?: DepreciationEntry[]
+}
 const METHOD_LABELS: Record<string, string> = {
   STRAIGHT_LINE: 'Straight Line',
   DECLINING_BALANCE: 'Declining Balance',
@@ -23,9 +41,9 @@ export default function DepreciationPage() {
   const { currency } = useCompanyCurrency()
   const toast = useToast()
 
-  const [assets, setAssets] = useState<any[]>([])
+  const [assets, setAssets] = useState<DepreciationEntry[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState('')
-  const [schedule, setSchedule] = useState<any>(null)
+  const [schedule, setSchedule] = useState<DepreciationSchedule | null>(null)
   const [loading, setLoading] = useState(true)
   const [scheduleLoading, setScheduleLoading] = useState(false)
   const [runningDepreciation, setRunningDepreciation] = useState(false)
@@ -40,8 +58,9 @@ export default function DepreciationPage() {
     try {
       const { data } = await inventoryService.getFixedAssets(companyId)
       setAssets(Array.isArray(data) ? data : (data?.data ?? []))
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load fixed assets')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      setError(apiErr?.message || 'Failed to load fixed assets')
     } finally {
       setLoading(false)
     }
@@ -53,8 +72,9 @@ export default function DepreciationPage() {
     try {
       const { data: scheduleData } = await inventoryService.getDepreciationSchedule(companyId, selectedAssetId)
       setSchedule(scheduleData)
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to load depreciation schedule')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      toast.error(apiErr?.response?.data?.message || apiErr?.message || 'Failed to load depreciation schedule')
     } finally {
       setScheduleLoading(false)
     }
@@ -82,8 +102,9 @@ export default function DepreciationPage() {
       setPeriodStart('')
       setPeriodEnd('')
       fetchSchedule()
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to run depreciation')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      toast.error(apiErr?.response?.data?.message || apiErr?.message || 'Failed to run depreciation')
     } finally {
       setRunningDepreciation(false)
     }
@@ -276,12 +297,12 @@ export default function DepreciationPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {schedule.posted.map((entry: any) => (
+                    {schedule.posted.map((entry) => (
                       <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                         <td className="px-5 py-3 text-slate-700">{new Date(entry.periodStart).toLocaleDateString()}</td>
                         <td className="px-5 py-3 text-slate-700">{new Date(entry.periodEnd).toLocaleDateString()}</td>
                         <td className="px-5 py-3 text-slate-900 font-medium">{formatCurrency(Number(entry.amount || 0), currency)}</td>
-                        <td className="px-5 py-3 text-slate-700">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                        <td className="px-5 py-3 text-slate-700">{new Date(entry.createdAt ?? '').toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>

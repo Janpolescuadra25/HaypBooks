@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { RefreshCw, PackageOpen, Building2, PauseCircle, Wrench, XCircle, ShoppingBag } from 'lucide-react'
+import { RefreshCw, PackageOpen, Building2, PauseCircle, Wrench, XCircle, ShoppingBag, type LucideIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/format'
 
 const STATUS_ORDER = ['ACTIVE', 'IDLE', 'UNDER_MAINTENANCE', 'DISPOSED', 'SOLD'] as const
 
-const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string; border: string }> = {
+const STATUS_CONFIG: Record<string, { label: string; icon: LucideIcon; color: string; bg: string; border: string }> = {
   ACTIVE: { label: 'Active', icon: Building2, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   IDLE: { label: 'Idle', icon: PauseCircle, color: 'text-slate-600', bg: 'bg-slate-100', border: 'border-slate-200' },
   UNDER_MAINTENANCE: { label: 'Under Maintenance', icon: Wrench, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -34,8 +34,9 @@ export default function AssetLifecyclePage() {
     try {
       const { data } = await inventoryService.getFixedAssets(companyId)
       setAssets(Array.isArray(data) ? data : (data?.data ?? []))
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load fixed assets')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      setError(apiErr?.message || 'Failed to load fixed assets')
     } finally {
       setLoading(false)
     }

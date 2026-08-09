@@ -43,8 +43,9 @@ export default function AssetManagementPage() {
     try {
       const { data } = await inventoryService.getFixedAssets(companyId)
       setAssets(Array.isArray(data) ? data : (data?.data ?? []))
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load fixed assets')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      setError(apiErr?.message || 'Failed to load fixed assets')
     } finally {
       setLoading(false)
     }

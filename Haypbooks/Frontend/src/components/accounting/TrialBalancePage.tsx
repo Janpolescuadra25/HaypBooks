@@ -36,8 +36,9 @@ export default function TrialBalancePage() {
       const { data } = await apiClient.get(`/companies/${companyId}/accounting/trial-balance`, { params: { asOf } })
       setRows(Array.isArray(data) ? data : data.rows ?? data.accounts ?? [])
       setError('')
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load trial balance')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load trial balance')
     } finally {
       setLoading(false)
     }

@@ -278,8 +278,9 @@ export default function GeneralLedgerPage() {
       const { data } = await apiClient.get(`/companies/${companyId}/general-ledger`, { params })
       setGlData(data)
       setError('')
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load general ledger')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load general ledger')
     } finally {
       setLoading(false)
     }
@@ -609,7 +610,7 @@ export default function GeneralLedgerPage() {
           sortField={sortField}
           sortDir={sortDir}
           onSort={(key) => {
-            handleSort(key as any)
+            handleSort(key as SortField)
           }}
           onDownload={handleExport}
           currencySymbol={currencySymbol}

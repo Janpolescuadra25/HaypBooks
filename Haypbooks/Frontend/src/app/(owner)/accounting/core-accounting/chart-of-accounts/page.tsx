@@ -432,8 +432,9 @@ function AccountModal({
       }
       onSaved()
       onClose()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Save failed. Please try again.')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Save failed. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -670,8 +671,9 @@ function ImportModal({ onClose, onImported, companyId }: { onClose: () => void; 
               description: descIdx >= 0 ? r[descIdx] : undefined,
             })
             count++
-          } catch (error: any) {
-            failures.push({ row: rowIndex + 2, message: error?.response?.data?.message ?? error?.message ?? 'Unknown import error' })
+          } catch (error: unknown) {
+            const apiErr = error as { response?: { data?: { message?: string } }; message?: string }
+            failures.push({ row: rowIndex + 2, message: apiErr?.response?.data?.message ?? apiErr?.message ?? 'Unknown import error' })
           }
         }
         if (failures.length > 0) {
@@ -682,8 +684,9 @@ function ImportModal({ onClose, onImported, companyId }: { onClose: () => void; 
         }
         setSuccess(`Imported ${count} account${count !== 1 ? 's' : ''} successfully`)
         setTimeout(() => { onImported(); onClose() }, 1500)
-      } catch (er: any) {
-        setError(er?.response?.data?.message ?? 'Import failed')
+      } catch (er: unknown) {
+        const apiErr = er as { response?: { data?: { message?: string } }; message?: string }
+        setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Import failed')
       } finally { setImporting(false) }
     }
     reader.readAsText(file)
@@ -816,8 +819,9 @@ export default function ChartOfAccountsPage() {
       setTreeAccounts(tree)
       // Auto-expand top-level accounts
       setExpanded(new Set(tree.map(a => a.id)))
-    } catch (e: any) {
-      setLoadError(e?.response?.data?.message ?? 'Failed to load accounts. Check your connection and try again.')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setLoadError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load accounts. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -917,8 +921,9 @@ export default function ChartOfAccountsPage() {
       await apiClient.delete(`/companies/${companyId}/accounting/accounts/${acc.id}`)
       loadAccounts()
       toast.success('Account deactivated successfully.')
-    } catch (e: any) {
-      const msg = e?.response?.data?.message ?? ''
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      const msg = apiErr?.response?.data?.message ?? ''
       if (msg.toLowerCase().includes('active children')) {
         toast.error('Cannot deactivate account with active children.')
       } else {

@@ -110,8 +110,9 @@ export default function JournalEntryDetailPage() {
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/accounting/journal-entries/${params.id}`)
       setEntry(data)
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load journal entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load journal entry')
     } finally {
       setLoading(false)
     }
@@ -134,10 +135,10 @@ export default function JournalEntryDetailPage() {
     if (!entry) return
     setEditDate(entry.date?.split('T')[0] ?? new Date().toISOString().split('T')[0])
     setEditMemo(entry.description ?? entry.memo ?? '')
-    setEditReference((entry as any).reference ?? '')
+    setEditReference(entry.reference ?? '')
     setEditLines((entry.lines ?? []).map(l => ({
       accountId: l.accountId,
-      customerId: (l as any).customerId ?? '',
+      customerId: l.customerId ?? '',
       debit: l.debit ? String(l.debit) : '',
       credit: l.credit ? String(l.credit) : '',
       description: l.description ?? '',
@@ -192,8 +193,9 @@ export default function JournalEntryDetailPage() {
       }
       setEditMode(false)
       fetchEntry()
-    } catch (e: any) {
-      setSaveError(e?.response?.data?.message ?? 'Failed to save journal entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setSaveError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to save journal entry')
     } finally {
       setSaving(false)
     }
@@ -205,8 +207,9 @@ export default function JournalEntryDetailPage() {
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${entry.id}/post`)
       fetchEntry()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to post entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to post entry')
     }
   }
 
@@ -220,8 +223,9 @@ export default function JournalEntryDetailPage() {
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${entry.id}/void`, { reason })
       fetchEntry()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to void entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to void entry')
     }
   }
 
@@ -230,7 +234,7 @@ export default function JournalEntryDetailPage() {
     const desc = encodeURIComponent(entry.description ?? entry.memo ?? '')
     const linesPayload = (entry.lines ?? []).map(l => ({
       accountId: l.accountId,
-      customerId: (l as any).customerId ?? '',
+      customerId: l.customerId ?? '',
       debit: l.debit,
       credit: l.credit,
       description: l.description ?? '',
@@ -245,8 +249,9 @@ export default function JournalEntryDetailPage() {
     try {
       await apiClient.delete(`/companies/${companyId}/accounting/journal-entries/${entry.id}`)
       router.push('/accounting/core-accounting/journal-entries')
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to delete entry')
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to delete entry')
     }
   }
 
@@ -373,7 +378,7 @@ export default function JournalEntryDetailPage() {
             </div>
             <div>
               <p className="text-xs text-slate-400 mb-0.5">Reference</p>
-              <p className="font-medium text-slate-700">{(entry as any).reference || '—'}</p>
+              <p className="font-medium text-slate-700">{entry.reference || '—'}</p>
             </div>
             <div>
               <p className="text-xs text-slate-400 mb-0.5">Memo / Description</p>

@@ -44,8 +44,9 @@ export default function LockPeriodPage() {
       const { data } = await accountingService.listPeriods(companyId)
       const periodsData = Array.isArray(data) ? data : (data?.data ?? [])
       setPeriods(periodsData)
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load accounting periods')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      setError(apiErr?.message || 'Failed to load accounting periods')
     } finally {
       setLoading(false)
       setActiveActionId(null)
@@ -60,7 +61,8 @@ export default function LockPeriodPage() {
     try {
       await accountingService.closePeriod(companyId, periodId)
       await fetchPeriods()
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error('Error closing period:', err)
       setError('Failed to close period. Please try again.')
       setActiveActionId(null)
     }
@@ -74,7 +76,8 @@ export default function LockPeriodPage() {
     try {
       await accountingService.reopenPeriod(companyId, periodId)
       await fetchPeriods()
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error('Error reopening period:', err)
       setError('Failed to reopen period. Please try again.')
       setActiveActionId(null)
     }

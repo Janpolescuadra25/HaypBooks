@@ -31,6 +31,22 @@ interface Customer {
   contact?: { id: string; displayName: string }
 }
 
+type CopyEntryLine = {
+  accountId?: string
+  customerId?: string
+  debit?: string | number
+  credit?: string | number
+  description?: string
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null) {
+    const err = error as { response?: { data?: { message?: string; error?: string } } }
+    return err.response?.data?.message ?? err.response?.data?.error ?? fallback
+  }
+  return fallback
+}
+
 export default function NewJournalEntryPage() {
   const router = useRouter()
   const { companyId, loading: companyLoading, error: companyError } = useCompanyId()
@@ -79,7 +95,7 @@ export default function NewJournalEntryPage() {
       try {
         const parsed = JSON.parse(decodeURIComponent(linesRaw))
         if (Array.isArray(parsed) && parsed.length >= 2) {
-          setLines(parsed.map((l: any) => ({
+          setLines(parsed.map((l: CopyEntryLine) => ({
             accountId: l.accountId ?? '',
             customerId: l.customerId ?? '',
             debit: l.debit ? String(l.debit) : '',
@@ -193,13 +209,8 @@ export default function NewJournalEntryPage() {
         await apiClient.post(`/companies/${companyId}/attachments/upload`, formData)
       }
       router.push('/accounting/core-accounting/journal-entries')
-    } catch (e: unknown) {
-      const error = e as any
-      const msg =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        (error instanceof Error ? error.message : undefined)
-      setError(msg ?? 'Failed to create journal entry')
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to create journal entry'))
     } finally {
       setSaving(false)
     }
