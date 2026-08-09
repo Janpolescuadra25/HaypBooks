@@ -72,6 +72,13 @@
 | Analytics Dashboards | New page | Chart dashboard (recharts) — revenue trends, expense breakdown, KPIs |
 | Report Builder | New page | Hybrid form + preview — select data source, columns, filters, preview generated report |
 
+### Plan N: Accounting Module Fixes (POST-L-2)
+Section 2 audit found 30 issues (7 critical, 13 significant, 10 minor). Top priorities:
+- **N-1: Data-loss hotfixes** — Fix attachment upload, customerId payload, COA modal fields, remove console.logs (7 critical items)
+- **N-2: UX improvements** — Add void reason modal, post confirmation, fix recurrence logic, fix contra styling, fix CSV import error reporting (13 significant items)
+- **N-3: Code quality** — Remove 30+ `as any` casts, extract shared audit-log component, dead code cleanup (10 minor items)
+- **Missing vs QB/ERPNext (10 items)** — Payment terms, FX revaluation logic, budget distribution (monthly), period close checklist, JE templates, account subtypes, cheque printing, cost center allocation, GL reconciliation, financial statement snapshots
+
 ### Post-Reporting: Deployment
 See "Deployment Roadmap" section below.
 
@@ -136,6 +143,16 @@ These require backend Prisma models, controllers, and services before frontend c
 17. **Three "coming soon" components** — TabComingSoon.tsx, ComingSoonPage.tsx, TabPlaceholder.tsx serve the same purpose with different UIs
 18. **OwnerSidebar has dead Star import** — lucide-react Star imported but never used
 19. **HaypDataTable.types.ts has dead tanstack imports** — ColumnDef, SortingState, ColumnOrderState, VisibilityState, RowSelectionState, ColumnSizingState imported but unused
+20. **JE attachments are discarded on create/edit** — File input only increments `attachmentCount`; actual files never uploaded to backend. journal-entries/new and journal-entries/[id] both affected. (Accounting audit #1, #3)
+21. **JE customerId silently dropped from payload** — Form collects customer per line but `validLines.map()` only sends accountId/debit/credit/description. (Accounting audit #2)
+22. **COA modal drops 4 form fields on save** — handleSave sends only {code, name, type}; parentId, description, isHeader, normalSide collected in form are silently discarded. (Accounting audit #4)
+23. **console.log leaks financial data** — journal-entries/new page logs full JE payload (amounts, accounts) to browser console. 3 more in GeneralLedgerPage. (Accounting audit #5, #6)
+24. **Contra account styling never applies** — `getTypeRowStyle` checks `CONTRA_` (underscore) but types use spaces (`Contra Asset`). Falls through to gray. (Accounting audit #7)
+25. **Recurrence next-run always +1 month** — Yearly/Quarterly JEs show next run as next month regardless of interval. (Accounting audit #8)
+26. **JE void has no reason UI** — Hardcoded `{reason:'Voided by user'}`; Post action has no confirmation dialog. (Accounting audit #13, #14)
+27. **COA CSV import swallows per-row errors** — Failed imports reported as successful. (Accounting audit #16)
+28. **Inconsistent API verbs** — Account deactivate uses DELETE, reactivate uses PUT for same state toggle. (Accounting audit #17)
+29. **30+ `as any` / `catch (e: any)` in accounting module** — Reduces TypeScript safety across all accounting pages. (Accounting audit #10, #11, #27)
 
 ---
 
