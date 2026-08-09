@@ -1,9 +1,5 @@
 # HaypBooks Frontend Roadmap
-**Last Updated:** August 9, 2026  
-**Branch:** `main` (80 commits ahead of origin)  
-**Total Built Pages:** 349  
-**ComingSoon Stubs Remaining:** 26  
-**Service Files:** 25  
+> **Last Updated:** August 10, 2026 | **Branch:** `main` (81 commits ahead) | **349 built pages** | **26 ComingSoon stubs** | **25 service files**
 
 ---
 
@@ -66,12 +62,14 @@
 
 ### Immediate: N-3 — Code Quality Cleanup
 
-| Task | Type | Description |
-|---|---|---|
-| Remove `as any` casts in accounting | Type safety | Replace ~30 `as any` / `catch (e: any)` with proper types across 4 accounting files |
-| Remove dead `Star` import in OwnerSidebar | Dead code | Unused lucide-react `Star` import in sidebar component |
-| Remove dead tanstack imports in HaypDataTable.types | Dead code | Unused `@tanstack/react-table` type imports |
-| Consolidate 3 coming-soon components | Redundancy | Merge redundant ComingSoon/ComingSoonPage/ComingSoonCard into 1 |
+| # | Task | Files | Tech Debt |
+|---|---|---|---|
+| 1 | Remove `as any` casts — replace with proper TypeScript types | 15 files in `accounting/` (40 instances) | #29 |
+| 2 | Remove dead `Star` import | `OwnerSidebar.tsx` (L6) | #18 |
+| 3 | Remove dead tanstack imports | `HaypDataTable.types.ts` (L1) | #19 |
+| 4 | Remove dead `TabPlaceholder.tsx` (zero imports) | `layout/tabs/TabPlaceholder.tsx` | #17 |
+| 5 | Consolidate 4 coming-soon components into canonical `ComingSoonPage.tsx` — re-point 9 consumers (7 from `TabComingSoon`, 2 from `owner/ComingSoon`) | `shared/TabComingSoon.tsx`, `owner/ComingSoon.tsx`, `owner/SectionComingSoon.tsx` | #17 |
+| 6 | Remove `as any` casts in reporting service | `reporting.service.ts` | #12 |
 
 ### Plan N: Accounting Module Fixes (N-1 ✅, N-2 ✅, N-3 Pending)
 Section 2 audit found 30 issues (7 critical, 13 significant, 10 minor). Top priorities:
@@ -154,6 +152,597 @@ These require backend Prisma models, controllers, and services before frontend c
 27. ~~**COA CSV import swallows per-row errors** — Failed imports reported as successful. (Accounting audit #16)~~ — ✅ Resolved (N-2, commit 69f856ad)
 28. **Inconsistent API verbs** — Account deactivate uses DELETE, reactivate uses PUT for same state toggle. (Accounting audit #17)
 29. **30+ `as any` / `catch (e: any)` in accounting module** — Reduces TypeScript safety across all accounting pages. (Accounting audit #10, #11, #27)
+
+---
+
+## Module Output Specifications
+
+> **Purpose:** Every module section below defines its target output state — what "complete" looks like.
+> Each module is evaluated against 11 perspectives. A module is ✅ Complete only when it satisfies
+> all applicable criteria for its current phase.
+
+### Evaluation Framework
+
+Each module output spec is assessed from these perspectives:
+
+| # | Perspective | Focus |
+|---|---|---|
+| 1 | **Accountant** | Logical flow, correct UI sequence, proper data entry, ledger accuracy, fully functional workflow, every button in the right place, understandable flow, no missing entry points |
+| 2 | **Auditor** | Compliance readiness, audit trail integrity, discrepancy detection, data validation, segregation of duties, approval chains, traceability |
+| 3 | **Security Analyst** | Input validation, authorization checks, sensitive data protection, CSRF/XSS prevention, secure file uploads, session handling |
+| 4 | **UI Designer** | Consistent styling, no redundant buttons/forms, shared components reused, responsive layout, accessible markup, intuitive navigation, visual hierarchy |
+| 5 | **Judgement** | Fair allocation rules, impartial calculations, correct tax treatment, proper period handling, ethical defaults |
+| 6 | **Financial Analyst** | Accurate calculations, proper aggregation, drill-down capability, data completeness, period-over-period comparison support |
+| 7 | **Business Analyst** | Business goal alignment, workflow efficiency, reporting coverage, decision-support data, integration points |
+| 8 | **Backend Engineer** | Correct API endpoints, proper HTTP methods, query efficiency, error handling, pagination, idempotency where needed |
+| 9 | **Frontend Engineer** | Component reusability, state management, error boundaries, loading states, form validation, URL-based navigation |
+| 10 | **Folder Structure** | Logical file organization, consistent naming, co-located assets, no orphan files |
+| 11 | **Testing** | DOM-testable components, verifiable outputs, no hardcoded test data in production, form submissions verifiable via DOM events |
+
+---
+
+#### ### Accounting Module
+
+**Target Output:** A fully functional double-entry accounting system that a CPA can use daily without workarounds.
+
+**Sections & Deliverables:**
+
+**1. Chart of Accounts (`/accounting/chart-of-accounts`)
+- [ ] Hierarchical account tree with drag-and-drop reordering (parent/child relationships)
+- [ ] Account types: Asset, Liability, Equity, Revenue, Expense, Contra Asset, Contra Liability, Contra Revenue — each with correct normal balance side (Debit/Credit) and signage
+- [ ] Create, edit, archive, reactivate accounts with proper validation (no deletion of accounts with transactions)
+- [ ] Account codes with format validation and uniqueness enforcement
+- [ ] Import from CSV with row-level error reporting (failures array with per-row messages)
+- [ ] Export to CSV with all account fields
+- [ ] Search, filter by type, collapse/expand tree
+- [ ] Visual distinction for contra accounts (e.g., indented or different icon)
+- [ ] Header accounts (non-postable, organizational only) vs leaf accounts (postable)
+
+**Accountant perspective:** Can the accountant find any account in under 3 clicks? Is the contra account visually distinguishable at a glance? Does the import handle errors gracefully without losing good rows? Is the hierarchy intuitive (indentation, expand/collapse)?
+
+**Auditor perspective:** Is there an audit trail for account changes (who changed what, when)? Can accounts with balances be archived (should require approval)? Is there a log of CSV imports?
+
+**UI Designer perspective:** Is the tree performance acceptable with 500+ accounts? Are action buttons (Edit, Archive, New) consistently placed? Does the table use shared HaypDataTable?
+
+**Backend Engineer perspective:** Are COA endpoints RESTful? (`GET /chart-of-accounts`, `POST /chart-of-accounts`, `PUT /chart-of-accounts/:id`, `PATCH /chart-of-accounts/:id/archive`). Is the hierarchy stored with materialized path or adjacency list? Is the import endpoint idempotent?
+
+**2. Journal Entries (`/accounting/journal-entries`)
+- [ ] List page with search, filter by status (Draft, Posted, Voided), date range, and pagination
+- [ ] Create new JE with dynamic line items (add/remove rows), auto-balancing validation (total debits = total credits)
+- [ ] Each line: account selector (from COA), description, debit amount, credit amount — mutually exclusive (one must be zero)
+- [ ] Customer/Vendor linkage per line (optional) for AR/AP tracking
+- [ ] Attachment upload (multiple files) on create and edit, with file list display and delete capability
+- [ ] Edit draft JEs (posted JEs are immutable — must void + re-enter)
+- [ ] Post JE (with confirmation dialog — "This action cannot be undone")
+- [ ] Void JE with mandatory rejection reason (modal, not `window.confirm`), stored for audit trail
+- [ ] Recurring JE setup: frequency (Monthly/Quarterly/Yearly) with correct `nextRunDate` calculation (Monthly→+1mo, Quarterly→+3mo, Yearly→+12mo), start date, end date (optional)
+- [ ] View JE detail: all line items, attachments, posting history, audit log
+- [ ] Print/export JE as PDF
+
+**Accountant perspective:** Is the auto-balance indicator real-time? Can the accountant see which accounts are debited vs credited at a glance? Is the customer selector accessible per line? Does the recurrence UI clearly show the next run date? Is the void flow clear about consequences?
+
+**Auditor perspective:** Is every JE mutation (create, edit, post, void) logged with timestamp + user? Can voided JEs still be viewed with the void reason? Is the approval chain enforced (draft → posted, no skipping)?
+
+**Security Analyst perspective:** Are attachment uploads validated for file type and size? Is the void endpoint authorization-checked (only authorized users can void)? Is customer data properly scoped to the company?
+
+**Frontend Engineer perspective:** Does the form use ModalForm (canonical) not HaypModal for form modals? Are loading states shown during save/post? Is the line-items array managed with proper React state (no stale closures)?
+
+**3. General Ledger (`/accounting/general-ledger`)
+- [ ] Filterable ledger view by account, date range, transaction type
+- [ ] Shows running balance per account (debit/credit/running total)
+- [ ] Drill-down from any balance to source JE
+- [ ] Export to CSV/PDF
+- [ ] Supports multi-currency display when applicable
+
+**Accountant perspective:** Is the running balance recalculated correctly after every transaction? Can the accountant trace any balance back to its source journal entry? Are debits shown positive and credits negative (or clearly labeled)?
+
+**Financial Analyst perspective:** Can the ledger data be aggregated for period-over-period analysis? Are there summary views (monthly, quarterly)?
+
+**4. Trial Balance (`/accounting/trial-balance`)
+- [ ] Lists all accounts with their debit/credit balances for a selected period
+- [ ] Total debits must equal total credits (with visual indicator)
+- [ ] Filter by date range, account type
+- [ ] Export to CSV/PDF
+- [ ] Drill-down to individual account activity
+
+**Accountant perspective:** Does the trial balance clearly show out-of-balance conditions? Is the period selector intuitive? Can the accountant quickly identify which accounts have unexpected balances?
+
+**Auditor perspective:** Is the trial balance generated from live data (not cached/stale)? Can it be locked for a specific period-end date?
+
+**5. Accounting Periods (`/accounting/accounting-periods`)
+- [ ] Fiscal year management: create, open, close periods
+- [ ] Period locking: prevent posting to closed periods
+- [ ] Multi-year support with carry-forward
+- [ ] Visual calendar/timeline of period status (Open, Closed, Closing)
+
+**Accountant perspective:** Is the period lock status immediately visible? Does the system prevent posting to closed periods with a clear error message? Can the accountant see the full fiscal year timeline?
+
+**Judgement perspective:** Are period-end close procedures documented/enforced? Is there a soft-close vs hard-close distinction?
+
+**6. Asset Management (`/accounting/asset-management`)
+- [ ] Fixed asset register: create assets with purchase date, cost, useful life, salvage value, depreciation method
+- [ ] Depreciation schedules: Straight-line, Declining balance, Double declining
+- [ ] Asset lifecycle: acquisition → depreciation → disposal/revaluation
+- [ ] Asset categories with default depreciation rules
+
+**Accountant perspective:** Is the depreciation calculation transparent (show the formula)? Can the accountant override a depreciation entry? Is the disposal flow clear (gain/loss calculation)?
+
+**Financial Analyst perspective:** Are asset values tracked at both book value and fair market value? Can asset reports be generated by category, department, or location?
+
+**7. Multi-Currency (`/accounting/multi-currency-revaluation`)
+- [ ] Support for multiple currencies with exchange rate management
+- [ ] Automatic revaluation of foreign currency balances
+- [ ] Gain/loss recognition on revaluation
+
+**Accountant perspective:** Are exchange rates current and source-able? Is the revaluation journal entry automatically generated and reviewable?
+
+**8. Budget Management (`/accounting/budgets`)
+- [ ] Budget creation by account, department, or project
+- [ ] Budget vs actual comparison reports
+- [ ] Variance analysis with threshold alerts
+
+**Accountant perspective:** Can budgets be imported from CSV? Is the variance calculation transparent? Can the accountant drill from a variance to the underlying transactions?
+
+**9. Close & Archive (`/accounting/close-archive`)
+- [ ] Year-end close checklist with step-by-step flow
+- [ ] Income/expense account closing to retained earnings
+- [ ] Archive closed periods with read-only access
+
+**Accountant perspective:** Is the close process guided (step 1, step 2, ...)? Can the accountant undo a close if needed (with appropriate authorization)? Is the archive searchable?
+
+**Current Status:** 7 pages fully built. **Gaps:** 3 allocation stubs (cost-center, project, class), no PDF export, no year-end close automation, no budget vs actual reporting, no asset depreciation auto-scheduling.
+
+---
+
+#### ### Banking Module
+
+**Target Output:** Complete bank account management with reconciliation, transfers, and transaction tracking.
+
+**Sections & Deliverables:**
+
+**1. Bank Accounts (`/banking/accounts`)
+- [ ] Register bank accounts with type (Checking, Savings, Credit Card, Petty Cash), currency, opening balance
+- [ ] Link bank accounts to GL accounts (Chart of Accounts)
+- [ ] View account balances, recent transactions
+- [ ] Activate/deactivate accounts
+
+**Accountant perspective:** Is the GL account linkage enforced (must select a valid COA account)? Is the opening balance entry automatically created as a JE? Can the accountant see which bank account maps to which GL account at a glance?
+
+**Backend Engineer perspective:** Are bank account balances cached and updated transactionally? Is there a race condition risk between bank transaction import and manual entry?
+
+**2. Bank Reconciliation (`/banking/reconciliation`)
+- [ ] Start reconciliation for a bank account + period
+- [ ] Import bank statement (CSV, OFX)
+- [ ] Auto-match transactions (by amount, date, reference)
+- [ ] Manual match: select bank transaction + internal transaction to pair
+- [ ] Add missing transactions directly during reconciliation
+- [ ] Clear/unclear individual transactions
+- [ ] Complete reconciliation with discrepancy report
+- [ ] View reconciliation history
+
+**Accountant perspective:** Is the auto-match accuracy high? Can the accountant easily find unmatched items? Is the running cleared balance visible in real-time? Does the reconciliation clearly show the difference between bank balance and book balance? Can the accountant add a bank fee or interest entry without leaving the reconciliation screen?
+
+**Auditor perspective:** Is every reconciliation saved with timestamp, user, and matched pairs? Can prior reconciliations be viewed but not edited? Is there a reconciliation discrepancy threshold that triggers a review?
+
+**UI Designer perspective:** Is the match interface intuitive (click two items to pair)? Are matched items visually distinct from unmatched? Is there a split-screen layout (bank side vs book side)?
+
+**3. Bank Transfers (`/banking/transfers`)
+- [ ] Transfer between internal bank accounts
+- [ ] Auto-generate JE for the transfer (debit destination, credit source)
+- [ ] Record transfer fees
+- [ ] Transfer status tracking (Pending, Completed, Failed)
+
+**Accountant perspective:** Does the auto-generated JE use the correct GL accounts? Is the fee handling clear (separate JE line for fee expense)? Can the accountant edit the auto-generated JE before posting?
+
+**4. Transaction Rules (`/banking/transaction-rules`)
+- [ ] Auto-categorization rules for imported transactions
+- [ ] Rule conditions: amount range, description contains, counterparty
+- [ ] Rule actions: assign category, assign account, flag for review
+
+**Business Analyst perspective:** Can rules be ordered by priority? Is there a test/preview function for rules? Can rules be enabled/disabled without deletion?
+
+**Current Status:** Core pages built. **Gaps:** No actual bank feed integration (imports only), auto-match algorithm is basic, no recurring transfer scheduling, no bank fee auto-categorization.
+
+---
+
+#### ### Sales Module
+
+**Target Output:** End-to-end sales pipeline from quote to cash receipt with tax, discount, and inventory integration.
+
+**Sections & Deliverables:**
+
+**1. Customers (`/sales/customers`)
+- [ ] Customer master data: name, email, phone, billing address, shipping address, tax ID, credit limit, payment terms
+- [ ] Customer portal settings (optional)
+- [ ] Customer statements (account receivable aging)
+- [ ] Customer contact persons (multiple per customer)
+- [ ] Notes and communication log
+
+**Accountant perspective:** Is the customer aging report accurate (30/60/90 days)? Can the accountant view a customer's full transaction history? Is the credit limit enforced at invoice creation? Are payment terms (Net 30, Net 60, etc.) configurable per customer?
+
+**UI Designer perspective:** Is the customer list searchable by all fields? Is the customer detail page tabbed (Details, Transactions, Statements, Notes)?
+
+**2. Estimates / Quotes (`/sales/estimates`)
+- [ ] Create estimates with line items (product/service, description, quantity, rate, discount, tax)
+- [ ] Estimate status flow: Draft → Sent → Accepted → Rejected → Expired → Converted to Invoice
+- [ ] Send estimate via email
+- [ ] Convert accepted estimate to invoice (one click)
+- [ ] Estimate templates with customizable branding
+- [ ] Clone estimate for revision
+
+**Accountant perspective:** Does the estimate total calculate correctly (subtotal - discount + tax = total)? Can the accountant see which estimates were converted vs expired? Is the conversion to invoice seamless (no data loss)?
+
+**Business Analyst perspective:** Is there an estimate-to-conversion rate metric? Can expired estimates be followed up automatically?
+
+**3. Invoices (`/sales/invoices`)
+- [ ] Create invoices from scratch, from estimate, or from recurring schedule
+- [ ] Line items with product/service selection, quantity, rate, discount type (% or flat), tax calculation
+- [ ] Multiple tax rates per invoice (e.g., GST + PST)
+- [ ] Invoice status flow: Draft → Sent → Paid → Partially Paid → Overdue → Voided
+- [ ] Payment application: record partial or full payments against invoices
+- [ ] Late fee calculation (auto or manual)
+- [ ] Credit memo creation and application
+- [ ] Invoice printing with professional layout (header, logo, terms, footer)
+- [ ] Batch actions: send multiple, print multiple, export multiple
+- [ ] Recurring invoice scheduling
+
+**Accountant perspective:** Is the tax calculation transparent (show each tax line separately)? Can the accountant apply a payment to multiple invoices (oldest first)? Is the credit memo flow correct (reduce AR, not create negative invoice)? Does the invoice print layout include all legally required information?
+
+**Auditor perspective:** Is every invoice mutation logged? Can deleted/voided invoices be recovered? Is the payment-to-invoice mapping traceable? Are tax calculations auditable (stored, not recalculated)?
+
+**Security Analyst perspective:** Are customer financial data (credit limits, aging) access-controlled? Is invoice PDF generation server-side (prevent tampering)?
+
+**UI Designer perspective:** Is the invoice form responsive? Are line items in a proper data table with add/remove/reorder? Is the payment recording inline (no page navigation)?
+
+**4. Recurring Invoices (`/sales/recurring-invoices`)
+- [ ] Schedule automatic invoice generation (daily, weekly, monthly, yearly)
+- [ ] Template management (line items, amounts, tax)
+- [ ] Customer assignment
+- [ ] Start/end date, next run date
+- [ ] Pause/resume schedule
+- [ ] History of generated invoices
+
+**Accountant perspective:** Is the next run date calculated correctly for each frequency? Can the accountant preview the next invoice before it generates? Is there a notification when a recurring invoice fails?
+
+**5. Credit Notes (`/sales/credit-notes`)
+- [ ] Create credit notes against invoices or standalone
+- [ ] Refund tracking (full, partial, none)
+- [ ] Apply credit note to future invoices
+- [ ] Print credit note
+
+**Accountant perspective:** Does the credit note properly reverse the tax entries? Is the AR impact clear (reduce AR, not create negative revenue)? Can the accountant see the original invoice from the credit note?
+
+**6. Sales Reports (`/sales/reports` or via Reporting Center)
+- [ ] Sales by customer, product, period
+- [ ] Revenue recognition tracking
+- [ ] Accounts receivable aging
+- [ ] Top customers by revenue
+- [ ] Sales trend analysis
+
+**Financial Analyst perspective:** Are reports filterable by date range, customer, product? Can reports be exported to CSV/PDF? Are there visual charts (bar, line) for trends?
+
+**Current Status:** Core pages built (Customers, Invoices, Estimates, Credit Notes, Recurring). **Gaps:** No actual email sending (UI exists, backend not wired), no payment gateway integration, no inventory deduction on invoice, no multi-currency invoicing, no invoice template customization.
+
+---
+
+#### ### Expenses Module
+
+**Target Output:** Complete purchase-to-pay cycle with vendor management, bill approval, payment processing, and expense tracking.
+
+**Sections & Deliverables:**
+
+**1. Vendors (`/expenses/vendors`)
+- [ ] Vendor master data: name, email, phone, address, tax ID, payment terms, bank details, 1099 status
+- [ ] Vendor contact persons (multiple)
+- [ ] Vendor portal settings
+- [ ] Notes and communication log
+- [ ] Vendor statements (AP aging)
+- [ ] 1099 tracking and reporting (US tax)
+
+**Accountant perspective:** Is the vendor aging report accurate? Can the accountant view a vendor's full purchase/payment history? Is the 1099 status trackable? Are payment terms enforced on bill creation?
+
+**Auditor perspective:** Is vendor bank account information encrypted? Is there a vendor approval workflow before first use? Are 1099 amounts calculable at year-end?
+
+**2. Bills (`/expenses/bills`)
+- [ ] Create bills from purchase orders or from scratch
+- [ ] Line items with account, description, quantity, rate, tax
+- [ ] Bill status flow: Draft → Submitted → Approved → Paid → Partially Paid → Overdue → Voided
+- [ ] Bill approval workflow (configurable: single approval, multi-level)
+- [ ] Attach receipts/documents
+- [ ] Record partial payments against bills
+- [ ] Batch bill actions
+- [ ] Recurring bill scheduling
+- [ ] Bill printing with professional layout
+
+**Accountant perspective:** Is the bill total calculation correct? Can the accountant see the approval chain? Is the payment-to-bill mapping traceable? Does the bill automatically create AP entry in GL? Can the accountant split a bill across multiple departments or projects?
+
+**Auditor perspective:** Is there segregation of duties (creator ≠ approver)? Is every approval action logged? Can bills be modified after approval (should require re-approval)?
+
+**UI Designer perspective:** Is the bill form consistent with the invoice form (sales module)? Are shared components used (line items table, tax calculator, attachment upload)?
+
+**3. Payments (`/expenses/bills-payments`)
+- [ ] Record payments to vendors (check, wire, ACH, credit card)
+- [ ] Auto-apply payment to oldest outstanding bill
+- [ ] Manual payment allocation (select which bills to pay)
+- [ ] Payment status tracking
+- [ ] Print checks (with MICR line, payee, amount, memo)
+- [ ] Batch payment processing (pay multiple vendors at once)
+
+**Accountant perspective:** Does the payment auto-generate the correct JE (credit Cash/Bank, debit AP)? Can the accountant see the payment history per vendor? Is early payment discount handling available (2/10 Net 30)? Is the check print layout professional and MICR-compliant?
+
+**4. Purchase Orders (`/expenses/procurement`)
+- [ ] Create POs with line items, vendor selection, delivery date
+- [ ] PO status flow: Draft → Sent → Partially Received → Received → Closed → Cancelled
+- [ ] Receive against PO (partial or full)
+- [ ] Auto-convert received PO to bill
+- [ ] PO approval workflow
+- [ ] PO printing with terms and conditions
+
+**Accountant perspective:** Does receiving against a PO create inventory entries? Is the PO-to-bill conversion seamless? Can the accountant track PO commitments vs actual spending?
+
+**5. Employee Expenses (`/expenses/employee-expenses`)
+- [ ] Employee expense submission (receipt upload, category, amount, date, description)
+- [ ] Expense categories (Travel, Meals, Office, etc.) with per-category limits
+- [ ] Approval workflow (manager approval, finance approval)
+- [ ] Expense report generation (per employee, per department, per period)
+- [ ] Reimbursement processing (create vendor payment or direct deposit)
+- [ ] Corporate card transaction import and matching
+
+**Accountant perspective:** Are expense categories aligned with the COA? Does approved expense auto-create a JE? Can the accountant see the full approval chain? Is the reimbursement flow traceable?
+
+**Auditor perspective:** Are receipt images verified against claimed amounts? Is there a duplicate detection (same receipt submitted twice)? Are expense policy violations flagged?
+
+**UI Designer perspective:** Is the receipt upload drag-and-drop? Is the mobile experience good (employees submit from phones)? Is the approval queue intuitive?
+
+**6. Expense Reports (`/expenses/expense-reports`)
+- [ ] Aggregate employee expenses into reports
+- [ ] Report status flow: Draft → Submitted → Approved → Reimbursed → Rejected
+- [ ] Report-level approval (approve all expenses at once)
+- [ ] Export to PDF/CSV
+
+**Current Status:** Core pages built (Vendors, Bills, Payments, Procurement, Employee Expenses). **Gaps:** No approval workflow enforcement, no check printing, no 1099 reporting, no corporate card integration, no PO-to-inventory integration, no multi-level approval chains.
+
+---
+
+#### ### Inventory Module
+
+**Target Output:** Complete inventory management with stock tracking, valuation, and sales/purchase integration.
+
+**Sections & Deliverables:**
+
+**1. Products & Services (`/inventory/products-services`)
+- [ ] Product master: name, SKU, description, category, unit, price, cost, tax applicable
+- [ ] Service items (non-inventory)
+- [ ] Product categories with hierarchy
+- [ ] Product images
+- [ ] Bulk import/export (CSV)
+- [ ] Product status (Active, Inactive, Discontinued)
+
+**Accountant perspective:** Is the inventory asset account auto-populated from COA? Can the accountant set default COGS and revenue accounts per product category? Is the costing method configurable (FIFO, LIFO, Average)?
+
+**2. Stock Management (`/inventory/stock-management`)
+- [ ] Real-time stock levels per product per warehouse
+- [ ] Stock adjustment (increase/decrease with reason)
+- [ ] Stock transfer between warehouses/locations
+- [ ] Low stock alerts with configurable thresholds
+- [ ] Stock movement history (full audit trail)
+
+**Accountant perspective:** Does every stock movement create a JE (debit/credit inventory accounts)? Is the stock valuation updated in real-time? Can the accountant view stock by valuation method?
+
+**Auditor perspective:** Is every stock movement logged with user, timestamp, reason? Can stock adjustments be reversed? Is there a periodic stock count reconciliation feature?
+
+**3. Warehouses (`/inventory/warehouses`)
+- [ ] Warehouse creation with address, contact, manager
+- [ ] Multiple warehouse support
+- [ ] Warehouse-level stock tracking
+
+**4. Inventory Valuation (`/inventory/valuation`)
+- [ ] Valuation by FIFO, LIFO, Weighted Average
+- [ ] Valuation report by product, category, warehouse
+- [ ] Period-end valuation adjustment JE
+- [ ] Inventory write-down handling
+
+**Accountant perspective:** Is the valuation method change tracked (can't change mid-period without adjustment)? Does the write-down create the correct JE (debit COGS, credit Inventory)?
+
+**5. Purchase & Sales Integration**
+- [ ] Auto-deduct stock on invoice/sales order
+- [ ] Auto-add stock on bill receipt/PO receipt
+- [ ] Backorder handling (sell more than in stock)
+- [ ] Inventory reservation for sales orders
+
+**Current Status:** Core pages built. **Gaps:** No actual inventory tracking (backend), no warehouse management, no valuation reports, no FIFO/LIFO/Average cost methods, no stock alerts, no barcode/QR support.
+
+---
+
+#### ### Payroll Module
+
+**Target Output:** Full payroll processing with employee management, tax calculations, and compliance reporting.
+
+**Sections & Deliverables:**
+
+**1. Employees (`/payroll/employees`)
+- [ ] Employee master: personal info, employment details, compensation, tax withholdings, bank details
+- [ ] Employee categories (Full-time, Part-time, Contractor)
+- [ ] Employment history (hire date, termination, rehire)
+- [ ] Document management (W-4, I-9, contracts)
+- [ ] Self-service portal (view paystubs, submit time-off)
+
+**2. Payroll Runs (`/payroll/payroll-runs`)
+- [ ] Create payroll run for a period (weekly, bi-weekly, semi-monthly, monthly)
+- [ ] Auto-calculate gross pay, deductions, taxes, net pay
+- [ ] Support for hourly and salaried employees
+- [ ] Overtime calculation (configurable thresholds)
+- [ ] Bonus/commission processing
+- [ ] Payroll preview before processing
+- [ ] One-click payroll processing (generate paystubs, JEs, tax filings)
+- [ ] Payroll reversal/correction
+
+**Accountant perspective:** Are tax calculations correct (federal, state, local, FICA, Medicare)? Is the payroll JE correct (debit Wages Expense, credit Cash, credit Payroll Liabilities)? Can the accountant review and approve before processing?
+
+**Auditor perspective:** Is every payroll run archived and immutable after processing? Are tax remittances tracked? Is there a segregation between payroll processor and approver?
+
+**3. Tax & Compliance (`/payroll/tax-compliance`)
+- [ ] Tax withholding setup (federal, state, local)
+- [ ] Employer tax contributions (FICA match, FUTA, SUTA)
+- [ ] Year-end forms (W-2, 1099)
+- [ ] Tax filing status tracking
+- [ ] Quarterly tax reports (941)
+
+**4. Compensation & Benefits (`/payroll/compensation`)
+- [ ] Salary/wage management
+- [ ] Benefits enrollment (health, dental, vision, 401k)
+- [ ] Benefit deduction processing
+- [ ] PTO/leave management and accrual
+
+**Current Status:** Mostly stubs. **Gaps:** Full rebuild needed — current Employees page is flagged for rebuild (Tech Debt #6), no actual payroll processing, no tax engine, no paystub generation.
+
+---
+
+#### ### Projects Module
+
+**Target Output:** Project-based accounting with budgeting, time tracking, and profitability analysis.
+
+**Sections & Deliverables:**
+
+**1. Projects (`/projects/projects`)
+- [ ] Project creation: name, customer, start/end date, budget, manager, status
+- [ ] Project status flow: Planning → Active → On Hold → Completed → Cancelled
+- [ ] Project dashboard: budget vs actual, timeline, team, milestones
+
+**2. Time Tracking (`/projects/time-tracking`)
+- [ ] Log time entries (project, task, date, hours, description)
+- [ ] Timer (start/stop) for real-time tracking
+- [ ] Weekly timesheet view
+- [ ] Approve/reject timesheets
+- [ ] Billable vs non-billable hours
+
+**3. Project Invoicing (`/projects/project-invoicing`)
+- [ ] Generate invoices from time entries and expenses
+- [ ] Progress billing (percentage of completion)
+- [ ] Milestone-based invoicing
+- [ ] Retention/warranty holdback
+
+**4. Project Reports (`/projects/reports` or via Reporting Center)
+- [ ] Project profitability (revenue - cost - overhead)
+- [ ] Budget vs actual by project, phase, category
+- [ ] Resource utilization (hours billed vs available)
+- [ ] Project timeline (Gantt chart or similar)
+
+**Financial Analyst perspective:** Are project costs fully loaded (labor + materials + overhead)? Is the profitability calculation transparent? Can reports be filtered by customer, manager, date range?
+
+**Current Status:** Basic pages built. **Gaps:** No actual time tracking, no project budget tracking, no progress billing, no Gantt chart, no resource allocation.
+
+---
+
+#### ### Reporting Module ✅ COMPLETE (L-1 + L-2)
+
+**Target Output:** Comprehensive reporting suite with 20+ report types, custom report builder, and analytics dashboards.
+
+**Sections & Deliverables:**
+
+**1. Reports Center (`/reporting/reports-center`)
+- [x] 6 category pages (Banking, Expense, Inventory, Payroll, Project, Sales) with report cards
+- [x] Each card: title, description, run button
+- [x] Error state with retry button
+- [x] Consistent layout across all 6 pages
+
+**2. Analytics Dashboards (`/reporting/analytics/analytics-dashboards`)
+- [x] 4 KPI cards (Total Revenue, Total Expenses, Net Profit, Accounts Receivable)
+- [x] Bar chart (Monthly Revenue vs Expenses) using recharts
+- [x] Line chart (Profit Trend) using recharts
+- [x] Mock data with `generateMockData` function
+
+**3. Report Builder (`/reporting/custom-reports/report-builder`)
+- [x] Two-column layout (form + preview)
+- [x] Dynamic column selection
+- [x] Filter configuration
+- [x] Mock CSV download
+- [x] Real-time preview
+
+**4. Reporting Service (`src/services/reporting.service.ts`)
+- [x] All 20 methods with correct URL pattern (`/reporting/*` with `{ params: { companyId } }`)
+- [x] CSV exports use `buildQuery({ ...params, companyId })` + `downloadFromResponse`
+- [x] Regular queries use `apiClient.get`/`apiClient.post`
+
+**Gaps (backend-dependent):** All 20 report endpoints return 404 until backend implements them. Analytics dashboards use mock data. Report builder preview is mock.
+
+---
+
+#### ### Settings Module
+
+**Target Output:** Complete organization settings with user management, security, and customization.
+
+**Sections & Deliverables:**
+
+**1. Company Profile (`/settings/company-profile`)
+- [ ] Company details: legal name, DBA, tax ID, address, phone, email, website, logo
+- [ ] Fiscal year settings (start month, period count)
+- [ ] Default currency, timezone, date format
+- [ ] Multi-currency enable/disable
+
+**2. User Management (`/settings/users-security`)
+- [ ] Invite users (email, role assignment)
+- [ ] Role-based access control (Admin, Accountant, Employee, Read-only)
+- [ ] User activation/deactivation
+- [ ] Password reset flow
+- [ ] User activity log
+
+**Security Analyst perspective:** Are passwords hashed with bcrypt/argon2? Is there rate limiting on login? Are sessions invalidated on password change? Is 2FA available and enforced for admin roles?
+
+**3. Security Settings (`/settings/users-security/two-factor-auth`)
+- [ ] Two-factor authentication (TOTP)
+- [ ] Session management (view active sessions, revoke)
+- [ ] IP whitelist (optional)
+- [ ] Login history
+
+**4. Preferences (`/settings/preferences`)
+- [ ] Date format, number format, currency display
+- [ ] Default payment terms
+- [ ] Invoice template selection
+- [ ] Notification preferences
+
+**5. Tax Settings (`/settings/tax-settings`)
+- [ ] Tax rate configuration (name, rate, agency)
+- [ ] Compound tax support (tax on tax)
+- [ ] Tax-exempt customer/vendor handling
+- [ ] Tax filing calendar
+
+**6. Integration Settings (`/settings/integrations`)
+- [ ] Bank feed connection (Plaid, Yodlee)
+- [ ] Payment gateway (Stripe)
+- [ ] Email service (SendGrid)
+- [ ] Cloud storage (R2/S3) for attachments
+
+**Current Status:** UI pages built. **Gaps:** No actual user invitation flow (backend), no 2FA implementation, no bank feed connections, no payment gateway wiring.
+
+---
+
+#### ### Tasks & Approvals Module
+
+**Target Output:** Workflow automation with task management, approval queues, and notification system.
+
+**Sections & Deliverables:**
+
+**1. My Tasks (`/tasks-approvals/my-work/my-tasks`)
+- [ ] Task list assigned to current user
+- [ ] Task detail with description, due date, priority, status
+- [ ] Mark complete, reassign, add notes
+- [ ] Filter by status, priority, due date
+
+**2. Approvals Queue (`/tasks-approvals/my-work/my-approvals`)
+- [ ] Pending approvals (bills, expenses, POs, timesheets)
+- [ ] Approve/reject with comments
+- [ ] Batch approve
+- [ ] Approval history
+
+**3. Task Management (`/tasks-approvals/task-management`)
+- [ ] Create tasks (assignee, due date, priority, description, linked entity)
+- [ ] Task templates (recurring tasks)
+- [ ] Task board (Kanban-style: To Do, In Progress, Done)
+
+**Business Analyst perspective:** Can tasks be linked to any entity (invoice, bill, project, journal entry)? Is there a notification when a task is assigned or approved? Can task completion trigger automated actions (e.g., approve bill when manager approves)?
+
+**Current Status:** Basic pages built. **Gaps:** No actual workflow engine, no notifications, no task templates, no Kanban board.
 
 ---
 
