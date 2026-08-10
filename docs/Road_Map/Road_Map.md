@@ -1,5 +1,5 @@
 # HaypBooks Frontend Roadmap
-> **Last Updated:** August 10, 2026 | **Branch:** `main` (84 commits ahead) | **349 built pages** | **26 ComingSoon stubs** | **25 service files**
+> **Last Updated:** August 11, 2026 | **Branch:** `main` (84 commits ahead) | **349 built pages** | **26 ComingSoon stubs** | **25 service files**
 
 ---
 
@@ -798,6 +798,9 @@ Each module output spec is assessed from these perspectives:
 | `87d3ff52` | docs | docs: add module output specifications with 11-perspective evaluation framework |
 | `73ff563d` | N-3 | refactor(accounting): replace 'as any' casts with proper TypeScript types |
 | `a323f5fc` | N-3 | refactor: remove dead code and consolidate coming-soon components |
+| `6df26198` | N-3 | docs: update roadmap — N-3 complete, 5 tech debt resolved, deployment prep |
+| `bdd69c98` | Deploy | fix: remove deprecated baseUrl from tsconfig and make prepare script safe for CI |
+| `db25b0c6` | Deploy | fix: add prisma generate to postinstall and exclude spec files from build |
 
 ## Deployment Roadmap
 
@@ -835,6 +838,12 @@ Before deploying, the following backend code changes are required:
 5. **Vercel** → Connect GitHub repo, set env vars, deploy
 6. **Porkbun** → Configure all DNS records (Vercel, Render, SendGrid, R2)
 7. **Testing** → End-to-end verification of all integrations
+
+### Owner Credentials (Fixed)
+- **Email:** `paulescuadra25@gmail.com`
+- **Role:** `platform_owner`
+- This account has unrestricted access across all platforms: `haypbooks_owner`, `haypbooks_online`, `haypbooks_practice`
+- These are NOT subscription/client credentials — they are the platform owner's fixed credentials with full access to all modules without restriction.
 
 ### Environment Variables
 Source of truth: `Haypbooks/Backend/.env.production.example` and `Haypbooks/Frontend/.env.local.example`.
