@@ -107,7 +107,8 @@
     "diag:tenants-missing-name": "ts-node ./scripts/db/find-tenants-missing-name.ts",
     "db:backfill:tenant-names": "ts-node ./scripts/db/backfill-tenant-names.ts",
     "db:cleanup-expired-tokens": "ts-node ./scripts/db/cleanup-expired-tokens.ts",
-    "prepare": "husky install || true"
+    "prepare": "husky install || true",
+    "postinstall": "prisma generate --schema=prisma/schema.prisma"
   },
   "husky": {
     "hooks": {
