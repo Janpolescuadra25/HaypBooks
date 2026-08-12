@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 
 // Use BACKEND_INTERNAL_URL (server-only) or NEXT_PUBLIC_API_URL, falling back

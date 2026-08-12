@@ -75,7 +75,7 @@ const today = new Date().toISOString().slice(0, 10)
 
 export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const queryBillId = searchParams.get('billId') ?? ''
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()

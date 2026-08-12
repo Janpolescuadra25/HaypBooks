@@ -20,7 +20,7 @@ const STEPS = [
 
 export default function PracticeOnboardingPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const createMode = searchParams.get('newPractice') === 'true' ? 'append' : 'replace'
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)

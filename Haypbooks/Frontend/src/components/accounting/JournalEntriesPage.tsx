@@ -1,4 +1,5 @@
-﻿'use client'
+'use client'
+
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
@@ -176,7 +177,7 @@ export default function JournalEntriesPage() {
 
   // Sync sourceTypeFilter with URL query params on mount
   useEffect(() => {
-    const sourceTypeFromUrl = searchParams.get('sourceType')
+    const sourceTypeFromUrl = (searchParams ?? new URLSearchParams()).get('sourceType')
     if (sourceTypeFromUrl) {
       setSourceTypeFilter(sourceTypeFromUrl)
     }

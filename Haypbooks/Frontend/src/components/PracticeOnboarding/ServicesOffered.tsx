@@ -1,3 +1,5 @@
+'use client'
+
 import React, { forwardRef, useImperativeHandle, useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 

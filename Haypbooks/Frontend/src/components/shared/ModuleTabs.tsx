@@ -15,7 +15,7 @@ interface ModuleTabsProps {
 }
 
 export default function ModuleTabs({ tabs, basePath }: ModuleTabsProps) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
 
   return (
     <div className="bg-white border-b border-slate-200 shrink-0 shadow-sm">

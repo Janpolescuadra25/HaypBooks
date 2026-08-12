@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * General Ledger - Financial Monitoring Hub
  *
@@ -11,7 +13,6 @@
  *
  * DO NOT ADD: manual JE creation form, invoice form, bill form, or any data entry.
  */
-'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'

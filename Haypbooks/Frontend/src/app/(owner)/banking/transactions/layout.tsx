@@ -11,7 +11,7 @@ const TABS = [
 ]
 
 export default function TransactionsLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
 
   // Full-screen pages render without the module tab bar
   const isFullScreen =

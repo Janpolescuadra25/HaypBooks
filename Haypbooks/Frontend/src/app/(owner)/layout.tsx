@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode } from 'react'
 
 // Prevent static generation — owner pages rely on React contexts

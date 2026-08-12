@@ -22,7 +22,7 @@ const fmtDate = (s: string) =>
 // ─── Inner Component (uses useSearchParams) ───────────────────────────────────
 
 function MatchPageInner() {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const router       = useRouter()
   const txnId        = searchParams.get('txnId') ?? ''
 

@@ -1,4 +1,5 @@
-﻿'use client'
+'use client'
+
 import { useState, useMemo } from 'react'
 import { X, ListChecks, ChevronDown, ChevronRight, Search } from 'lucide-react'
 import { navigationData, NavItem } from './ownerNavConfig'

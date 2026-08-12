@@ -1,4 +1,5 @@
-﻿'use client'
+'use client'
+
 
 import React, { useEffect, useRef } from 'react'
 import { X, Loader2 } from 'lucide-react'

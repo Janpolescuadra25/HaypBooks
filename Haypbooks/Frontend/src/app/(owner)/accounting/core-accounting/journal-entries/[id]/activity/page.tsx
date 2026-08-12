@@ -4,7 +4,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
 export default function JournalEntryActivityPage() {
-  const { id } = useParams<{ id: string }>()
+  const params = useParams<{ id: string }>()
+  const id = params?.id ?? ''
   const router = useRouter()
 
   return (

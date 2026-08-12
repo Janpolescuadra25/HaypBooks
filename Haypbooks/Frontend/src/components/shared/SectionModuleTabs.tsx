@@ -21,7 +21,7 @@ interface Props {
  * Any deeper path (e.g. /invoices/new, /products-services/[id]) gets no tabs.
  */
 export default function SectionModuleTabs({ tabs, basePath }: Props) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
 
   const listingPaths = [
     basePath,

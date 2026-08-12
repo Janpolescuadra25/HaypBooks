@@ -27,7 +27,7 @@ function fmtDate(d: string) {
 
 function ViewRecordInner() {
   const router      = useRouter()
-  const params      = useSearchParams()
+  const params      = useSearchParams() ?? new URLSearchParams()
   const jeId        = params.get('id')    ?? ''
   const txnId       = params.get('txnId') ?? ''
   const paramType   = params.get('type')  ?? ''   // 'bill' | 'invoice'

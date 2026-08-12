@@ -1,3 +1,5 @@
+'use client'
+
 // Prevent static pre-rendering — public pages are wrapped by the root layout
 // which uses ClientRoot. Pre-rendering fails with null useContext for routing contexts.
 export const dynamic = 'force-dynamic'

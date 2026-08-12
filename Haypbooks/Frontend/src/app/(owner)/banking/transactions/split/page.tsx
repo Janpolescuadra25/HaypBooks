@@ -31,7 +31,7 @@ interface SplitLine {
 // ─── Inner Component (uses useSearchParams) ───────────────────────────────────
 
 function SplitPageInner() {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const router       = useRouter()
   const txnId        = searchParams.get('txnId') ?? ''
 

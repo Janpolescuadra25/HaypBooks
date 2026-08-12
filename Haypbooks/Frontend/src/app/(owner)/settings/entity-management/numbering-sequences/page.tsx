@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, FormEvent } from 'react'
 import { ListOrdered, RefreshCw, Loader2, Pencil } from 'lucide-react'
 import { settingsService } from '@/services/settings.service'

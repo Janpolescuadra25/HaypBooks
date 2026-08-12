@@ -1,4 +1,5 @@
-﻿'use client'
+'use client'
+
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Plus, Bell, HelpCircle, ChevronDown, LayoutGrid, ListChecks } from 'lucide-react'

@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, FormEvent } from 'react'
 import { FileText, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { bankingService } from '@/services/banking.service'

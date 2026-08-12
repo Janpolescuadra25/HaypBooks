@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, FormEvent } from 'react'
 import { Inbox, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { accountantWorkspaceService } from '@/services/accountant-workspace.service'

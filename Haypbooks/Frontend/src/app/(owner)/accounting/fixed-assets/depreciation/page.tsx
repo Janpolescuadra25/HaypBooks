@@ -11,6 +11,8 @@ import { inventoryService } from '@/services/inventory.service'
 import { formatCurrency } from '@/lib/format'
 interface DepreciationEntry {
   id: string
+  name?: string
+  assetCode?: string
   periodStart: string
   periodEnd: string
   amount?: number | string
@@ -190,7 +192,7 @@ export default function DepreciationPage() {
       ) : (
         <>
           <div className="text-sm text-slate-500">
-            {schedule.name} — {METHOD_LABELS[schedule.depreciationMethod] ?? schedule.depreciationMethod}
+            {schedule.name} — {schedule.depreciationMethod ? METHOD_LABELS[schedule.depreciationMethod] ?? schedule.depreciationMethod : 'Unknown method'}
             {schedule.usefulLifeMonths ? ` — ${schedule.usefulLifeMonths} months` : ''}
           </div>
 
@@ -218,7 +220,7 @@ export default function DepreciationPage() {
                 <div className="rounded-2xl bg-slate-100 p-3 text-slate-500"><BarChart3 className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm font-medium text-slate-500">Depreciable Base</p>
-                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(schedule.depreciableBase, currency)}</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(Number(schedule.depreciableBase || 0), currency)}</p>
                 </div>
               </div>
             </div>
@@ -227,7 +229,7 @@ export default function DepreciationPage() {
                 <div className="rounded-2xl bg-amber-50 p-3 text-amber-500"><TrendingDown className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm font-medium text-slate-500">Monthly Depreciation</p>
-                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(schedule.monthlyDepreciation, currency)}</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(Number(schedule.monthlyDepreciation || 0), currency)}</p>
                 </div>
               </div>
             </div>
@@ -236,7 +238,7 @@ export default function DepreciationPage() {
                 <div className="rounded-2xl bg-rose-50 p-3 text-rose-500"><TrendingUp className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm font-medium text-slate-500">Total Depreciated</p>
-                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(schedule.totalDepreciated, currency)}</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(Number(schedule.totalDepreciated || 0), currency)}</p>
                 </div>
               </div>
             </div>
@@ -245,7 +247,7 @@ export default function DepreciationPage() {
                 <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-500"><DollarSign className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm font-medium text-slate-500">Remaining Value</p>
-                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(schedule.depreciableBase - schedule.totalDepreciated, currency)}</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(Number(schedule.depreciableBase || 0) - Number(schedule.totalDepreciated || 0), currency)}</p>
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
-﻿'use client'
+'use client'
+
 /**
  * CrudModal — Reusable CRUD modal for Owner Hub pages.
  *
@@ -21,7 +22,6 @@
  *   />
  */
 
-'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'

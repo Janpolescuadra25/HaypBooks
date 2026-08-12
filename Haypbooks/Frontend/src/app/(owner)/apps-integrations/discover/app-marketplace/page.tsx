@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import { Search, RefreshCw, Loader2, Plus } from 'lucide-react'
 import { integrationService } from '@/services/integration.service'

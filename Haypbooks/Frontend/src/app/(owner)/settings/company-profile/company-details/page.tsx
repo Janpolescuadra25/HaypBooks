@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, FormEvent } from 'react'
 import { Building2, Loader2 } from 'lucide-react'
 import { settingsService } from '@/services/settings.service'

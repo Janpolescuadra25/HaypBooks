@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Mail, Printer, Download, Share2, Settings2, ArrowUp, ArrowDown, ArrowUpDown, X } from 'lucide-react';
 

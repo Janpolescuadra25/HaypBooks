@@ -14,13 +14,16 @@ type ArchivePeriod = {
   name?: string
   startDate?: string
   endDate?: string
+  closedAt?: string
 }
 
-function formatDate(date: string) {
+function formatDate(date?: string) {
+  if (!date) return '—'
   return format(new Date(date), 'MMM d, yyyy')
 }
 
-function formatDateTime(date: string) {
+function formatDateTime(date?: string) {
+  if (!date) return '—'
   return format(new Date(date), 'MMM d, yyyy')
 }
 
@@ -137,7 +140,7 @@ export default function CloseArchivePage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{period.closedAt ? formatDateTime(period.closedAt) : '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{getDurationLabel(period.startDate, period.endDate)}</td>
+                  <td className="px-4 py-3 text-slate-600">{period.startDate && period.endDate ? getDurationLabel(period.startDate, period.endDate) : '—'}</td>
                 </tr>
               ))
             )}

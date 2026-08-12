@@ -65,7 +65,7 @@ const defaultLine = (): ExpenseLine => ({
 
 export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportFormProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const companyQuery = searchParams.get('company')
   const expensesReturnPath = companyQuery ? `/expenses/employee-expenses/expenses?company=${companyQuery}` : '/expenses/employee-expenses/expenses'
   const { companyId } = useCompanyId()

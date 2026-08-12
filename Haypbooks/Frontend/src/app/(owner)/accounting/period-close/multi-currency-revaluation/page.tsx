@@ -31,7 +31,8 @@ interface RevaluationData {
   generatedAt?: string
 }
 
-function formatDate(date: string) {
+function formatDate(date?: string) {
+  if (!date) return '—'
   return format(new Date(date), 'MMM d, yyyy')
 }
 

@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * useCrud — All-in-one CRUD hook for Owner Hub pages.
  *
@@ -19,7 +21,6 @@
  * //   ]}
  * //   <CrudModal {...crud.modalProps} />
  */
-'use client'
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import apiClient from '@/lib/api-client'

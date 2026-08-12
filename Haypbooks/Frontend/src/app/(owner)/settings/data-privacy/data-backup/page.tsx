@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import { HardDrive, RefreshCw, Loader2, Download } from 'lucide-react'
 import { settingsService } from '@/services/settings.service'

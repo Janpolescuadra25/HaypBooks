@@ -138,15 +138,6 @@ export default function JournalAuditLog({ companyId, entryId, open, onOpenChange
             user: event.user,
           }
         })
-          id: e.id,
-          action: e.action,
-          tableName: 'JournalEntry',
-          performedBy: e.user?.name ?? e.user?.email ?? 'System',
-          performedAt: e.createdAt,
-          lines: e.lines ?? [],
-          synthetic: e.synthetic,
-          user: e.user,
-        }))
         setLogs(events.reverse()) // newest first
       } else {
         // Global audit log for all journal entries

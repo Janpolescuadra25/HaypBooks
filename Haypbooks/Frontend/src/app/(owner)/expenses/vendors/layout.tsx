@@ -11,7 +11,7 @@ const TABS = [
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const isFormPage = /(\/new|\/edit)\/?$/.test(pathname)
 
   return (

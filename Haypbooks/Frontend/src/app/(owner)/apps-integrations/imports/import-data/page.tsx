@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, FormEvent } from 'react'
 import { Eye, RefreshCw, Loader2, Trash2, Plus } from 'lucide-react'
 import { integrationService } from '@/services/integration.service'

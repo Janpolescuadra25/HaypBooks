@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, FormEvent } from 'react'
 import { ClipboardCheck, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { complianceService } from '@/services/compliance.service'

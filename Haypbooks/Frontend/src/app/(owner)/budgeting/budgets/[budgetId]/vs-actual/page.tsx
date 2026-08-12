@@ -35,7 +35,7 @@ const VarianceIcon = ({ value }: { value: number }) => {
 }
 
 export default function BudgetVsActualPage() {
-  const { budgetId } = useParams<{ budgetId: string }>()
+  const budgetId = useParams<{ budgetId: string }>()?.budgetId ?? ''
   const router = useRouter()
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
