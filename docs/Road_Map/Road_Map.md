@@ -1,5 +1,5 @@
 # HaypBooks Frontend Roadmap
-> **Last Updated:** August 11, 2026 | **Branch:** `main` (84 commits ahead) | **349 built pages** | **26 ComingSoon stubs** | **25 service files**
+> **Last Updated:** August 13, 2026 | App live at https://haypbooks.com | Hetzner VPS deployment complete
 
 ---
 
@@ -62,20 +62,31 @@
 
 ### Immediate: Deployment Preparation
 
-The frontend is now clean — all Plans L, N-1, N-2, N-3 are complete. Next steps:
-1. R2 backend integration (install `@aws-sdk/client-s3`, replace multer `diskStorage`)
-2. Set up infrastructure (Neon, Cloudflare R2, Render, SendGrid, Vercel, Porkbun DNS)
-3. Deploy backend to Render, frontend to Vercel
-4. Post-deployment testing
+The deployment is now live on Hetzner VPS (77.42.85.129). Completed:
+- ✅ Frontend build stabilized (342 static pages, all 'use client' fixes committed)
+- ✅ Backend built and deployed on Hetzner VPS via PM2
+- ✅ Prisma migrations applied (40 migrations, 588 models)
+- ✅ Nginx reverse proxy configured (frontend + API)
+- ✅ Porkbun DNS pointed to Hetzner VPS
+- ✅ Let's Encrypt SSL installed with auto-renewal
+- 🚀 App live at https://haypbooks.com
+
+Remaining:
+1. Cloudflare R2 backend integration (replace multer diskStorage for file uploads)
+2. Full end-to-end post-deployment testing
+3. SendGrid email integration (transactional emails)
 
 See "Deployment Roadmap" section below for full step-by-step guide.
 
-### Plan N: Accounting Module Fixes (N-1 ✅, N-2 ✅, N-3 ✅ — COMPLETE)
-Section 2 audit found 30 issues (7 critical, 13 significant, 10 minor). Top priorities:
-- **N-1: Data-loss hotfixes** — Fix attachment upload, customerId payload, COA modal fields, remove console.logs (7 critical items)
-- **N-2: UX improvements** — Add void reason modal, post confirmation, fix recurrence logic, fix contra styling, fix CSV import error reporting (13 significant items)
-- **N-3: Code quality** — Remove 30+ `as any` casts, extract shared audit-log component, dead code cleanup (10 minor items)
-- **Missing vs QB/ERPNext (10 items)** — Payment terms, FX revaluation logic, budget distribution (monthly), period close checklist, JE templates, account subtypes, cheque printing, cost center allocation, GL reconciliation, financial statement snapshots
+### Plan: Self-Hosted PostgreSQL Migration
+
+Migrate the database from Neon free tier to PostgreSQL 16 on the Hetzner VPS to eliminate Neon costs ($0/month vs $19+/month). Includes:
+- Install PostgreSQL 16 on the Hetzner VPS
+- Configure backup cron
+- Update `DATABASE_URL`
+- Set up pgAdmin or similar admin tooling
+
+Prerequisite: app must be stable on Hetzner first.
 
 ### Post-Reporting: Deployment
 See "Deployment Roadmap" section below.
