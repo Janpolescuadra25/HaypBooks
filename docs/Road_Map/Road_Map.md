@@ -63,7 +63,6 @@ All core infrastructure is deployed and operational:
 **Goal:** Verify the complete user flow works in production end-to-end, documenting any issues found.
 
 **What needs to be achieved:**
-- [ ] Run `pm2 startup && pm2 save` on VPS to ensure processes survive reboots (prerequisite before testing)
 - [ ] Register new account at https://haypbooks.com → verification email arrives via Resend → enter code → account created
 - [ ] Complete onboarding flow (business info, offerings, fiscal/tax, branding, banking, review → Finish Setup)
 - [ ] Create a company and verify workspace selection works
@@ -163,13 +162,3 @@ These frontend pages exist as stubs but cannot be completed until backend Prisma
 
 ---
 
-## PM2 Startup Persistence
-
-**Status:** NOT YET CONFIGURED. PM2 processes will NOT survive a VPS reboot.
-
-**Fix required on VPS:**
-```bash
-pm2 startup
-pm2 save
-```
-This generates and enables a systemd service that auto-starts PM2 and all managed processes on boot. Must be run on the VPS as root.
