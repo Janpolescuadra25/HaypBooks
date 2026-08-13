@@ -46,11 +46,11 @@ export default function VerificationPage() {
 
         // Developer hint: some browsers don't expose httpOnly auth cookies via document.cookie.
         // Instead, do a small authenticated probe to /api/users/me to check whether cookies are
-        // being sent; if the probe returns 401 and we're on `localhost` suggest opening 127.0.0.1
-        // which often fixes cookie scoping for local dev. IMPORTANT: this is a non-blocking
+        // being sent; if the probe returns 401 and we're on `localhost` over http suggest opening
+        // 127.0.0.1 which often fixes cookie scoping for local dev. IMPORTANT: this is a non-blocking
         // informational hint only and does not interfere with normal auth flows.
         try {
-          if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+          if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.protocol === 'http:') {
             fetch('/api/users/me', { method: 'GET', credentials: 'include', cache: 'no-store' })
               .then((r) => {
                 if (r.status === 401) {
@@ -92,12 +92,22 @@ export default function VerificationPage() {
     }
   }, [fromSignin, view, userEmail])
 
-  const onVerified = React.useCallback(() => {
+  const onVerified = React.useCallback(async () => {
     try {
-      // prefer router.replace for testability
-      router.replace('/workspace')
-    } catch (e) {
-      try { window.location.href = '/workspace' } catch (err) { /* swallow in tests */ }
+      // Redirect to onboarding if the user has not completed onboarding yet.
+      const user = await authService.getCurrentUser()
+      if (user?.onboardingCompleted) {
+        router.replace('/workspace')
+      } else {
+        router.replace('/onboarding')
+      }
+    } catch {
+      // If user fetch fails, default to onboarding for safety.
+      try {
+        router.replace('/onboarding')
+      } catch (e) {
+        try { window.location.href = '/onboarding' } catch (err) { /* swallow in tests */ }
+      }
     }
   }, [router])
 

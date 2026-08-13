@@ -114,7 +114,8 @@ export default function LoginPage() {
       } catch (e) { /* swallow logging errors */ }
       
       const params = new URLSearchParams(window.location.search)
-  const next = params.get('next') || '/dashboard'
+      const next = params.get('next') || null
+      const destination = (response.user?.onboardingCompleted === false) ? '/onboarding' : (next || '/workspace')
       // If server indicates MFA/verification is required, redirect to verification flow
       if ((response as any)?.mfaRequired || (response.user as any)?.requiresVerification) {
         // pass email in query so email code form can default to it; include origin
@@ -190,7 +191,7 @@ export default function LoginPage() {
 
       // Always show the Workspace selection first so users explicitly choose or create a workspace
       // (Do not auto-redirect to a preferred workspace immediately after login.)
-      router.replace('/workspace')
+      router.replace(destination)
     } catch (e: any) {
       // If aborted (either by our timeout or user navigation), show a consistent message
       if (e?.name === 'CanceledError' || e?.name === 'AbortError') {

@@ -2,12 +2,23 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ToastProvider'
 
 export default function CompanyModal({ company, onClose, onSuccess }: any) {
   const router = useRouter()
+  const toast = useToast()
   const [loading, setLoading] = useState(false)
 
   const confirm = async () => {
+    if (!company?.id) {
+      toast.error('Company selection is invalid. Please choose a company and try again.')
+      return
+    }
+    if (!company?.name?.trim()) {
+      toast.error('Company name is required to continue.')
+      return
+    }
+
     setLoading(true)
     try {
       // mark preferred workspace so user lands in owner hub

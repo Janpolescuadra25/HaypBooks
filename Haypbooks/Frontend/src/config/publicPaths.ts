@@ -17,6 +17,5 @@ export const PUBLIC_PATH_PREFIXES = [
   // quick business onboarding has been retired; no longer a public path
   '/hub',
   '/accountants',
-  '/workspace',
   '/get-started'
 ]
