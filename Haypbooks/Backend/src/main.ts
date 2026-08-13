@@ -110,18 +110,27 @@ async function bootstrap() {
       if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
         if (!req.cookies?.csrf_token) {
           const token = crypto.randomBytes(32).toString('hex')
+          // Derive cookie domain from FRONTEND_URL for cross-subdomain CSRF
+          const cookieDomain = process.env.FRONTEND_URL
+            ? '.' + new URL(process.env.FRONTEND_URL).hostname
+            : undefined
           res.cookie('csrf_token', token, {
             httpOnly: false,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             path: '/',
             maxAge: 86400000, // 24 hours
+            ...(cookieDomain ? { domain: cookieDomain } : {}),
           })
         }
         return next()
       }
       // Exempt paths — public auth endpoints (no session to protect yet)
       if (CSRF_EXEMPT_PATHS.some(p => req.path.startsWith(p))) {
+        return next()
+      }
+      // Skip CSRF if request carries an Authorization header (JWT auth is immune to CSRF)
+      if (req.headers['authorization']) {
         return next()
       }
       // Unsafe methods — validate CSRF token (double-submit: cookie === header)
