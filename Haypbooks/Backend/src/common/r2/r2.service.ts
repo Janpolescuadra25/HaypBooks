@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Injectable, Logger } from '@nestjs/common'
 
@@ -45,5 +45,34 @@ export class R2Service {
   async delete(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }))
     this.logger.log(`Deleted: ${key}`)
+  }
+
+  async getFolderSize(prefix: string): Promise<number> {
+    try {
+      let totalBytes = 0
+      let continuationToken: string | undefined
+
+      do {
+        const response = await this.client.send(new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }))
+
+        const objects = response.Contents || []
+        for (const obj of objects) {
+          if (typeof obj.Size === 'number') {
+            totalBytes += obj.Size
+          }
+        }
+
+        continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined
+      } while (continuationToken)
+
+      return Math.round(totalBytes / (1024 * 1024))
+    } catch (error: any) {
+      this.logger.warn(`Failed to calculate folder size for prefix ${prefix}: ${error?.message || error}`)
+      return 0
+    }
   }
 }
