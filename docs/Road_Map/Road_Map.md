@@ -48,21 +48,38 @@ These features are code-complete in the repository. They require production vali
 
 ---
 
-## Immediate Priorities (Next 2 Weeks)
-
-### Priority 0: Landing Page Content & Consistency Fixes
-**Status:** Issues identified, ready to implement
-
-- [ ] Remove all country-specific references (e.g., Philippines-specific tax terms, BIR forms, local compliance mentions) — make all copy general and applicable to any country/region
-- [ ] Fill the blank sections below the fold — add "What is HaypBooks?" story section, feature highlights, and value propositions so users understand the product when scrolling
-- [ ] Audit the pricing displayed on the landing page and compare it against the signup/pricing card modal — ensure both show identical plans, prices, and features with no discrepancies
-- [ ] Add social proof section (testimonials placeholder, "trusted by" section, or use case examples)
-- [ ] Ensure consistent branding and messaging across all landing page sections
-
-**Expected output:** A polished, country-agnostic landing page with no blank sections, consistent pricing, and clear messaging that converts visitors into signups.
+## Immediate Priority (Next 2 Weeks)
 
 ### Priority 1: Extend Audit Logging to All Entities
 **Status:** Core accounting (COA, Journal Entries) covered; needs expansion
+
+- [ ] Add audit logging to banking transactions (deposits, withdrawals, transfers)
+- [ ] Add audit logging to invoices, bills, and payments
+- [ ] Add audit logging to contacts (customers, vendors)
+- [ ] Add audit logging to inventory items and fixed assets
+- [ ] Create unified audit log UI page for accountants to review all entity changes
+- [ ] Add audit log export to CSV for compliance evidence collection
+
+**Expected output:** Every financial entity change is tracked at field level with before/after values. Accountants can review a complete, filterable audit trail.
+
+---
+
+## Production-Validated Features (Implemented)
+
+These features are code-complete in the repository. They require production validation testing after R2 VPS deployment.
+
+### Landing Page & Pricing
+- [x] All country-specific references removed — landing and pricing pages are now fully international/country-agnostic
+- [x] "About HaypBooks" story section added to landing page (between How It Works and Testimonials)
+- [x] Pricing centralized in `src/lib/pricing.ts` — single source of truth consumed by landing page preview and pricing page
+- [x] Compact pricing preview component added to landing page
+- [x] Pricing page FAQ updated with generic tax compliance and payment method wording
+
+### Core Accounting Module
+- [x] Chart of Accounts — Tree structure with parent/subaccount support, type-based coloring, 9+ account types including Contra accounts
+- [x] Journal Entries — Double-entry enforcement, real-time debit/credit balancing, recurring entries (Monthly/Quarterly/Yearly), copy-as-new, attachment support, customer tracking
+- [x] Journal Entry Lifecycle — Draft → Posted → Voided status workflow, audit log access, bulk actions, filtering by status/source type
+- [x] General Ledger — Unified view across all modules (invoices, bills, JEs, banking), 13 source type filters, drill-down to source documents, CSV export, running balance, hidden columns persistence
 
 - [ ] Add audit logging to banking transactions (deposits, withdrawals, transfers)
 - [ ] Add audit logging to invoices, bills, and payments
@@ -95,7 +112,7 @@ These features are code-complete in the repository. They require production vali
 ### Plan A: Self-Hosted PostgreSQL Migration
 - Migrate from Supabase hosted PostgreSQL to self-hosted PostgreSQL on the VPS or a separate DB server
 - Eliminates Supabase dependency, reduces costs, gives full control over backups and scaling
-- **Blocked by:** Completion of R2 deployment and E2E testing
+- **Blocked by:** E2E testing completion
 
 ### Plan B: Multi-Currency Support
 - Add currency fields to company settings, invoices, bills
