@@ -63,6 +63,53 @@ These features are code-complete in the repository. They require production vali
 
 ## Next Sprint
 
+> Two parallel active tracks are in progress: Practice Hub MVP and Owner Dashboard implementation.
+
+### Plan F: Owner Dashboard — Platform Monitoring & Usage Limits
+**Status**: 🔄 Active Implementation (Mantra in progress — 12 todos in execution)
+
+Build the HB_Owner-only dashboard — the master control panel for the HaypBooks platform owner (JP). Only the platform owner can see and access this dashboard. Regular subscribers cannot see it.
+
+#### Storage System with 50GB Safety Net
+- Every user on any subscription plan automatically receives a **50GB safety net buffer** beyond their plan's allocated storage
+- Storage limits are enforced at upload time — reject uploads when the combined plan allocation + safety net is exceeded, with a clear error message
+- The platform owner can **override and increase** any user's storage limit from the Owner Dashboard at any time — no contact/request needed from the user
+- Owner can also **reduce** limits back to plan defaults if needed
+- Display per-company storage metrics:
+  - Database storage used (PostgreSQL table sizes per company/schema)
+  - R2 storage used (Cloudflare R2 bucket usage per company folder prefix)
+  - Total storage per company with visual bar/donut chart
+  - Usage percentage, remaining storage, and plan vs. safety net breakdown on each company card
+
+#### Owner-Only Navigation (3-Way vs 2-Way)
+- **Platform owner (JP)** sees **3 selections** after login:
+  1. HaypBooks Company Dashboard (My Companies)
+  2. HaypBooks Practice Hub (My Practice)
+  3. HaypBooks Owner Dashboard (HB_Owner — master control panel)
+- **Regular subscribers** see only **2 selections** after login:
+  1. HaypBooks Company Dashboard (My Companies)
+  2. HaypBooks Practice Hub (My Practice)
+  - The Owner Dashboard selection is **completely hidden** from non-owner users
+- The Owner Dashboard is gated by the existing `RolesGuard` with `@Roles('Owner')` — no new guard needed
+
+#### User Management & Monitoring
+- List all users across HaypBooks with pagination and search
+- Show user status (active/suspended), last login, company affiliation, plan type, storage usage
+- Ability to suspend/reactivate users (with audit log entry)
+- Per-user storage override controls — owner can set custom limits for any user
+
+#### Platform-Wide Metrics
+- Total companies, total users, total storage consumed
+- Storage growth trend over time (daily/weekly/monthly)
+- Plan distribution overview (how many users on each plan)
+
+#### Backend Endpoints
+- `GET /api/owner/storage/usage` — aggregate platform-wide storage metrics
+- `GET /api/owner/storage/usage/:companyId` — per-company storage breakdown
+- `PUT /api/owner/storage/limits/:companyId` — set/override storage limits per company
+- `GET /api/owner/users` — list all users with pagination, search, and filters
+- `PATCH /api/owner/users/:userId/status` — suspend/reactivate user (with audit log)
+
 ### Priority 2: Practice Hub MVP
 **Status:** Route structure exists, needs full implementation
 
@@ -106,31 +153,6 @@ These features are code-complete in the repository. They require production vali
 - Automatic depreciation journal entries
 - Asset disposal and revaluation workflows
 - **Blocked by:** Core accounting E2E validation
-
-### Plan F: Owner Dashboard — Platform Monitoring & Usage Limits
-- Build an HB_Owner-only dashboard accessible at `/owner/monitoring` (gated by owner role)
-- Display per-company storage metrics:
-  - Database storage used (PostgreSQL table sizes per company/schema)
-  - R2 storage used (Cloudflare R2 bucket usage per company folder prefix)
-  - Total storage per company with visual bar/donut chart
-- Implement configurable storage limits per company:
-  - Owner can set database limit (e.g., 500MB per company) and R2 limit (e.g., 1GB per company)
-  - Enforce limits at upload time — reject uploads when limit exceeded with clear error message
-  - Display usage percentage and remaining storage on each company card
-- User management overview:
-  - List all users across HaypBooks_Online and HaypBooks_Practice
-  - Show user status (active/inactive), last login, company affiliation
-  - Ability to suspend/reactivate users
-- Platform-wide metrics:
-  - Total companies, total users, total storage consumed
-  - Storage growth trend over time (daily/weekly/monthly)
-- Backend endpoints needed:
-  - `GET /api/owner/storage/usage` — aggregate storage metrics
-  - `GET /api/owner/storage/usage/:companyId` — per-company breakdown
-  - `PUT /api/owner/storage/limits/:companyId` — set storage limits
-  - `GET /api/owner/users` — list all users across both platforms
-  - `PATCH /api/owner/users/:userId/status` — suspend/reactivate user
-- **Ready to implement** — no blockers remaining
 
 ---
 
