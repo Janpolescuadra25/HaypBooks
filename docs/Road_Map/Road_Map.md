@@ -1,164 +1,154 @@
-# HaypBooks Roadmap
+# HaypBooks — Development Roadmap
 
-> **Last Updated:** August 14, 2026
-> **App Live:** https://haypbooks.com | **API:** https://api.haypbooks.com
-> **Infrastructure:** Hetzner CX33 VPS (4 vCPU, 8GB RAM, 80GB SSD) — Helsinki
-> **Database:** Neon PostgreSQL (temporary, pending self-hosted migration)
+> Last updated: August 2026
 
 ---
 
-## Production Status
+## Production-Validated Features (Implemented)
 
-All core infrastructure is deployed and operational:
+These features are code-complete in the repository. They require production validation testing after R2 VPS deployment.
 
-| Component | Status | Details |
-|---|---|---|
-| Frontend | ✅ Live | https://haypbooks.com — Next.js 14, 342 static pages |
-| Backend API | ✅ Live | https://api.haypbooks.com — NestJS, 588 Prisma models, PM2 managed |
-| Database | ✅ Connected | Neon PostgreSQL, 40 migrations applied |
-| SSL | ✅ Active | Let's Encrypt, auto-renewal via certbot |
-| DNS | ✅ Configured | Porkbun — A records for haypbooks.com and api.haypbooks.com |
-| Nginx | ✅ Running | 3 server blocks (frontend, API, default catch-all) |
-| Email | ✅ Working | Resend SMTP (port 587 STARTTLS) — verification codes delivered |
-| CSRF Protection | ✅ Fixed | Cross-subdomain cookie domain (.haypbooks.com) + JWT bypass |
+### Core Accounting Module
+- [x] Chart of Accounts — Tree structure with parent/subaccount support, type-based coloring, 9+ account types including Contra accounts
+- [x] Journal Entries — Double-entry enforcement, real-time debit/credit balancing, recurring entries (Monthly/Quarterly/Yearly), copy-as-new, attachment support, customer tracking
+- [x] Journal Entry Lifecycle — Draft → Posted → Voided status workflow, audit log access, bulk actions, filtering by status/source type
+- [x] General Ledger — Unified view across all modules (invoices, bills, JEs, banking), 13 source type filters, drill-down to source documents, CSV export, running balance, hidden columns persistence
 
----
+### Financial Statements
+- [x] Trial Balance — Endpoint: `GET /api/companies/:companyId/accounting/trial-balance`, frontend: `TrialBalancePage.tsx`
+- [x] Profit & Loss — Endpoint: `GET /api/reporting/profit-and-loss`
+- [x] Balance Sheet — Endpoint: `GET /api/reporting/balance-sheet`
+- [x] Cash Flow Statement — Endpoint: `GET /api/reporting/cash-flow`
 
-## Immediate Priorities
+### Bank Reconciliation
+- [x] Full reconciliation lifecycle (create, match, unmatch, auto-match, undo, complete)
+- [x] Endpoints in `banking.controller.ts` — list, create, complete reconciliations
+- [x] Frontend: `BankReconciliationPage.tsx` — setup flow, transaction matching, real-time summary, print report, pagination/search/filter, history view
 
-### Priority 1: Cloudflare R2 Integration (File Uploads)
+### Audit Logging
+- [x] `AuditLogLine` Prisma model — captures before/after values at field level
+- [x] Audit endpoints for Chart of Accounts and Journal Entries
+- [x] Global audit controller: `GET /api/audit/audit-logs`
+- [x] Source document linking for traceability
 
-**Goal:** Replace multer local diskStorage with Cloudflare R2 object storage so uploaded files persist across deploys, scale horizontally, and are served via CDN.
+### File Storage
+- [x] Cloudflare R2 integration — `R2Service` and `R2Module` with upload, presigned URL, delete
+- [x] Attachments upload with `memoryStorage()` + R2 (25MB limit)
+- [x] Receipt upload endpoint: `POST /companies/:companyId/ap/receipts/upload`
+- [x] Presigned URL generation: `GET /api/attachments/:id/url`
 
-**Why now:** Current `attachments.controller.ts` saves files to `/uploads/attachments/` on the VPS filesystem. Any redeploy or server restart loses these files. This is the last infrastructure piece needed for full production readiness.
-
-**What needs to be achieved:**
-- [ ] Install `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` in Backend
-- [ ] Create `R2StorageModule` with S3-compatible client configured via env vars:
-  - `R2_ENDPOINT` — Full S3-compatible endpoint (`https://<account-id>.r2.cloudflarestorage.com`)
-  - `R2_ACCESS_KEY_ID` — R2 API token access key
-  - `R2_SECRET_ACCESS_KEY` — R2 API token secret key
-  - `R2_BUCKET_NAME` — Bucket name (e.g., `haypbooks-uploads`)
-  - `R2_PUBLIC_URL` — Public access URL for the bucket (if using custom domain or R2.dev subdomain)
-- [ ] Create presigned URL endpoints: `POST /api/companies/:id/attachments/presign` (upload) and `GET /api/companies/:id/attachments/:fileId/presign` (download)
-- [ ] Replace `multer({ storage: diskStorage(...) })` in `attachments.controller.ts` with R2 upload logic using presigned URLs
-- [ ] Update frontend attachment components to upload directly to R2 via presigned URL, then POST the file metadata to the backend
-- [ ] Configure R2 bucket CORS to allow uploads from `https://haypbooks.com`
-- [ ] Add `R2_*` env vars to VPS `.env` and local `.env.example`
-- [ ] Test: upload attachment on journal entry → verify file is in R2 bucket → verify download works
-
-**Expected output:** All file uploads in HaypBooks are stored in Cloudflare R2. Files survive server redeployments. Uploads go directly from browser to R2 (presigned URLs) to avoid proxying large files through the backend.
-
-**Files to modify:**
-- `Haypbooks/Backend/src/attachments/` — controller and service
-- `Haypbooks/Backend/src/common/` — new R2 storage module
-- `Haypbooks/Backend/package.json` — add S3 SDK dependencies
-- `Haypbooks/Backend/.env.example` — add R2_* variables
-- `Haypbooks/Frontend/src/` — attachment upload components
+### Authentication & Onboarding
+- [x] Email verification flow
+- [x] Onboarding with company creation
+- [x] JWT-based authentication (CSRF-immune)
+- [x] Cross-subdomain CSRF protection for cookie-based requests
 
 ---
 
-### Priority 2: Full End-to-End Post-Deployment Testing
+## Immediate Priorities (Next 2 Weeks)
 
-**Goal:** Verify the complete user flow works in production end-to-end, documenting any issues found.
+### Priority 1: R2 VPS Deployment & Full E2E Testing
+**Status:** Code complete, pending VPS deployment
 
-**What needs to be achieved:**
-- [ ] Register new account at https://haypbooks.com → verification email arrives via Resend → enter code → account created
-- [ ] Complete onboarding flow (business info, offerings, fiscal/tax, branding, banking, review → Finish Setup)
-- [ ] Create a company and verify workspace selection works
-- [ ] Navigate Chart of Accounts → create/edit/archive accounts
-- [ ] Create a Journal Entry with lines → verify debit/credit balancing
-- [ ] Test all major module pages load without console errors (Banking, Settings, Reporting, Home Dashboard)
-- [ ] Test file attachment upload (after R2 integration)
-- [ ] Test logout and login again (session refresh flow)
-- [ ] Document any bugs or issues found with screenshots and steps to reproduce
+- [ ] VPS: `npm install`, add R2 credentials to `.env`, `pm2 restart all`
+- [ ] Test file upload via attachments endpoint — verify file appears in Cloudflare R2 dashboard
+- [ ] Test presigned URL generation — verify file is accessible via returned URL
+- [ ] Test receipt upload endpoint
+- [ ] Full E2E test of core flows:
+  - [ ] User registration → email verification → onboarding → workspace
+  - [ ] Create journal entry → post → view in General Ledger → verify in Trial Balance
+  - [ ] Upload attachment → verify in R2 → download via presigned URL
+  - [ ] Bank reconciliation flow (create → match → complete)
+  - [ ] Generate P&L, Balance Sheet, Cash Flow statements
 
-**Expected output:** A test report documenting pass/fail for each flow, with any bugs logged for fixing.
-
----
-
-## Active Plans
-
-### Plan: Self-Hosted PostgreSQL Migration
-
-**Goal:** Migrate the database from Neon free tier to PostgreSQL 16 running on the Hetzner VPS to eliminate external database dependency and costs ($0/month vs $19+/month for Neon paid tiers).
-
-**Prerequisite:** App must be stable on Hetzner with R2 integration and E2E testing complete.
-
-**What needs to be achieved:**
-- [ ] Install PostgreSQL 16 on Hetzner CX33 (8GB RAM — allocate 4GB to PostgreSQL via `shared_buffers` and `effective_cache_size`)
-- [ ] Configure `pg_hba.conf` for local-only connections (no remote access for security)
-- [ ] Create `haypbooks` database and `haypbooks` user with restricted permissions
-- [ ] Run `prisma migrate deploy` to apply all 40 migrations to local PostgreSQL
-- [ ] Seed with production data (pg_dump from Neon → pg_restore to local)
-- [ ] Set up automated backup: daily `pg_dump` cron at 3AM Helsinki time, 7-day rotation, backup stored in `/var/backups/postgresql/`
-- [ ] Update `DATABASE_URL` in VPS `.env` to point to local PostgreSQL
-- [ ] Restart PM2 and verify all API endpoints return correct data
-- [ ] Run full E2E test suite against local database
-- [ ] Decommission Neon project (delete after 7-day verification window)
-
-**Expected output:** PostgreSQL 16 running on VPS, all data migrated, automated daily backups, $0/month database cost, Neon project decommissioned.
-
-**Risk:** VPS has 80GB SSD. Database size must be monitored. If it exceeds ~20GB, the self-hosted migration may need to be reconsidered.
+**Expected output:** R2 fully operational in production, all core accounting flows validated end-to-end.
 
 ---
 
-### Plan M: HB_Owner Dashboard + Architecture Restructure
+## Next Sprint (Weeks 3-4)
 
-**Goal:** Separate the platform owner (JP) admin experience from client-facing apps. The owner should have a confidential admin dashboard, not be routed through the same workspace selection as clients.
+### Priority 2: Extend Audit Logging to All Entities
+**Status:** Core accounting (COA, Journal Entries) covered; needs expansion
 
-**Prerequisite:** Backend role system (`platform_owner` role), multi-tenant admin API endpoints, subscription management backend. This is a major architectural plan spanning both frontend and backend.
+- [ ] Add audit logging to banking transactions (deposits, withdrawals, transfers)
+- [ ] Add audit logging to invoices, bills, and payments
+- [ ] Add audit logging to contacts (customers, vendors)
+- [ ] Add audit logging to inventory items and fixed assets
+- [ ] Create unified audit log UI page for accountants to review all entity changes
+- [ ] Add audit log export to CSV for compliance evidence collection
 
-**What needs to be achieved:**
+**Expected output:** Every financial entity change is tracked at field level with before/after values. Accountants can review a complete, filterable audit trail.
 
-**M-1: Route Restructure**
-- [ ] Rename `(owner)/` route group to represent HB_Online (client-facing app)
-- [ ] Rename `practice-hub/` to HB_Practice_Hub (accountant-facing app)
-- [ ] Create new `(hb-owner)/` route group — confidential, NOT in workspace selection
-- [ ] Update login flow: backend checks for `platform_owner` role → redirect to HB_Owner or workspace selection
-- [ ] Workspace selection only between HB_Online and HB_Practice_Hub
+### Priority 3: Practice Hub MVP
+**Status:** Route structure exists, needs full implementation
 
-**M-2: HB_Owner Dashboard — Core Pages**
-- [ ] Overview dashboard (total clients, users, subscriptions, MRR, system health, activity feed)
-- [ ] Client management (list all companies, search/filter, suspend, reactivate, delete, read-only access to client books)
-- [ ] Subscription plan management (create/edit plans, pricing, upgrade/downgrade clients, payment history)
-- [ ] User management (global user list, block/unblock by email or domain, delete, login history, force password reset)
-- [ ] Activity & security (global audit log, login tracking, failed attempts, blocked domains, IP management)
+- [ ] Build client management dashboard for accountants
+- [ ] Implement multi-client bookkeeping workspace switching
+- [ ] Add client onboarding workflow (collect financial data, import existing records)
+- [ ] Add bulk operation tools for accounting firms (bulk invoice generation, bulk journal entries)
+- [ ] Create client-specific financial overview (combined P&L across entities)
 
-**M-3: HB_Owner Dashboard — Advanced Pages**
-- [ ] Platform configuration (feature flags, maintenance mode, announcement banner, email templates, API rate limits, storage quotas)
-- [ ] Analytics (user growth, revenue trends, feature usage, churn analysis, most active clients)
-- [ ] Support tools (support tickets, client feedback, impersonation mode for debugging)
-
-**Expected output:** A separate, confidential admin dashboard accessible only to platform owners with full visibility and control over all tenants, users, and system configuration.
+**Expected output:** Accounting firms can manage multiple client books from a single dashboard with quick-switch between entities.
 
 ---
 
-## Deferred (Backend-Blocked Stubs — 22 total)
+## Future Plans
 
-These frontend pages exist as stubs but cannot be completed until backend Prisma models, controllers, and services are built. They will be addressed as dedicated module-specific backend+frontend plans.
+### Plan A: Self-Hosted PostgreSQL Migration
+- Migrate from Supabase hosted PostgreSQL to self-hosted PostgreSQL on the VPS or a separate DB server
+- Eliminates Supabase dependency, reduces costs, gives full control over backups and scaling
+- **Blocked by:** Completion of R2 deployment and E2E testing
 
-| Module | Stub Count | Missing Backend |
-|---|---|---|
-| Inventory | 6 | cycle-counts, bundles, cost-adjustments, landed-costs, write-downs, zones |
-| Payroll | 6 | bonuses-commissions, final-pay, payroll-adjustments, holiday-calendar, employee-documents, job-positions |
-| Projects | 6 | contracts, templates, schedule, progress-billing + KPI UI (budget-vs-actual, profitability) |
-| Time | 1 | KPI summary object (billable-time-review) |
-| Period Close | 1 | sign-offs |
-| Fixed Assets | 1 | insurance |
-| Accounting | 1 | sign-offs |
+### Plan B: Multi-Currency Support
+- Add currency fields to company settings, invoices, bills
+- Implement exchange rate management (manual and auto-fetch)
+- Convert financial statements to support multi-currency display
+- **Blocked by:** Priority 2 (audit logging) completion
+
+### Plan C: Budgeting Module
+- Create budget templates by account and period
+- Budget vs Actual comparison in financial statements
+- Budget variance alerts and reporting
+- **Blocked by:** Financial statement production validation
+
+### Plan D: Approval Workflows
+- Implement role-based access control (RBAC) for accounting functions
+- Create approval chains for journal entries above a threshold amount
+- Add manager approval for bank reconciliation completion
+- **Blocked by:** Priority 2 (audit logging) completion
+
+### Plan E: Fixed Asset Management
+- Asset register with depreciation schedules (straight-line, declining balance)
+- Automatic depreciation journal entries
+- Asset disposal and revaluation workflows
+- **Blocked by:** Core accounting E2E validation
 
 ---
 
-## Unresolved Tech Debt
+## Deferred Backend Stubs (22 Total)
 
-1. **Missing shared components** — LoadingSpinner, FilterPills not yet extracted from individual pages
-2. **108 HaypDataTable pages** (Expenses, Sales) — Different pattern from other tables, intentionally not unified
-3. **Employees page** — Uses `gray-*` classes, raw `fetch()`, `Loader2` — needs full rebuild
-4. **3 custom detail pages** — chart-of-accounts, journal-entries/[id], budgets/[budgetId] — too custom for generic patterns
-5. **Backend schema drift** — TimeEntry, TimerSession, ProjectMilestone field name mismatches between Prisma models and frontend types
-6. **Reporting backend endpoints missing** — 6 category reports, 6 CSV exports, custom-reports CRUD, scheduled-reports CRUD endpoints don't exist on backend (same category as deferred stubs)
-7. **Inconsistent API verbs** — Account deactivate uses DELETE, reactivate uses PUT for same state toggle
+These modules have controller/service stubs that return placeholder data. They require full backend implementation before the frontend can be connected.
+
+### Inventory Module (6 stubs)
+- Inventory items CRUD, stock adjustments, inventory valuation, warehouse management, stock movements, inventory reports
+
+### Payroll Module (6 stubs)
+- Employee records, payroll runs, tax computations, payslip generation, payroll reports, statutory contributions
+
+### Projects Module (6 stubs)
+- Project creation, time tracking, project billing, project profitability, milestone tracking, project reports
+
+### Other (4 stubs)
+- Fixed asset insurance tracking, accounting period close sign-offs, advanced reporting, data import/export
+
+**Note:** These are low priority. They should be addressed individually when the corresponding frontend module becomes the development focus.
 
 ---
 
+## Technical Debt
+
+- [ ] Nginx reverse proxy passes `localhost` as hostname to Next.js (workaround applied in verification page)
+- [ ] `NEXTAUTH_URL` must be explicitly set in production (documented in deployment guide)
+- [ ] Frontend receipt upload endpoint was calling a non-existent backend route (now fixed with R2 integration)
+- [ ] 6 Prisma models have `fileUrl` fields still referencing local paths — need migration to R2 keys for old data
+- [ ] No automated test suite exists — all testing is currently manual
