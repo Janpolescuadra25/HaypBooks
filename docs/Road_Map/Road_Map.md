@@ -27,8 +27,14 @@ These features are code-complete in the repository. They require production vali
 
 ### Audit Logging
 - [x] `AuditLogLine` Prisma model — captures before/after values at field level
-- [x] Audit endpoints for Chart of Accounts and Journal Entries
-- [x] Global audit controller: `GET /api/audit/audit-logs`
+- [x] Audit logging for Chart of Accounts and Journal Entries
+- [x] Audit logging for banking transactions (deposits, withdrawals, transfers)
+- [x] Audit logging for invoices, bills, and payments (create, update, void)
+- [x] Audit logging for contacts (customers and vendors — create, update, soft-delete)
+- [x] Audit logging for inventory items (create, update, delete)
+- [x] Global audit controller: `GET /api/companies/:companyId/audit-logs` with filters (entityType, entityId, action, date range, userId, search, pagination)
+- [x] CSV export endpoint: `GET /api/companies/:companyId/audit-logs/export`
+- [x] Unified audit log UI page with filters, expandable field diffs, CSV export, and pagination
 - [x] Source document linking for traceability
 
 ### File Storage
@@ -45,22 +51,6 @@ These features are code-complete in the repository. They require production vali
 - [x] Onboarding with company creation
 - [x] JWT-based authentication (CSRF-immune)
 - [x] Cross-subdomain CSRF protection for cookie-based requests
-
----
-
-## Immediate Priority (Next 2 Weeks)
-
-### Priority 1: Extend Audit Logging to All Entities
-**Status:** Core accounting (COA, Journal Entries) covered; needs expansion
-
-- [ ] Add audit logging to banking transactions (deposits, withdrawals, transfers)
-- [ ] Add audit logging to invoices, bills, and payments
-- [ ] Add audit logging to contacts (customers, vendors)
-- [ ] Add audit logging to inventory items and fixed assets
-- [ ] Create unified audit log UI page for accountants to review all entity changes
-- [ ] Add audit log export to CSV for compliance evidence collection
-
-**Expected output:** Every financial entity change is tracked at field level with before/after values. Accountants can review a complete, filterable audit trail.
 
 ---
 
@@ -92,7 +82,7 @@ These features are code-complete in the repository. They require production vali
 
 ---
 
-## Next Sprint (Weeks 3-4)
+## Next Sprint
 
 ### Priority 2: Practice Hub MVP
 **Status:** Route structure exists, needs full implementation
@@ -118,7 +108,7 @@ These features are code-complete in the repository. They require production vali
 - Add currency fields to company settings, invoices, bills
 - Implement exchange rate management (manual and auto-fetch)
 - Convert financial statements to support multi-currency display
-- **Blocked by:** Priority 2 (audit logging) completion
+- **Blocked by:** Priority 2 (Practice Hub MVP) completion
 
 ### Plan C: Budgeting Module
 - Create budget templates by account and period
@@ -130,7 +120,7 @@ These features are code-complete in the repository. They require production vali
 - Implement role-based access control (RBAC) for accounting functions
 - Create approval chains for journal entries above a threshold amount
 - Add manager approval for bank reconciliation completion
-- **Blocked by:** Priority 2 (audit logging) completion
+- **Blocked by:** Priority 2 (Practice Hub MVP) completion
 
 ### Plan E: Fixed Asset Management
 - Asset register with depreciation schedules (straight-line, declining balance)
@@ -161,7 +151,7 @@ These features are code-complete in the repository. They require production vali
   - `PUT /api/owner/storage/limits/:companyId` — set storage limits
   - `GET /api/owner/users` — list all users across both platforms
   - `PATCH /api/owner/users/:userId/status` — suspend/reactivate user
-- **Blocked by:** Priority 1 (Audit Logging Expansion) completion
+- **Ready to implement** — no blockers remaining
 
 ---
 
