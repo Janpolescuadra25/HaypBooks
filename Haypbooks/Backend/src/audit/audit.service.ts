@@ -52,8 +52,10 @@ export class AuditService {
 
   async getCompanyLogs(companyId: string, filters?: {
     entityType?: string
+    entityId?: string
     action?: string
     userId?: string
+    search?: string
     startDate?: Date
     endDate?: Date
     skip?: number
@@ -61,8 +63,21 @@ export class AuditService {
   }) {
     const where: any = { companyId }
     if (filters?.entityType) where.tableName = filters.entityType
+    if (filters?.entityId) where.recordId = filters.entityId
     if (filters?.action) where.action = filters.action
     if (filters?.userId) where.userId = filters.userId
+    if (filters?.search) {
+      where.AND = [
+        ...(where.AND ?? []),
+        {
+          OR: [
+            { recordId: { contains: filters.search, mode: 'insensitive' } },
+            { user: { name: { contains: filters.search, mode: 'insensitive' } } },
+            { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+          ],
+        },
+      ]
+    }
     if (filters?.startDate || filters?.endDate) {
       where.createdAt = {}
       if (filters.startDate) where.createdAt.gte = filters.startDate
@@ -78,9 +93,10 @@ export class AuditService {
             user: {
               select: { id: true, name: true, email: true },
             },
+            lines: true,
           },
-          skip: filters?.skip || 0,
-          take: filters?.take || 50,
+          skip: filters?.skip,
+          take: filters?.take,
         }),
         this.prisma.auditLog.count({ where }),
       ])
