@@ -144,7 +144,7 @@ These features are code-complete in the repository. They require production vali
   - `PUT /api/owner/storage/limits/:companyId` — set storage limits
   - `GET /api/owner/users` — list all users across both platforms
   - `PATCH /api/owner/users/:userId/status` — suspend/reactivate user
-- **Blocked by:** Priority 1 (R2 VPS deployment) — storage metrics require R2 to be operational
+- **Blocked by:** Priority 1 (Audit Logging Expansion) completion
 
 ---
 
