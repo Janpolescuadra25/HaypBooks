@@ -50,6 +50,17 @@ These features are code-complete in the repository. They require production vali
 
 ## Immediate Priorities (Next 2 Weeks)
 
+### Priority 0: Landing Page Content & Consistency Fixes
+**Status:** Issues identified, ready to implement
+
+- [ ] Remove all country-specific references (e.g., Philippines-specific tax terms, BIR forms, local compliance mentions) — make all copy general and applicable to any country/region
+- [ ] Fill the blank sections below the fold — add "What is HaypBooks?" story section, feature highlights, and value propositions so users understand the product when scrolling
+- [ ] Audit the pricing displayed on the landing page and compare it against the signup/pricing card modal — ensure both show identical plans, prices, and features with no discrepancies
+- [ ] Add social proof section (testimonials placeholder, "trusted by" section, or use case examples)
+- [ ] Ensure consistent branding and messaging across all landing page sections
+
+**Expected output:** A polished, country-agnostic landing page with no blank sections, consistent pricing, and clear messaging that converts visitors into signups.
+
 ### Priority 1: Extend Audit Logging to All Entities
 **Status:** Core accounting (COA, Journal Entries) covered; needs expansion
 
