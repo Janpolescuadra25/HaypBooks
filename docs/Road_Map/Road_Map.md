@@ -46,18 +46,6 @@ These features are code-complete in the repository. They require production vali
 - [x] workspaceId foreign key bug fixed (companyId → company.workspaceId lookup)
 - [x] forcePathStyle added for Cloudflare R2 signature compatibility
 
-### Authentication & Onboarding
-- [x] Email verification flow
-- [x] Onboarding with company creation
-- [x] JWT-based authentication (CSRF-immune)
-- [x] Cross-subdomain CSRF protection for cookie-based requests
-
----
-
-## Production-Validated Features (Implemented)
-
-These features are code-complete in the repository. They require production validation testing after R2 VPS deployment.
-
 ### Landing Page & Pricing
 - [x] All country-specific references removed — landing and pricing pages are now fully international/country-agnostic
 - [x] "About HaypBooks" story section added to landing page (between How It Works and Testimonials)
@@ -65,20 +53,11 @@ These features are code-complete in the repository. They require production vali
 - [x] Compact pricing preview component added to landing page
 - [x] Pricing page FAQ updated with generic tax compliance and payment method wording
 
-### Core Accounting Module
-- [x] Chart of Accounts — Tree structure with parent/subaccount support, type-based coloring, 9+ account types including Contra accounts
-- [x] Journal Entries — Double-entry enforcement, real-time debit/credit balancing, recurring entries (Monthly/Quarterly/Yearly), copy-as-new, attachment support, customer tracking
-- [x] Journal Entry Lifecycle — Draft → Posted → Voided status workflow, audit log access, bulk actions, filtering by status/source type
-- [x] General Ledger — Unified view across all modules (invoices, bills, JEs, banking), 13 source type filters, drill-down to source documents, CSV export, running balance, hidden columns persistence
-
-- [ ] Add audit logging to banking transactions (deposits, withdrawals, transfers)
-- [ ] Add audit logging to invoices, bills, and payments
-- [ ] Add audit logging to contacts (customers, vendors)
-- [ ] Add audit logging to inventory items and fixed assets
-- [ ] Create unified audit log UI page for accountants to review all entity changes
-- [ ] Add audit log export to CSV for compliance evidence collection
-
-**Expected output:** Every financial entity change is tracked at field level with before/after values. Accountants can review a complete, filterable audit trail.
+### Authentication & Onboarding
+- [x] Email verification flow
+- [x] Onboarding with company creation
+- [x] JWT-based authentication (CSRF-immune)
+- [x] Cross-subdomain CSRF protection for cookie-based requests
 
 ---
 
