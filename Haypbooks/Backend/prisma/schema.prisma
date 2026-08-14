@@ -703,6 +703,7 @@ model User {
   auditReviewer   Boolean   @default(false)
   // Soft-delete timestamp — null means active account
   deletedAt       DateTime?
+  suspended       Boolean   @default(false)
 
   // === MFA Support ===
   mfaEnabled            Boolean   @default(false)
@@ -1521,6 +1522,7 @@ model Company {
   createdAt DateTime @default(now())
 
   workspace          Workspace            @relation(fields: [workspaceId], references: [id])
+  storageLimit       StorageLimit?
   countryConfig      Country?             @relation(fields: [countryId], references: [id])
   subscription       Subscription?        @relation("CompanySubscription")
   onboardingSteps    OnboardingStep[]
@@ -1858,6 +1860,20 @@ model Company {
   @@index([countryId])
   @@index([birRegistrationStatus])
   @@index([taxIncentiveGranted])
+}
+
+model StorageLimit {
+  id                Int       @id @default(autoincrement())
+  companyId         String    @unique
+  planBaseLimitMb   Int       @default(0)    // Storage allocated by the user's subscription plan (in MB)
+  ownerOverrideMb   Int?                      // Platform owner's custom override (in MB). null = no override, uses plan default
+  safetyNetMb       Int       @default(51200) // 50GB safety net buffer (in MB), applies to ALL users
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
 }
 
 model ConsolidationGroup {
