@@ -11,6 +11,7 @@ import { OwnerController } from './owner/owner.controller'
 import { PrismaRepositoriesModule } from './repositories/prisma/prisma-repositories.module'
 import { TasksModule } from './tasks/tasks.module'
 import { AttachmentsModule } from './attachments/attachments.module'
+import { R2Module } from './common/r2/r2.module'
 import { TenantsModule } from './tenants/tenants.module'
 import { CompanyContextMiddleware } from './shared/company-context.middleware'
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware'
@@ -40,6 +41,7 @@ const RepositoriesModule = PrismaRepositoriesModule
     UsersModule,
     OnboardingModule,
     TasksModule,
+    R2Module,
     AttachmentsModule,
     // Companies module (provides company listing and last-accessed updates)
     (require('./companies/companies.module').CompaniesModule),

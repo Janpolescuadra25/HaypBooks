@@ -4,10 +4,15 @@ import { PrismaService } from '../repositories/prisma/prisma.service'
 @Injectable()
 export class AttachmentsService {
   constructor(private readonly prisma: PrismaService) {}
-async list(tenantId: string, entityType: string, entityId: string) {
+
+  async list(tenantId: string, entityType: string, entityId: string) {
     const workspaceId = tenantId
 
     return this.prisma.attachment.findMany({ where: { workspaceId, entityType, entityId, deletedAt: null }, orderBy: { uploadedAt: 'desc' } })
+  }
+
+  async findById(id: string) {
+    return this.prisma.attachment.findUnique({ where: { id } })
   }
 
   async create(data: { workspaceId: string; entityType: string; entityId: string; fileUrl: string; fileName?: string; mimeType?: string; fileSize?: number; uploadedById?: string; description?: string }) {

@@ -125,6 +125,8 @@
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^4.15.0",
+    "@aws-sdk/client-s3": "^3.500.0",
+    "@aws-sdk/s3-request-presigner": "^3.500.0",
     "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
