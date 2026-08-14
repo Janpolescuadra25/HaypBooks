@@ -30,8 +30,7 @@ export interface User {
   onboardingCompleted: boolean;
   ownerOnboardingCompleted?: boolean;
   accountantOnboardingCompleted?: boolean;
-  preferredHub?: 'OWNER' | 'ACCOUNTANT';
-}
+  preferredHub?: 'OWNER' | 'ACCOUNTANT';  isOwner?: boolean}
 
 export interface AuthResponse {
   user: User;

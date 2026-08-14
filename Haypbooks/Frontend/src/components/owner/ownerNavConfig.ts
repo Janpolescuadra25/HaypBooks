@@ -28,6 +28,7 @@ import {
   Settings,
   Briefcase,
   FileCheck,
+  HardDrive,
 } from 'lucide-react'
 
 
@@ -90,6 +91,20 @@ export const navigationData: NavSection[] = [
       { title: 'Setup Checklist', path: '/home/setup-center' },
       { title: 'Notifications', path: '/home/notifications' },
       { title: 'Audit Trail', path: '/activity' },
+    ],
+  },
+  {
+    title: 'STORAGE',
+    label: 'STORAGE',
+    icon: HardDrive,
+    groups: [
+      {
+        title: 'Monitoring',
+        icon: HardDrive,
+        items: [
+          { title: 'Storage Overview', path: '/owner/storage' },
+        ],
+      },
     ],
   },
   {

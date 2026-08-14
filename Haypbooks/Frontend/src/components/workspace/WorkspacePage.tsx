@@ -408,8 +408,8 @@ export default function WorkspacePage() {
             delay={0.15}
             isExpanded={expandedBook === 'owner'}
             onExpand={() => setExpandedBook('owner')}
-            onItemClick={() => router.push('/owner/monitoring')}
-            onCtaClick={() => router.push('/owner/monitoring')}
+            onItemClick={() => router.push('/owner/storage')}
+            onCtaClick={() => router.push('/owner/storage')}
             logoSrc="/HB_Logo.png"
             logoAlt="Haypbooks Owner"
           />
