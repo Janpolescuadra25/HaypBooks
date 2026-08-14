@@ -87,6 +87,7 @@ These features are code-complete in the repository. They require production vali
 - [ ] Add client onboarding workflow (collect financial data, import existing records)
 - [ ] Add bulk operation tools for accounting firms (bulk invoice generation, bulk journal entries)
 - [ ] Create client-specific financial overview (combined P&L across entities)
+- [ ] Add Owner Dashboard monitoring for Practice Hub clients with per-company storage usage and limits
 
 **Expected output:** Accounting firms can manage multiple client books from a single dashboard with quick-switch between entities.
 
@@ -122,6 +123,31 @@ These features are code-complete in the repository. They require production vali
 - Automatic depreciation journal entries
 - Asset disposal and revaluation workflows
 - **Blocked by:** Core accounting E2E validation
+
+### Plan F: Owner Dashboard — Platform Monitoring & Usage Limits
+- Build an HB_Owner-only dashboard accessible at `/owner/monitoring` (gated by owner role)
+- Display per-company storage metrics:
+  - Database storage used (PostgreSQL table sizes per company/schema)
+  - R2 storage used (Cloudflare R2 bucket usage per company folder prefix)
+  - Total storage per company with visual bar/donut chart
+- Implement configurable storage limits per company:
+  - Owner can set database limit (e.g., 500MB per company) and R2 limit (e.g., 1GB per company)
+  - Enforce limits at upload time — reject uploads when limit exceeded with clear error message
+  - Display usage percentage and remaining storage on each company card
+- User management overview:
+  - List all users across HaypBooks_Online and HaypBooks_Practice
+  - Show user status (active/inactive), last login, company affiliation
+  - Ability to suspend/reactivate users
+- Platform-wide metrics:
+  - Total companies, total users, total storage consumed
+  - Storage growth trend over time (daily/weekly/monthly)
+- Backend endpoints needed:
+  - `GET /api/owner/storage/usage` — aggregate storage metrics
+  - `GET /api/owner/storage/usage/:companyId` — per-company breakdown
+  - `PUT /api/owner/storage/limits/:companyId` — set storage limits
+  - `GET /api/owner/users` — list all users across both platforms
+  - `PATCH /api/owner/users/:userId/status` — suspend/reactivate user
+- **Blocked by:** Priority 1 (R2 VPS deployment) — storage metrics require R2 to be operational
 
 ---
 
