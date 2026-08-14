@@ -1,175 +1,56 @@
 "use client"
-import { useState } from 'react'
+import Link from 'next/link'
+import { MARKETING_PRICING_PLANS } from '@/lib/pricing'
 
 export default function PricingPreview() {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
-
-  const plans = [
-    {
-      id: 'freemium',
-      name: 'Freemium',
-      priceMonthly: 0,
-      priceAnnual: 0,
-      description: 'Try HaypBooks free — ideal for sole proprietors and testing the product',
-      features: [
-        '1 company',
-        'Limited transactions (100/month)',
-        'Basic reports',
-        'Email support'
-      ],
-      cta: 'Create Free Account',
-      highlighted: false
-    },
-    {
-      id: 'starter',
-      name: 'Starter',
-      priceMonthly: 19,
-      priceAnnual: 199, // ~16/mo equivalent
-      description: 'For freelancers and micro-businesses',
-      features: [
-        'Unlimited invoices & bills',
-        'Bank reconciliation',
-        'Basic financial reports',
-        'Up to 2 users',
-        'Email support'
-      ],
-      cta: 'Get Started',
-      highlighted: false
-    },
-    {
-      id: 'growth',
-      name: 'Growth',
-      priceMonthly: 49,
-      priceAnnual: 499, // ~41.5/mo
-      description: 'For growing businesses that need more automation',
-      features: [
-        'Everything in Starter',
-        'Inventory management',
-        'Advanced reports & analytics',
-        'Up to 10 users',
-        'Priority support',
-        'API access'
-      ],
-      cta: 'Get Started',
-      highlighted: true
-    },
-    {
-      id: 'scale',
-      name: 'Business',
-      priceMonthly: 89,
-      priceAnnual: 899, // ~75/mo
-      description: 'For scaling businesses with larger teams',
-      features: [
-        'Everything in Growth',
-        'Advanced automation',
-        'Custom integrations',
-        '20+ seats optional',
-        'Dedicated onboarding support'
-      ],
-      cta: 'Get Started',
-      highlighted: false
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      priceMonthly: null,
-      priceAnnual: null,
-      description: 'Custom pricing and SLA for large organizations',
-      features: [
-        'Unlimited users',
-        'Dedicated account manager',
-        'SLA & compliance support',
-        'Custom integrations & onboarding'
-      ],
-      cta: 'Contact Sales',
-      highlighted: false
-    }
-  ]
-
-  function displayPrice(plan: any) {
-    if (plan.priceMonthly === 0 && billingCycle === 'monthly') return '$0'
-    if (plan.priceMonthly === 0 && billingCycle === 'annual') return '$0'
-    if (!plan.priceMonthly) return 'Custom'
-    if (billingCycle === 'monthly') return `$${plan.priceMonthly}`
-    // show per-year price but format as $xxx /yr and monthly equivalent below
-    return `$${plan.priceAnnual}`
-  }
+  const plans = MARKETING_PRICING_PLANS
 
   return (
-    <section className="py-20 px-4 bg-gradient-to-br from-blue-50 to-sky-50">
+    <section className="py-20 px-4 bg-gradient-to-br from-slate-50 via-slate-100 to-white">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Simple, Transparent Pricing</h2>
-          <p className="text-xl text-gray-600">Start with a free account. No credit card required. Cancel anytime.</p>
+        <div className="text-center mb-10">
+          <p className="text-emerald-600 text-sm font-bold uppercase tracking-widest mb-3">Pricing preview</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900">
+            Simple plans for growing teams
+          </h2>
+          <p className="text-slate-500 mt-3 max-w-2xl mx-auto">
+            See the most popular plans at a glance. Pricing below matches the full pricing page and links to complete details.
+          </p>
         </div>
 
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <div className="inline-flex rounded-full bg-white shadow-sm p-1">
-            <button
-              aria-pressed={billingCycle === 'monthly'}
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-2 rounded-full font-medium ${billingCycle === 'monthly' ? 'bg-blue-600 text-white' : 'text-slate-700'}`}
-            >
-              Monthly
-            </button>
-            <button
-              aria-pressed={billingCycle === 'annual'}
-              onClick={() => setBillingCycle('annual')}
-              className={`px-4 py-2 rounded-full font-medium ${billingCycle === 'annual' ? 'bg-blue-600 text-white' : 'text-slate-700'}`}
-            >
-              Annual (save 2 months)
-            </button>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
-          {plans.map((plan, idx) => (
+        <div className="grid gap-6 lg:grid-cols-3">
+          {plans.map((plan) => (
             <div
-              key={plan.id}
-              className={`relative bg-white rounded-2xl p-6 ${plan.highlighted ? 'border-2 border-blue-500 shadow-2xl scale-105' : 'border border-gray-200 shadow-lg'}`}
+              key={plan.name}
+              className={`rounded-3xl border p-6 shadow-sm transition-shadow duration-300 bg-white ${plan.highlight ? 'border-emerald-300 shadow-2xl' : 'border-slate-200 hover:shadow-lg'}`}
             >
-              {plan.highlighted && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-blue-500 text-white text-sm font-semibold px-4 py-1 rounded-full">Most Popular</span>
-                </div>
-              )}
-
-              <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-              <p className="text-gray-600 text-sm mb-4 min-h-[44px]">{plan.description}</p>
-
-              <div className="mb-6">
-                <span className="text-4xl font-bold">{displayPrice(plan)}</span>
-                {plan.priceMonthly && billingCycle === 'monthly' && <span className="text-gray-500 ml-2">/ month</span>}
-                {plan.priceAnnual && billingCycle === 'annual' && <span className="text-gray-500 ml-2">/ year</span>}
-                {plan.priceAnnual && billingCycle === 'annual' && plan.priceMonthly && (
-                  <div className="text-sm text-gray-500">(~${(plan.priceAnnual / 12).toFixed(0)}/mo)</div>
-                )}
+              <div className="mb-4">
+                <p className="text-sm uppercase tracking-[0.24em] font-semibold text-emerald-600">{plan.name}</p>
+                <p className="mt-3 text-4xl font-extrabold text-slate-900">
+                  {plan.price}
+                  <span className="text-slate-500 text-base font-medium">{plan.period}</span>
+                </p>
               </div>
 
-              <ul className="space-y-3 mb-6 text-sm">
-                {plan.features.map((feature: string, featureIdx: number) => (
-                  <li key={featureIdx} className="flex items-start">
-                    <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+              <p className="text-slate-500 mb-6 text-sm leading-relaxed">{plan.description}</p>
+
+              <ul className="space-y-3 mb-6 text-sm text-slate-600">
+                {plan.features.slice(0, 5).map((feature) => (
+                  <li key={feature} className="flex items-start gap-2">
+                    <span className="mt-1 text-emerald-500">✓</span>
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-4">
-                <button
-                  className={`w-full py-3 rounded-lg font-semibold transition-all ${plan.highlighted ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
-                >
-                  {plan.cta}
-                </button>
-              </div>
+              <Link
+                href="/pricing"
+                className={`block w-full rounded-2xl py-3 text-center font-semibold transition ${plan.highlight ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+              >
+                See Full Pricing
+              </Link>
             </div>
           ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <p className="text-gray-600">All plans include free updates, data migration assistance, and online training resources.</p>
         </div>
       </div>
     </section>
