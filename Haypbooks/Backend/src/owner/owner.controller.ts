@@ -1,26 +1,59 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { RolesGuard } from '../auth/guards/roles.guard'
+import { Roles } from '../auth/decorators/roles.decorator'
 import { CompanyService } from '../companies/company.service'
+import { OwnerService } from './owner.service'
 
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('Owner')
 @Controller('api/owner')
 export class OwnerController {
-  constructor(private readonly svc: CompanyService) {}
+  constructor(
+    private readonly ownerService: OwnerService,
+    private readonly companyService: CompanyService,
+  ) {}
+
+  @Get('health')
+  async health() {
+    return this.ownerService.getHealth()
+  }
 
   @Get('dashboard')
-  @UseGuards(JwtAuthGuard)
   async getDashboard(@Req() req: any) {
-    return this.svc.getOwnerDashboard(req.user?.userId)
+    return this.companyService.getOwnerDashboard(req.user?.userId)
   }
 
   @Get('cash-position')
-  @UseGuards(JwtAuthGuard)
   async getCashPosition(@Req() req: any) {
-    return this.svc.getOwnerCashPosition(req.user?.userId)
+    return this.companyService.getOwnerCashPosition(req.user?.userId)
   }
 
   @Get('financial-summary')
-  @UseGuards(JwtAuthGuard)
   async getFinancialSummary(@Req() req: any) {
-    return this.svc.getOwnerFinancialSummary(req.user?.userId)
+    return this.companyService.getOwnerFinancialSummary(req.user?.userId)
+  }
+
+  @Get('storage/usage')
+  async getPlatformStorageUsage() {
+    return this.ownerService.getPlatformStorageUsage()
+  }
+
+  @Get('storage/usage/:companyId')
+  async getCompanyStorageUsage(@Param('companyId') companyId: string) {
+    return this.ownerService.getCompanyStorageUsage(companyId)
+  }
+
+  @Put('storage/limits/:companyId')
+  async setStorageLimit(
+    @Param('companyId') companyId: string,
+    @Body() body: { overrideMb: number | null },
+    @Req() req: any,
+  ) {
+    return this.ownerService.setStorageLimit(
+      companyId,
+      body.overrideMb,
+      req.user?.userId,
+    )
   }
 }
