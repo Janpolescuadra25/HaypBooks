@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Put, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
@@ -42,6 +42,24 @@ export class OwnerController {
   @Get('storage/usage/:companyId')
   async getCompanyStorageUsage(@Param('companyId') companyId: string) {
     return this.ownerService.getCompanyStorageUsage(companyId)
+  }
+
+  @Get('users')
+  async getUsers(
+    @Query('query') query?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.ownerService.getUsers(query, page, limit)
+  }
+
+  @Patch('users/:userId/status')
+  async setUserSuspendStatus(
+    @Param('userId') userId: string,
+    @Body() body: { suspend: boolean },
+    @Req() req: any,
+  ) {
+    return this.ownerService.setUserSuspendStatus(userId, body.suspend, req)
   }
 
   @Put('storage/limits/:companyId')

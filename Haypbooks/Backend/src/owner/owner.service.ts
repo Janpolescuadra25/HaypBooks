@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { R2Service } from '../common/r2/r2.service'
 
@@ -155,5 +155,120 @@ export class OwnerService {
     })
 
     return storageLimit
+  }
+
+  async getUsers(query: string, page: number, limit: number) {
+    const p = Math.max(1, parseInt(String(page)) || 1)
+    const l = Math.max(1, Math.min(50, parseInt(String(limit)) || 20))
+    const skip = (p - 1) * l
+
+    const where = query
+      ? {
+          OR: [
+            { email: { contains: query, mode: 'insensitive' as const } },
+            { name: { contains: query, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}
+
+    const [users, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          suspended: true,
+          createdAt: true,
+          lastLogin: true,
+          workspaceUsers: {
+            select: {
+              workspaceId: true,
+              role: true,
+              companyUsers: {
+                select: {
+                  companyId: true,
+                  company: {
+                    select: { id: true, name: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: l,
+      }),
+      this.prisma.user.count({ where }),
+    ])
+
+    return {
+      data: users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        suspended: u.suspended,
+        createdAt: u.createdAt,
+        lastLogin: u.lastLogin,
+        companies: u.workspaceUsers.flatMap((wu) =>
+          wu.companyUsers.map((cu) => ({
+            companyId: cu.companyId,
+            companyName: cu.company.name,
+            role: wu.role,
+          })),
+        ),
+      })),
+      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+    }
+  }
+
+  async setUserSuspendStatus(userId: string, suspend: boolean, req: any) {
+    const currentUserId = req.user?.userId
+    if (!currentUserId) throw new UnauthorizedException()
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } })
+    if (!user) throw new NotFoundException('User not found')
+
+    const before = user.suspended
+    if (before === suspend) {
+      return { message: suspend ? 'User is already suspended' : 'User is already active' }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { suspended: suspend },
+    })
+
+    const firstWorkspace = await this.prisma.workspaceUser.findFirst({
+      where: { userId },
+      select: { workspaceId: true },
+    })
+    const workspaceId = firstWorkspace?.workspaceId ?? null
+
+    const firstCompany = await this.prisma.companyUser.findFirst({
+      where: { userId },
+      select: { companyId: true },
+    })
+
+    await this.prisma.auditLog.create({
+      data: {
+        workspaceId,
+        userId: currentUserId,
+        companyId: firstCompany?.companyId ?? null,
+        tableName: 'User',
+        action: suspend ? 'SUSPEND' : 'REACTIVATE',
+        recordId: userId,
+        changes: {
+          before: { suspended: before },
+          after: { suspended: suspend },
+        },
+      },
+    })
+
+    return {
+      message: suspend ? 'User suspended successfully' : 'User reactivated successfully',
+      user: { id: updated.id, email: updated.email, name: updated.name, suspended: updated.suspended },
+    }
   }
 }

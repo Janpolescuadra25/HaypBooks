@@ -108,6 +108,20 @@ export const navigationData: NavSection[] = [
     ],
   },
   {
+    title: 'USERS',
+    label: 'USERS',
+    icon: Users,
+    groups: [
+      {
+        title: 'User Management',
+        icon: Users,
+        items: [
+          { title: 'All Users', path: '/owner/users' },
+        ],
+      },
+    ],
+  },
+  {
     title: 'OPERATIONS',
     label: 'OPS',
     icon: Briefcase,
