@@ -36,6 +36,9 @@ These features are code-complete in the repository. They require production vali
 - [x] Attachments upload with `memoryStorage()` + R2 (25MB limit)
 - [x] Receipt upload endpoint: `POST /companies/:companyId/ap/receipts/upload`
 - [x] Presigned URL generation: `GET /api/attachments/:id/url`
+- [x] R2 VPS deployment validated — uploads, presigned URLs, and receipt endpoint confirmed working in production
+- [x] workspaceId foreign key bug fixed (companyId → company.workspaceId lookup)
+- [x] forcePathStyle added for Cloudflare R2 signature compatibility
 
 ### Authentication & Onboarding
 - [x] Email verification flow
@@ -47,27 +50,7 @@ These features are code-complete in the repository. They require production vali
 
 ## Immediate Priorities (Next 2 Weeks)
 
-### Priority 1: R2 VPS Deployment & Full E2E Testing
-**Status:** Code complete, pending VPS deployment
-
-- [ ] VPS: `npm install`, add R2 credentials to `.env`, `pm2 restart all`
-- [ ] Test file upload via attachments endpoint — verify file appears in Cloudflare R2 dashboard
-- [ ] Test presigned URL generation — verify file is accessible via returned URL
-- [ ] Test receipt upload endpoint
-- [ ] Full E2E test of core flows:
-  - [ ] User registration → email verification → onboarding → workspace
-  - [ ] Create journal entry → post → view in General Ledger → verify in Trial Balance
-  - [ ] Upload attachment → verify in R2 → download via presigned URL
-  - [ ] Bank reconciliation flow (create → match → complete)
-  - [ ] Generate P&L, Balance Sheet, Cash Flow statements
-
-**Expected output:** R2 fully operational in production, all core accounting flows validated end-to-end.
-
----
-
-## Next Sprint (Weeks 3-4)
-
-### Priority 2: Extend Audit Logging to All Entities
+### Priority 1: Extend Audit Logging to All Entities
 **Status:** Core accounting (COA, Journal Entries) covered; needs expansion
 
 - [ ] Add audit logging to banking transactions (deposits, withdrawals, transfers)
@@ -79,7 +62,11 @@ These features are code-complete in the repository. They require production vali
 
 **Expected output:** Every financial entity change is tracked at field level with before/after values. Accountants can review a complete, filterable audit trail.
 
-### Priority 3: Practice Hub MVP
+---
+
+## Next Sprint (Weeks 3-4)
+
+### Priority 2: Practice Hub MVP
 **Status:** Route structure exists, needs full implementation
 
 - [ ] Build client management dashboard for accountants
@@ -87,7 +74,6 @@ These features are code-complete in the repository. They require production vali
 - [ ] Add client onboarding workflow (collect financial data, import existing records)
 - [ ] Add bulk operation tools for accounting firms (bulk invoice generation, bulk journal entries)
 - [ ] Create client-specific financial overview (combined P&L across entities)
-- [ ] Add Owner Dashboard monitoring for Practice Hub clients with per-company storage usage and limits
 
 **Expected output:** Accounting firms can manage multiple client books from a single dashboard with quick-switch between entities.
 
@@ -175,6 +161,4 @@ These modules have controller/service stubs that return placeholder data. They r
 
 - [ ] Nginx reverse proxy passes `localhost` as hostname to Next.js (workaround applied in verification page)
 - [ ] `NEXTAUTH_URL` must be explicitly set in production (documented in deployment guide)
-- [ ] Frontend receipt upload endpoint was calling a non-existent backend route (now fixed with R2 integration)
-- [ ] 6 Prisma models have `fileUrl` fields still referencing local paths — need migration to R2 keys for old data
 - [ ] No automated test suite exists — all testing is currently manual
