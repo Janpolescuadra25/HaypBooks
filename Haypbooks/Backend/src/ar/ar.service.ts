@@ -1248,6 +1248,23 @@ export class ArService {
         })
         // Post payment receipt to the General Ledger (DR: Cash/Bank, CR: Accounts Receivable)
         await this.subLedger.postPaymentReceivedToGL(result.id, userId)
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'CREATE',
+                tableName: 'CustomerPayment',
+                recordId: result.id,
+                changes: {
+                    customerId,
+                    amount: paymentAmount,
+                    paymentMethodId: paymentMethodId ?? null,
+                    bankAccountId: resolvedBankAccountId ?? null,
+                    paymentDate: paymentDate ? new Date(paymentDate).toISOString() : null,
+                },
+            },
+        }).catch(() => {})
         return this.getNormalizedPaymentById(companyId, result.id)
     }
 
@@ -1302,6 +1319,18 @@ export class ArService {
         if (!result) throw new NotFoundException('Payment not found')
         // Reverse the DR Cash / CR AR journal entry posted when the payment was recorded
         await this.subLedger.reversePaymentReceivedGL(paymentId, userId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'VOID',
+                tableName: 'CustomerPayment',
+                recordId: paymentId,
+                changes: { status: 'VOID' },
+            },
+        }).catch(() => {})
         return result
     }
 

@@ -42,7 +42,22 @@ export class ContactsService {
   async createCustomer(userId: string, companyId: string, data: any) {
     await this.assertCompanyAccess(userId, companyId)
     const workspaceId = await this.getWorkspaceId(companyId)
-    return this.repo.createCustomer(workspaceId, data)
+    const result = await this.repo.createCustomer(workspaceId, data)
+    await this.prisma.auditLog.create({
+      data: {
+        workspaceId,
+        companyId,
+        userId,
+        action: 'CREATE',
+        tableName: 'Customer',
+        recordId: result.contactId,
+        changes: {
+          displayName: result.contact?.displayName ?? '',
+          email: result.contact?.contactEmails?.[0]?.email ?? null,
+        },
+      },
+    }).catch(() => {})
+    return result
   }
 
   async updateCustomer(userId: string, companyId: string, id: string, data: any) {
@@ -50,13 +65,36 @@ export class ContactsService {
     const workspaceId = await this.getWorkspaceId(companyId)
     const updated = await this.repo.updateCustomer(workspaceId, id, data)
     if (!updated) throw new NotFoundException('Customer not found')
+    await this.prisma.auditLog.create({
+      data: {
+        workspaceId,
+        companyId,
+        userId,
+        action: 'UPDATE',
+        tableName: 'Customer',
+        recordId: id,
+        changes: data,
+      },
+    }).catch(() => {})
     return updated
   }
 
   async softDeleteCustomer(userId: string, companyId: string, id: string) {
     await this.assertCompanyAccess(userId, companyId)
     const workspaceId = await this.getWorkspaceId(companyId)
-    return this.repo.softDeleteCustomer(workspaceId, id, userId)
+    const result = await this.repo.softDeleteCustomer(workspaceId, id, userId)
+    await this.prisma.auditLog.create({
+      data: {
+        workspaceId,
+        companyId,
+        userId,
+        action: 'DELETE',
+        tableName: 'Customer',
+        recordId: id,
+        changes: { status: 'INACTIVE' },
+      },
+    }).catch(() => {})
+    return result
   }
 
   async getCustomerAuditLog(userId: string, companyId: string, customerId: string) {
@@ -99,7 +137,21 @@ export class ContactsService {
   async createVendor(userId: string, companyId: string, data: any) {
     await this.assertCompanyAccess(userId, companyId)
     const workspaceId = await this.getWorkspaceId(companyId)
-    return this.repo.createVendor(workspaceId, data)
+    const result = await this.repo.createVendor(workspaceId, data)
+    await this.prisma.auditLog.create({
+      data: {
+        workspaceId,
+        companyId,
+        userId,
+        action: 'CREATE',
+        tableName: 'Vendor',
+        recordId: result.contactId,
+        changes: {
+          displayName: result.contact?.displayName ?? '',
+        },
+      },
+    }).catch(() => {})
+    return result
   }
 
   async updateVendor(userId: string, companyId: string, id: string, data: any) {
@@ -107,12 +159,35 @@ export class ContactsService {
     const workspaceId = await this.getWorkspaceId(companyId)
     const updated = await this.repo.updateVendor(workspaceId, id, data)
     if (!updated) throw new NotFoundException('Vendor not found')
+    await this.prisma.auditLog.create({
+      data: {
+        workspaceId,
+        companyId,
+        userId,
+        action: 'UPDATE',
+        tableName: 'Vendor',
+        recordId: id,
+        changes: data,
+      },
+    }).catch(() => {})
     return updated
   }
 
   async softDeleteVendor(userId: string, companyId: string, id: string) {
     await this.assertCompanyAccess(userId, companyId)
     const workspaceId = await this.getWorkspaceId(companyId)
-    return this.repo.softDeleteVendor(workspaceId, id, userId)
+    const result = await this.repo.softDeleteVendor(workspaceId, id, userId)
+    await this.prisma.auditLog.create({
+      data: {
+        workspaceId,
+        companyId,
+        userId,
+        action: 'DELETE',
+        tableName: 'Vendor',
+        recordId: id,
+        changes: { status: 'INACTIVE' },
+      },
+    }).catch(() => {})
+    return result
   }
 }

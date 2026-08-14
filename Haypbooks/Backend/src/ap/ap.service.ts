@@ -464,6 +464,17 @@ export class ApService {
             discountType: data.discountType ?? undefined,
         }, userId)
         if (!result) throw new BadRequestException('Bill not found or not editable (only DRAFT bills can be updated)')
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId: await this.getWorkspaceId(companyId),
+                companyId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'Bill',
+                recordId: billId,
+                changes: data,
+            },
+        }).catch(() => {})
         return result
     }
 

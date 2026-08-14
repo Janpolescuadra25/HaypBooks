@@ -208,85 +208,114 @@ export class BankingService {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
 
+        const existingTxn = await this.prisma.bankTransaction.findUnique({ where: { id: bankTransactionId } })
+        if (!existingTxn) throw new NotFoundException('Bank transaction not found')
+
         // ── GL Integration: create a Journal Entry when categorizing ─────────
         let journalEntryId: string | undefined
         const isCategorizing = (data.status === 'categorized' || data.status === 'CATEGORIZED') && data.accountId
         if (isCategorizing) {
             try {
-                const txn = await this.prisma.bankTransaction.findUnique({
-                    where: { id: bankTransactionId },
-                    select: { date: true, description: true, amount: true, bankAccountId: true },
+                const txn = existingTxn
+                const bankAcct = await this.prisma.bankAccount.findUnique({
+                    where: { id: txn.bankAccountId },
+                    select: { glAccountId: true, name: true },
                 })
-                if (txn) {
-                    // Find the GL account linked to the bank account (glAccountId)
-                    const bankAcct = await this.prisma.bankAccount.findUnique({
-                        where: { id: txn.bankAccountId },
-                        select: { glAccountId: true, name: true },
+
+                let bankGlAccountId = bankAcct?.glAccountId
+                if (!bankGlAccountId) {
+                    const cashAcct = await this.prisma.account.findFirst({
+                        where: {
+                            companyId,
+                            isActive: true,
+                            deletedAt: null,
+                            isHeader: false,
+                            type: { category: { in: ['ASSET'] } },
+                            name: { contains: 'Cash', mode: 'insensitive' },
+                        },
+                        select: { id: true },
                     })
+                    bankGlAccountId = cashAcct?.id
+                }
 
-                    // Find the COA account for the bank account — fallback to first asset account if no glAccountId set
-                    let bankGlAccountId = bankAcct?.glAccountId
-                    if (!bankGlAccountId) {
-                        const cashAcct = await this.prisma.account.findFirst({
-                            where: {
-                                companyId,
-                                isActive: true,
-                                deletedAt: null,
-                                isHeader: false,
-                                type: { category: { in: ['ASSET'] } },
-                                name: { contains: 'Cash', mode: 'insensitive' },
-                            },
-                            select: { id: true },
-                        })
-                        bankGlAccountId = cashAcct?.id
-                    }
+                if (bankGlAccountId) {
+                    const amount = Math.abs(Number(txn.amount))
+                    const isMoney_IN = Number(txn.amount) > 0
+                    const lines = isMoney_IN
+                        ? [
+                            { accountId: bankGlAccountId, debit: amount, credit: 0, description: txn.description },
+                            { accountId: data.accountId,  debit: 0, credit: amount, description: data.category ?? txn.description },
+                          ]
+                        : [
+                            { accountId: data.accountId,  debit: amount, credit: 0, description: data.category ?? txn.description },
+                            { accountId: bankGlAccountId, debit: 0, credit: amount, description: txn.description },
+                          ]
 
-                    if (bankGlAccountId) {
-                        const amount = Math.abs(Number(txn.amount))
-                        const isMoney_IN = Number(txn.amount) > 0
-                        // Money IN (credit): DR Bank Account, CR selected Category Account
-                        // Money OUT (debit): DR selected Category Account, CR Bank Account
-                        const lines = isMoney_IN
-                            ? [
-                                { accountId: bankGlAccountId, debit: amount, credit: 0, description: txn.description },
-                                { accountId: data.accountId,  debit: 0, credit: amount, description: data.category ?? txn.description },
-                              ]
-                            : [
-                                { accountId: data.accountId,  debit: amount, credit: 0, description: data.category ?? txn.description },
-                                { accountId: bankGlAccountId, debit: 0, credit: amount, description: txn.description },
-                              ]
-
-                        const je = await this.prisma.journalEntry.create({
-                            data: {
-                                workspaceId: wid,
-                                companyId,
-                                date: txn.date,
-                                description: `Bank Transaction — ${txn.description}`,
-                                currency: await this.resolveCurrency(companyId),
-                                postingStatus: 'DRAFT',
-                                createdById: userId,
-                                transactionSource: 'Bank Transaction',
-                                sourceReferenceId: bankTransactionId,
-                                lines: { create: lines.map(l => ({ companyId, workspaceId: wid, accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description })) },
-                            },
-                            select: { id: true },
-                        })
-                        journalEntryId = je.id
-                    }
+                    const je = await this.prisma.journalEntry.create({
+                        data: {
+                            workspaceId: wid,
+                            companyId,
+                            date: txn.date,
+                            description: `Bank Transaction — ${txn.description}`,
+                            currency: await this.resolveCurrency(companyId),
+                            postingStatus: 'DRAFT',
+                            createdById: userId,
+                            transactionSource: 'Bank Transaction',
+                            sourceReferenceId: bankTransactionId,
+                            lines: { create: lines.map(l => ({ companyId, workspaceId: wid, accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description })) },
+                        },
+                        select: { id: true },
+                    })
+                    journalEntryId = je.id
                 }
             } catch {
                 // Journal entry creation is best-effort — do not block categorization
             }
         }
 
-        return this.repo.updateTransaction(wid, bankTransactionId, {
+        const newJournalEntryId = journalEntryId ?? data.journalEntryId
+        const updated = await this.repo.updateTransaction(wid, bankTransactionId, {
             category: data.category,
             memo: data.memo,
             status: data.status,
             contactId: data.contactId,
             transactionType: data.transactionType ?? (isCategorizing ? 'Bank Transaction' : undefined),
-            journalEntryId: journalEntryId ?? data.journalEntryId,
+            journalEntryId: newJournalEntryId,
         })
+
+        const auditLines: any[] = []
+        const trackFields = ['category', 'memo', 'status', 'contactId', 'transactionType', 'journalEntryId']
+        for (const field of trackFields) {
+            const oldVal = (existingTxn as any)[field]
+            const newVal = (field === 'journalEntryId' ? newJournalEntryId : (data as any)[field])
+            if (newVal !== undefined && String(oldVal ?? '') !== String(newVal ?? '')) {
+                auditLines.push({ fieldName: field, oldValue: oldVal != null ? String(oldVal) : null, newValue: newVal != null ? String(newVal) : null, changeType: 'UPDATE' })
+            }
+        }
+
+        if (auditLines.length > 0) {
+            await this.prisma.auditLog.create({
+                data: {
+                    workspaceId: wid,
+                    companyId,
+                    userId,
+                    action: 'UPDATE',
+                    tableName: 'BankTransaction',
+                    recordId: bankTransactionId,
+                    changes: {
+                        category: data.category,
+                        memo: data.memo,
+                        status: data.status,
+                        contactId: data.contactId,
+                        transactionType: data.transactionType,
+                        journalEntryId: newJournalEntryId,
+                    },
+                    lines: { create: auditLines },
+                },
+            }).catch(() => {})
+        }
+
+        return updated
     }
 
     async splitTransaction(userId: string, companyId: string, bankAccountId: string, bankTransactionId: string, splits: any[]) {
@@ -476,6 +505,23 @@ export class BankingService {
             date: new Date(data.date),
             memo: data.memo,
         })
+
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'CREATE',
+                tableName: 'BankTransfer',
+                recordId: transfer.id,
+                changes: {
+                    fromBankAccountId: data.fromBankAccountId,
+                    toBankAccountId: data.toBankAccountId,
+                    amount: Number(data.amount),
+                    memo: data.memo ?? null,
+                },
+            },
+        }).catch(() => {})
 
         const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
         const jeId = await this.subLedger.postBankTransferToGL({
