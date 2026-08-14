@@ -123,11 +123,14 @@ interface BookCardProps {
   onExpand: () => void
   onItemClick: (idx: number) => void
   onCtaClick: () => void
+  logoSrc?: string
+  logoAlt?: string
 }
 
 function BookCard({
   title, subtitle, items, emptyText, buttonText, ctaTestId,
   color, accentColor, delay, isExpanded, onExpand, onItemClick, onCtaClick,
+  logoSrc, logoAlt,
 }: BookCardProps) {
   const [searchQuery, setSearchQuery] = React.useState('')
 
@@ -185,74 +188,72 @@ function BookCard({
               transition={{ duration: 0.2 }}
               className="flex flex-col h-full"
             >
-              <h2 className="text-2xl font-bold text-white tracking-tight leading-tight mb-1">{title}</h2>
-              <p className="text-white/70 font-medium text-sm mb-4">{subtitle}</p>
+              <div className="flex items-center gap-3 mb-4">
+                {logoSrc ? (
+                  <img src={logoSrc} alt={logoAlt || title} className="h-10 w-10 rounded-2xl bg-white/10 object-contain" />
+                ) : null}
+                <div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight leading-tight">{title}</h2>
+                  <p className="text-white/70 font-medium text-sm">{subtitle}</p>
+                </div>
+              </div>
 
               <div className="flex-grow flex flex-col min-h-0">
-                {items.length > 0 ? (
-                  <div className="bg-[#fdfbf7] rounded-xl p-3 border border-black/5 flex flex-col min-h-0">
-                    {/* Search */}
-                    <div className="relative mb-3">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
-                      <input
-                        type="text"
-                        placeholder="Search entries..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        onClick={e => e.stopPropagation()}
-                        className="w-full bg-white border border-slate-200 rounded-lg py-1.5 pl-8 pr-3 text-[11px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00a372]/20 focus:border-[#00a372] transition-all"
-                      />
-                    </div>
-
-                    {/* Scrollable table */}
-                    <div className="overflow-y-auto pr-1 max-h-[260px]" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(0,0,0,0.1) transparent' }}>
-                      {filteredItems.length > 0 ? (
-                        <table className="w-full text-xs text-slate-800">
-                          <thead>
-                            <tr className="border-b border-slate-200">
-                              <th className="py-2 text-left">Name</th>
-                              <th className="py-2 text-left">Meta</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredItems.map(item => (
-                              <tr
-                                key={item.id}
-                                onClick={e => { e.stopPropagation(); onItemClick(items.findIndex(i => i.id === item.id)) }}
-                                className="cursor-pointer hover:bg-emerald-50"
-                              >
-                                <td className="py-2 px-2">
-                                  <span className="font-bold group-hover/item:text-[#00a372] transition-colors">{item.name}</span>
-                                </td>
-                                <td className="py-2 px-2">
-                                  {item.meta || '-'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <div className="py-6 text-center text-slate-400 text-[10px] italic">No matching entries found</div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-black/10 backdrop-blur-md rounded-xl p-4 text-white/90 font-medium border border-white/10 shadow-inner text-sm">
-                    {emptyText}
-                  </div>
-                )}
-
-                <div className="mt-4">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    data-testid={ctaTestId}
-                    onClick={e => { e.stopPropagation(); onCtaClick() }}
-                    className={`w-full ${accentColor} hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg border border-white/10`}
-                  >
-                    <Plus size={18} strokeWidth={3} />
-                    <span className="uppercase tracking-widest text-[10px]">{buttonText}</span>
-                  </motion.button>
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                  <input
+                    type="text"
+                    placeholder="Search entries..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    className="w-full bg-white border border-slate-200 rounded-lg py-1.5 pl-8 pr-3 text-[11px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00a372]/20 focus:border-[#00a372] transition-all"
+                  />
                 </div>
+
+                {/* Scrollable table */}
+                <div className="overflow-y-auto pr-1 max-h-[260px]" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(0,0,0,0.1) transparent' }}>
+                  {filteredItems.length > 0 ? (
+                    <table className="w-full text-xs text-slate-800">
+                      <thead>
+                        <tr className="border-b border-slate-200">
+                          <th className="py-2 text-left">Name</th>
+                          <th className="py-2 text-left">Meta</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredItems.map(item => (
+                          <tr
+                            key={item.id}
+                            onClick={e => { e.stopPropagation(); onItemClick(items.findIndex(i => i.id === item.id)) }}
+                            className="cursor-pointer hover:bg-emerald-50"
+                          >
+                            <td className="py-2 px-2">
+                              <span className="font-bold group-hover/item:text-[#00a372] transition-colors">{item.name}</span>
+                            </td>
+                            <td className="py-2 px-2">
+                              {item.meta || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="py-6 text-center text-slate-400 text-[10px] italic">No matching entries found</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  data-testid={ctaTestId}
+                  onClick={e => { e.stopPropagation(); onCtaClick() }}
+                  className={`w-full ${accentColor} hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg border border-white/10`}
+                >
+                  <Plus size={18} strokeWidth={3} />
+                  <span className="uppercase tracking-widest text-[10px]">{buttonText}</span>
+                </motion.button>
               </div>
             </motion.div>
           ) : (
@@ -309,7 +310,7 @@ export default function WorkspacePage() {
   const [practices, setPractices] = useState<Practice[]>([])
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [showCompanyModal, setShowCompanyModal] = useState(false)
-  const [expandedBook, setExpandedBook] = useState<'companies' | 'practice'>('companies')
+  const [expandedBook, setExpandedBook] = useState<'companies' | 'practice' | 'owner'>('companies')
 
   const reloadProfile = useCallback(async () => {
     try {
@@ -350,6 +351,8 @@ export default function WorkspacePage() {
     }
   }
 
+  const gridColsClass = profile?.isOwner ? 'md:grid-cols-3' : 'md:grid-cols-2'
+
   return (
     <div
       className="relative min-h-screen font-sans text-slate-200 flex flex-col items-center pt-8 px-6 pb-12 overflow-x-hidden"
@@ -375,7 +378,7 @@ export default function WorkspacePage() {
       </motion.div>
 
       {/* Book cards */}
-      <div className="relative z-10 flex flex-col md:flex-row gap-6 w-full max-w-6xl items-stretch justify-center min-h-[580px]">
+      <div className={`relative z-10 grid grid-cols-1 gap-6 w-full max-w-6xl ${gridColsClass} items-stretch justify-center min-h-[580px]`}>
         <BookCard
           title="My Companies"
           subtitle="The ledger of your own enterprises"
@@ -391,6 +394,26 @@ export default function WorkspacePage() {
           onItemClick={openCompany}
           onCtaClick={() => { router.push('/onboarding/business') }}
         />
+
+        {profile?.isOwner && (
+          <BookCard
+            title="Owner Dashboard"
+            subtitle="HB_Owner master control panel"
+            items={[{ id: 'owner-dashboard', name: 'Platform metrics & controls' }]}
+            emptyText="Master controls for platform owner"
+            buttonText="Open Owner Dashboard"
+            ctaTestId="open-owner-dashboard"
+            color="bg-[#0f766e]"
+            accentColor="bg-[#0f5f54]"
+            delay={0.15}
+            isExpanded={expandedBook === 'owner'}
+            onExpand={() => setExpandedBook('owner')}
+            onItemClick={() => router.push('/owner/monitoring')}
+            onCtaClick={() => router.push('/owner/monitoring')}
+            logoSrc="/HB_Logo.png"
+            logoAlt="Haypbooks Owner"
+          />
+        )}
 
         <BookCard
           title="My Practice"
