@@ -4,7 +4,9 @@ import StoryHero from '@/components/landing/StoryHero'
 import JourneySteps from '@/components/landing/JourneySteps'
 import Industries from '@/components/landing/Industries'
 import Features from '@/components/landing/Features'
+import PricingPreview from '@/components/landing/PricingPreview'
 import HowItWorks from '@/components/landing/HowItWorks'
+import AboutHaypBooks from '@/components/landing/AboutHaypBooks'
 import Testimonials from '@/components/landing/Testimonials'
 import Footer from '@/components/landing/Footer'
 import LandingTweakControls from '@/components/landing/LandingTweakControls'
@@ -18,7 +20,9 @@ export default function LandingPage() {
         <JourneySteps />
         <Industries />
         <Features />
+        <PricingPreview />
         <HowItWorks />
+        <AboutHaypBooks />
         <Testimonials />
 
         {/* Final CTA */}
@@ -34,7 +38,7 @@ export default function LandingPage() {
                   Ready to run your<br />business better?
                 </h2>
                 <p className="text-emerald-100/80 text-lg mb-10 max-w-lg mx-auto">
-                  Join hundreds of Philippine business owners who already save hours every week with HaypBooks.
+                  Join thousands of business owners worldwide who already save hours every week with HaypBooks.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Link

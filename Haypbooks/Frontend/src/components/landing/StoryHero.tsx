@@ -84,10 +84,9 @@ export default function StoryHero() {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
               className="text-lg md:text-xl text-slate-500 leading-relaxed mb-10 max-w-lg"
             >
-              Invoicing, expenses, inventory, payroll, and real-time insights — all in one beautifully simple platform built for Philippine businesses.
+              Invoicing, expenses, inventory, payroll, and real-time insights — all in one beautifully simple platform built for growing businesses everywhere.
             </motion.p>
 
-            {/* CTA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4 mb-12"
@@ -123,7 +122,7 @@ export default function StoryHero() {
                 <div className="flex gap-0.5 mb-0.5">
                   {[1,2,3,4,5].map(i => <span key={i} className="text-amber-400 text-sm">★</span>)}
                 </div>
-                <p className="text-slate-500 text-xs font-medium">Loved by 500+ Philippine businesses</p>
+                <p className="text-slate-500 text-xs font-medium">Loved by 500+ businesses worldwide</p>
               </div>
             </motion.div>
           </div>
@@ -150,9 +149,9 @@ export default function StoryHero() {
                 {/* Summary row */}
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Revenue', val: '₱184,200', color: 'text-emerald-600' },
-                    { label: 'Expenses', val: '₱54,800', color: 'text-rose-500' },
-                    { label: 'Net Profit', val: '₱129,400', color: 'text-blue-600' },
+                    { label: 'Revenue', val: '$184,200', color: 'text-emerald-600' },
+                    { label: 'Expenses', val: '$54,800', color: 'text-rose-500' },
+                    { label: 'Net Profit', val: '$129,400', color: 'text-blue-600' },
                   ].map(m => (
                     <div key={m.label} className="bg-slate-50 rounded-2xl p-3 text-center">
                       <p className={`text-base font-bold ${m.color}`}>{m.val}</p>
@@ -184,8 +183,8 @@ export default function StoryHero() {
                 {/* Recent invoices */}
                 <div className="space-y-2">
                   {[
-                    { name: 'Dela Cruz Corp', amount: '₱12,450', status: 'Paid', ok: true },
-                    { name: 'Santos Trading', amount: '₱8,200', status: 'Pending', ok: false },
+                    { name: 'Dela Cruz Corp', amount: '$12,450', status: 'Paid', ok: true },
+                    { name: 'Santos Trading', amount: '$8,200', status: 'Pending', ok: false },
                   ].map(inv => (
                     <div key={inv.name} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                       <div className="flex items-center gap-2">
@@ -220,7 +219,7 @@ export default function StoryHero() {
               </div>
               <div>
                 <p className="text-xs text-slate-400 font-medium">Payment Received</p>
-                <p className="text-slate-900 font-bold text-sm">+₱12,450.00</p>
+                <p className="text-slate-900 font-bold text-sm">+$12,450.00</p>
               </div>
             </motion.div>
 
@@ -231,7 +230,7 @@ export default function StoryHero() {
               transition={{ duration: 3, delay: 1, repeat: Infinity, ease: 'easeInOut' }}
             >
               <CheckCircle className="w-4 h-4" />
-              <span className="text-xs font-bold whitespace-nowrap">BIR Compliant</span>
+              <span className="text-xs font-bold whitespace-nowrap">Tax Ready</span>
             </motion.div>
           </motion.div>
 

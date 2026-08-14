@@ -10,7 +10,7 @@ export default function Testimonials() {
       quote: "HaypBooks transformed our accounting from a monthly nightmare into a daily breeze. The time we save pays for itself ten times over.",
       author: "Sarah Chen",
       role: "CEO",
-      company: "TechStart Philippines",
+      company: "TechStart Global",
       avatar: "👩‍💼",
       stat: "80% time saved",
       color: "from-emerald-500 to-teal-500"
@@ -19,7 +19,7 @@ export default function Testimonials() {
       quote: "We switched from spreadsheets to HaypBooks and never looked back. Real-time insights helped us grow 300% last year.",
       author: "Miguel Santos",
       role: "Finance Director",
-      company: "GrowthCo Manila",
+      company: "GrowthCo",
       avatar: "👨‍💼",
       stat: "300% growth",
       color: "from-teal-500 to-cyan-500"

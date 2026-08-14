@@ -31,7 +31,7 @@ export default function Footer() {
               <span className="text-white font-bold text-lg tracking-tight">HaypBooks</span>
             </div>
             <p className="text-sm text-white/50 leading-relaxed mb-6">
-              The all-in-one business platform built for Philippine SMEs. Simplify, automate, and grow.
+              The all-in-one business platform for modern businesses. Simplify, automate, and grow.
             </p>
             <div className="flex gap-3">
               {['fb', 'tw', 'li'].map(s => (

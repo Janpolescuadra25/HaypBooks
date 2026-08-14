@@ -5,7 +5,7 @@ export default function Hero() {
     <section className="min-h-screen flex items-center justify-center px-4 py-20">
       <div className="max-w-6xl mx-auto text-center">
         <div className="inline-block mb-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-          Market-leading features for Philippine businesses
+          Market-leading features for growing businesses
         </div>
         
         <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
@@ -13,7 +13,7 @@ export default function Hero() {
         </h1>
         
         <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-          Professional accounting software with BIR compliance built-in. 
+          Professional accounting software with compliance built-in.
           Track invoices, bills, inventory, and taxes with enterprise-grade features at a fraction of the cost.
         </p>
         

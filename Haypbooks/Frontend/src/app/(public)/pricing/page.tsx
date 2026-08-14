@@ -1,69 +1,13 @@
 import Link from 'next/link'
 import LandingHeader from '@/components/landing/LandingHeader'
+import { MARKETING_PRICING_PLANS, PRICING_PAGE_SUBTITLE, PRICING_PAGE_FAQS } from '@/lib/pricing'
 
 export const metadata = {
   title: 'Pricing — HaypBooks',
-  description: 'Simple, transparent pricing for Philippine businesses of every size.',
+  description: 'Simple, transparent pricing for growing businesses of every size.',
 }
 
-const PLANS = [
-  {
-    name: 'Starter',
-    price: 'Free',
-    period: '',
-    description: 'For solo entrepreneurs just getting started.',
-    cta: 'Start Free',
-    highlight: false,
-    features: [
-      '1 company',
-      'Up to 50 transactions / month',
-      'Invoicing & billing',
-      'Basic financial reports',
-      'Bank account tracking',
-      'Email support',
-    ],
-  },
-  {
-    name: 'Business',
-    price: '₱1,499',
-    period: '/mo',
-    description: 'For growing businesses that need full bookkeeping.',
-    cta: 'Start 14-Day Trial',
-    highlight: true,
-    features: [
-      'Unlimited companies',
-      'Unlimited transactions',
-      'Full double-entry accounting',
-      'AR & AP management',
-      'Bank reconciliation',
-      'Payroll basics',
-      'Inventory tracking',
-      'Custom reports & dashboards',
-      'Multi-user access (up to 5)',
-      'Priority email & chat support',
-    ],
-  },
-  {
-    name: 'Professional',
-    price: '₱3,499',
-    period: '/mo',
-    description: 'For accountants and firms managing multiple clients.',
-    cta: 'Contact Sales',
-    highlight: false,
-    features: [
-      'Everything in Business',
-      'Practice Hub for accountants',
-      'Unlimited users & roles',
-      'Client management & onboarding',
-      'Advanced RBAC & audit trail',
-      'API access & integrations',
-      'BIR-ready tax reports',
-      'Dedicated account manager',
-      'Phone & video support',
-      'Custom training sessions',
-    ],
-  },
-]
+const PLANS = MARKETING_PRICING_PLANS
 
 export default function PricingPage() {
   return (
@@ -76,7 +20,7 @@ export default function PricingPage() {
             Simple pricing,<br />no surprises
           </h1>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-            Start free. Upgrade when you need more. All plans include automatic updates and Philippine tax compliance tools.
+            {PRICING_PAGE_SUBTITLE}
           </p>
         </section>
 
@@ -131,13 +75,7 @@ export default function PricingPage() {
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold text-slate-900 text-center mb-10">Frequently asked questions</h2>
             <div className="space-y-6">
-              {[
-                { q: 'Can I switch plans later?', a: 'Yes — upgrade or downgrade anytime from your account settings. Changes take effect on your next billing cycle.' },
-                { q: 'Is my data secure?', a: 'All data is encrypted at rest and in transit. We use bank-grade security with row-level access control and full audit logging.' },
-                { q: 'Do you support BIR compliance?', a: 'Yes. HaypBooks generates BIR-ready forms including 2307, 2550M/Q, 1601-C, and more for Philippine businesses.' },
-                { q: 'Can my accountant access my books?', a: 'Absolutely. Invite your accountant with their own login. They get Practice Hub access to manage your books alongside their other clients.' },
-                { q: 'What payment methods do you accept?', a: 'We accept major credit/debit cards, GCash, Maya, and bank transfers for Philippine customers.' },
-              ].map(({ q, a }) => (
+              {PRICING_PAGE_FAQS.map(({ q, a }) => (
                 <div key={q} className="bg-white rounded-2xl p-6 border border-slate-200">
                   <h3 className="font-bold text-slate-800">{q}</h3>
                   <p className="mt-2 text-sm text-slate-500 leading-relaxed">{a}</p>

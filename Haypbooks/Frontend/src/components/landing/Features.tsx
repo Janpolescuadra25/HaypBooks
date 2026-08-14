@@ -12,7 +12,7 @@ const FEATURES = [
   { Icon: Users,      title: 'Team & Payroll',        desc: 'Manage staff schedules, time tracking, and payroll with ease.' },
   { Icon: BarChart3,  title: 'Real-time Reports',     desc: 'Instant profit & loss, balance sheet, and cash-flow insights.' },
   { Icon: CreditCard, title: 'Expense Tracking',      desc: 'Capture receipts on mobile, categorize, and reconcile automatically.' },
-  { Icon: Receipt,    title: 'BIR & Compliance',      desc: 'Stay compliant with Philippine tax regulations effortlessly.' },
+  { Icon: Receipt,    title: 'Tax & Compliance',      desc: 'Stay compliant with local tax regulations effortlessly, wherever your business operates.' },
   { Icon: Zap,        title: 'AI Automation',         desc: 'Let AI handle repetitive bookkeeping so you can focus on growth.' },
 ]
 
