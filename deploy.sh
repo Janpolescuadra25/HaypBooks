@@ -1,6 +1,7 @@
 #!/bin/bash
 # NOTE: Update the PROJECT_DIR path below to match the actual location on the VPS.
-# This script is designed for the actual path /root/HaypBooks/Haypbooks.
+# This script is designed for the actual path /root/HaypBooks, with the app code
+# inside the nested Haypbooks directory.
 # Make sure this script is executable (`chmod +x deploy.sh`) if you want to run it directly.
 
 set -e
@@ -9,7 +10,7 @@ echo "=== HaypBooks Auto-Deploy ==="
 echo "Started at: $(date)"
 
 # Navigate to project directory
-cd /root/HaypBooks
+cd /root/HaypBooks/Haypbooks
 
 # Pull latest code
 echo "Pulling latest code..."
