@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronDown, Menu, X, UserCheck, LifeBuoy } from 'lucide-react'
@@ -45,9 +46,13 @@ export default function LandingHeader() {
 
         {/* Logo */}
         <Link href="/landing" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20 group-hover:scale-110 transition-transform">
-            <span className="text-white font-bold text-sm">HB</span>
-          </div>
+          <Image
+            src="/HB_Logo.png"
+            alt="HaypBooks"
+            width={40}
+            height={40}
+            className="rounded-xl shadow-lg shadow-emerald-600/20 group-hover:scale-110 transition-transform"
+          />
           <span className="text-lg font-bold tracking-tight text-emerald-950">
             HaypBooks
           </span>

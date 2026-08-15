@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -154,26 +155,20 @@ export default function CinematicIntro() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="flex px-8">
-                  {'HaypBooks'.split('').map((char, i) => (
-                    <motion.span
-                      key={i}
-                      initial={{ y: 200, opacity: 0, rotate: 45 }}
-                      animate={{ y: 0, opacity: 1, rotate: 0 }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 100,
-                        damping: 12,
-                        delay: i * 0.1,
-                        duration: 0.8,
-                      }}
-                      className="inline-block text-7xl font-black tracking-tighter text-white md:text-9xl lg:text-[12rem]"
-                      style={{ textShadow: '0 0 40px rgba(16,185,129,0.4)' }}
-                    >
-                      {char}
-                    </motion.span>
-                  ))}
-                </div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  className="flex items-center justify-center"
+                >
+                  <Image
+                    src="/HB_Logo.png"
+                    alt="HaypBooks"
+                    width={240}
+                    height={240}
+                    className="max-w-full h-auto"
+                  />
+                </motion.div>
               </motion.div>
             ) : (
               <>

@@ -18,6 +18,10 @@ const inter = Inter({
 export const metadata = {
   title: "HaypBooks",
   description: "Accounting, reimagined.",
+  metadataBase: new URL('https://haypbooks.com'),
+  icons: {
+    icon: '/HB_Logo.png',
+  },
 }
 
 // NOTE: RootLayout is a Server Component; client interactivity handled in ClientRoot.
