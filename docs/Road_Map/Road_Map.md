@@ -66,7 +66,7 @@ These features are code-complete in the repository. They require production vali
 > Two parallel active tracks are in progress: Practice Hub MVP and Owner Dashboard implementation.
 
 ### Plan F: Owner Dashboard — Platform Monitoring & Usage Limits
-**Status**: 🔄 Active Implementation — 8 of 13 todos complete (backend storage layer done, frontend + user management remaining)
+**Status**: 🔄 Active Implementation — 12 of 13 todos complete (only platform-wide metrics remaining)
 
 Build the HB_Owner-only dashboard — the master control panel for the HaypBooks platform owner (JP). Only the platform owner can see and access this dashboard. Regular subscribers cannot see it.
 
@@ -80,10 +80,10 @@ Build the HB_Owner-only dashboard — the master control panel for the HaypBooks
 | 4 | GET /api/owner/storage/usage/:companyId (per-company detail) | ✅ Complete |
 | 5 | R2Service.getFolderSize() (R2 folder size helper) | ✅ Complete |
 | 6 | PUT /api/owner/storage/limits/:companyId (override endpoint) | ✅ Complete |
-| 7 | Owner Dashboard storage overview UI | ⬜ Pending |
-| 8 | Per-company custom limit controls UI | ⬜ Pending |
-| 9 | User management list (pagination, search, filters) | ⬜ Pending |
-| 10 | Suspend/reactivate user controls + backend endpoint | ⬜ Pending |
+| 7 | Owner Dashboard storage overview UI | ✅ Complete |
+| 8 | Per-company custom limit controls UI | ✅ Complete |
+| 9 | User management list (pagination, search, filters) | ✅ Complete |
+| 10 | Suspend/reactivate user controls + backend endpoint | ✅ Complete |
 | 11 | Audit logging for storage overrides | ✅ Complete (integrated into todo 6) |
 | 12 | Platform-wide metrics and plan distribution | ⬜ Pending |
 
@@ -124,8 +124,8 @@ Build the HB_Owner-only dashboard — the master control panel for the HaypBooks
 - `GET /api/owner/storage/usage` — aggregate platform-wide storage metrics ✅
 - `GET /api/owner/storage/usage/:companyId` — per-company storage breakdown ✅
 - `PUT /api/owner/storage/limits/:companyId` — set/override storage limits per company ✅
-- `GET /api/owner/users` — list all users with pagination, search, and filters ⬜
-- `PATCH /api/owner/users/:userId/status` — suspend/reactivate user (with audit log) ⬜
+- `GET /api/owner/users` — list all users with pagination, search, and filters ✅
+- `PATCH /api/owner/users/:userId/status` — suspend/reactivate user (with audit log) ✅
 
 ### Priority 2: Practice Hub MVP
 **Status:** Route structure exists, needs full implementation
