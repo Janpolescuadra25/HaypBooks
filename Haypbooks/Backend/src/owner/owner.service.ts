@@ -157,9 +157,9 @@ export class OwnerService {
     return storageLimit
   }
 
-  async getUsers(query: string, page: number, limit: number) {
-    const p = Math.max(1, parseInt(String(page)) || 1)
-    const l = Math.max(1, Math.min(50, parseInt(String(limit)) || 20))
+  async getUsers(query?: string, page?: string, limit?: string) {
+    const p = Math.max(1, parseInt(page || '1') || 1)
+    const l = Math.max(1, Math.min(50, parseInt(limit || '20') || 20))
     const skip = (p - 1) * l
 
     const where = query
@@ -185,9 +185,8 @@ export class OwnerService {
             select: {
               workspaceId: true,
               role: true,
-              companyUsers: {
+              workspace: {
                 select: {
-                  companyId: true,
                   company: {
                     select: { id: true, name: true },
                   },
@@ -211,13 +210,11 @@ export class OwnerService {
         suspended: u.suspended,
         createdAt: u.createdAt,
         lastLogin: u.lastLogin,
-        companies: u.workspaceUsers.flatMap((wu) =>
-          wu.companyUsers.map((cu) => ({
-            companyId: cu.companyId,
-            companyName: cu.company.name,
-            role: wu.role,
-          })),
-        ),
+        companies: u.workspaceUsers.map((wu) => ({
+          companyId: wu.workspace.company.id,
+          companyName: wu.workspace.company.name,
+          role: wu.role,
+        })),
       })),
       pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
     }
