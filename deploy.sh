@@ -29,6 +29,7 @@ cd ..
 echo "Installing backend dependencies..."
 cd Backend
 npm install
+npx prisma generate
 
 echo "Building backend..."
 npm run build

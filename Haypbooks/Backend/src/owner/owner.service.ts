@@ -192,7 +192,7 @@ export class OwnerService {
               Role: {
                 select: { name: true },
               },
-              workspace: {
+              companyUsers: {
                 select: {
                   company: {
                     select: { id: true, name: true },
@@ -217,11 +217,13 @@ export class OwnerService {
         suspended: u.suspended,
         createdAt: u.createdAt,
         lastLogin: u.sessions?.[0]?.lastUsedAt ?? null,
-        companies: u.workspaceUsers.map((wu) => ({
-          companyId: wu.workspace.company.id,
-          companyName: wu.workspace.company.name,
-          role: wu.Role?.name ?? null,
-        })),
+        companies: u.workspaceUsers.flatMap((wu) =>
+          wu.companyUsers.map((cu) => ({
+            companyId: cu.company.id,
+            companyName: cu.company.name,
+            role: wu.Role?.name ?? null,
+          })),
+        ),
       })),
       pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
     }
