@@ -9,7 +9,7 @@ echo "=== HaypBooks Auto-Deploy ==="
 echo "Started at: $(date)"
 
 # Navigate to project directory
-cd /root/HaypBooks/Haypbooks
+cd /root/HaypBooks
 
 # Pull latest code
 echo "Pulling latest code..."
