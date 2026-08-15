@@ -127,14 +127,19 @@ Build the HB_Owner-only dashboard — the master control panel for the HaypBooks
 - `GET /api/owner/users` — list all users with pagination, search, and filters ✅
 - `PATCH /api/owner/users/:userId/status` — suspend/reactivate user (with audit log) ✅
 
-### Priority 2: Practice Hub MVP
-**Status:** Route structure exists, needs full implementation
+### Practice Hub MVP
+**Status**: 🔄 Active Implementation — 1 of 5 todos complete
 
-- [ ] Build client management dashboard for accountants
-- [ ] Implement multi-client bookkeeping workspace switching
-- [ ] Add client onboarding workflow (collect financial data, import existing records)
-- [ ] Add bulk operation tools for accounting firms (bulk invoice generation, bulk journal entries)
-- [ ] Create client-specific financial overview (combined P&L across entities)
+Build the client management platform for accounting firms — enabling multi-client bookkeeping from a single dashboard.
+
+#### Progress Tracker
+| # | Todo | Status |
+|---|------|--------|
+| 1 | Practice Hub infrastructure (sidebar, layout, nav config, page template, route group) | ✅ Complete |
+| 2 | Practice dashboard page (stat cards, activity feed, deadlines, client preview) | ✅ Complete |
+| 3 | Client list page with search and pagination | ⬜ Pending |
+| 4 | Multi-client workspace switching | ⬜ Pending |
+| 5 | Client onboarding workflow | ⬜ Pending |
 
 **Expected output:** Accounting firms can manage multiple client books from a single dashboard with quick-switch between entities.
 
