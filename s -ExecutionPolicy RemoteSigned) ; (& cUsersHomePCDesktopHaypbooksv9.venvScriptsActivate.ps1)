@@ -1,0 +1,3 @@
+[33m8ead84b1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m chore: add deploy output artifact
+[33m2c1a7c98[m chore: replace open-source references with neutral proprietary wording
+[33m230ab6f4[m fix: revert owner.service.ts to correct companyUsers relation path, add prisma generate to deploy

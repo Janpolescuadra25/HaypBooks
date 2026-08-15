@@ -4,45 +4,42 @@
 
 ---
 
-## Production-Validated Features (Implemented)
-
-✅ Core Accounting Module (4 todos) · ✅ Financial Statements (4 todos) · ✅ Bank Reconciliation (3 todos) · ✅ Audit Logging (10 todos) · ✅ File Storage (7 todos) · ✅ Landing Page & Pricing (5 todos) · ✅ Authentication & Onboarding (4 todos) · ✅ Plan F: Owner Dashboard — Platform Monitoring & Usage Limits (13 todos) · ✅ Practice Hub MVP — Client management platform for accounting firms (5 todos)
-
----
-
-## Next Sprint
-
-✅ Production Infrastructure & DevOps — auto-deploy, path fixes, swap, Nginx headers (all completed August 2026)
-
----
-
 ## Future Plans
 
 ### Plan A: Self-Hosted PostgreSQL Migration
-- Migrate from Supabase hosted PostgreSQL to self-hosted PostgreSQL on the VPS or a separate DB server
-- Eliminates Supabase dependency, reduces costs, gives full control over backups and scaling
+- Goal: Migrate from Supabase hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
+- Expected output: production-grade Postgres deployment, reliable backups, and a secure connection configuration for HaypBooks.
+- Eliminates Supabase dependency, reduces costs, and gives full control over backups and scaling.
 - **Blocked by:** E2E testing completion
 
 ### Plan B: Multi-Currency Support (ACTIVE)
-- Add currency fields to company settings, invoices, bills
-- Implement exchange rate management (manual and auto-fetch)
-- Convert financial statements to support multi-currency display
+- Goal: Support multiple currencies across companies, transactions, and financial reporting.
+- Expected output: currency-aware transaction entries, exchange rate management, and multi-currency financial statements.
+- Add currency fields to company settings, invoices, bills.
+- Implement exchange rate management (manual and auto-fetch).
+- Convert financial statements to support multi-currency display.
 
 ### Plan C: Budgeting Module
-- Create budget templates by account and period
-- Budget vs Actual comparison in financial statements
-- Budget variance alerts and reporting
+- Goal: Deliver budgeting capability with variance tracking and reporting.
+- Expected output: budget templates, budget vs actual comparison, and budget variance alerts.
+- Create budget templates by account and period.
+- Budget vs Actual comparison in financial statements.
+- Budget variance alerts and reporting.
 - **Blocked by:** Financial statement production validation
 
 ### Plan D: Approval Workflows
-- Implement role-based access control (RBAC) for accounting functions
-- Create approval chains for journal entries above a threshold amount
-- Add manager approval for bank reconciliation completion
+- Goal: Provide controlled approval flows for high-risk accounting actions.
+- Expected output: RBAC-enabled approvals for journal entries and reconciliation signoff.
+- Implement role-based access control (RBAC) for accounting functions.
+- Create approval chains for journal entries above a threshold amount.
+- Add manager approval for bank reconciliation completion.
 
 ### Plan E: Fixed Asset Management
-- Asset register with depreciation schedules (straight-line, declining balance)
-- Automatic depreciation journal entries
-- Asset disposal and revaluation workflows
+- Goal: Add fixed asset tracking, depreciation, and disposal workflows.
+- Expected output: asset register, scheduled depreciation journals, and disposal/revaluation support.
+- Asset register with depreciation schedules (straight-line, declining balance).
+- Automatic depreciation journal entries.
+- Asset disposal and revaluation workflows.
 - **Blocked by:** Core accounting E2E validation
 
 ---
