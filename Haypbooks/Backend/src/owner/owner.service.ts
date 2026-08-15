@@ -180,11 +180,18 @@ export class OwnerService {
           name: true,
           suspended: true,
           createdAt: true,
-          lastLogin: true,
+          sessions: {
+            orderBy: { lastUsedAt: 'desc' },
+            take: 1,
+            select: { lastUsedAt: true },
+          },
           workspaceUsers: {
             select: {
               workspaceId: true,
-              role: true,
+              roleId: true,
+              Role: {
+                select: { name: true },
+              },
               workspace: {
                 select: {
                   company: {
@@ -209,11 +216,11 @@ export class OwnerService {
         name: u.name,
         suspended: u.suspended,
         createdAt: u.createdAt,
-        lastLogin: u.lastLogin,
+        lastLogin: u.sessions?.[0]?.lastUsedAt ?? null,
         companies: u.workspaceUsers.map((wu) => ({
           companyId: wu.workspace.company.id,
           companyName: wu.workspace.company.name,
-          role: wu.role,
+          role: wu.Role?.name ?? null,
         })),
       })),
       pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
@@ -235,6 +242,7 @@ export class OwnerService {
 
     const planMap = new Map<string, { planName: string; planType: string; monthlyPrice: number | null; count: number }>()
     for (const sub of subscriptions) {
+      if (!sub.plan) continue
       const key = sub.plan.name
       if (!planMap.has(key)) {
         planMap.set(key, {
@@ -271,7 +279,7 @@ export class OwnerService {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const existing = await this.prisma.platformMetricsSnapshot.findFirst({
+    const existing = await this.prisma.platformMetricSnapshot.findFirst({
       where: {
         recordedAt: { gte: today, lt: tomorrow },
       },
@@ -295,28 +303,60 @@ export class OwnerService {
 
     const totalUsers = await this.prisma.user.count()
 
-    const snapshot = await this.prisma.platformMetricsSnapshot.create({
-      data: {
-        totalCompanies: companies.length,
-        totalUsers,
-        totalDbStorageMb: 0,
-        totalR2StorageMb,
-        recordedAt: new Date(),
-      },
-    })
+    const recordedAt = new Date()
+    const metricRows = [
+      { category: 'SYSTEM_PERFORMANCE' as const, metricName: 'total_companies', metricValue: companies.length, recordedAt },
+      { category: 'SYSTEM_PERFORMANCE' as const, metricName: 'total_users', metricValue: totalUsers, recordedAt },
+      { category: 'SYSTEM_PERFORMANCE' as const, metricName: 'total_db_storage_mb', metricValue: 0, recordedAt },
+      { category: 'SYSTEM_PERFORMANCE' as const, metricName: 'total_r2_storage_mb', metricValue: totalR2StorageMb, recordedAt },
+    ]
+    const snapshots = await this.prisma.$transaction(
+      metricRows.map((data) => this.prisma.platformMetricSnapshot.create({ data })),
+    )
 
-    return snapshot
+    return snapshots[0]
   }
 
-  async getMetricsHistory(days: string | number) {
-    const d = Math.max(1, Math.min(90, parseInt(String(days)) || 30))
+  async getMetricsHistory(days?: string | number) {
+    const d = Math.max(1, Math.min(90, parseInt(String(days ?? '')) || 30))
     const since = new Date()
     since.setDate(since.getDate() - d)
 
-    const snapshots = await this.prisma.platformMetricsSnapshot.findMany({
-      where: { recordedAt: { gte: since } },
-      orderBy: { recordedAt: 'asc' },
+    const rows = await this.prisma.platformMetricSnapshot.findMany({
+      where: {
+        recordedAt: { gte: since },
+        metricName: { in: ['total_companies', 'total_users', 'total_db_storage_mb', 'total_r2_storage_mb'] },
+      },
+      orderBy: [{ recordedAt: 'asc' }, { metricName: 'asc' }],
     })
+
+    const grouped = new Map<string, {
+      recordedAt: Date
+      totalCompanies: number
+      totalUsers: number
+      totalDbStorageMb: number
+      totalR2StorageMb: number
+    }>()
+
+    for (const row of rows) {
+      const key = row.recordedAt.toISOString()
+      const existing = grouped.get(key) ?? {
+        recordedAt: row.recordedAt,
+        totalCompanies: 0,
+        totalUsers: 0,
+        totalDbStorageMb: 0,
+        totalR2StorageMb: 0,
+      }
+
+      if (row.metricName === 'total_companies') existing.totalCompanies = Number(row.metricValue)
+      if (row.metricName === 'total_users') existing.totalUsers = Number(row.metricValue)
+      if (row.metricName === 'total_db_storage_mb') existing.totalDbStorageMb = Number(row.metricValue)
+      if (row.metricName === 'total_r2_storage_mb') existing.totalR2StorageMb = Number(row.metricValue)
+
+      grouped.set(key, existing)
+    }
+
+    const snapshots = Array.from(grouped.values()).sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime())
 
     return {
       snapshots,
@@ -346,7 +386,10 @@ export class OwnerService {
       where: { userId },
       select: { workspaceId: true },
     })
-    const workspaceId = firstWorkspace?.workspaceId ?? null
+    if (!firstWorkspace?.workspaceId) {
+      throw new NotFoundException('Workspace not found for user')
+    }
+    const workspaceId = firstWorkspace.workspaceId
 
     const firstCompany = await this.prisma.companyUser.findFirst({
       where: { userId },
