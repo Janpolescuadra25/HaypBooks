@@ -1,4 +1,4 @@
-import { LayoutDashboard } from 'lucide-react'
+import { LayoutDashboard, Users } from 'lucide-react'
 
 export interface NavTab {
   label: string
@@ -60,6 +60,24 @@ export const practiceHubNavigation: NavSection[] = [
           {
             title: 'Practice Dashboard',
             path: '/practice-hub',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'CLIENTS',
+    label: 'CLIENTS',
+    id: 'clients',
+    icon: Users,
+    groups: [
+      {
+        title: 'Client Management',
+        icon: Users,
+        items: [
+          {
+            title: 'All Clients',
+            path: '/practice-hub/clients',
           },
         ],
       },
