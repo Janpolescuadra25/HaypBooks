@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Put, Query, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
@@ -60,6 +60,21 @@ export class OwnerController {
     @Req() req: any,
   ) {
     return this.ownerService.setUserSuspendStatus(userId, body.suspend, req)
+  }
+
+  @Get('metrics/plan-distribution')
+  async getPlanDistribution() {
+    return this.ownerService.getPlanDistribution()
+  }
+
+  @Post('metrics/snapshot')
+  async recordMetricsSnapshot() {
+    return this.ownerService.recordMetricsSnapshot()
+  }
+
+  @Get('metrics/history')
+  async getMetricsHistory(@Query('days') days?: string) {
+    return this.ownerService.getMetricsHistory(days)
   }
 
   @Put('storage/limits/:companyId')

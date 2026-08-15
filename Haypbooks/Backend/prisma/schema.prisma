@@ -720,18 +720,18 @@ model User {
 
   // relation back to security events (optional)
 
-  securityEvents           UserSecurityEvent[]
-  ownedWorkspace           Workspace?          @relation("WorkspaceOwner")
-  workspaceUsers           WorkspaceUser[]
-  invitedWorkspaceUsers    WorkspaceUser[]     @relation("InvitedUsers")
-  sentWorkspaceInvites     WorkspaceInvite[]   @relation("WorkspaceInviteInvitedBy")
-  timesheetApprovals       TimesheetApproval[]
-  auditLogs                AuditLog[]
-  recurringExpensesCreated RecurringExpense[]  @relation("RecurringExpenseCreator")
-  statementSchedulesCreated  StatementSchedule[]  @relation("StatementScheduleCreator")
+  securityEvents            UserSecurityEvent[]
+  ownedWorkspace            Workspace?          @relation("WorkspaceOwner")
+  workspaceUsers            WorkspaceUser[]
+  invitedWorkspaceUsers     WorkspaceUser[]     @relation("InvitedUsers")
+  sentWorkspaceInvites      WorkspaceInvite[]   @relation("WorkspaceInviteInvitedBy")
+  timesheetApprovals        TimesheetApproval[]
+  auditLogs                 AuditLog[]
+  recurringExpensesCreated  RecurringExpense[]  @relation("RecurringExpenseCreator")
+  statementSchedulesCreated StatementSchedule[] @relation("StatementScheduleCreator")
   // Tasks relations
-  tasksCreated             Task[]
-  createdWorkflows         Workflow[]
+  tasksCreated              Task[]
+  createdWorkflows          Workflow[]
 
   // Construction project & grant relation backrefs
   constructionProjectsManaged ConstructionProject[] @relation("ConstructionProjectManager")
@@ -771,6 +771,7 @@ model User {
   resourceAllocations          ResourceAllocation[]
   notifications                Notification[]
   dataImportJobs               DataImportJob[]
+  practiceInvitesAccepted      PracticeInvite[]              @relation("PracticeInviteAcceptedBy")
 
   // Audit Relations
   invoicesCreated                  Invoice[]                  @relation("Invoice_createdBy")
@@ -1367,6 +1368,7 @@ model Practice {
   PracticeRoleRate   PracticeRoleRate[]
   PracticeWipLedger  PracticeWipLedger[]
   PracticeClientLead PracticeClientLead[]
+  practiceInvites    PracticeInvite[]       @relation("PracticeInvitePractice")
 
   // ── Schema alignment additions (reports102) ──
   engagementTemplates EngagementTemplate[]
@@ -1527,6 +1529,7 @@ model Company {
   subscription       Subscription?        @relation("CompanySubscription")
   onboardingSteps    OnboardingStep[]
   firmAccesses       CompanyFirmAccess[]
+  practiceInvites    PracticeInvite[]     @relation("PracticeInviteCompany")
   // Core accounting & operational relations (company-scoped)
   accounts           Account[]
   accountSubTypes    AccountSubType[]
@@ -1863,15 +1866,15 @@ model Company {
 }
 
 model StorageLimit {
-  id                Int       @id @default(autoincrement())
-  companyId         String    @unique
-  planBaseLimitMb   Int       @default(0)    // Storage allocated by the user's subscription plan (in MB)
-  ownerOverrideMb   Int?                      // Platform owner's custom override (in MB). null = no override, uses plan default
-  safetyNetMb       Int       @default(51200) // 50GB safety net buffer (in MB), applies to ALL users
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id              Int      @id @default(autoincrement())
+  companyId       String   @unique
+  planBaseLimitMb Int      @default(0) // Storage allocated by the user's subscription plan (in MB)
+  ownerOverrideMb Int? // Platform owner's custom override (in MB). null = no override, uses plan default
+  safetyNetMb     Int      @default(51200) // 50GB safety net buffer (in MB), applies to ALL users
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
 }
@@ -5672,7 +5675,7 @@ model Customer {
   creditNotes                CreditNote[]
   dunningNotices             DunningNotice[]
   customerStatements         CustomerStatement[]
-  statementSchedules          StatementSchedule[]
+  statementSchedules         StatementSchedule[]
   customerRefunds            CustomerRefund[]
 
   @@index([workspaceId])
@@ -7864,30 +7867,30 @@ model QuoteLine {
 }
 
 model Invoice {
-  id                   String           @id @default(uuid())
+  id                   String            @id @default(uuid())
   workspaceId          String
   companyId            String
   invoiceNumber        String?
   customerId           String
-  status               InvoiceStatus    @default(DRAFT)
-  paymentStatus        PaymentStatus    @default(DRAFT)
-  totalAmount          Decimal          @map("total") @db.Decimal(19, 4)
-  balance              Decimal          @db.Decimal(19, 4)
+  status               InvoiceStatus     @default(DRAFT)
+  paymentStatus        PaymentStatus     @default(DRAFT)
+  totalAmount          Decimal           @map("total") @db.Decimal(19, 4)
+  balance              Decimal           @db.Decimal(19, 4)
   dunningLevel         Int?
   dunningLastSentAt    DateTime?
   currency             String?
-  exchangeRate         Decimal?         @db.Decimal(18, 12)
-  baseTotal            Decimal?         @db.Decimal(19, 4)
+  exchangeRate         Decimal?          @db.Decimal(18, 12)
+  baseTotal            Decimal?          @db.Decimal(19, 4)
   transactionType      TransactionType?
-  discountAmount       Decimal?         @db.Decimal(19, 4)
-  shippingAmount       Decimal?         @db.Decimal(19, 4)
-  otherCharges         Decimal?         @db.Decimal(19, 4)
-  withholdingTaxAmount Decimal?         @db.Decimal(19, 4)
-  finalTaxAmount       Decimal?         @db.Decimal(19, 4)
-  date                 DateTime         @default(now()) @map("issuedAt")
+  discountAmount       Decimal?          @db.Decimal(19, 4)
+  shippingAmount       Decimal?          @db.Decimal(19, 4)
+  otherCharges         Decimal?          @db.Decimal(19, 4)
+  withholdingTaxAmount Decimal?          @db.Decimal(19, 4)
+  finalTaxAmount       Decimal?          @db.Decimal(19, 4)
+  date                 DateTime          @default(now()) @map("issuedAt")
   dueDate              DateTime?
   paymentTermId        String?
-  paymentTerm          PaymentTerm?     @relation(fields: [paymentTermId], references: [id])
+  paymentTerm          PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
   recurringTemplateId  String?
   recurringTemplate    RecurringInvoice? @relation(fields: [recurringTemplateId], references: [id])
   memo                 String?
@@ -8044,9 +8047,9 @@ model RecurringInvoice {
   createdAt         DateTime               @default(now())
   deletedAt         DateTime?
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  customer  Customer  @relation(fields: [customerId], references: [contactId])
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  customer          Customer  @relation(fields: [customerId], references: [contactId])
   generatedInvoices Invoice[]
 
   @@index([workspaceId, nextRun])
@@ -8686,7 +8689,7 @@ model StatementSchedule {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   createdBy      String
-  user           User              @relation("StatementScheduleCreator", fields: [createdBy], references: [id])
+  user           User               @relation("StatementScheduleCreator", fields: [createdBy], references: [id])
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   company   Company   @relation(fields: [companyId], references: [id])
@@ -9909,9 +9912,9 @@ model CompanySettings {
   reminderRepeatDays Int     @default(7)
 
   // Statement Email Defaults
-  statementEmailEnabled  Boolean           @default(false)
-  statementFrequency     StatementFrequency @default(MONTHLY)
-  statementDayOfMonth    Int               @default(1)
+  statementEmailEnabled Boolean            @default(false)
+  statementFrequency    StatementFrequency @default(MONTHLY)
+  statementDayOfMonth   Int                @default(1)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -12125,12 +12128,37 @@ model Engagement {
   // Practice Hub back-relations
   practiceCalendars PracticeCalendar[]
   clientRequests    ClientRequest[]
+  practiceInvite    PracticeInvite?    @relation("PracticeInviteEngagement")
 
   timeEntries EngagementTimeEntry[]
   wipLedgers  PracticeWipLedger[]
   workflows   EngagementWorkflow[]
 
   @@index([practiceId, status])
+}
+
+model PracticeInvite {
+  id               String    @id @default(uuid())
+  practiceId       String
+  code             String    @unique
+  email            String
+  companyName      String?
+  engagementName   String
+  engagementType   String
+  startDate        DateTime
+  expiresAt        DateTime
+  status           String    @default("PENDING")
+  acceptedByUserId String?
+  companyId        String?
+  engagementId     String?   @unique
+  acceptedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  practice   Practice    @relation("PracticeInvitePractice", fields: [practiceId], references: [id])
+  acceptedBy User?       @relation("PracticeInviteAcceptedBy", fields: [acceptedByUserId], references: [id])
+  company    Company?    @relation("PracticeInviteCompany", fields: [companyId], references: [id])
+  engagement Engagement? @relation("PracticeInviteEngagement", fields: [engagementId], references: [id])
 }
 
 // ─── Engagement Templates & Workflows ─────────────────────────────────

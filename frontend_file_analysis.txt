@@ -1,0 +1,614 @@
+FILE: Haypbooks\Frontend\src\__tests__\onboarding\complete-toast.test.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=False clientapi=True next_hook=True custom_hook_import=False
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import React from 'react'"
+    04: "import { render, screen, waitFor } from '@testing-library/react'"
+    05: "import userEvent from '@testing-library/user-event'"
+    06: "import { act } from 'react'"
+    07: ''
+    08: '// Mock router'
+    09: 'const pushMock = jest.fn()'
+    10: "jest.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn(), refresh: jest.fn() }) }))"
+    11: ''
+    12: '// Make the page use the mock fetch branch so our global.fetch handler is used'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\accountant-workspace\client-requests\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Inbox, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { accountantWorkspaceService } from '@/services/accountant-workspace.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const REQUEST_TYPES = ['
+    10: "  'Document Request',"
+    11: "  'Financial Report',"
+    12: "  'Tax Filing',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\accounting\core-accounting\chart-of-accounts\page.tsx
+  use_client_lines=[1, 3] count=2
+  hook=True handler=True clientapi=True next_hook=True custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "\ufeff'use client'"
+    04: ''
+    05: "import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'"
+    06: 'import {'
+    07: '  Plus, Upload, Download, Search, ChevronRight, ChevronDown,'
+    08: '  MoreHorizontal, Edit2, Eye, Trash2, PlusSquare,'
+    09: '  CheckCircle2, CheckSquare2, Square, BarChart3, X,'
+    10: '  RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal,'
+    11: '  Wallet, Clock, AlertTriangle,'
+    12: "} from 'lucide-react'"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\apps-integrations\api\api-keys\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Key, RefreshCw, Loader2, Trash2, Plus } from 'lucide-react'"
+    05: "import { integrationService } from '@/services/integration.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: "const EXPIRATION_OPTIONS = ['Never', '30 days', '90 days', '1 year']"
+    10: 'const STATUS_BADGE: Record<string, string> = {'
+    11: "  Active: 'bg-emerald-50 text-emerald-700',"
+    12: "  Expired: 'bg-slate-100 text-slate-600',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\apps-integrations\api\webhooks\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Send, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { integrationService } from '@/services/integration.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const STATUS_BADGE: Record<string, string> = {'
+    10: "  Active: 'bg-emerald-50 text-emerald-700',"
+    11: "  Inactive: 'bg-slate-100 text-slate-600',"
+    12: '}'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\apps-integrations\connected-apps\installed-apps\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Layers, RefreshCw, Loader2, Pencil, Trash2, Plus } from 'lucide-react'"
+    05: "import { integrationService } from '@/services/integration.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: "const CATEGORY_OPTIONS = ['Accounting', 'Payment', 'CRM', 'Storage', 'Communication', 'Other']"
+    10: 'const STATUS_BADGE: Record<string, string> = {'
+    11: "  Connected: 'bg-emerald-50 text-emerald-700',"
+    12: "  Disconnected: 'bg-slate-100 text-slate-600',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\apps-integrations\data-tools\export-data\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Download, RefreshCw, Loader2, Trash2, Plus } from 'lucide-react'"
+    05: "import { integrationService } from '@/services/integration.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const FORMAT_BADGE: Record<string, string> = {'
+    10: "  CSV: 'bg-blue-50 text-blue-700',"
+    11: "  Excel: 'bg-emerald-50 text-emerald-700',"
+    12: "  PDF: 'bg-rose-50 text-rose-700',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\apps-integrations\discover\app-marketplace\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect } from 'react'"
+    04: "import { Search, RefreshCw, Loader2, Plus } from 'lucide-react'"
+    05: "import { integrationService } from '@/services/integration.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: "const CATEGORIES = ['All', 'Accounting', 'Payment', 'CRM', 'Storage', 'Communication', 'Productivity']"
+    10: "const CARD_COLORS = ['bg-blue-50 text-blue-700', 'bg-emerald-50 text-emerald-700', 'bg-purple-50 text-purple-700', 'bg-amber-50 text-amber-700', 'bg-rose-50 text-rose-700', 'bg-cyan-50 text-cyan-700']"
+    11: ''
+    12: 'export default function AppMarketplacePage() {'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\apps-integrations\imports\import-data\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Eye, RefreshCw, Loader2, Trash2, Plus } from 'lucide-react'"
+    05: "import { integrationService } from '@/services/integration.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const STATUS_BADGE: Record<string, string> = {'
+    10: "  Completed: 'bg-emerald-50 text-emerald-700',"
+    11: "  Processing: 'bg-amber-50 text-amber-700',"
+    12: "  Failed: 'bg-rose-50 text-rose-700',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\apps-integrations\my-integrations\integration-logs\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect } from 'react'"
+    04: "import { FileText, RefreshCw, Loader2 } from 'lucide-react'"
+    05: "import { integrationService } from '@/services/integration.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: ''
+    08: 'const DIRECTION_BADGE: Record<string, string> = {'
+    09: "  Outgoing: 'bg-blue-50 text-blue-700',"
+    10: "  Incoming: 'bg-emerald-50 text-emerald-700',"
+    11: '}'
+    12: ''
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\automation\ai-intelligence\smart-matching\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Search, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { automationService } from '@/services/automation.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const PRIORITY_BADGE: Record<string, string> = {'
+    10: "  High: 'bg-rose-50 text-rose-700',"
+    11: "  Medium: 'bg-amber-50 text-amber-700',"
+    12: "  Low: 'bg-blue-50 text-blue-700',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\automation\monitoring\automation-logs\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect } from 'react'"
+    04: "import { FileText, RefreshCw, Loader2 } from 'lucide-react'"
+    05: "import { automationService } from '@/services/automation.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: ''
+    08: 'const ACTION_BADGE: Record<string, string> = {'
+    09: "  Triggered: 'bg-blue-50 text-blue-700',"
+    10: "  Completed: 'bg-emerald-50 text-emerald-700',"
+    11: "  Failed: 'bg-rose-50 text-rose-700',"
+    12: "  Skipped: 'bg-amber-50 text-amber-700',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\automation\workflow-engine\smart-rules\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Sparkles, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { automationService } from '@/services/automation.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const RULE_CATEGORIES = ['
+    10: "  'Transaction Categorization',"
+    11: "  'Duplicate Detection',"
+    12: "  'Amount Threshold',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\automation\workflow-engine\workflow-builder\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Workflow, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { automationService } from '@/services/automation.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const TRIGGER_TYPES = ['
+    10: "  'Manual',"
+    11: "  'Scheduled',"
+    12: "  'Event-Based',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\banking\reconciliation\statements\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { FileText, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { bankingService } from '@/services/banking.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const STATEMENT_STATUS_BADGE: Record<string, string> = {'
+    10: "  Imported: 'bg-blue-50 text-blue-700',"
+    11: "  Reconciled: 'bg-emerald-50 text-emerald-700',"
+    12: "  'In Progress': 'bg-amber-50 text-amber-700',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\banking\transactions\ImportWizardModal.tsx
+  use_client_lines=[1, 3] count=2
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "\ufeff'use client'"
+    04: ''
+    05: "import { useEffect, useMemo, useRef, useState } from 'react'"
+    06: 'import {'
+    07: '  Building2,'
+    08: '  Check,'
+    09: '  CheckCircle2,'
+    10: '  ChevronLeft,'
+    11: '  ChevronRight,'
+    12: '  FileUp,'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\banking\transactions\page.tsx
+  use_client_lines=[1, 3] count=2
+  hook=True handler=True clientapi=True next_hook=True custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "\ufeff'use client'"
+    04: ''
+    05: "import { useCallback, useEffect, useMemo, useRef, useState } from 'react'"
+    06: "import { useRouter } from 'next/navigation'"
+    07: 'import {'
+    08: '  AlertCircle, ArrowLeftRight, BookOpen, Briefcase, Building2, Check, ChevronDown, ChevronLeft,'
+    09: '  ChevronRight, ChevronUp, Clock, FileUp, GitMerge, Link2, Loader2, RefreshCw,'
+    10: '  RotateCcw, Scissors, Search, Sparkles, User, X,'
+    11: "} from 'lucide-react'"
+    12: "import apiClient from '@/lib/api-client'"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\banking\transactions\rules\page.tsx
+  use_client_lines=[1, 3] count=2
+  hook=True handler=True clientapi=False next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "\ufeff'use client'"
+    04: ''
+    05: "import { useState, useMemo, useEffect, useCallback } from 'react'"
+    06: "import { ChevronDown, ChevronUp, Edit2, Plus, Trash2, X, Check, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react'"
+    07: "import apiClient from '@/lib/api-client'"
+    08: "import { useToast } from '@/components/ToastProvider'"
+    09: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    10: "import { bankingService } from '@/services/banking.service'"
+    11: ''
+    12: 'interface Rule {'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\compliance\controls\control-testing\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { CheckSquare, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { complianceService } from '@/services/compliance.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: "const TEST_STATUSES = ['Passed', 'Failed', 'In Progress', 'Not Tested']"
+    10: ''
+    11: "const REVIEW_FREQUENCIES = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual']"
+    12: ''
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\compliance\controls\internal-controls\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { ClipboardCheck, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { complianceService } from '@/services/compliance.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const CONTROL_CATEGORIES = ['
+    10: "  'Preventive',"
+    11: "  'Detective',"
+    12: "  'Corrective',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\compliance\controls\policy-management\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { ScrollText, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { complianceService } from '@/services/compliance.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const POLICY_CATEGORIES = ['
+    10: "  'Financial',"
+    11: "  'Operational',"
+    12: "  'Regulatory',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\compliance\monitoring\fraud-detection-rules\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { ShieldAlert, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { complianceService } from '@/services/compliance.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const FRAUD_RULE_CATEGORIES = ['
+    10: "  'Transaction Anomaly',"
+    11: "  'Duplicate Detection',"
+    12: "  'Amount Threshold',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\compliance\monitoring\issue-tracking\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { AlertCircle, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { complianceService } from '@/services/compliance.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const ISSUE_CATEGORIES = ['
+    10: "  'Financial Discrepancy',"
+    11: "  'Regulatory Violation',"
+    12: "  'Internal Control Failure',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\layout.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=False clientapi=False next_hook=False custom_hook_import=False
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { ReactNode } from 'react'"
+    04: ''
+    05: '// Prevent static generation ù owner pages rely on React contexts'
+    06: '// provided by ClientRoot in the root layout. Without this, next build'
+    07: '// tries to pre-render these pages at build time and hits null useContext.'
+    08: "export const dynamic = 'force-dynamic'"
+    09: ''
+    10: '// Owner/Company layout - wraps all (owner) routes with the owner sidebar + top nav.'
+    11: '// Replace the placeholder imports below with your real sidebar and header components.'
+    12: "// import OwnerSidebar from '@/components/layout/sidebar/owner-sidebar'"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\company-profile\company-details\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Building2, Loader2 } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: ''
+    08: 'const INDUSTRY_OPTIONS = ['
+    09: "  'Technology',"
+    10: "  'Healthcare',"
+    11: "  'Financial Services',"
+    12: "  'Manufacturing',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\company-profile\fiscal-year-setup\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { CalendarDays, Loader2 } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: ''
+    08: 'const MONTHS = ['
+    09: "  { value: 1, label: 'January' },"
+    10: "  { value: 2, label: 'February' },"
+    11: "  { value: 3, label: 'March' },"
+    12: "  { value: 4, label: 'April' },"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\customization\custom-fields\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Columns3, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const ENTITY_OPTIONS = ['
+    10: "  'Invoice',"
+    11: "  'Bill',"
+    12: "  'Payment',"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\data-privacy\data-backup\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect } from 'react'"
+    04: "import { HardDrive, RefreshCw, Loader2, Download } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: ''
+    08: 'export default function DataBackupPage() {'
+    09: '  const { companyId, loading: companyIdLoading, error: companyIdError } = useCompanyId()'
+    10: '  const [backups, setBackups] = useState<any[]>([])'
+    11: '  const [loading, setLoading] = useState(true)'
+    12: '  const [creating, setCreating] = useState(false)'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\entity-management\numbering-sequences\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { ListOrdered, RefreshCw, Loader2, Pencil } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'export default function NumberingSequencesPage() {'
+    10: '  const { companyId, loading: companyIdLoading, error: companyIdError } = useCompanyId()'
+    11: '  const [sequences, setSequences] = useState<any[]>([])'
+    12: '  const [loading, setLoading] = useState(true)'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\users-security\roles-permissions\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Shield, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const PERMISSION_OPTIONS = ['
+    10: "  { key: 'dashboard', label: 'Dashboard' },"
+    11: "  { key: 'invoices', label: 'Invoices' },"
+    12: "  { key: 'bills', label: 'Bills & Payments' },"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\users-security\two-factor-auth\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { ShieldCheck, Loader2 } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: ''
+    08: 'const AUTH_METHODS = ['
+    09: "  { key: 'authenticator', label: 'Authenticator App', description: 'Use Google Authenticator or similar apps' },"
+    10: "  { key: 'sms', label: 'SMS', description: 'Receive verification codes via text message' },"
+    11: "  { key: 'email', label: 'Email', description: 'Receive verification codes via email' },"
+    12: ']'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(owner)\settings\users-security\user-management\page.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "import { useState, useEffect, FormEvent } from 'react'"
+    04: "import { Users, RefreshCw, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'"
+    05: "import { settingsService } from '@/services/settings.service'"
+    06: "import { useCompanyId } from '@/hooks/useCompanyId'"
+    07: "import HaypModal from '@/components/shared/HaypModal'"
+    08: ''
+    09: 'const ROLE_OPTIONS = ['
+    10: "  { value: 'administrator', label: 'Administrator' },"
+    11: "  { value: 'accountant', label: 'Accountant' },"
+    12: "  { value: 'manager', label: 'Manager' },"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\(public)\layout.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=False clientapi=False next_hook=False custom_hook_import=False
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: '// Prevent static pre-rendering ù public pages are wrapped by the root layout'
+    04: '// which uses ClientRoot. Pre-rendering fails with null useContext for routing contexts.'
+    05: "export const dynamic = 'force-dynamic'"
+    06: ''
+    07: 'export default function PublicLayout({ children }: { children: React.ReactNode }) {'
+    08: '  return ('
+    09: '    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">'
+    10: '      {children}'
+    11: '    </div>'
+    12: '  )'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\get-started\plans\page.tsx
+  use_client_lines=[1, 3] count=2
+  hook=True handler=True clientapi=False next_hook=True custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: '\ufeff"use client"'
+    04: ''
+    05: "import React from 'react'"
+    06: "import { useRouter } from 'next/navigation'"
+    07: "import { motion, AnimatePresence } from 'motion/react'"
+    08: "import { CheckCircle2, ArrowRight, ArrowLeft, Check, X, Info } from 'lucide-react'"
+    09: "import { BackgroundEffects } from '@/components/auth/BackgroundEffects'"
+    10: ''
+    11: 'const PLANS = ['
+    12: '  {'
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\layout.tsx
+  use_client_lines=[1] count=1
+  hook=True handler=False clientapi=False next_hook=False custom_hook_import=False
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: 'import "@/styles/globals.css"'
+    04: 'import { ReactNode } from "react"'
+    05: "import ClientRoot from './client-root'"
+    06: "import { ToastProvider } from '@/components/ToastProvider'"
+    07: "import { Inter } from 'next/font/google'"
+    08: ''
+    09: '// Prevent static pre-rendering ù the entire app relies on React contexts'
+    10: '// (AppRouter, PathnameContext) that are only available at request-time.'
+    11: '// Without this, next build pre-renders pages and hits null useContext.'
+    12: "export const dynamic = 'force-dynamic'"
+--------------------------------------------------------------------------------
+FILE: Haypbooks\Frontend\src\app\practice-hub\client-connect\mail\page.tsx
+  use_client_lines=[1, 3] count=2
+  hook=True handler=True clientapi=True next_hook=False custom_hook_import=True
+  top 10 lines:
+    01: "'use client'"
+    02: ''
+    03: "\ufeff'use client'"
+    04: ''
+    05: "import { useState, useEffect, useRef } from 'react'"
+    06: "import { createPortal } from 'react-dom'"
+    07: ''
+Traceback (most recent call last):
+  File "C:\Users\HomePC\Desktop\Haypbooksv9\tmp_frontend_file_analysis.py", line 33, in <module>
+    print(f'    {i:02}: {line!r}')
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HomePC\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 12-14: character maps to <undefined>

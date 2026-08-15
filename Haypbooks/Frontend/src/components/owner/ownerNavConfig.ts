@@ -108,6 +108,20 @@ export const navigationData: NavSection[] = [
     ],
   },
   {
+    title: 'METRICS',
+    label: 'METRICS',
+    icon: BarChart3,
+    groups: [
+      {
+        title: 'Platform Metrics',
+        icon: BarChart3,
+        items: [
+          { title: 'Metrics Dashboard', path: '/owner/metrics' },
+        ],
+      },
+    ],
+  },
+  {
     title: 'USERS',
     label: 'USERS',
     icon: Users,

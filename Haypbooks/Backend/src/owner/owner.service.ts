@@ -223,6 +223,111 @@ export class OwnerService {
     }
   }
 
+  async getPlanDistribution() {
+    const subscriptions = await this.prisma.subscription.findMany({
+      where: {
+        status: 'ACTIVE',
+        companyId: { not: null },
+      },
+      select: {
+        plan: {
+          select: { name: true, type: true, monthlyPrice: true },
+        },
+      },
+    })
+
+    const planMap = new Map<string, { planName: string; planType: string; monthlyPrice: number | null; count: number }>()
+    for (const sub of subscriptions) {
+      const key = sub.plan.name
+      if (!planMap.has(key)) {
+        planMap.set(key, {
+          planName: sub.plan.name,
+          planType: sub.plan.type,
+          monthlyPrice: sub.plan.monthlyPrice ? Number(sub.plan.monthlyPrice) : null,
+          count: 0,
+        })
+      }
+      planMap.get(key)!.count++
+    }
+
+    const totalCompanies = await this.prisma.company.count()
+    const subscribedCompanyIds = await this.prisma.subscription.findMany({
+      where: { status: 'ACTIVE', companyId: { not: null } },
+      select: { companyId: true },
+    })
+    const subscribedSet = new Set(subscribedCompanyIds.map((s) => s.companyId))
+    const unsubscribedCount = totalCompanies - subscribedSet.size
+
+    const plans = Array.from(planMap.values()).sort((a, b) => b.count - a.count)
+
+    return {
+      plans,
+      unsubscribedCompanies: unsubscribedCount,
+      totalCompanies,
+      totalActiveSubscriptions: subscriptions.length,
+    }
+  }
+
+  async recordMetricsSnapshot() {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const existing = await this.prisma.platformMetricsSnapshot.findFirst({
+      where: {
+        recordedAt: { gte: today, lt: tomorrow },
+      },
+    })
+    if (existing) return existing
+
+    const companies = await this.prisma.company.findMany({
+      select: { id: true },
+    })
+
+    let totalR2StorageMb = 0
+    for (const company of companies) {
+      try {
+        const attachmentsSize = await this.r2Service.getFolderSize(`attachments/${company.id}/`)
+        const receiptsSize = await this.r2Service.getFolderSize(`receipts/${company.id}/`)
+        totalR2StorageMb += attachmentsSize + receiptsSize
+      } catch {
+        // Individual company R2 errors should not block the snapshot
+      }
+    }
+
+    const totalUsers = await this.prisma.user.count()
+
+    const snapshot = await this.prisma.platformMetricsSnapshot.create({
+      data: {
+        totalCompanies: companies.length,
+        totalUsers,
+        totalDbStorageMb: 0,
+        totalR2StorageMb,
+        recordedAt: new Date(),
+      },
+    })
+
+    return snapshot
+  }
+
+  async getMetricsHistory(days: string | number) {
+    const d = Math.max(1, Math.min(90, parseInt(String(days)) || 30))
+    const since = new Date()
+    since.setDate(since.getDate() - d)
+
+    const snapshots = await this.prisma.platformMetricsSnapshot.findMany({
+      where: { recordedAt: { gte: since } },
+      orderBy: { recordedAt: 'asc' },
+    })
+
+    return {
+      snapshots,
+      range: { days: d, from: since, to: new Date() },
+      totalSnapshots: snapshots.length,
+    }
+  }
+
   async setUserSuspendStatus(userId: string, suspend: boolean, req: any) {
     const currentUserId = req.user?.userId
     if (!currentUserId) throw new UnauthorizedException()

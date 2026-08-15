@@ -79,6 +79,7 @@ export class UsersService {
       companies: uniqueCompanies,
       practices: uniquePractices,
       ownedWorkspaceId,
+      isOwner: !!ownedWorkspaceId,
       // Back-compat: global flag
       onboardingCompleted: result.onboardingComplete ?? false,
       onboardingMode: result.onboardingMode || 'full',

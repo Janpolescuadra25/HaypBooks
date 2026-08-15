@@ -1,9 +1,13 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, ConflictException, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { MailService } from '../common/mail.service'
+import crypto from 'crypto'
 
 @Injectable()
 export class PracticeHubService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PracticeHubService.name)
+
+  constructor(private readonly prisma: PrismaService, private readonly mailService: MailService) {}
 
   /** Find the practice record for a given workspace */
   async findPracticeByWorkspace(workspaceId: string) {
@@ -101,5 +105,165 @@ export class PracticeHubService {
       startDate: e.startDate.toISOString(),
       endDate: e.endDate?.toISOString() ?? null,
     }))
+  }
+
+  private async findPracticeForUser(userId: string) {
+    const practiceUser = await this.prisma.practiceUser.findFirst({ where: { userId } })
+    if (!practiceUser) return null
+    return this.prisma.practice.findUnique({ where: { id: practiceUser.practiceId } })
+  }
+
+  async createInvite(userId: string, dto: { email: string; companyName?: string; engagementName: string; engagementType: string; startDate: string }) {
+    const practice = await this.findPracticeForUser(userId)
+    if (!practice) throw new NotFoundException('Practice not found for user')
+
+    const normalizedEmail = dto.email.trim().toLowerCase()
+    if (!normalizedEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      throw new BadRequestException('Invalid email format')
+    }
+
+    const allowedTypes = ['AUDIT', 'TAX', 'ADVISORY', 'BOOKKEEPING']
+    if (!allowedTypes.includes(dto.engagementType)) {
+      throw new BadRequestException('Invalid engagement type')
+    }
+
+    const existingPending = await this.prisma.practiceInvite.findFirst({
+      where: { practiceId: practice.id, email: normalizedEmail, status: 'PENDING' },
+    })
+    if (existingPending) {
+      throw new ConflictException('An active invite already exists for this email')
+    }
+
+    const existingEngagement = await this.prisma.engagement.findFirst({
+      where: {
+        practiceId: practice.id,
+        status: 'ACTIVE',
+        company: {
+          companyUsers: {
+            some: {
+              member: {
+                status: 'ACTIVE',
+                user: { email: normalizedEmail },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (existingEngagement) {
+      throw new ConflictException('This practice already has an active engagement with a company for that email')
+    }
+
+    const code = crypto.randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    const invite = await this.prisma.practiceInvite.create({
+      data: {
+        practiceId: practice.id,
+        code,
+        email: normalizedEmail,
+        companyName: dto.companyName?.trim() || null,
+        engagementName: dto.engagementName.trim(),
+        engagementType: dto.engagementType,
+        startDate: new Date(dto.startDate),
+        expiresAt,
+      },
+    })
+
+    const inviteUrl = `${process.env.NEXTAUTH_URL || process.env.APP_URL || 'http://localhost:3000'}/accept-practice-invite?code=${invite.code}`
+    try {
+      const inviterName = practice.name || 'Your practice'
+      const workspaceName = practice.name || 'HaypBooks'
+      const html = this.mailService.buildInviteHtml(inviterName, workspaceName, inviteUrl)
+      const text = this.mailService.buildInviteText(inviterName, workspaceName, inviteUrl)
+      await this.mailService.sendEmail(normalizedEmail, `You're invited to join ${practice.name} on HaypBooks`, html, text)
+    } catch (error) {
+      console.error('[PracticeHubService] invite email send failed (non-fatal):', error)
+    }
+
+    return invite
+  }
+
+  async getInvites(userId: string) {
+    const practice = await this.findPracticeForUser(userId)
+    if (!practice) throw new NotFoundException('Practice not found for user')
+
+    return this.prisma.practiceInvite.findMany({
+      where: { practiceId: practice.id, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  async getInviteByCode(code: string) {
+    const invite = await this.prisma.practiceInvite.findUnique({
+      where: { code },
+      include: { practice: true },
+    })
+    if (!invite) throw new NotFoundException('Invite not found')
+    if (invite.status !== 'PENDING') {
+      throw new BadRequestException('This invitation has already been used or is no longer valid')
+    }
+    if (invite.expiresAt < new Date()) {
+      await this.prisma.practiceInvite.update({ where: { id: invite.id }, data: { status: 'EXPIRED' } })
+      throw new BadRequestException('This invitation has expired')
+    }
+    return invite
+  }
+
+  async acceptInvite(userId: string, code: string, companyId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const invite = await tx.practiceInvite.findUnique({ where: { code } })
+      if (!invite) throw new NotFoundException('Invite not found')
+      if (invite.status !== 'PENDING') {
+        throw new BadRequestException('This invitation has already been used or is no longer valid')
+      }
+      if (invite.expiresAt < new Date()) {
+        await tx.practiceInvite.update({ where: { id: invite.id }, data: { status: 'EXPIRED' } })
+        throw new BadRequestException('This invitation has expired')
+      }
+      const user = await tx.user.findUnique({ where: { id: userId } })
+      if (!user || user.email.toLowerCase() !== invite.email.toLowerCase()) {
+        throw new ForbiddenException('This invitation was sent to a different email')
+      }
+
+      const company = await tx.company.findFirst({
+        where: { id: companyId, workspace: { users: { some: { userId, status: 'ACTIVE' } } } },
+      })
+      if (!company) {
+        throw new ForbiddenException("You don't have access to this company")
+      }
+
+      const activeEngagement = await tx.engagement.findFirst({
+        where: { practiceId: invite.practiceId, companyId, status: 'ACTIVE' },
+      })
+      if (activeEngagement) {
+        throw new ConflictException('An active engagement already exists for this company and practice')
+      }
+
+      const engagement = await tx.engagement.create({
+        data: {
+          practiceId: invite.practiceId,
+          companyId,
+          name: invite.engagementName,
+          type: invite.engagementType,
+          status: 'ACTIVE',
+          startDate: invite.startDate,
+        },
+      })
+
+      await tx.practiceInvite.update({
+        where: { id: invite.id },
+        data: {
+          status: 'ACCEPTED',
+          acceptedByUserId: userId,
+          companyId,
+          engagementId: engagement.id,
+          acceptedAt: new Date(),
+        },
+      })
+
+      return engagement
+    })
   }
 }

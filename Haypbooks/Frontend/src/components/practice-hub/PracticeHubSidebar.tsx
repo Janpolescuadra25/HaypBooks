@@ -3,7 +3,8 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react'
+import apiClient from '@/lib/api-client'
 import { practiceHubNavigation, NavSection, NavItem } from './practiceHubNavConfig'
 import { useCompany } from '@/hooks/use-company'
 import { motion, AnimatePresence } from 'motion/react'
@@ -218,6 +219,10 @@ export default function PracticeHubSidebar() {
   })
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const [quickSwitchCompanies, setQuickSwitchCompanies] = useState<{ companyId: string; companyName: string }[]>([])
+  const [quickSwitchError, setQuickSwitchError] = useState('')
+  const [quickSwitchLoading, setQuickSwitchLoading] = useState(false)
+  const [isQuickSwitchOpen, setIsQuickSwitchOpen] = useState(true)
 
   const activeIndex = filteredNavigation.findIndex(
     (s) => s.title === activeSection.title
@@ -248,6 +253,33 @@ export default function PracticeHubSidebar() {
     })
     setOpenGroups(initialOpen)
   }, [activeSection, pathname])
+
+  useEffect(() => {
+    let mounted = true
+    setQuickSwitchLoading(true)
+    apiClient.get('/api/practice-hub/clients')
+      .then((res) => {
+        if (!mounted) return
+        const companies = new Map<string, { companyId: string; companyName: string }>()
+        res.data.forEach((item: any) => {
+          if (!companies.has(item.companyId)) {
+            companies.set(item.companyId, {
+              companyId: item.companyId,
+              companyName: item.companyName,
+            })
+          }
+        })
+        setQuickSwitchCompanies(Array.from(companies.values()))
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setQuickSwitchError(err?.response?.data?.message || err?.message || 'Unable to load quick switch clients')
+      })
+      .finally(() => {
+        if (mounted) setQuickSwitchLoading(false)
+      })
+    return () => { mounted = false }
+  }, [])
 
   useEffect(() => {
     const rail = railRef.current
@@ -348,6 +380,54 @@ export default function PracticeHubSidebar() {
               </div>
 
               <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickSwitchOpen((open) => !open)}
+                    className="w-full flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                  >
+                    <span>Quick switch</span>
+                    <span className="inline-flex items-center gap-2 text-slate-400">
+                      {quickSwitchLoading ? 'Loading…' : `${quickSwitchCompanies.length} clients`}
+                      <ChevronDown size={14} className={`transition-transform ${isQuickSwitchOpen ? 'rotate-180' : 'rotate-0'}`} />
+                    </span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isQuickSwitchOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div className="mt-3 space-y-2">
+                          {quickSwitchError ? (
+                            <div className="rounded-2xl bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                              {quickSwitchError}
+                            </div>
+                          ) : quickSwitchCompanies.length === 0 ? (
+                            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                              No active clients found
+                            </div>
+                          ) : (
+                            quickSwitchCompanies.map((client) => (
+                              <Link
+                                key={client.companyId}
+                                href={`/home/performance?company=${client.companyId}`}
+                                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-emerald-50 hover:border-emerald-100 transition"
+                              >
+                                <span className="truncate">{client.companyName}</span>
+                                <ArrowRight size={16} className="text-slate-400" />
+                              </Link>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {activeSection.groups ? (
                   activeSection.groups.map((group, gi) => {
                     const title = group.title ?? `group-${gi}`

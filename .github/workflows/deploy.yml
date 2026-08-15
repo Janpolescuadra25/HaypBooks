@@ -1,0 +1,39 @@
+# ============================================================
+# SETUP INSTRUCTIONS (one-time)
+# ============================================================
+# 1. Generate a dedicated SSH key pair (do NOT use your personal key):
+#    ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_deploy
+#
+# 2. Add the PUBLIC key to the VPS:
+#    ssh-copy-id -i ~/.ssh/github_deploy.pub root@YOUR_VPS_IP
+#    (or manually append to /root/.ssh/authorized_keys on the VPS)
+#
+# 3. Add GitHub Secrets (Settings > Secrets and variables > Actions):
+#    VPS_HOST      = your Hetzner CX33 IP address (e.g., 1.2.3.4)
+#    VPS_USER      = root (or your VPS username)
+#    VPS_SSH_KEY   = contents of ~/.ssh/github_deploy (the PRIVATE key)
+#
+# 4. Update the project path in this workflow and deploy.sh
+#    if your project is not at /root/Haypbooks on the VPS.
+#
+# 5. Ensure the project is already cloned on the VPS:
+#    git clone https://github.com/YOUR_USERNAME/Haypbooks.git /root/Haypbooks
+# ============================================================
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: bash /root/HaypBooks/Haypbooks/deploy.sh

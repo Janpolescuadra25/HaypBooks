@@ -1,0 +1,308 @@
+===== COMMAND: pm2 env 3 =====
+_tree_pids: 87873
+node_version: 20.20.2
+version: 0.0.1
+_pm2_version: 7.0.3
+unique_id: d4258e93-6153-4f1d-8aa3-fee21eb4b16b
+NODE_OPTIONS: --max-old-space-size=4096
+NODE_ENV: production
+haypbooks-backend: {}
+PM2_HOME: /root/.pm2
+PM2_JSON_PROCESSING: true
+PM2_USAGE: CLI
+_: /usr/bin/pm2
+OLDPWD: /root
+DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/0/bus
+PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+XDG_DATA_DIRS: /usr/local/share:/usr/share:/var/lib/snapd/desktop
+SSH_CLIENT: 112.211.156.168 57795 22
+XDG_RUNTIME_DIR: /run/user/0
+XDG_SESSION_ID: 213
+SHLVL: 1
+USER: root
+XDG_SESSION_CLASS: user
+SSH_CONNECTION: 112.211.156.168 57795 77.42.85.129 22
+LANG: en_US.UTF-8
+HOME: /root
+XDG_SESSION_TYPE: tty
+LOGNAME: root
+PWD: /root/HaypBooks/Haypbooks/Backend
+SHELL: /bin/bash
+NODE_APP_INSTANCE: 0
+vizion_running: false
+km_link: false
+namespace: default
+max_memory_restart: 6442450944
+
+===== COMMAND: pm2 env 4 =====
+_tree_pids: 63639,63638,63626
+node_version: 20.20.2
+version: N/A
+unique_id: eab2a3d4-edf9-4f49-8630-1024485b6dcb
+PM2_HOME: /root/.pm2
+PM2_USAGE: CLI
+_: /usr/bin/pm2
+OLDPWD: /root
+DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/0/bus
+PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+SSH_CLIENT: 112.211.156.168 50882 22
+XDG_RUNTIME_DIR: /run/user/0
+XDG_SESSION_ID: 231
+SHLVL: 1
+USER: root
+XDG_SESSION_CLASS: user
+SSH_CONNECTION: 112.211.156.168 50882 77.42.85.129 22
+LANG: en_US.UTF-8
+HOME: /root
+XDG_SESSION_TYPE: tty
+LOGNAME: root
+PWD: /root/HaypBooks/Haypbooks/Frontend
+SHELL: /bin/bash
+NODE_APP_INSTANCE: 0
+vizion_running: false
+km_link: false
+namespace: default
+
+===== COMMAND: pm2 show 3 =====
+ Describing process with id 3 - name haypbooks-backend 
+┌────────────────────┬────────────────────────────────────────────────┐
+│ status             │ online                                         │
+│ name               │ haypbooks-backend                              │
+│ namespace          │ default                                        │
+│ version            │ 0.0.1                                          │
+│ restarts           │ 173                                            │
+│ max memory restart │ 6442450944                                     │
+│ uptime             │ 27h                                            │
+│ script path        │ /root/HaypBooks/Haypbooks/Backend/dist/main.js │
+│ script args        │ N/A                                            │
+│ error log path     │ /root/.pm2/logs/haypbooks-backend-error-3.log  │
+│ out log path       │ /root/.pm2/logs/haypbooks-backend-out-3.log    │
+│ pid path           │ /root/.pm2/pids/haypbooks-backend-3.pid        │
+│ interpreter        │ node                                           │
+│ interpreter args   │ N/A                                            │
+│ script id          │ 3                                              │
+│ exec cwd           │ /root/HaypBooks/Haypbooks/Backend              │
+│ exec mode          │ cluster_mode                                   │
+│ node.js version    │ 20.20.2                                        │
+│ node env           │ production                                     │
+│ watch & reload     │ ✘                                              │
+│ unstable restarts  │ 0                                              │
+│ created at         │ 2026-08-14T07:39:23.619Z                       │
+└────────────────────┴────────────────────────────────────────────────┘
+ Actions available 
+┌────────────────────────┐
+│ km:heapdump            │
+│ km:cpu:profiling:start │
+│ km:cpu:profiling:stop  │
+│ km:heap:sampling:start │
+│ km:heap:sampling:stop  │
+└────────────────────────┘
+ Trigger via: pm2 trigger haypbooks-backend <action_name>
+
+ Code metrics value 
+┌────────────────────────┬────────────┐
+│ Heap Size              │ 885.13 MiB │
+│ Heap Usage             │ 92.41 %    │
+│ Used Heap Size         │ 817.97 MiB │
+│ Active requests        │ 0          │
+│ Active handles         │ 1          │
+│ Event Loop Latency     │ 0.54 ms    │
+│ Event Loop Latency p95 │ 1.50 ms    │
+│ HTTP Mean Latency      │ 2 ms       │
+│ HTTP P95 Latency       │ 3 ms       │
+│ HTTP                   │ 0 req/min  │
+└────────────────────────┴────────────┘
+ Divergent env variables from local env 
+┌────────────────┬───────────────────────────────────────┐
+│ PWD            │ /root/HaypBooks/Haypbooks/Backend     │
+│ SSH_CONNECTION │ 112.211.156.168 57795 77.42.85.129 22 │
+│ XDG_SESSION_ID │ 213                                   │
+│ SSH_CLIENT     │ 112.211.156.168 57795 22              │
+└────────────────┴───────────────────────────────────────┘
+
+ Add your own code metrics: http://bit.ly/code-metrics
+ Use `pm2 logs haypbooks-backend [--lines 1000]` to display logs
+ Use `pm2 env 3` to display environment variables
+ Use `pm2 monit` to monitor CPU and Memory usage haypbooks-backend
+
+===== COMMAND: cat /etc/nginx/sites-enabled/default =====
+
+===== COMMAND: free -h =====
+               total        used        free      shared  buff/cache   available
+Mem:           7.6Gi       6.0Gi       1.0Gi       5.8Mi       824Mi       1.6Gi
+Swap:             0B          0B          0B
+
+===== COMMAND: ls -la ~/.pm2/dump.pm2 =====
+-rw-r--r-- 1 root root 8595 Aug 12 17:44 /root/.pm2/dump.pm2
+
+===== COMMAND: swapon --show =====
+
+===== COMMAND: cat /root/Haypbooks/ecosystem.config.js =====
+
+===== COMMAND: ls -la /root/Haypbooks/Backend/.env* 2>/dev/null =====
+
+===== COMMAND: ls -la /root/Haypbooks/Frontend/.env* 2>/dev/null =====
+===== EXTRA COMMAND: ls -la /etc/nginx/sites-enabled =====
+total 8
+drwxr-xr-x 2 root root 4096 Aug 12 20:01 .
+drwxr-xr-x 8 root root 4096 Aug 12 20:46 ..
+lrwxrwxrwx 1 root root   44 Aug 12 20:01 haypbooks-backend -> /etc/nginx/sites-available/haypbooks-backend
+lrwxrwxrwx 1 root root   44 Aug 12 20:01 haypbooks-default -> /etc/nginx/sites-available/haypbooks-default
+lrwxrwxrwx 1 root root   45 Aug 12 20:01 haypbooks-frontend -> /etc/nginx/sites-available/haypbooks-frontend
+
+===== EXTRA COMMAND: cat /etc/nginx/sites-enabled/* 2>/dev/null =====
+server {
+    server_name api.haypbooks.com;
+
+    location / {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 50M;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/api.haypbooks.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/api.haypbooks.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+server {
+    if ($host = api.haypbooks.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name api.haypbooks.com;
+    return 404; # managed by Certbot
+
+
+}server {
+    listen 80 default_server;
+    server_name _;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+server {
+    server_name haypbooks.com www.haypbooks.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/haypbooks.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/haypbooks.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+server {
+    if ($host = www.haypbooks.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = haypbooks.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name haypbooks.com www.haypbooks.com;
+    return 404; # managed by Certbot
+
+
+
+
+}
+===== EXTRA COMMAND: pm2 show 4 =====
+ Describing process with id 4 - name haypbooks-frontend 
+┌───────────────────┬──────────────────────────────────────────────┐
+│ status            │ online                                       │
+│ name              │ haypbooks-frontend                           │
+│ namespace         │ default                                      │
+│ version           │ N/A                                          │
+│ restarts          │ 1                                            │
+│ uptime            │ 30h                                          │
+│ script path       │ /usr/bin/npm                                 │
+│ script args       │ start                                        │
+│ error log path    │ /root/.pm2/logs/haypbooks-frontend-error.log │
+│ out log path      │ /root/.pm2/logs/haypbooks-frontend-out.log   │
+│ pid path          │ /root/.pm2/pids/haypbooks-frontend-4.pid     │
+│ interpreter       │ /usr/bin/node                                │
+│ interpreter args  │ N/A                                          │
+│ script id         │ 4                                            │
+│ exec cwd          │ /root/HaypBooks/Haypbooks/Frontend           │
+│ exec mode         │ fork_mode                                    │
+│ node.js version   │ 20.20.2                                      │
+│ node env          │ N/A                                          │
+│ watch & reload    │ ✘                                            │
+│ unstable restarts │ 0                                            │
+│ created at        │ 2026-08-14T04:25:16.051Z                     │
+└───────────────────┴──────────────────────────────────────────────┘
+ Actions available 
+┌────────────────────────┐
+│ km:heapdump            │
+│ km:cpu:profiling:start │
+│ km:cpu:profiling:stop  │
+│ km:heap:sampling:start │
+│ km:heap:sampling:stop  │
+└────────────────────────┘
+ Trigger via: pm2 trigger haypbooks-frontend <action_name>
+
+ Code metrics value 
+┌────────────────────────┬───────────┐
+│ Heap Size              │ 15.98 MiB │
+│ Heap Usage             │ 90.3 %    │
+│ Used Heap Size         │ 14.43 MiB │
+│ Active requests        │ 0         │
+│ Active handles         │ 5         │
+│ Event Loop Latency     │ 0.54 ms   │
+│ Event Loop Latency p95 │ 1.48 ms   │
+└────────────────────────┴───────────┘
+ Divergent env variables from local env 
+┌────────────────┬───────────────────────────────────────┐
+│ PWD            │ /root/HaypBooks/Haypbooks/Frontend    │
+│ SSH_CONNECTION │ 112.211.156.168 50882 77.42.85.129 22 │
+│ XDG_SESSION_ID │ 231                                   │
+│ SSH_CLIENT     │ 112.211.156.168 50882 22              │
+└────────────────┴───────────────────────────────────────┘
+
+ Add your own code metrics: http://bit.ly/code-metrics
+ Use `pm2 logs haypbooks-frontend [--lines 1000]` to display logs
+ Use `pm2 env 4` to display environment variables
+ Use `pm2 monit` to monitor CPU and Memory usage haypbooks-frontend
+
+===== EXTRA COMMAND: ls -la /root/HaypBooks/Haypbooks/ecosystem.config.js =====
+
+===== EXTRA COMMAND: cat /root/HaypBooks/Haypbooks/ecosystem.config.js =====
+
+===== EXTRA COMMAND: find /root -maxdepth 4 -type f \( -name  ecosystem.config.js -o -name .env* \) 2>/dev/null =====
+/root/HaypBooks/Haypbooks/Backend/.env
+/root/HaypBooks/Haypbooks/Backend/ecosystem.config.js
+/root/.env

@@ -309,7 +309,7 @@ export class CompanyRepository {
 
   // Return company only if the userId is a member of the owning tenant
   async findByIdForUser(userId: string, id: string) {
-    return this.prisma.company.findFirst({
+    const company = await this.prisma.company.findFirst({
       where: {
         id,
         isActive: true,
@@ -317,6 +317,43 @@ export class CompanyRepository {
           users: { some: { userId, status: 'ACTIVE' } }
         }
       },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            users: {
+              where: { userId },
+              select: { isOwner: true, lastAccessedAt: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (company) {
+      return company
+    }
+
+    const practiceUser = await this.prisma.practiceUser.findFirst({
+      where: {
+        userId,
+        practice: {
+          engagements: {
+            some: {
+              companyId: id,
+              status: 'ACTIVE',
+            },
+          },
+        },
+      },
+    })
+
+    if (!practiceUser) {
+      return null
+    }
+
+    return this.prisma.company.findUnique({
+      where: { id },
       include: {
         workspace: {
           select: {

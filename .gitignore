@@ -49,6 +49,7 @@ e2e/screenshots/debug-*
 
 # Sensitive files
 cookies.txt
+credentials.md
 
 # Temp files
 temp_*.txt

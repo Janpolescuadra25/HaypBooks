@@ -6,32 +6,17 @@
 
 ## Production-Validated Features (Implemented)
 
-✅ Core Accounting Module (4 todos) · ✅ Financial Statements (4 todos) · ✅ Bank Reconciliation (3 todos) · ✅ Audit Logging (10 todos) · ✅ File Storage (7 todos) · ✅ Landing Page & Pricing (5 todos) · ✅ Authentication & Onboarding (4 todos) · ✅ Plan F: Owner Dashboard — Platform Monitoring & Usage Limits (13 todos)
+✅ Core Accounting Module (4 todos) · ✅ Financial Statements (4 todos) · ✅ Bank Reconciliation (3 todos) · ✅ Audit Logging (10 todos) · ✅ File Storage (7 todos) · ✅ Landing Page & Pricing (5 todos) · ✅ Authentication & Onboarding (4 todos) · ✅ Plan F: Owner Dashboard — Platform Monitoring & Usage Limits (13 todos) · ✅ Practice Hub MVP — Client management platform for accounting firms (5 todos)
 
 ---
 
 ## Next Sprint
 
-> Two parallel active tracks are in progress: Practice Hub MVP and Owner Dashboard implementation.
-
-### Practice Hub MVP
-**Status**: ✅ Active Implementation — 4 of 5 todos complete
-
-Build the client management platform for accounting firms — enabling multi-client bookkeeping from a single dashboard.
-
-#### Progress Tracker
-| # | Todo | Status |
-|---|------|--------|
-| 1 | Practice Hub infrastructure (sidebar, layout, nav config, page template, route group) | ✅ Complete |
-| 2 | Practice dashboard page (stat cards, activity feed, deadlines, client preview) | ✅ Complete |
-| 3 | Client list page with search and pagination | ✅ Complete |
-| 4 | Multi-client workspace switching | ✅ Complete |
-| 5 | Client onboarding workflow | ⬜ Pending |
-
-**Expected output:** Accounting firms can manage multiple client books from a single dashboard with quick-switch between entities.
-
 #### Infrastructure & DevOps
-- [ ] GitHub Actions auto-deploy to Hetzner CX33 VPS — SSH-based workflow that triggers on push to `main`, pulls code on the server, rebuilds the Next.js frontend (`npm run build`), and restarts the NestJS backend (pm2). Setup: generate SSH key pair, add VPS public key to GitHub Actions secrets (VPS_HOST, VPS_USER, VPS_SSH_KEY), create `.github/workflows/deploy.yml`, and add a `deploy.sh` script on the VPS.
+- [x] GitHub Actions auto-deploy to Hetzner CX33 VPS — SSH-based workflow triggers on push to `main`, deploy.sh handles pull + build + migrate + pm2 restart
+- [x] Fix auto-deploy path mismatch — `deploy.sh`, `ecosystem.config.js`, and `deploy.yml` use `/root/Haypbooks` but VPS actual path is `/root/HaypBooks/Haypbooks/`
+- [x] Add 2 GB swap to VPS — backend uses ~5.4 GB RAM with 0B swap, causing OOM kills (173+ restarts)
+- [x] Fix Nginx config to pass correct `Host`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers
 
 ---
 
@@ -46,7 +31,6 @@ Build the client management platform for accounting firms — enabling multi-cli
 - Add currency fields to company settings, invoices, bills
 - Implement exchange rate management (manual and auto-fetch)
 - Convert financial statements to support multi-currency display
-- **Blocked by:** Priority 2 (Practice Hub MVP) completion
 
 ### Plan C: Budgeting Module
 - Create budget templates by account and period
@@ -58,7 +42,6 @@ Build the client management platform for accounting firms — enabling multi-cli
 - Implement role-based access control (RBAC) for accounting functions
 - Create approval chains for journal entries above a threshold amount
 - Add manager approval for bank reconciliation completion
-- **Blocked by:** Priority 2 (Practice Hub MVP) completion
 
 ### Plan E: Fixed Asset Management
 - Asset register with depreciation schedules (straight-line, declining balance)
@@ -89,7 +72,4 @@ These modules have controller/service stubs that return placeholder data. They r
 ---
 
 ## Technical Debt
-
-- [ ] Nginx reverse proxy passes `localhost` as hostname to Next.js (workaround applied in verification page)
-- [ ] `NEXTAUTH_URL` must be explicitly set in production (documented in deployment guide)
 - [ ] No automated test suite exists — all testing is currently manual

@@ -1,0 +1,68 @@
+duplicates:
+--- syntax files ---
+FILE Haypbooks/Frontend/src/app/(owner)/reporting/analytics/analytics-dashboards/page.tsx
+134:           <ResponsiveContainer width="100%" height={300}>
+135:             <LineChart data={dashboardData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+136:               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+137:               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+138:               <YAxis tick={{ fontSize: 12 }} />
+139:               <Tooltip />
+140:               <Line type="monotone" dataKey="profit" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4 }} />
+141:             </LineChart>
+142:           </ResponsiveContainer>
+143:         </div>
+144:       </div>
+145:     </div>
+---
+FILE Haypbooks/Frontend/src/app/(owner)/reporting/custom-reports/report-builder/page.tsx
+134:             <div>
+135:               <label className="block text-xs font-semibold text-slate-500 mb-2">Report Name</label>
+136:               <input
+137:                 value={reportName}
+138:                 onChange={(event) => setReportName(event.target.value)}
+139:                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+140:               />
+141:             </div>
+142: 
+143:             <div>
+144:               <label className="block text-xs font-semibold text-slate-500 mb-2">Data Source</label>
+145:               <select
+146:                 value={dataSource}
+147:                 onChange={(event) => setDataSource(event.target.value)}
+148:                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+149:               >
+150:                 {['Journal Entries', 'Chart of Accounts', 'Trial Balance', 'Balance Sheet', 'Income Statement', 'Cash Flow'].map((option) => (
+151:                   <option key={option} value={option}>{option}</option>
+152:                 ))}
+153:               </select>
+154:             </div>
+155: 
+156:             <div className="grid grid-cols-2 gap-4">
+157:               <div>
+---
+FILE Haypbooks/Frontend/src/components/accounting/JournalAuditLog.tsx
+134:             performedBy: event.user?.name ?? event.user?.email ?? 'System',
+135:             performedAt: event.createdAt,
+136:             lines: event.lines ?? [],
+137:             synthetic: event.synthetic,
+138:             user: event.user,
+139:           }
+140:         })
+141:         setLogs(events.reverse()) // newest first
+142:       } else {
+143:         // Global audit log for all journal entries
+144:         const { data } = await apiClient.get(
+145:           `/companies/${companyId}/accounting/journal-entries/audit-log?range=${dateRange}`
+146:         )
+147:         setLogs(Array.isArray(data) ? data : [])
+148:       }
+149:     } catch (err: unknown) {
+150:       const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+151:       setError(apiErr?.response?.data?.message ?? apiErr?.message ?? 'Failed to load audit log')
+152:     } finally {
+153:       setLoading(false)
+154:     }
+155:   }, [companyId, entryId, open, dateRange])
+156: 
+157:   useEffect(() => { fetchLogs() }, [fetchLogs])
+---
