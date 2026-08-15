@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'haypbooks-backend',
       script: 'dist/main.js',
-      cwd: './Backend',
+      cwd: './Haypbooks/Backend',
       exec_mode: 'fork',
       instances: 1,
       autorestart: true,
@@ -18,7 +18,7 @@ module.exports = {
       name: 'haypbooks-frontend',
       script: 'node_modules/.bin/next',
       args: 'start',
-      cwd: './Frontend',
+      cwd: './Haypbooks/Frontend',
       exec_mode: 'fork',
       instances: 1,
       autorestart: true,
