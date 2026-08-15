@@ -14,7 +14,7 @@ export default function AboutHaypBooks() {
               Built by accountants, for modern accounting teams.
             </h2>
             <p className="text-slate-600 text-lg leading-relaxed mb-6">
-              HaypBooks is an open-source accounting and ERP platform designed to give business owners and accounting professionals a single source of truth. It brings real-time double-entry accounting, reporting, and finance workflows together in one easy-to-use system.
+              HaypBooks is an accounting and ERP platform designed to give business owners and accounting professionals a single source of truth. It brings real-time double-entry accounting, reporting, and finance workflows together in one easy-to-use system.
             </p>
             <p className="text-slate-600 text-lg leading-relaxed mb-6">
               Powerful accounting doesn’t need to be complicated or expensive. HaypBooks helps teams automate bookkeeping, stay audit-ready, and collaborate across clients or companies without juggling multiple disconnected apps.
@@ -41,8 +41,8 @@ export default function AboutHaypBooks() {
                     <Code2 className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="text-sm uppercase tracking-[0.24em] font-semibold text-emerald-600">Open source foundation</p>
-                    <p className="text-slate-600 text-sm">Transparent engineering with flexible customization and community-driven improvement.</p>
+                    <p className="text-sm uppercase tracking-[0.24em] font-semibold text-emerald-600">Built for extensibility</p>
+                    <p className="text-slate-600 text-sm">Transparent engineering with flexible customization and continual improvement.</p>
                   </div>
                 </div>
               </div>

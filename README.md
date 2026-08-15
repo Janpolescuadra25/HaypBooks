@@ -1,6 +1,6 @@
 # HaypBooks
 
-HaypBooks is an open-source accounting and practice management suite with a modern Next.js frontend and NestJS backend. This repository includes a real JWT authentication flow, landing page, onboarding UI, and a foundation for business finance features.
+HaypBooks is a modern accounting and practice management suite with a Next.js frontend and NestJS backend. This repository includes a real JWT authentication flow, landing page, onboarding UI, and a foundation for business finance features.
 
 ## Tech Stack
 - Frontend: Next.js 14 (React)

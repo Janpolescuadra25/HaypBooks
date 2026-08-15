@@ -12,11 +12,7 @@
 
 ## Next Sprint
 
-#### Infrastructure & DevOps
-- [x] GitHub Actions auto-deploy to Hetzner CX33 VPS — SSH-based workflow triggers on push to `main`, deploy.sh handles pull + build + migrate + pm2 restart
-- [x] Fix auto-deploy path mismatch — `deploy.sh`, `ecosystem.config.js`, and `deploy.yml` use `/root/Haypbooks` but VPS actual path is `/root/HaypBooks/Haypbooks/`
-- [x] Add 2 GB swap to VPS — backend uses ~5.4 GB RAM with 0B swap, causing OOM kills (173+ restarts)
-- [x] Fix Nginx config to pass correct `Host`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers
+✅ Production Infrastructure & DevOps — auto-deploy, path fixes, swap, Nginx headers (all completed August 2026)
 
 ---
 
@@ -27,7 +23,7 @@
 - Eliminates Supabase dependency, reduces costs, gives full control over backups and scaling
 - **Blocked by:** E2E testing completion
 
-### Plan B: Multi-Currency Support
+### Plan B: Multi-Currency Support (ACTIVE)
 - Add currency fields to company settings, invoices, bills
 - Implement exchange rate management (manual and auto-fetch)
 - Convert financial statements to support multi-currency display
