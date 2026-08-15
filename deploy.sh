@@ -40,7 +40,7 @@ cd ..
 
 # Restart both apps via pm2
 echo "Restarting services..."
-pm2 restart ecosystem.config.js --env production
+pm2 restart /root/HaypBooks/ecosystem.config.js --env production
 
 echo "=== Deploy complete at: $(date) ==="
 pm2 status
