@@ -128,7 +128,7 @@ Build the HB_Owner-only dashboard — the master control panel for the HaypBooks
 - `PATCH /api/owner/users/:userId/status` — suspend/reactivate user (with audit log) ✅
 
 ### Practice Hub MVP
-**Status**: 🔄 Active Implementation — 1 of 5 todos complete
+**Status**: 🔄 Active Implementation — 3 of 5 todos complete
 
 Build the client management platform for accounting firms — enabling multi-client bookkeeping from a single dashboard.
 
@@ -137,7 +137,7 @@ Build the client management platform for accounting firms — enabling multi-cli
 |---|------|--------|
 | 1 | Practice Hub infrastructure (sidebar, layout, nav config, page template, route group) | ✅ Complete |
 | 2 | Practice dashboard page (stat cards, activity feed, deadlines, client preview) | ✅ Complete |
-| 3 | Client list page with search and pagination | ⬜ Pending |
+| 3 | Client list page with search and pagination | ✅ Complete |
 | 4 | Multi-client workspace switching | ⬜ Pending |
 | 5 | Client onboarding workflow | ⬜ Pending |
 
