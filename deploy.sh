@@ -34,6 +34,15 @@ npx prisma generate
 echo "Building backend..."
 npm run build
 
+echo "Sync GEMINI_API_KEY from GitHub Secrets to VPS .env"
+if [ -n "$GEMINI_API_KEY" ]; then
+  if grep -q "^GEMINI_API_KEY=" /root/HaypBooks/Haypbooks/Backend/.env 2>/dev/null; then
+    sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=$GEMINI_API_KEY|" /root/HaypBooks/Haypbooks/Backend/.env
+  else
+    echo "GEMINI_API_KEY=$GEMINI_API_KEY" >> /root/HaypBooks/Haypbooks/Backend/.env
+  fi
+fi
+
 echo "Running database migrations..."
 npx prisma migrate deploy
 
