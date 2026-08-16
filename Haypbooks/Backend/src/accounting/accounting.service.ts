@@ -215,9 +215,6 @@ export class AccountingService {
         const template = await findTemplateForIndustry(industry)
         const coaTemplate = [...DEFAULT_COA, ...template.lines]
 
-        // First pass: create header/parent accounts
-        const codeToId = new Map<string, string>()
-
         const resolveLiquidity = (typeKey: string, liq?: string) => {
             if (liq === 'CURRENT') return 'CURRENT'
             if (liq === 'NON_CURRENT') return 'NON_CURRENT'
@@ -225,52 +222,78 @@ export class AccountingService {
             return 'NOT_APPLICABLE'
         }
 
-        for (const acct of coaTemplate) {
-            if (!acct.isHeader) continue
-            const typeId = resolve(acct.typeKey)
-            if (!typeId) continue
-            try {
-                const created = await db.account.upsert({
-                    where: { companyId_code: { companyId, code: acct.code } },
-                    update: {},
-                    create: {
-                        companyId, code: acct.code, name: acct.name, typeId,
-                        normalSide: acct.normalSide as any, isHeader: true,
-                        liquidityType: resolveLiquidity(acct.typeKey, acct.liquidityType) as any,
-                        specialType: (acct.code === '9990' ? 'SUSPENSE_ACCOUNT' : 'NONE') as any,
-                        isSystem: acct.code === '9990' ? true : undefined,
-                        currency,
-                        isFromTemplate: true,
-                    } as any,
-                })
-                codeToId.set(acct.code, created.id)
-            } catch { /* skip duplicates */ }
+        type CoaAccount = {
+            companyId: string
+            code: string
+            name: string
+            typeId: number
+            normalSide: 'DEBIT' | 'CREDIT'
+            isHeader: boolean
+            parentCode: string | null
+            liquidityType: 'CURRENT' | 'NON_CURRENT' | 'NOT_APPLICABLE'
+            specialType: 'SUSPENSE_ACCOUNT' | 'NONE'
+            isSystem: boolean
+            currency: string
+            isFromTemplate: boolean
         }
 
-        // Second pass: create detail accounts with parent references
-        for (const acct of coaTemplate) {
-            if (acct.isHeader) continue
-            const typeId = resolve(acct.typeKey)
-            if (!typeId) continue
-            const parentId = acct.parentCode ? codeToId.get(acct.parentCode) : null
-            try {
-                const created = await db.account.upsert({
-                    where: { companyId_code: { companyId, code: acct.code } },
-                    update: {},
-                    create: {
-                        companyId, code: acct.code, name: acct.name, typeId,
-                        normalSide: acct.normalSide as any, isHeader: false,
-                        parentId: parentId ?? null,
-                        liquidityType: resolveLiquidity(acct.typeKey, acct.liquidityType) as any,
-                        specialType: (acct.code === '9990' ? 'SUSPENSE_ACCOUNT' : 'NONE') as any,
-                        isSystem: acct.code === '9990' ? true : undefined,
-                        currency,
-                        isFromTemplate: true,
-                    } as any,
-                })
-                codeToId.set(acct.code, created.id)
-            } catch { /* skip duplicates */ }
-        }
+        const isNotNull = <T>(value: T | null): value is T => value !== null
+
+        const coaAccounts: CoaAccount[] = coaTemplate
+            .map((acct) => {
+                const typeId = resolve(acct.typeKey)
+                if (typeId === null) return null
+                return {
+                    companyId,
+                    code: acct.code,
+                    name: acct.name,
+                    typeId,
+                    normalSide: acct.normalSide as 'DEBIT' | 'CREDIT',
+                    isHeader: acct.isHeader,
+                    parentCode: acct.parentCode ?? null,
+                    liquidityType: resolveLiquidity(acct.typeKey, acct.liquidityType) as 'CURRENT' | 'NON_CURRENT' | 'NOT_APPLICABLE',
+                    specialType: (acct.code === '9990' ? 'SUSPENSE_ACCOUNT' : 'NONE') as 'NONE' | 'SUSPENSE_ACCOUNT',
+                    isSystem: acct.code === '9990',
+                    currency,
+                    isFromTemplate: true,
+                }
+            })
+            .filter(isNotNull)
+
+        await db.account.createMany({
+            data: coaAccounts.map((acct) => ({
+                companyId: acct.companyId,
+                code: acct.code,
+                name: acct.name,
+                typeId: acct.typeId,
+                normalSide: acct.normalSide,
+                isHeader: acct.isHeader,
+                parentId: null,
+                liquidityType: acct.liquidityType,
+                specialType: acct.specialType,
+                isSystem: acct.isSystem,
+                currency: acct.currency,
+                isFromTemplate: acct.isFromTemplate,
+            })),
+            skipDuplicates: true,
+        })
+
+        const existingAccounts = await db.account.findMany({
+            where: { companyId, code: { in: coaAccounts.map((acct) => acct.code) } },
+            select: { id: true, code: true },
+        })
+        const codeToId = new Map(existingAccounts.map((acct) => [acct.code, acct.id]))
+
+        const accountsToUpdate = coaAccounts
+            .filter((acct): acct is CoaAccount & { parentCode: string } => acct.parentCode !== null && codeToId.has(acct.parentCode))
+            .map((acct) => ({ code: acct.code, parentId: codeToId.get(acct.parentCode)! }))
+
+        await Promise.all(accountsToUpdate.map((acct) =>
+            db.account.updateMany({
+                where: { companyId, code: acct.code, parentId: null },
+                data: { parentId: acct.parentId },
+            })
+        ))
 
         return { message: 'Default Chart of Accounts seeded successfully' }
     }

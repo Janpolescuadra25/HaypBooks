@@ -1,13 +1,15 @@
 import {
     Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
-    UseGuards, Req, HttpCode, HttpStatus, BadRequestException, UsePipes, ValidationPipe,
+    UseGuards, Req, HttpCode, HttpStatus, BadRequestException, UsePipes, ValidationPipe, Res,
 } from '@nestjs/common'
+import { Response } from 'express'
 import { ReportingService } from './reporting.service'
 import { LedgerHealthService } from './ledger-health.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { CreateBudgetDto, UpdateBudgetDto } from './dto/create-budget.dto'
 
-@Controller('api/reporting')
+@Controller(['api/reporting', 'api/companies/:companyId/reporting'])
 @UseGuards(JwtAuthGuard)
 export class ReportingController {
     constructor(
@@ -134,6 +136,38 @@ export class ReportingController {
     ) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
         return this.svc.getBudgetVsActual(req.user.userId, cid, bid, { from, to })
+    }
+
+    @Get('budgets/:budgetId/vs-actual/csv')
+    @UseGuards(JwtAuthGuard, CompanyAccessGuard)
+    async exportBudgetVsActualCsv(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('budgetId') budgetId: string,
+        @Res() res: Response,
+    ) {
+        const data = await this.svc.getBudgetVsActual(req.user.userId, companyId, budgetId, {})
+        const csv = this.svc.formatBudgetVsActualCsv(data)
+        const filename = `budget-vs-actual-${String(data.budget.name).replace(/[^a-zA-Z0-9-_]/g, '-')}-${data.budget.fiscalYear}.csv`
+        res.setHeader('Content-Type', 'text/csv')
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+        res.send(csv)
+    }
+
+    @Get('budgets/:budgetId/vs-actual/pdf')
+    @UseGuards(JwtAuthGuard, CompanyAccessGuard)
+    async exportBudgetVsActualPdf(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('budgetId') budgetId: string,
+        @Res() res: Response,
+    ) {
+        const data = await this.svc.getBudgetVsActual(req.user.userId, companyId, budgetId, {})
+        const pdfBuffer = await this.svc.generateBudgetVsActualPdf(data)
+        const filename = `budget-vs-actual-${String(data.budget.name).replace(/[^a-zA-Z0-9-_]/g, '-')}-${data.budget.fiscalYear}.pdf`
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+        res.send(pdfBuffer)
     }
 
     // ─── Budget CRUD ──────────────────────────────────────────────────────────

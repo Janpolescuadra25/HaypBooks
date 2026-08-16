@@ -1,8 +1,26 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
+import PDFDocument from 'pdfkit'
 import { ReportingRepository } from './reporting.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { ExchangeRateService } from '../currency/exchange-rate.service'
+
+interface BudgetVsActualResponse {
+    budget: { id: string; name: string; fiscalYear: number; currency?: string | null }
+    rows: Array<{
+        accountId: string | null
+        accountCode: string | null | undefined
+        accountName: string | null | undefined
+        month: number | null
+        budgeted: number
+        actual: number
+        variance: number
+        variancePct: number
+    }>
+    from: string
+    to: string
+    currency?: string | null
+}
 
 @Injectable()
 export class ReportingService {
@@ -586,6 +604,123 @@ export class ReportingService {
 
         const baseCurrency = (await this.exchangeRateService.enforceCurrency(companyId, undefined, undefined, 1)).currency
         return { ...result, currency: baseCurrency }
+    }
+
+    formatBudgetVsActualCsv(data: BudgetVsActualResponse): string {
+        const header = 'Account Code,Account Name,Month,Budgeted,Actual,Variance,Variance %\n'
+        const rows = data.rows.map((l) =>
+            `${l.accountCode ?? ''},"${(l.accountName ?? '').replace(/"/g, '""')}",${l.month ?? ''},${l.budgeted.toFixed(2)},${l.actual.toFixed(2)},${l.variance.toFixed(2)},${l.variancePct.toFixed(1)}%`
+        ).join('\n')
+        const totalBudgeted = data.rows.reduce((sum, row) => sum + row.budgeted, 0)
+        const totalActual = data.rows.reduce((sum, row) => sum + row.actual, 0)
+        const totalVariance = data.rows.reduce((sum, row) => sum + row.variance, 0)
+        const totals = `\n\nTOTALS,,,${totalBudgeted.toFixed(2)},${totalActual.toFixed(2)},${totalVariance.toFixed(2)},\n`
+        const currency = data.currency ?? data.budget.currency ?? ''
+        return `Currency: ${currency}\nFiscal Year: ${data.budget.fiscalYear}\nBudget: ${data.budget.name}\n\n${header}${rows}${totals}`
+    }
+
+    async generateBudgetVsActualPdf(data: BudgetVsActualResponse): Promise<Buffer> {
+        const doc = new PDFDocument({ size: 'A4', margin: 50 })
+        const buffers: Buffer[] = []
+
+        const monthLabel = (month: number | null) => {
+            if (!month) return 'Annual'
+            const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            return names[month - 1] ?? String(month)
+        }
+
+        return new Promise<Buffer>((resolve, reject) => {
+            doc.on('data', (chunk) => buffers.push(chunk))
+            doc.on('end', () => resolve(Buffer.concat(buffers)))
+            doc.on('error', reject)
+
+            doc.font('Helvetica-Bold').fontSize(16).text('Budget vs Actual Report', { align: 'center' })
+            doc.moveDown(0.5)
+            doc.font('Helvetica').fontSize(12).text(`${data.budget.name} • ${data.budget.fiscalYear} • ${data.currency ?? data.budget.currency ?? ''}`, { align: 'center' })
+            doc.moveDown(1)
+
+            const startX = doc.x
+            const columnWidths = [90, 180, 50, 80, 80, 80, 60]
+            const columns = [
+                { title: 'Account Code', width: columnWidths[0] },
+                { title: 'Account Name', width: columnWidths[1] },
+                { title: 'Month', width: columnWidths[2] },
+                { title: 'Budgeted', width: columnWidths[3] },
+                { title: 'Actual', width: columnWidths[4] },
+                { title: 'Variance', width: columnWidths[5] },
+                { title: 'Var %', width: columnWidths[6] },
+            ]
+
+            const renderHeader = () => {
+                doc.font('Helvetica-Bold').fontSize(10)
+                let x = startX
+                for (const column of columns) {
+                    doc.text(column.title, x, doc.y, { width: column.width, continued: true })
+                    x += column.width
+                }
+                doc.text('', { continued: false })
+                doc.moveDown(0.5)
+                doc.font('Helvetica').fontSize(10)
+            }
+
+            const renderRow = (row: BudgetVsActualResponse['rows'][number]) => {
+                const varianceColor = row.variance > 0 ? 'red' : row.variance < 0 ? 'green' : 'black'
+                if (doc.y > doc.page.height - 120) {
+                    doc.addPage()
+                    renderHeader()
+                }
+
+                let x = startX
+                doc.text(row.accountCode ?? '', x, doc.y, { width: columnWidths[0], continued: true })
+                x += columnWidths[0]
+                doc.text(row.accountName ?? '', x, doc.y, { width: columnWidths[1], continued: true })
+                x += columnWidths[1]
+                doc.text(monthLabel(row.month), x, doc.y, { width: columnWidths[2], continued: true })
+                x += columnWidths[2]
+                doc.text(row.budgeted.toFixed(2), x, doc.y, { width: columnWidths[3], continued: true, align: 'right' })
+                x += columnWidths[3]
+                doc.text(row.actual.toFixed(2), x, doc.y, { width: columnWidths[4], continued: true, align: 'right' })
+                x += columnWidths[4]
+                doc.fillColor(varianceColor).text(row.variance.toFixed(2), x, doc.y, { width: columnWidths[5], continued: true, align: 'right' })
+                x += columnWidths[5]
+                doc.text(`${row.variancePct.toFixed(1)}%`, x, doc.y, { width: columnWidths[6], align: 'right' })
+                doc.fillColor('black')
+                doc.moveDown(0.5)
+            }
+
+            renderHeader()
+            for (const row of data.rows) {
+                renderRow(row)
+            }
+
+            const totalBudgeted = data.rows.reduce((sum, row) => sum + row.budgeted, 0)
+            const totalActual = data.rows.reduce((sum, row) => sum + row.actual, 0)
+            const totalVariance = data.rows.reduce((sum, row) => sum + row.variance, 0)
+            const totalVariancePct = totalBudgeted !== 0 ? (totalVariance / totalBudgeted) * 100 : 0
+
+            if (doc.y > doc.page.height - 120) {
+                doc.addPage()
+                renderHeader()
+            }
+
+            doc.moveDown(0.5)
+            let x = startX
+            doc.font('Helvetica-Bold').text('TOTALS', x, doc.y, { width: columnWidths[0] + columnWidths[1] + columnWidths[2], continued: true })
+            x += columnWidths[0] + columnWidths[1] + columnWidths[2]
+            doc.text(totalBudgeted.toFixed(2), x, doc.y, { width: columnWidths[3], continued: true, align: 'right' })
+            x += columnWidths[3]
+            doc.text(totalActual.toFixed(2), x, doc.y, { width: columnWidths[4], continued: true, align: 'right' })
+            x += columnWidths[4]
+            doc.text(totalVariance.toFixed(2), x, doc.y, { width: columnWidths[5], continued: true, align: 'right' })
+            x += columnWidths[5]
+            doc.text(`${totalVariancePct.toFixed(1)}%`, x, doc.y, { width: columnWidths[6], align: 'right' })
+
+            doc.moveDown(2)
+            doc.font('Helvetica').fontSize(8).fillColor('gray')
+            doc.text(`Generated by HaypBooks • ${new Date().toLocaleDateString('en-US')}`, { align: 'right' })
+
+            doc.end()
+        })
     }
 
     // ─── Budget CRUD ──────────────────────────────────────────────────────────

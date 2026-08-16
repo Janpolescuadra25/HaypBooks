@@ -150,12 +150,12 @@ export class OnboardingService {
         }
       } catch (e) { /* ignore */ }
 
-      // Best-effort: ensure an Owner Workspace exists, create Company record, seed COA, and create bank account inside a single transaction.
+      // Best-effort: ensure an Owner Workspace exists, create Company record, link the user, and create the bank account in a fast transaction.
       let createdCompanyId: string | null = null
       let ownerWorkspaceId: string | null = null
+      const businessStep = steps?.business || {}
       try {
         this.logger.log('[ONBOARDING-COMPLETE] 🚀 Step 1: Upserting workspace and company for userId: ' + userId)
-        const businessStep = steps?.business || {}
         const fiscalStep = steps?.fiscal_tax || steps?.fiscal || {}
         const taxStep = steps?.tax || {}
         const brandingStep = steps?.branding || {}
@@ -294,10 +294,6 @@ export class OnboardingService {
             }
 
             const step5Data = steps?.coa || {}
-            if (createdCompanyId) {
-              await this.accountingService.seedDefaultAccounts(createdCompanyId, tx, { industry: businessStep?.industry ?? undefined })
-              this.logger.log('[ONBOARDING-COMPLETE] ✅ COA seeded for company: ' + createdCompanyId)
-            }
 
             const step6Data = steps?.bank || {}
             if (step6Data?.bankName && ownerWorkspaceId) {
@@ -314,11 +310,16 @@ export class OnboardingService {
               this.logger.log('[ONBOARDING-COMPLETE] ✅ Bank account created for workspace: ' + ownerWorkspaceId)
             }
           }
-        }, { timeout: 30000 })
+        })
       } catch (e) {
         this.logger.warn('[ONBOARDING-COMPLETE] Onboarding workspace/company/financial setup failed: ' + (e?.message || e))
         incMetric('onboarding.company_creation_failure')
         throw e
+      }
+
+      if (createdCompanyId) {
+        this.accountingService.seedDefaultAccounts(createdCompanyId, this.prisma, { industry: businessStep?.industry ?? undefined })
+          .catch(err => this.logger.error('[ONBOARDING-COMPLETE] COA seeding failed post-onboarding', err))
       }
 
     } else {
