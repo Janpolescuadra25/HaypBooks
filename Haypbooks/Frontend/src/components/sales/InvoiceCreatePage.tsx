@@ -12,7 +12,8 @@ import {
   Mail, Phone, Settings, Eye,
 } from 'lucide-react'
 import { salesService } from '@/services/sales.service'
-import { formatCurrency } from '@/lib/format'
+import { currencyService, type CurrencyDefinition } from '@/services/currency.service'
+import { formatCurrency, formatNumber } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
@@ -73,9 +74,78 @@ const defaultLineColWidths = {
 export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', invoiceId }: { isRecurringTemplate?: boolean, mode?: 'new' | 'edit', invoiceId?: string }) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
-  const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+  const { currency: companyCurrency } = useCompanyCurrency()
+  const [currency, setCurrency] = useState<string>('')
+  const [currencyOptions, setCurrencyOptions] = useState<{ value: string; label: string }[]>([])
+  const [exchangeRate, setExchangeRate] = useState<number>(1)
+  const [exchangeRateLoading, setExchangeRateLoading] = useState(false)
+  const [exchangeRateError, setExchangeRateError] = useState<string | null>(null)
   const toast = useToast()
+  const fmt = useCallback((n: number) => formatCurrency(n, currency || companyCurrency), [currency, companyCurrency])
+
+  useEffect(() => {
+    if (!currency && companyCurrency) {
+      setCurrency(companyCurrency)
+    }
+  }, [currency, companyCurrency])
+
+  useEffect(() => {
+    let cancelled = false
+    setCurrencyOptions([])
+    currencyService.listCurrencies()
+      .then((response) => {
+        if (cancelled) return
+        const options = (response.data ?? []).map((item: CurrencyDefinition) => ({
+          value: item.code,
+          label: `${item.code} - ${item.name}`,
+        }))
+
+        if (companyCurrency && !options.some((option) => option.value === companyCurrency)) {
+          options.unshift({ value: companyCurrency, label: companyCurrency })
+        }
+
+        setCurrencyOptions(options.length ? options : [{ value: companyCurrency || 'USD', label: companyCurrency || 'USD' }])
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCurrencyOptions([{ value: companyCurrency || 'USD', label: companyCurrency || 'USD' }])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [companyCurrency])
+
+  useEffect(() => {
+    if (!currency || !companyCurrency || currency === companyCurrency) {
+      setExchangeRate(1)
+      setExchangeRateError(null)
+      setExchangeRateLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setExchangeRateLoading(true)
+    setExchangeRateError(null)
+
+    currencyService.getAutoExchangeRate(currency, companyCurrency)
+      .then((response) => {
+        if (cancelled) return
+        const rate = Number(response.data?.rate ?? 0)
+        setExchangeRate(rate || 1)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setExchangeRateError('Unable to fetch exchange rate')
+      })
+      .finally(() => {
+        if (!cancelled) setExchangeRateLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [currency, companyCurrency])
 
   // Template
   const [template, setTemplate] = useState<InvoiceTemplate>(getDefaultTemplate)
@@ -171,6 +241,10 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
             zip: inv.billAddress.zip ?? '',
             country: inv.billAddress.country ?? '',
           })
+        }
+
+        if (inv.currency) {
+          setCurrency(inv.currency)
         }
 
         if (inv.shipAddress && Object.keys(inv.shipAddress).length > 0) {
@@ -477,6 +551,7 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
         discountValue: Number(discountValue),
         billAddress: { contactName: billContact, company: billCompany, ...billAddress },
         shipAddress: shipSameAsBill ? undefined : shipAddress,
+        currency: currency || companyCurrency,
         items: invoiceLines,
         lines: invoiceLines,
       }

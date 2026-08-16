@@ -6,9 +6,10 @@ import { Save, Loader2, X, FileText, Paperclip, History, CheckCircle2 } from 'lu
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatNumber } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import { bankingService } from '@/services/banking.service'
+import { currencyService, type CurrencyDefinition } from '@/services/currency.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import HaypDatePicker from '@/components/shared/HaypDatePicker'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
@@ -78,7 +79,12 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   const searchParams = useSearchParams() ?? new URLSearchParams()
   const queryBillId = searchParams.get('billId') ?? ''
   const { companyId, loading: cidLoading } = useCompanyId()
-  const { currency } = useCompanyCurrency()
+  const { currency: companyCurrency } = useCompanyCurrency()
+  const [currency, setCurrency] = useState<string>('')
+  const [currencyOptions, setCurrencyOptions] = useState<{ value: string; label: string }[]>([])
+  const [exchangeRate, setExchangeRate] = useState<number>(1)
+  const [exchangeRateLoading, setExchangeRateLoading] = useState(false)
+  const [exchangeRateError, setExchangeRateError] = useState<string | null>(null)
   const toast = useToast()
 
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -140,6 +146,66 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
       setBankAccountId(bankAccounts[0].id)
     }
   }, [bankAccounts, bankAccountId])
+
+  useEffect(() => {
+    if (!companyCurrency) return
+    let cancelled = false
+    currencyService.listCurrencies()
+      .then((response) => {
+        if (cancelled) return
+        const options = (response.data ?? []).map((item: CurrencyDefinition) => ({
+          value: item.code,
+          label: `${item.code} - ${item.name}`,
+        }))
+
+        if (companyCurrency && !options.some((option) => option.value === companyCurrency)) {
+          options.unshift({ value: companyCurrency, label: companyCurrency })
+        }
+
+        setCurrencyOptions(options.length ? options : [{ value: companyCurrency, label: companyCurrency }])
+        if (!currency) {
+          setCurrency(companyCurrency)
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCurrencyOptions([{ value: companyCurrency, label: companyCurrency }])
+        if (!currency) {
+          setCurrency(companyCurrency)
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [companyCurrency, currency])
+
+  useEffect(() => {
+    if (!currency || !companyCurrency || currency === companyCurrency) {
+      setExchangeRate(1)
+      setExchangeRateError(null)
+      setExchangeRateLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setExchangeRateLoading(true)
+    setExchangeRateError(null)
+
+    currencyService.getAutoExchangeRate(currency, companyCurrency)
+      .then((response) => {
+        if (cancelled) return
+        const rate = Number(response.data?.rate ?? 0)
+        setExchangeRate(rate || 1)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setExchangeRateError('Unable to fetch exchange rate')
+      })
+      .finally(() => {
+        if (!cancelled) setExchangeRateLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [currency, companyCurrency])
 
   useEffect(() => {
     if (!companyId || mode !== 'new') return
@@ -286,7 +352,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
         method: paymentMethod,
         referenceNumber,
         bankAccountId: bankAccountId || null,
-        currency,
+        currency: currency || companyCurrency,
         bills: billsPayload,
         applications: selectedBills.map((bill) => ({ billId: bill.id, amount: bill.paymentAmount, memo: bill.memo || null })),
         memo,

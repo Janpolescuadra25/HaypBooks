@@ -8,9 +8,10 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import LineItemTable from './LineItemTable'
 import { getPostingRulesForTransaction } from '@/lib/gl-posting-rules'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatNumber } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
+import { currencyService, type CurrencyDefinition } from '@/services/currency.service'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import ActivityLog from '@/components/ui/ActivityLog'
 import HaypDatePicker from '@/components/shared/HaypDatePicker'
@@ -107,7 +108,12 @@ const PAYMENT_TERM_OPTIONS = [
 export default function BillForm({ mode, billId, title, onClose, onSaved, saveBill, loadBill, buildPayloadExtras, isRecurringTemplate, hideHeader }: BillFormProps) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
-  const { currency } = useCompanyCurrency()
+  const { currency: companyCurrency } = useCompanyCurrency()
+  const [currency, setCurrency] = useState<string>('')
+  const [currencyOptions, setCurrencyOptions] = useState<{ value: string; label: string }[]>([])
+  const [exchangeRate, setExchangeRate] = useState<number>(1)
+  const [exchangeRateLoading, setExchangeRateLoading] = useState(false)
+  const [exchangeRateError, setExchangeRateError] = useState<string | null>(null)
   const toast = useToast()
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [vendorId, setVendorId] = useState('')
@@ -259,6 +265,66 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   }, [companyId])
 
   useEffect(() => {
+    if (!companyCurrency) return
+    let cancelled = false
+    currencyService.listCurrencies()
+      .then((response) => {
+        if (cancelled) return
+        const options = (response.data ?? []).map((item: CurrencyDefinition) => ({
+          value: item.code,
+          label: `${item.code} - ${item.name}`,
+        }))
+
+        if (companyCurrency && !options.some((option) => option.value === companyCurrency)) {
+          options.unshift({ value: companyCurrency, label: companyCurrency })
+        }
+
+        setCurrencyOptions(options.length ? options : [{ value: companyCurrency, label: companyCurrency }])
+        if (!currency) {
+          setCurrency(companyCurrency)
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCurrencyOptions([{ value: companyCurrency, label: companyCurrency }])
+        if (!currency) {
+          setCurrency(companyCurrency)
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [companyCurrency, currency])
+
+  useEffect(() => {
+    if (!currency || !companyCurrency || currency === companyCurrency) {
+      setExchangeRate(1)
+      setExchangeRateError(null)
+      setExchangeRateLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setExchangeRateLoading(true)
+    setExchangeRateError(null)
+
+    currencyService.getAutoExchangeRate(currency, companyCurrency)
+      .then((response) => {
+        if (cancelled) return
+        const rate = Number(response.data?.rate ?? 0)
+        setExchangeRate(rate || 1)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setExchangeRateError('Unable to fetch exchange rate')
+      })
+      .finally(() => {
+        if (!cancelled) setExchangeRateLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [currency, companyCurrency])
+
+  useEffect(() => {
     if (mode !== 'edit' || !billId || !companyId) return
     const companyIdValue = companyId
     const billIdValue = billId
@@ -286,6 +352,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
           url: attachment.url ?? attachment.fileUrl ?? undefined,
         })) : [])
         setStatus(data.status ?? 'DRAFT')
+        if (data.currency) setCurrency(data.currency)
         
         if (data.frequency || data.templateName) {
           setIsRecurring(true)
@@ -365,7 +432,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       date,
       dueAt: dueDate,
       description: memo,
-      currency,
+      currency: currency || companyCurrency,
       paymentTermId: paymentTerms,
       terms,
       internalNotes,
@@ -590,7 +657,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                   <div className="w-1 h-6 bg-emerald-500 rounded-full" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Bill Information</h2>
                 </div>
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 px-4 pb-4 sm:px-5 lg:px-6">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 px-4 pb-4 sm:px-5 lg:px-6">
                 <div className="space-y-1.5">
                   <label htmlFor="billNumber" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill #</label>
                   <input 
@@ -616,6 +683,33 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                     value={dueDate}
                     onChange={setDueDate}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="billCurrency" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Currency</label>
+                  <select
+                    id="billCurrency"
+                    value={currency || companyCurrency || 'USD'}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  >
+                    {(currencyOptions.length ? currencyOptions : [{ value: companyCurrency || 'USD', label: companyCurrency || 'USD' }]).map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="mt-8">
+                    {currency && companyCurrency && currency !== companyCurrency && (
+                      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 text-sm text-slate-700">
+                        <span className="font-semibold">Exchange rate:&nbsp;</span>
+                        {exchangeRateLoading
+                          ? 'Loading…'
+                          : exchangeRateError
+                            ? exchangeRateError
+                            : `1 ${currency} = ${formatNumber(exchangeRate, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${companyCurrency}`}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 </div>
               </div>
