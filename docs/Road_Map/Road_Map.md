@@ -1,6 +1,6 @@
 # HaypBooks — Development Roadmap
 
-> Last updated: August 2026
+> Last updated: August 16, 2026
 
 ## Completed Projects
 - ✅ **VPS Auto-Deploy Pipeline** — GitHub Actions → SSH → deploy.sh → PM2 restart. Fully operational. Every push to main auto-deploys to production.
@@ -21,14 +21,8 @@
 ### Plan B: Multi-Currency Support (ACTIVE)
 - Goal: Support multiple currencies across companies, transactions, and financial reporting.
 - Expected output: currency-aware transaction entries, exchange rate management, and multi-currency financial statements.
-- **Phase 1 — Schema Foundation:**
-  - Add `Currency` model (ISO 4217 codes, symbols, decimal places)
-  - Add `ExchangeRate` model (from/to currency, rate, source, validity period)
-  - Standardize currency field nullability across all financial models
-- **Phase 2 — Backend Logic:**
-  - Implement exchange rate service (manual entry + auto-fetch from API)
-  - Add currency conversion utility for financial calculations
-  - Update all transaction services to enforce currency and exchange rate fields
+- ✅ **Phase 1: Schema Foundation** — Currency/ExchangeRate models added, nullability standardized across `PaymentReceived`, `BankDeposit`, and `JournalEntry`; 15 currencies seeded
+- ✅ **Phase 2: Backend Logic** — `ExchangeRateService` with `enforceCurrency()` helper implemented; currency enforcement applied to AR and Banking transaction services; backend exchange rate endpoints exposed
 - **Phase 3 — Frontend Display:**
   - Update all currency displays to show correct symbol/formatting per company currency
   - Add currency selector in company settings
