@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
@@ -319,7 +319,7 @@ export class BankingRepository {
 
     async createDeposit(data: {
         workspaceId: string; companyId: string; bankAccountId: string
-        depositDate: Date; currency?: string; referenceNumber?: string
+        depositDate: Date; currency?: string; exchangeRate?: Prisma.Decimal; baseAmount?: Prisma.Decimal; referenceNumber?: string
         paymentIds: string[]
     }) {
         // Get payments to calculate total
@@ -334,7 +334,10 @@ export class BankingRepository {
                 data: {
                     workspaceId: data.workspaceId, companyId: data.companyId,
                     bankAccountId: data.bankAccountId, depositDate: data.depositDate,
-                    totalAmount, currency: await this.resolveCurrency(data.companyId, data.currency),
+                    totalAmount,
+                    currency: data.currency ?? await this.resolveCurrency(data.companyId, data.currency),
+                    exchangeRate: data.exchangeRate ?? new Prisma.Decimal(1),
+                    baseAmount: data.baseAmount ?? new Prisma.Decimal(0),
                     referenceNumber: data.referenceNumber ?? null, status: 'DRAFT',
                     lines: {
                         create: payments.map((p) => ({ paymentReceivedId: p.id, amount: p.amount })),
@@ -349,6 +352,19 @@ export class BankingRepository {
             })
             return deposit
         })
+    }
+
+    async calculateDepositTotalAmount(companyId: string, paymentIds: string[]) {
+        const result = await this.prisma.paymentReceived.aggregate({
+            where: {
+                companyId,
+                id: { in: paymentIds },
+                deletedAt: null,
+                isDeposited: false,
+            },
+            _sum: { amount: true },
+        })
+        return Number(result._sum.amount ?? 0)
     }
 
     async postDeposit(companyId: string, depositId: string) {

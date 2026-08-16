@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { ArRepository } from './ar.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { ExchangeRateService } from '../currency/exchange-rate.service'
 import { MailService } from '../common/mail.service'
 import { AuditService } from '../audit/audit.service'
 
@@ -14,6 +15,7 @@ export class ArService {
         private readonly repo: ArRepository,
         private readonly prisma: PrismaService,
         private readonly subLedger: SubLedgerService,
+        private readonly exchangeRateService: ExchangeRateService,
         private readonly mailService: MailService,
         private readonly auditService: AuditService,
     ) { }
@@ -1215,6 +1217,13 @@ export class ArService {
             throw new BadRequestException('depositDestination must be UNDEPOSITED_FUNDS or BANK_ACCOUNT')
         }
 
+        const currencyInfo = await this.exchangeRateService.enforceCurrency(
+            companyId,
+            data.currency,
+            new Date(paymentDate),
+            paymentAmount,
+        )
+
         const requestedBankAccountId = String(data.bankAccountId ?? '').trim()
         const shouldDepositDirectlyToBank = depositDestination === 'BANK_ACCOUNT'
             || (!!requestedBankAccountId && depositDestination !== 'UNDEPOSITED_FUNDS')
@@ -1238,6 +1247,9 @@ export class ArService {
             companyId,
             customerId,
             amount: paymentAmount,
+            currency: currencyInfo.currency,
+            exchangeRate: currencyInfo.exchangeRate,
+            baseAmount: currencyInfo.baseAmount,
             paymentDate: new Date(paymentDate),
             referenceNumber: data.referenceNumber ?? data.reference,
             paymentMethodId: paymentMethodId ?? undefined,

@@ -5,8 +5,10 @@ import { CompanyBankAccountsController } from './company-bank-accounts.controlle
 import { BankingRepository } from './banking.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { CurrencyModule } from '../currency/currency.module'
 
 @Module({
+    imports: [CurrencyModule],
     providers: [BankingService, BankingRepository, PrismaService, SubLedgerService],
     controllers: [BankingController, CompanyBankAccountsController],
     exports: [BankingService],

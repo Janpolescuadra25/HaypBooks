@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { BankingRepository } from './banking.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
+import { ExchangeRateService } from '../currency/exchange-rate.service'
 import { encryptField, safeDecryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
@@ -10,6 +11,7 @@ export class BankingService {
       private readonly repo: BankingRepository,
       private readonly prisma: PrismaService,
       private readonly subLedger: SubLedgerService,
+      private readonly exchangeRateService: ExchangeRateService,
     ) { }
 
     private async getWorkspaceId(companyId: string) {
@@ -733,6 +735,9 @@ export class BankingService {
             select: {
                 id: true,
                 isDeposited: true,
+                amount: true,
+                currency: true,
+                baseAmount: true,
             },
         })
 
@@ -745,10 +750,29 @@ export class BankingService {
             throw new BadRequestException('One or more selected payments are already deposited')
         }
 
+        const depositDate = data.depositDate ? new Date(data.depositDate) : new Date()
+        const depositCurrency = String(data.currency ?? selectedPayments[0]?.currency ?? '').trim().toUpperCase() || await this.resolveCurrency(companyId)
+        if (selectedPayments.some((payment) => String(payment.currency ?? '').trim().toUpperCase() !== depositCurrency)) {
+            throw new BadRequestException('All selected payments must use the same currency for deposit')
+        }
+
+        const totalAmount = selectedPayments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0)
+        const currencyInfo = await this.exchangeRateService.enforceCurrency(
+            companyId,
+            depositCurrency,
+            depositDate,
+            totalAmount,
+        )
+
         const result = await this.repo.createDeposit({
-            workspaceId: wid, companyId, bankAccountId: data.bankAccountId,
-            depositDate: data.depositDate ? new Date(data.depositDate) : new Date(),
-            currency: data.currency, referenceNumber: data.referenceNumber,
+            workspaceId: wid,
+            companyId,
+            bankAccountId: data.bankAccountId,
+            depositDate,
+            currency: currencyInfo.currency,
+            exchangeRate: currencyInfo.exchangeRate,
+            baseAmount: currencyInfo.baseAmount,
+            referenceNumber: data.referenceNumber,
             paymentIds,
         })
         this.prisma.auditLog.create({

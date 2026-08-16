@@ -1378,7 +1378,8 @@ export class ArRepository {
 
     async recordPayment(data: {
         workspaceId: string, companyId: string, customerId: string,
-        amount: number, paymentDate: Date, referenceNumber?: string,
+        amount: number, currency?: string, exchangeRate?: Prisma.Decimal, baseAmount?: Prisma.Decimal,
+        paymentDate: Date, referenceNumber?: string,
         paymentMethodId?: string, bankAccountId?: string, isDeposited?: boolean, createdById: string,
         allocations: Array<{ invoiceId: string, amount: number }>
     }) {
@@ -1398,6 +1399,9 @@ export class ArRepository {
                     paymentMethodId: data.paymentMethodId ?? null,
                     bankAccountId: data.bankAccountId ?? null,
                     isDeposited: data.isDeposited ?? false,
+                    currency: data.currency ?? await this.resolveCurrency(data.companyId, data.currency),
+                    exchangeRate: data.exchangeRate ?? new Prisma.Decimal(1),
+                    baseAmount: data.baseAmount ?? new Prisma.Decimal(0),
                     createdById: data.createdById,
                 },
             })

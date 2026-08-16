@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
 import axios from 'axios'
-import { Prisma, ExchangeRate } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
@@ -9,6 +9,46 @@ export class ExchangeRateService {
 
   private normalizeCode(code: string): string {
     return String(code || '').trim().toUpperCase()
+  }
+
+  private createDecimal(value?: number | string | Prisma.Decimal): Prisma.Decimal {
+    if (value == null) return new Prisma.Decimal(0)
+    return value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value)
+  }
+
+  private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+    if (currency) {
+      const code = this.normalizeCode(currency)
+      const currencyRecord = await this.prisma.currency.findFirst({ where: { code, isActive: true } })
+      if (!currencyRecord) throw new NotFoundException(`Currency not found: ${code}`)
+      return code
+    }
+
+    const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+    const code = this.normalizeCode(company?.currency ?? 'PHP')
+    const currencyRecord = await this.prisma.currency.findFirst({ where: { code, isActive: true } })
+    if (!currencyRecord) throw new NotFoundException(`Currency not found: ${code}`)
+    return code
+  }
+
+  async enforceCurrency(
+    companyId: string,
+    currency?: string,
+    date?: Date,
+    amount?: number | string | Prisma.Decimal,
+  ): Promise<{ currency: string; exchangeRate: Prisma.Decimal; baseAmount: Prisma.Decimal }> {
+    const resolvedCurrency = await this.resolveCurrency(companyId, currency)
+    const companyCurrency = await this.resolveCurrency(companyId)
+    const exchangeRate = await this.getExchangeRate(resolvedCurrency, companyCurrency, date)
+    if (!exchangeRate) {
+      throw new NotFoundException(`Exchange rate not found for ${resolvedCurrency}/${companyCurrency}`)
+    }
+    const baseAmount = this.createDecimal(amount).mul(exchangeRate)
+    return {
+      currency: resolvedCurrency,
+      exchangeRate,
+      baseAmount,
+    }
   }
 
   async getExchangeRate(fromCode: string, toCode: string, date?: Date): Promise<Prisma.Decimal | null> {
