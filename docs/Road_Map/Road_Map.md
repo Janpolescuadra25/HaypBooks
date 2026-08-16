@@ -3,6 +3,8 @@
 > Last updated: August 17, 2026
 
 ## Completed Projects
+- ✅ **Onboarding Transaction Timeout Fix** — Moved COA seeding outside the onboarding Prisma interactive transaction and replaced 40+ sequential `account.create()` calls with a single batched `createMany()` operation. Transaction duration reduced from 60+ seconds to under 2 seconds, resolving the production onboarding blocker.
+- ✅ **PDFKit Build Fix** — Added missing `@types/pdfkit` dev dependency to package.json, resolving VPS build error TS2307: Cannot find module 'pdfkit'.
 - ✅ **VPS Auto-Deploy Pipeline** — GitHub Actions → SSH → deploy.sh → PM2 restart. Fully operational. Every push to main auto-deploys to production.
 - ✅ **Logo Replacement** — All placeholder logos replaced with HB_Logo.png. Favicon and metadata configured.
 - ✅ **Repo Cleanup** — Removed stray root files, malformed filenames, and all "open source" references. HaypBooks is proprietary.
@@ -10,7 +12,6 @@
 - ✅ **Multi-Currency Support (Plan B)** — Full end-to-end multi-currency accounting: Currency/ExchangeRate models with 15 seeded currencies, ExchangeRateService with enforceCurrency() helper and live API rate fetching, currency enforcement in transaction services, shared formatCurrency() utility, company base currency selector, multi-currency financial reporting with display currency selector on P&L/Balance Sheet/Cash Flow/Trial Balance.
 - ✅ **Zypra AI Assistant (Plan F, Phase 1)** — Floating chat widget with Gemini-powered accounting Q&A, lazy initialization, quick actions, system prompt guardrails.
 - ✅ **Cinematic Intro Restoration** — Reverted intro animation from HB logo back to "Haypbooks" text via git history.
-- ✅ **Onboarding Fix** — Added onboardingMode field to User model with migration, resolving 500 error during company creation.
 - ✅ **Owner Module DI Fix** — Added CompaniesModule to OwnerModule imports, resolving 478-restart crash loop in production.
 
 ---
@@ -18,14 +19,14 @@
 ## In Progress
 
 ### Plan C Phase 3: Budgeting Module Enhancements
-**Status**: Not Started | **Depends on**: Plan C Phase 2 completion (4 remaining items being addressed)
+**Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
 
 **Goal**: Extend the budgeting module with templates, alerts, exports, and forecasting capabilities.
 
 **What needs to be achieved**:
 - **Budget Templates**: Pre-built budget templates for common industries (retail, SaaS, professional services, manufacturing) that auto-populate account lines with realistic defaults based on chart of accounts structure
 - **Variance Alerts**: Automated notifications (in-app first, email later) when actual spending exceeds budgeted amounts by a configurable threshold (e.g., 10%, 20%, 50%) — alert rules stored in database with per-company customization
-- **CSV/PDF Export**: Export budget vs actual reports to CSV (with proper number formatting and column headers) and PDF (styled to match the existing financial report layout) from the vs-actual page
+- ~~**CSV/PDF Export**: Export budget vs actual reports to CSV (with proper number formatting and column headers) and PDF (styled to match the existing financial report layout) from the vs-actual page~~ — COMPLETED: CSV/PDF budget exports are fully functional and deployed.
 - **Rolling Forecasts**: Ability to update budget amounts mid-fiscal-year and compare original budget vs. revised forecast vs. actuals — requires a `scenario` field extension (DRAFT, ORIGINAL, REVISED, FORECAST)
 - **Cash Flow Integration**: Link budget data to cash flow forecasting so projected cash positions account for budgeted income and expenses by month
 - **Budget Ownership & Comments**: Assign budget line ownership to team members and add comment threads on individual budget lines for collaboration during budget review cycles
@@ -108,3 +109,4 @@ These modules have controller/service stubs that return placeholder data. They r
 
 ## Technical Debt
 - [ ] No automated test suite exists — all testing is currently manual
+- [ ] **Memory leak investigation** — Backend memory grows from ~60MB to 4GB over time, causing OOM kills and PM2 restarts. Source not yet identified; PDFKit usage in reporting.service.ts has been ruled out. Requires Node.js profiling (clinic.js, Chrome DevTools) to root-cause.
