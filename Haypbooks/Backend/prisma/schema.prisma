@@ -5498,9 +5498,9 @@ model JournalEntry {
   createdBy         User?         @relation("JournalEntry_createdBy", fields: [createdById], references: [id])
   updatedBy         User?         @relation("JournalEntry_updatedBy", fields: [updatedById], references: [id])
   postingStatus     PostingStatus @default(DRAFT)
-  currency          String?
-  exchangeRate      Decimal?      @db.Decimal(18, 12)
-  baseTotal         Decimal?      @db.Decimal(19, 4)
+  currency          String        @default("USD")
+  exchangeRate      Decimal       @default(1) @db.Decimal(18, 8)
+  baseTotal         Decimal       @default(0) @db.Decimal(18, 2)
   deletedAt         DateTime?
   /// Monotonically increasing version counter for optimistic concurrency
   version           Int           @default(1)
@@ -7299,7 +7299,7 @@ model PaymentLink {
   token             String    @unique
   description       String?
   amount            Decimal   @db.Decimal(19, 4)
-  currency          String    @default("PHP")
+  currency          String    @default("USD")
   status            String    @default("ACTIVE")
   expiresAt         DateTime?
   paidAt            DateTime?
@@ -8256,7 +8256,7 @@ model PerDiemClaim {
   days          Int
   dailyRate     Decimal   @db.Decimal(19, 4)
   totalAmount   Decimal   @db.Decimal(19, 4)
-  currency      String    @default("PHP")
+  currency      String    @default("USD")
   status        String    @default("DRAFT")
   notes         String?
   departmentId  String?
