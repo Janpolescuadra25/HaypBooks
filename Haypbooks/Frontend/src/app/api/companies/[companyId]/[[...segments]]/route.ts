@@ -29,7 +29,15 @@ interface AuditLog {
   ts: string
 }
 
+interface CompanyMeta {
+  id: string
+  name: string
+  currency: string
+  country: string
+}
+
 interface CompanyState {
+  company: CompanyMeta
   accounts: any[]
   employees: any[]
   vendors: any[]
@@ -61,13 +69,19 @@ function genId(prefix: string) {
 
 function getCompanyState(companyId: string) {
   if (!companyStore.has(companyId)) {
-    companyStore.set(companyId, createCompanyState())
+    companyStore.set(companyId, createCompanyState(companyId))
   }
-  return companyStore.get(companyId)! 
+  return companyStore.get(companyId)!
 }
 
-function createCompanyState(): CompanyState {
+function createCompanyState(companyId: string): CompanyState {
   return {
+    company: {
+      id: companyId,
+      name: `Demo Company ${companyId.slice(0, 6)}`,
+      currency: 'USD',
+      country: 'US',
+    },
     accounts: [
       { id: genId('acc'), code: '1000', name: 'Cash', type: 'Asset', subtype: 'cash', active: true },
       { id: genId('acc'), code: '6000', name: 'Operating Expenses', type: 'Expense', subtype: 'expense', active: true },
@@ -294,6 +308,20 @@ function createJournalEntry(resource: string, item: any, state: CompanyState, li
   }
   state.journalEntries.push(journalEntry)
   return journalEntry
+}
+
+async function routeCompany(method: string, state: CompanyState, req: Request) {
+  if (method === 'GET') {
+    return buildResponse(state.company)
+  }
+
+  if (method === 'PUT' || method === 'PATCH') {
+    const body = await parseJsonBody(req)
+    Object.assign(state.company, body || {})
+    return buildResponse(state.company)
+  }
+
+  return handleMethodNotAllowed()
 }
 
 function buildBalancedLines(state: CompanyState, amount: number, sourceAccount?: string) {
@@ -625,6 +653,7 @@ export async function GET(req: Request, ctx: { params: { companyId: string; segm
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
+  if (segments.length === 0) return routeCompany('GET', state, req)
   if (segments[0] === 'ap') return routeAp('GET', segments.slice(1), state, req)
   if (segments[0] === 'expenses') return routeExpenses('GET', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('GET', segments.slice(1), state, req)
@@ -655,6 +684,7 @@ export async function PUT(req: Request, ctx: { params: { companyId: string; segm
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
+  if (segments.length === 0) return routeCompany('PUT', state, req)
   if (segments[0] === 'ap') return routeAp('PUT', segments.slice(1), state, req)
   if (segments[0] === 'expenses') return routeExpenses('PUT', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('PUT', segments.slice(1), state, req)
@@ -670,6 +700,7 @@ export async function PATCH(req: Request, ctx: { params: { companyId: string; se
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
+  if (segments.length === 0) return routeCompany('PATCH', state, req)
   if (segments[0] === 'ap') return routeAp('PATCH', segments.slice(1), state, req)
   if (segments[0] === 'expenses') return routeExpenses('PATCH', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('PATCH', segments.slice(1), state, req)

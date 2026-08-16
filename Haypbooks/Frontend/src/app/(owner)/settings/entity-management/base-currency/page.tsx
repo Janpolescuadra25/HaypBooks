@@ -4,10 +4,18 @@ import { FormEvent, useEffect, useState } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompany } from '@/hooks/use-company'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { currencyService, type CurrencyDefinition } from '@/services/currency.service'
 
-const CURRENCIES = ['USD', 'EUR', 'PHP', 'GBP', 'AUD', 'CAD'] as const
+type CurrencyOption = { code: string; label: string }
 
-type CurrencyCode = (typeof CURRENCIES)[number]
+const FALLBACK_CURRENCY_OPTIONS: CurrencyOption[] = [
+  { code: 'USD', label: 'USD - US Dollar' },
+  { code: 'EUR', label: 'EUR - Euro' },
+  { code: 'PHP', label: 'PHP - Philippine Peso' },
+  { code: 'GBP', label: 'GBP - British Pound' },
+  { code: 'AUD', label: 'AUD - Australian Dollar' },
+  { code: 'CAD', label: 'CAD - Canadian Dollar' },
+]
 
 function SelectGroup({
   label,
@@ -16,20 +24,20 @@ function SelectGroup({
   onChange,
 }: {
   label: string
-  options: readonly CurrencyCode[]
+  options: CurrencyOption[]
   value: string
-  onChange: (value: CurrencyCode) => void
+  onChange: (value: string) => void
 }) {
   return (
     <label className="block text-sm font-medium text-slate-700">
       <span className="mb-2 block text-sm font-semibold text-slate-900">{label}</span>
       <select
         value={value}
-        onChange={(event) => onChange(event.target.value as CurrencyCode)}
+        onChange={(event) => onChange(event.target.value)}
         className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
       >
         {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
+          <option key={option.code} value={option.code}>{option.label}</option>
         ))}
       </select>
     </label>
@@ -39,18 +47,54 @@ function SelectGroup({
 export default function Page() {
   const { company, loading: companyLoading } = useCompany()
   const { companyId, loading: companyIdLoading, error: companyError } = useCompanyId()
-  const [currency, setCurrency] = useState<CurrencyCode>('USD')
+  const [currency, setCurrency] = useState<string>('USD')
+  const [currencyOptions, setCurrencyOptions] = useState<CurrencyOption[]>(FALLBACK_CURRENCY_OPTIONS)
+  const [currenciesLoading, setCurrenciesLoading] = useState(true)
+  const [currenciesError, setCurrenciesError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (company?.currency) {
-      setCurrency(company.currency as CurrencyCode)
+      setCurrency(company.currency)
     }
   }, [company?.currency])
 
-  const isLoading = companyLoading || companyIdLoading
+  useEffect(() => {
+    let cancelled = false
+    setCurrenciesLoading(true)
+    setCurrenciesError(null)
+
+    currencyService.listCurrencies()
+      .then((response) => {
+        if (cancelled) return
+        const options = (response.data ?? [])
+          .map((item: CurrencyDefinition) => ({
+            code: item.code,
+            label: `${item.code} - ${item.name}`,
+          }))
+        const currentValue = company?.currency
+        if (currentValue && !options.some((option) => option.code === currentValue)) {
+          options.unshift({ code: currentValue, label: currentValue })
+        }
+        setCurrencyOptions(options.length ? options : FALLBACK_CURRENCY_OPTIONS)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCurrenciesError('Unable to load currency options. Using default list.')
+        setCurrencyOptions(FALLBACK_CURRENCY_OPTIONS)
+      })
+      .finally(() => {
+        if (!cancelled) setCurrenciesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [company?.currency])
+
+  const isLoading = companyLoading || companyIdLoading || currenciesLoading
   const canSave = !isLoading && !!companyId
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -93,9 +137,12 @@ export default function Page() {
           </div>
 
           <div className="space-y-2">
-            <SelectGroup label="Base currency" options={CURRENCIES} value={currency} onChange={setCurrency} />
+            <SelectGroup label="Base currency" options={currencyOptions} value={currency} onChange={setCurrency} />
+            {currenciesError ? (
+              <p className="text-sm text-rose-600">{currenciesError}</p>
+            ) : null}
             <p className="text-sm text-slate-500">
-              Changing the base currency updates company settings. Existing transaction amounts remain unchanged.
+              Changing the base currency updates the company default currency for new transactions and reports.
             </p>
           </div>
         </div>
