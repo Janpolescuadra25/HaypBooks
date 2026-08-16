@@ -690,6 +690,7 @@ model User {
   sessions     Session[]
   // Preferred hub (owner vs accountant) used to route users on sign-in
   preferredHub PreferredHub?
+  onboardingMode String   @default("full") @map("onboarding_mode")
 
   // Contact fields
   phone     String? @db.Text
