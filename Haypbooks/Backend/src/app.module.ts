@@ -9,6 +9,7 @@ import { OnboardingModule } from './onboarding/onboarding.module'
 import { TestController } from './test/test.controller'
 import { PrismaRepositoriesModule } from './repositories/prisma/prisma-repositories.module'
 import { TasksModule } from './tasks/tasks.module'
+import { CurrencyModule } from './currency/currency.module'
 import { AttachmentsModule } from './attachments/attachments.module'
 import { OwnerModule } from './owner/owner.module'
 import { R2Module } from './common/r2/r2.module'
@@ -48,6 +49,7 @@ const RepositoriesModule = PrismaRepositoriesModule
     (require('./companies/companies.module').CompaniesModule),
     // Tenants module (provides client list and invite management for accountants)
     TenantsModule,
+    CurrencyModule,
     // Accounting / GL module (Chart of Accounts, Journal Entries, Periods, Trial Balance)
     (require('./accounting/accounting.module').AccountingModule),
     // General Ledger (full cross-account GL view with opening/closing balance and running balance)

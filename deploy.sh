@@ -36,7 +36,11 @@ npm run build
 
 echo "Running database migrations..."
 npx prisma migrate deploy
-cd ..
+
+echo "Seeding currency data..."
+cd /root/HaypBooks/Haypbooks/Backend
+npx prisma db seed
+cd /root/HaypBooks/Haypbooks
 
 # Restart both apps via pm2
 echo "Restarting services..."
