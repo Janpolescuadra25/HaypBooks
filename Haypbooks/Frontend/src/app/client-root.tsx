@@ -9,6 +9,7 @@ import { useCommandPalette } from '@/stores/commandPalette'
 import useUI from '@/stores/ui'
 import OwnerTopBar from '@/components/owner/OwnerTopBar'
 import OwnerSidebar from '@/components/owner/OwnerSidebar'
+import ZypraChatWidget from '@/components/ZypraChatWidget'
 
 const MockInit = dynamic(() => import('@/components/MockInit'), { ssr: false })
 
@@ -130,6 +131,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
               >
                 {children}
               </main>
+              <ZypraChatWidget />
             </div>
           </div>
           <CommandPalette />

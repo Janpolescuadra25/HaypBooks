@@ -18,6 +18,7 @@ import { CompanyContextMiddleware } from './shared/company-context.middleware'
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware'
 import { HealthModule } from './health/health.module'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor'
+import { ZypraModule } from './zypra/zypra.module'
 
 // CUTOVER: use Prisma repositories in all environments by default for production readiness.
 // Remove this env-controlled toggle once the mock layer is fully deprecated.
@@ -90,6 +91,7 @@ const RepositoriesModule = PrismaRepositoriesModule
     (require('./practice/practice.module').PracticeModule),
     // Email Templates (saved send templates per company)
     (require('./email-templates/email-templates.module').EmailTemplatesModule),
+    ZypraModule,
     HealthModule,
   ],
   controllers: [TestController],
