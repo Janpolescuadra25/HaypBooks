@@ -2,6 +2,12 @@
 
 > Last updated: August 2026
 
+## Completed Projects
+- ✅ **VPS Auto-Deploy Pipeline** — GitHub Actions → SSH → deploy.sh → PM2 restart. Fully operational. Every push to main auto-deploys to production.
+- ✅ **Logo Replacement** — All placeholder logos (LandingHeader, AuthLayout, CinematicIntro, landing.html) replaced with HB_Logo.png. Favicon and metadata configured.
+- ✅ **Repo Cleanup** — Removed stray root files, malformed filenames, and all "open source" references. HaypBooks is proprietary.
+- ✅ **Build Error Fixes** — Resolved TypeScript/Prisma build errors in owner.service.ts.
+
 ---
 
 ## Future Plans
@@ -15,9 +21,22 @@
 ### Plan B: Multi-Currency Support (ACTIVE)
 - Goal: Support multiple currencies across companies, transactions, and financial reporting.
 - Expected output: currency-aware transaction entries, exchange rate management, and multi-currency financial statements.
-- Add currency fields to company settings, invoices, bills.
-- Implement exchange rate management (manual and auto-fetch).
-- Convert financial statements to support multi-currency display.
+- **Phase 1 — Schema Foundation:**
+  - Add `Currency` model (ISO 4217 codes, symbols, decimal places)
+  - Add `ExchangeRate` model (from/to currency, rate, source, validity period)
+  - Standardize currency field nullability across all financial models
+- **Phase 2 — Backend Logic:**
+  - Implement exchange rate service (manual entry + auto-fetch from API)
+  - Add currency conversion utility for financial calculations
+  - Update all transaction services to enforce currency and exchange rate fields
+- **Phase 3 — Frontend Display:**
+  - Update all currency displays to show correct symbol/formatting per company currency
+  - Add currency selector in company settings
+  - Multi-currency support in invoices, bills, and payment forms
+- **Phase 4 — Multi-Currency Reporting:**
+  - Financial statements (P&L, balance sheet, cash flow) support multi-currency display
+  - Base currency conversion for consolidated reporting
+- **Blocked by:** None
 
 ### Plan C: Budgeting Module
 - Goal: Deliver budgeting capability with variance tracking and reporting.
