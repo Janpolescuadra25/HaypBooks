@@ -1476,6 +1476,7 @@ model Company {
   functionalCurrency  String?             @db.VarChar(3)
   fiscalYearStart     Int?
   taxYearEnd          DateTime?
+  currencies          Currency[]
 
   // Reconciliations & governance
   subledgerReconciliations SubledgerReconciliation[]
@@ -3834,11 +3835,21 @@ model LoyaltyAccount {
 }
 
 model Currency {
-  code     String  @id
-  name     String
-  symbol   String
-  decimals Int     @default(2)
-  isActive Boolean @default(true)
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  symbol        String
+  decimalPlaces Int      @default(2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  companies         Company[]
+  exchangeRatesFrom ExchangeRate[] @relation("ExchangeFrom")
+  exchangeRatesTo   ExchangeRate[] @relation("ExchangeTo")
+
+  @@map("currencies")
 }
 
 model PaymentTerm {
@@ -3882,14 +3893,22 @@ model PaymentMethod {
 }
 
 model ExchangeRate {
-  id           String   @id @default(uuid())
-  baseCurrency String
-  toCurrency   String
-  rate         Decimal  @db.Decimal(8, 4)
-  date         DateTime
-  source       String?
+  id             String    @id @default(cuid())
+  fromCurrencyId String
+  toCurrencyId   String
+  rate           Decimal   @db.Decimal(18, 8)
+  source         String    @default("manual")
+  validFrom      DateTime  @default(now())
+  validTo        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  @@unique([baseCurrency, toCurrency, date])
+  // Relations
+  fromCurrency Currency @relation("ExchangeFrom", fields: [fromCurrencyId], references: [id])
+  toCurrency   Currency @relation("ExchangeTo", fields: [toCurrencyId], references: [id])
+
+  @@unique([fromCurrencyId, toCurrencyId, validFrom])
+  @@map("exchange_rates")
 }
 
 model ForeignCurrencyGainLoss {
