@@ -8,10 +8,19 @@
 - ✅ **Repo Cleanup** — Removed stray root files, malformed filenames, and all "open source" references. HaypBooks is proprietary.
 - ✅ **Build Error Fixes** — Resolved TypeScript/Prisma build errors in owner.service.ts.
 - ✅ **Multi-Currency Support (Plan B)** — Full end-to-end multi-currency accounting: Currency/ExchangeRate models with 15 seeded currencies, ExchangeRateService with enforceCurrency() helper and live API rate fetching, currency enforcement in AR/Banking transaction services, shared formatCurrency() utility, company base currency selector, currency dropdowns with exchange rate preview on invoice/bill/payment forms, multi-currency financial reporting with display currency selector on P&L/Balance Sheet/Cash Flow/Trial Balance.
+- ✅ **Zypra AI Assistant (Plan F, Phase 1)** — Floating chat widget with Gemini-powered accounting Q&A, lazy initialization, quick actions, system prompt guardrails (August 2026).
 
 ---
 
 ## Future Plans
+
+| Plan | Name | Status | Blocked By |
+|------|------|--------|------------|
+| A | Self-Hosted PostgreSQL Migration | Not Started | E2E testing completion |
+| C | Budgeting Module | Not Started | Financial statement production validation |
+| D | Approval Workflows | Not Started | - |
+| E | Fixed Asset Management | Not Started | Core accounting E2E validation |
+| F-2 | Zypra AI Phase 2 (Persistent History, Document Q&A, Advanced Insights) | Not Started | - |
 
 ### Plan A: Self-Hosted PostgreSQL Migration
 - Goal: Migrate from Supabase hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
@@ -41,19 +50,6 @@
 - Automatic depreciation journal entries.
 - Asset disposal and revaluation workflows.
 - **Blocked by:** Core accounting E2E validation
-
-### Plan F: Zypra AI Assistant
-- Goal: Integrate a branded AI assistant ("Zypra") powered by Gemini API that answers questions about the user's own HaypBooks financial data
-- Expected output: A floating chat widget inside the HaypBooks app that can answer accounting queries using real company data (invoices, bills, payments, balances, reports)
-- Key constraints:
-  - Zypra must ONLY answer questions related to HaypBooks data and accounting — all off-topic questions must be politely declined
-  - Responses must be based on the user's actual company data, not generic advice
-  - The AI must understand multi-currency contexts (leveraging Plan B work)
-- Implementation phases:
-  1. Backend: NestJS Gemini API service with system prompt guard, data context layer that fetches company financial data and injects it into prompts
-  2. Frontend: Floating chat widget component, message history, typing indicators
-  3. Quick Actions: Pre-built queries like "Show overdue bills", "Summarize this month's revenue", "Create invoice for [client]"
-- **Blocked by:** Plan B Phase 4 (multi-currency reporting must be complete first)
 
 ---
 
