@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { currencyService, type CurrencyDefinition } from '@/services/currency.service'
 
 interface ProfitAndLossResult {
   from: string
@@ -21,10 +22,14 @@ function toDateInput(d: Date) {
 
 export default function Page() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
-  const { currency } = useCompanyCurrency()
+  const { currency: companyCurrency } = useCompanyCurrency()
   const [report, setReport] = useState<ProfitAndLossResult | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [displayCurrency, setDisplayCurrency] = useState<string>(companyCurrency)
+  const [currencyOptions, setCurrencyOptions] = useState<CurrencyDefinition[]>([])
+  const [currencyLoading, setCurrencyLoading] = useState(true)
+  const [currencyError, setCurrencyError] = useState('')
 
   const now = new Date()
   const defaultFrom = new Date(now.getFullYear(), 0, 1)
@@ -35,7 +40,7 @@ export default function Page() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get('/reporting/profit-and-loss', { params: { companyId, from, to } })
+      const { data } = await apiClient.get('/reporting/profit-and-loss', { params: { companyId, from, to, displayCurrency } })
       setReport(data)
       setError('')
     } catch (e: any) {
@@ -43,13 +48,41 @@ export default function Page() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, from, to])
+  }, [companyId, from, to, displayCurrency])
 
   useEffect(() => {
     fetchReport()
   }, [fetchReport])
 
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+  useEffect(() => {
+    if (!companyCurrency) return
+    setDisplayCurrency((current) => current || companyCurrency)
+  }, [companyCurrency])
+
+  useEffect(() => {
+    let cancelled = false
+    setCurrencyLoading(true)
+    currencyService.listCurrencies()
+      .then((response) => {
+        if (cancelled) return
+        setCurrencyOptions(response.data)
+        setCurrencyError('')
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCurrencyError('Unable to load currencies')
+      })
+      .finally(() => {
+        if (cancelled) return
+        setCurrencyLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const fmt = useCallback((n: number) => formatCurrency(n, displayCurrency || companyCurrency), [displayCurrency, companyCurrency])
 
   if (cidLoading || loading) return <div className="p-6 text-center">Loading…</div>
   if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
@@ -67,12 +100,27 @@ export default function Page() {
           <h1 className="text-2xl font-black text-emerald-900 tracking-tight">Profit &amp; Loss</h1>
           <p className="text-sm text-slate-500">Income and expense summary for the selected period.</p>
         </div>
-        <button
-          onClick={() => fetchReport()}
-          className="px-4 py-2 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-sm self-start sm:self-auto"
-        >
-          Refresh
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Report currency</label>
+            <select
+              value={displayCurrency}
+              onChange={(event) => setDisplayCurrency(event.target.value)}
+              className="border border-emerald-200 rounded-lg px-3 py-1.5 text-sm text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              {currencyOptions.map((option) => (
+                <option key={option.code} value={option.code}>{option.code} - {option.name}</option>
+              ))}
+            </select>
+            {currencyError ? <p className="text-xs text-rose-600 mt-1">{currencyError}</p> : null}
+          </div>
+          <button
+            onClick={() => fetchReport()}
+            className="px-4 py-2 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-sm self-start sm:self-auto"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Date filters */}
