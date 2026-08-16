@@ -23,10 +23,7 @@
 - Expected output: currency-aware transaction entries, exchange rate management, and multi-currency financial statements.
 - ✅ **Phase 1: Schema Foundation** — Currency/ExchangeRate models added, nullability standardized across `PaymentReceived`, `BankDeposit`, and `JournalEntry`; 15 currencies seeded
 - ✅ **Phase 2: Backend Logic** — `ExchangeRateService` with `enforceCurrency()` helper implemented; currency enforcement applied to AR and Banking transaction services; backend exchange rate endpoints exposed
-- **Phase 3 — Frontend Display:**
-  - Update all currency displays to show correct symbol/formatting per company currency
-  - Add currency selector in company settings
-  - Multi-currency support in invoices, bills, and payment forms
+- ✅ **Phase 3: Frontend Display** — Shared currency formatting utility (Intl.NumberFormat + 15-currency symbol map), company base currency selector in settings, currency dropdowns with live exchange rate preview on invoice/bill/payment forms, all forms send transaction currency to backend
 - **Phase 4 — Multi-Currency Reporting:**
   - Financial statements (P&L, balance sheet, cash flow) support multi-currency display
   - Base currency conversion for consolidated reporting
@@ -54,6 +51,19 @@
 - Automatic depreciation journal entries.
 - Asset disposal and revaluation workflows.
 - **Blocked by:** Core accounting E2E validation
+
+### Plan F: Zypra AI Assistant
+- Goal: Integrate a branded AI assistant ("Zypra") powered by Gemini API that answers questions about the user's own HaypBooks financial data
+- Expected output: A floating chat widget inside the HaypBooks app that can answer accounting queries using real company data (invoices, bills, payments, balances, reports)
+- Key constraints:
+  - Zypra must ONLY answer questions related to HaypBooks data and accounting — all off-topic questions must be politely declined
+  - Responses must be based on the user's actual company data, not generic advice
+  - The AI must understand multi-currency contexts (leveraging Plan B work)
+- Implementation phases:
+  1. Backend: NestJS Gemini API service with system prompt guard, data context layer that fetches company financial data and injects it into prompts
+  2. Frontend: Floating chat widget component, message history, typing indicators
+  3. Quick Actions: Pre-built queries like "Show overdue bills", "Summarize this month's revenue", "Create invoice for [client]"
+- **Blocked by:** Plan B Phase 4 (multi-currency reporting must be complete first)
 
 ---
 
