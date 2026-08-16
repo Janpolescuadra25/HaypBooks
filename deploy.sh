@@ -46,9 +46,18 @@ fi
 echo "Running database migrations..."
 npx prisma migrate deploy
 
-echo "Seeding currency data..."
+echo "Checking if seed is needed..."
 cd /root/HaypBooks/Haypbooks/Backend
-npx prisma db seed
+SEED_COUNT=$(npx prisma db execute --stdin <<'SQL' 2>/dev/null | tail -1
+SELECT COUNT(*) FROM currencies;
+SQL
+)
+if [ "$SEED_COUNT" -eq 0 ] 2>/dev/null; then
+  echo "No currencies found, running seed..."
+  npx prisma db seed
+else
+  echo "Currencies already exist ($SEED_COUNT rows), skipping seed."
+fi
 cd /root/HaypBooks/Haypbooks
 
 # Restart both apps via pm2
