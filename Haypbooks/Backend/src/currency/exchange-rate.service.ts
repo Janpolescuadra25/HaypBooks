@@ -16,7 +16,7 @@ export class ExchangeRateService {
     return value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value)
   }
 
-  private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+  async resolveCurrency(companyId: string, currency?: string): Promise<string> {
     if (currency) {
       const code = this.normalizeCode(currency)
       const currencyRecord = await this.prisma.currency.findFirst({ where: { code, isActive: true } })

@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { ReportingRepository } from './reporting.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { ExchangeRateService } from '../currency/exchange-rate.service'
 
 @Injectable()
 export class ReportingService {
-    constructor(private readonly repo: ReportingRepository, private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly repo: ReportingRepository,
+        private readonly prisma: PrismaService,
+        private readonly exchangeRateService: ExchangeRateService,
+    ) { }
 
     private async getWorkspaceId(companyId: string) {
         const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { workspaceId: true } })
@@ -21,7 +27,7 @@ export class ReportingService {
 
     // ─── Financial Statements ─────────────────────────────────────────────────
 
-    async getProfitAndLoss(userId: string, companyId: string, opts: { from?: string; to?: string }) {
+    async getProfitAndLoss(userId: string, companyId: string, opts: { from?: string; to?: string; displayCurrency?: string }) {
         await this.assertAccess(userId, companyId)
         const now = new Date()
         const from = opts.from ? new Date(opts.from) : new Date(now.getFullYear(), 0, 1) // YTD start
@@ -30,17 +36,30 @@ export class ReportingService {
         if (opts.to && Number.isNaN(to.getTime())) throw new BadRequestException('Invalid to date')
         if (from > to) throw new BadRequestException('from date must be before to date')
 
-        return this._calculateProfitAndLoss(companyId, from, to)
+        const baseCurrency = (await this.exchangeRateService.enforceCurrency(companyId, undefined, undefined, 1)).currency
+        const report = await this._calculateProfitAndLoss(companyId, from, to)
+        if (opts.displayCurrency && opts.displayCurrency.toUpperCase() !== baseCurrency) {
+            return this._convertProfitAndLossReport(report, baseCurrency, opts.displayCurrency.toUpperCase())
+        }
+
+        return { ...report, currency: baseCurrency }
     }
 
-    async getBalanceSheet(userId: string, companyId: string, opts: { asOf?: string }) {
+    async getBalanceSheet(userId: string, companyId: string, opts: { asOf?: string; displayCurrency?: string }) {
         await this.assertAccess(userId, companyId)
         const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
         if (opts.asOf && Number.isNaN(asOf.getTime())) throw new BadRequestException('Invalid asOf date')
-        return this._buildBalanceSheet(companyId, asOf)
+
+        const baseCurrency = await this.exchangeRateService.resolveCurrency(companyId)
+        const report = await this._buildBalanceSheet(companyId, asOf)
+        if (opts.displayCurrency && opts.displayCurrency.toUpperCase() !== baseCurrency) {
+            return this._convertBalanceSheetReport(report, baseCurrency, opts.displayCurrency.toUpperCase())
+        }
+
+        return { ...report, currency: baseCurrency }
     }
 
-    async getCashFlow(userId: string, companyId: string, opts: { from?: string; to?: string }) {
+    async getCashFlow(userId: string, companyId: string, opts: { from?: string; to?: string; displayCurrency?: string }) {
         await this.assertAccess(userId, companyId)
         const now = new Date()
         const from = opts.from ? new Date(opts.from) : new Date(now.getFullYear(), 0, 1)
@@ -126,7 +145,7 @@ export class ReportingService {
         const netCashFlow = this._roundMoney(totalOperating + totalInvesting + totalFinancing)
         const cashChangeVariance = this._roundMoney(netCashFlow - this._roundMoney(closingCash - openingCash))
 
-        return {
+        const report = {
             companyId,
             from,
             to,
@@ -153,13 +172,27 @@ export class ReportingService {
             closingCash,
             cashChangeVariance,
         }
+
+        const baseCurrency = await this.exchangeRateService.resolveCurrency(companyId)
+        if (opts.displayCurrency && opts.displayCurrency.toUpperCase() !== baseCurrency) {
+            return this._convertCashFlowReport(report, baseCurrency, opts.displayCurrency.toUpperCase())
+        }
+
+        return { ...report, currency: baseCurrency }
     }
 
-    async getTrialBalance(userId: string, companyId: string, opts: { asOf?: string } = {}) {
+    async getTrialBalance(userId: string, companyId: string, opts: { asOf?: string; displayCurrency?: string } = {}) {
         await this.assertAccess(userId, companyId)
         const asOf = opts.asOf ? new Date(opts.asOf) : new Date()
         if (opts.asOf && Number.isNaN(asOf.getTime())) throw new BadRequestException('Invalid asOf date')
-        return this._buildTrialBalance(companyId, asOf)
+
+        const baseCurrency = await this.exchangeRateService.resolveCurrency(companyId)
+        const report = await this._buildTrialBalance(companyId, asOf)
+        if (opts.displayCurrency && opts.displayCurrency.toUpperCase() !== baseCurrency) {
+            return this._convertTrialBalanceReport(report, baseCurrency, opts.displayCurrency.toUpperCase())
+        }
+
+        return { ...report, currency: baseCurrency }
     }
 
     private _roundMoney(value: number, decimals = 2): number {
@@ -167,23 +200,180 @@ export class ReportingService {
         return Math.round((value + Number.EPSILON) * factor) / factor
     }
 
+    private async _convertAmount(value: number, fromCurrency: string, toCurrency: string): Promise<number> {
+        if (fromCurrency === toCurrency) return this._roundMoney(value)
+        const converted = await this.exchangeRateService.convertAmount(new Prisma.Decimal(value), fromCurrency, toCurrency)
+        return this._roundMoney(Number(converted.toString()))
+    }
+
+    private async _convertProfitAndLossReport(report: any, fromCurrency: string, toCurrency: string) {
+        const revenueAccounts = await Promise.all(
+            report.sections.revenue.accounts.map(async (row: any) => ({
+                ...row,
+                totalDebit: await this._convertAmount(row.totalDebit, fromCurrency, toCurrency),
+                totalCredit: await this._convertAmount(row.totalCredit, fromCurrency, toCurrency),
+                netBalance: await this._convertAmount(row.netBalance, fromCurrency, toCurrency),
+            })),
+        )
+        const expenseAccounts = await Promise.all(
+            report.sections.expenses.accounts.map(async (row: any) => ({
+                ...row,
+                totalDebit: await this._convertAmount(row.totalDebit, fromCurrency, toCurrency),
+                totalCredit: await this._convertAmount(row.totalCredit, fromCurrency, toCurrency),
+                netBalance: await this._convertAmount(row.netBalance, fromCurrency, toCurrency),
+            })),
+        )
+
+        const totalRevenue = await this._convertAmount(report.totalRevenue, fromCurrency, toCurrency)
+        const totalExpenses = await this._convertAmount(report.totalExpenses, fromCurrency, toCurrency)
+        const netIncome = await this._convertAmount(report.netIncome, fromCurrency, toCurrency)
+
+        return {
+            ...report,
+            currency: toCurrency,
+            sections: {
+                revenue: { accounts: revenueAccounts, total: totalRevenue },
+                expenses: { accounts: expenseAccounts, total: totalExpenses },
+            },
+            totalRevenue,
+            totalExpenses,
+            netIncome,
+        }
+    }
+
+    private async _convertBalanceSheetReport(report: any, fromCurrency: string, toCurrency: string) {
+        const assets = await Promise.all(
+            report.sections.assets.accounts.map(async (row: any) => ({
+                ...row,
+                balance: await this._convertAmount(row.balance, fromCurrency, toCurrency),
+            })),
+        )
+        const liabilities = await Promise.all(
+            report.sections.liabilities.accounts.map(async (row: any) => ({
+                ...row,
+                balance: await this._convertAmount(row.balance, fromCurrency, toCurrency),
+            })),
+        )
+        const equity = await Promise.all(
+            report.sections.equity.accounts.map(async (row: any) => ({
+                ...row,
+                balance: await this._convertAmount(row.balance, fromCurrency, toCurrency),
+            })),
+        )
+
+        const totalAssets = await this._convertAmount(report.totalAssets, fromCurrency, toCurrency)
+        const totalLiabilities = await this._convertAmount(report.totalLiabilities, fromCurrency, toCurrency)
+        const totalEquity = await this._convertAmount(report.totalEquity, fromCurrency, toCurrency)
+        const isBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01
+
+        return {
+            ...report,
+            currency: toCurrency,
+            sections: {
+                assets: { accounts: assets, total: totalAssets },
+                liabilities: { accounts: liabilities, total: totalLiabilities },
+                equity: { accounts: equity, total: totalEquity },
+            },
+            totalAssets,
+            totalLiabilities,
+            totalEquity,
+            isBalanced,
+        }
+    }
+
+    private async _convertCashFlowReport(report: any, fromCurrency: string, toCurrency: string) {
+        const operatingItems = await Promise.all(
+            report.sections.operating.items.map(async (row: any) => ({
+                ...row,
+                change: await this._convertAmount(row.change, fromCurrency, toCurrency),
+            })),
+        )
+        const investingItems = await Promise.all(
+            report.sections.investing.items.map(async (row: any) => ({
+                ...row,
+                change: await this._convertAmount(row.change, fromCurrency, toCurrency),
+            })),
+        )
+        const financingItems = await Promise.all(
+            report.sections.financing.items.map(async (row: any) => ({
+                ...row,
+                change: await this._convertAmount(row.change, fromCurrency, toCurrency),
+            })),
+        )
+
+        const totalOperating = await this._convertAmount(report.sections.operating.total, fromCurrency, toCurrency)
+        const totalInvesting = await this._convertAmount(report.sections.investing.total, fromCurrency, toCurrency)
+        const totalFinancing = await this._convertAmount(report.sections.financing.total, fromCurrency, toCurrency)
+        const netCashFlow = await this._convertAmount(report.netCashFlow, fromCurrency, toCurrency)
+        const openingCash = await this._convertAmount(report.openingCash, fromCurrency, toCurrency)
+        const closingCash = await this._convertAmount(report.closingCash, fromCurrency, toCurrency)
+        const cashChangeVariance = await this._convertAmount(report.cashChangeVariance, fromCurrency, toCurrency)
+
+        return {
+            ...report,
+            currency: toCurrency,
+            sections: {
+                operating: { ...report.sections.operating, items: operatingItems, total: totalOperating },
+                investing: { ...report.sections.investing, items: investingItems, total: totalInvesting },
+                financing: { ...report.sections.financing, items: financingItems, total: totalFinancing },
+            },
+            netCashFlow,
+            openingCash,
+            closingCash,
+            cashChangeVariance,
+        }
+    }
+
+    private async _convertTrialBalanceReport(report: any, fromCurrency: string, toCurrency: string) {
+        const accounts = await Promise.all(
+            report.accounts.map(async (row: any) => ({
+                ...row,
+                totalDebit: await this._convertAmount(row.totalDebit, fromCurrency, toCurrency),
+                totalCredit: await this._convertAmount(row.totalCredit, fromCurrency, toCurrency),
+                netBalance: await this._convertAmount(row.netBalance, fromCurrency, toCurrency),
+            })),
+        )
+        const totals = {
+            totalDebit: await this._convertAmount(report.totals.totalDebit, fromCurrency, toCurrency),
+            totalCredit: await this._convertAmount(report.totals.totalCredit, fromCurrency, toCurrency),
+            netBalance: await this._convertAmount(report.totals.netBalance, fromCurrency, toCurrency),
+        }
+
+        return {
+            ...report,
+            currency: toCurrency,
+            accounts,
+            totals,
+        }
+    }
+
     private async _getAccountBalances(companyId: string, asOf: Date) {
-        const accounts = await this.prisma.account.findMany({
+            const accounts = await this.prisma.account.findMany({
             where: { companyId, deletedAt: null, isActive: true, isHeader: false },
             include: {
                 type: { select: { name: true, category: true, normalSide: true } },
                 AccountSubType: { select: { name: true } },
                 journalLines: {
                     where: { journal: { postingStatus: 'POSTED', deletedAt: null, date: { lte: asOf } } },
-                    select: { debit: true, credit: true },
+                    select: {
+                        debit: true,
+                        credit: true,
+                        journal: { select: { exchangeRate: true, currency: true } },
+                    },
                 },
             },
             orderBy: { code: 'asc' },
-        })
+        }) as Array<any>
 
         return accounts.map((account) => {
-            const totalDebit = account.journalLines.reduce((sum, line) => sum + Number(line.debit ?? 0), 0)
-            const totalCredit = account.journalLines.reduce((sum, line) => sum + Number(line.credit ?? 0), 0)
+            const totalDebit = account.journalLines.reduce((sum: number, line: any) => {
+                const rate = Number(line.journal?.exchangeRate ?? 1)
+                return sum + Number(line.debit ?? 0) * rate
+            }, 0)
+            const totalCredit = account.journalLines.reduce((sum: number, line: any) => {
+                const rate = Number(line.journal?.exchangeRate ?? 1)
+                return sum + Number(line.credit ?? 0) * rate
+            }, 0)
             const accountType = account.type?.category ?? 'ASSET'
             const netBalance = this._roundMoney(totalDebit - totalCredit)
             return {
@@ -207,15 +397,25 @@ export class ReportingService {
                 AccountSubType: { select: { name: true } },
                 journalLines: {
                     where: { journal: { postingStatus: 'POSTED', deletedAt: null, date: { gte: from, lte: to } } },
-                    select: { debit: true, credit: true },
+                    select: {
+                        debit: true,
+                        credit: true,
+                        journal: { select: { exchangeRate: true, currency: true } },
+                    },
                 },
             },
             orderBy: { code: 'asc' },
-        })
+        }) as Array<any>
 
         return accounts.map((account) => {
-            const totalDebit = account.journalLines.reduce((sum, line) => sum + Number(line.debit ?? 0), 0)
-            const totalCredit = account.journalLines.reduce((sum, line) => sum + Number(line.credit ?? 0), 0)
+            const totalDebit = account.journalLines.reduce((sum: number, line: any) => {
+                const rate = Number(line.journal?.exchangeRate ?? 1)
+                return sum + Number(line.debit ?? 0) * rate
+            }, 0)
+            const totalCredit = account.journalLines.reduce((sum: number, line: any) => {
+                const rate = Number(line.journal?.exchangeRate ?? 1)
+                return sum + Number(line.credit ?? 0) * rate
+            }, 0)
             const accountType = account.type?.category ?? 'ASSET'
             const netBalance = this._roundMoney(totalDebit - totalCredit)
             return {

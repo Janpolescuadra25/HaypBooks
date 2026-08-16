@@ -30,9 +30,10 @@ export class ReportingController {
         @Query('companyId') cid: string,
         @Query('from') from?: string,
         @Query('to') to?: string,
+        @Query('displayCurrency') displayCurrency?: string,
     ) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
-        return this.svc.getProfitAndLoss(req.user.userId, cid, { from, to })
+        return this.svc.getProfitAndLoss(req.user.userId, cid, { from, to, displayCurrency })
     }
 
     @Get('balance-sheet')
@@ -40,9 +41,10 @@ export class ReportingController {
         @Req() req: any,
         @Query('companyId') cid: string,
         @Query('asOf') asOf?: string,
+        @Query('displayCurrency') displayCurrency?: string,
     ) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
-        return this.svc.getBalanceSheet(req.user.userId, cid, { asOf })
+        return this.svc.getBalanceSheet(req.user.userId, cid, { asOf, displayCurrency })
     }
 
     @Get('cash-flow')
@@ -51,15 +53,21 @@ export class ReportingController {
         @Query('companyId') cid: string,
         @Query('from') from?: string,
         @Query('to') to?: string,
+        @Query('displayCurrency') displayCurrency?: string,
     ) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
-        return this.svc.getCashFlow(req.user.userId, cid, { from, to })
+        return this.svc.getCashFlow(req.user.userId, cid, { from, to, displayCurrency })
     }
 
     @Get('trial-balance')
-    getTrialBalance(@Req() req: any, @Query('companyId') cid: string, @Query('asOf') asOf?: string) {
+    getTrialBalance(
+        @Req() req: any,
+        @Query('companyId') cid: string,
+        @Query('asOf') asOf?: string,
+        @Query('displayCurrency') displayCurrency?: string,
+    ) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
-        return this.svc.getTrialBalance(req.user.userId, cid, { asOf })
+        return this.svc.getTrialBalance(req.user.userId, cid, { asOf, displayCurrency })
     }
 
     @Get('ledger-health')
