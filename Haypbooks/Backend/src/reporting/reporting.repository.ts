@@ -390,12 +390,7 @@ export class ReportingRepository {
                 lines: {
                     include: {
                         account: {
-                            include: {
-                                journalLines: {
-                                    where: { journal: { postingStatus: 'POSTED', deletedAt: null, date: { gte: from, lte: to } } },
-                                    select: { debit: true, credit: true },
-                                },
-                            },
+                            select: { id: true, code: true, name: true },
                         },
                     },
                 },
@@ -403,18 +398,64 @@ export class ReportingRepository {
         })
         if (!budget) return null
 
+        const accountIds = Array.from(new Set(budget.lines
+            .map((line) => line.accountId)
+            .filter((accountId): accountId is string => Boolean(accountId))))
+
+        const actualRows = accountIds.length > 0
+            ? await this.prisma.journalEntryLine.findMany({
+                where: {
+                    workspaceId,
+                    accountId: { in: accountIds },
+                    journal: {
+                        postingStatus: 'POSTED',
+                        deletedAt: null,
+                        date: { gte: from, lte: to },
+                    },
+                },
+                select: {
+                    accountId: true,
+                    debit: true,
+                    credit: true,
+                    journal: { select: { exchangeRate: true } },
+                },
+            })
+            : []
+
+        const actualByAccount = actualRows.reduce((map, row) => {
+            const exchangeRate = Number(row.journal?.exchangeRate ?? 1)
+            const amount = Number(row.debit ?? 0) * exchangeRate - Number(row.credit ?? 0) * exchangeRate
+            map.set(row.accountId, (map.get(row.accountId) ?? 0) + amount)
+            return map
+        }, new Map<string, number>())
+
         const rows = budget.lines.map((line) => {
-            const actual = line.account
-                ? line.account.journalLines.reduce((s, l) => s + Number(l.debit) - Number(l.credit), 0)
-                : 0
             const budgeted = Number(line.amount)
+            const actual = line.accountId ? actualByAccount.get(line.accountId) ?? 0 : 0
             const variance = actual - budgeted
             return {
-                accountId: line.accountId, accountCode: line.account?.code, accountName: line.account?.name,
-                month: line.month, budgeted, actual, variance, variancePct: budgeted !== 0 ? (variance / budgeted) * 100 : 0,
+                accountId: line.accountId,
+                accountCode: line.account?.code,
+                accountName: line.account?.name,
+                month: line.month,
+                budgeted,
+                actual,
+                variance,
+                variancePct: budgeted !== 0 ? (variance / budgeted) * 100 : 0,
             }
         })
-        return { budget: { id: budget.id, name: budget.name, fiscalYear: budget.fiscalYear }, rows, from: from.toISOString(), to: to.toISOString() }
+
+        return {
+            budget: {
+                id: budget.id,
+                name: budget.name,
+                fiscalYear: budget.fiscalYear,
+                currency: budget.currency,
+            },
+            rows,
+            from: from.toISOString(),
+            to: to.toISOString(),
+        }
     }
 
     // ─── KPI Dashboards ───────────────────────────────────────────────────────

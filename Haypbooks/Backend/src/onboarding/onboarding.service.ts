@@ -314,7 +314,7 @@ export class OnboardingService {
               this.logger.log('[ONBOARDING-COMPLETE] ✅ Bank account created for workspace: ' + ownerWorkspaceId)
             }
           }
-        })
+        }, { timeout: 30000 })
       } catch (e) {
         this.logger.warn('[ONBOARDING-COMPLETE] Onboarding workspace/company/financial setup failed: ' + (e?.message || e))
         incMetric('onboarding.company_creation_failure')

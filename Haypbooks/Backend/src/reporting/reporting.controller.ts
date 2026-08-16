@@ -1,10 +1,11 @@
 import {
     Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
-    UseGuards, Req, HttpCode, HttpStatus, BadRequestException,
+    UseGuards, Req, HttpCode, HttpStatus, BadRequestException, UsePipes, ValidationPipe,
 } from '@nestjs/common'
 import { ReportingService } from './reporting.service'
 import { LedgerHealthService } from './ledger-health.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { CreateBudgetDto, UpdateBudgetDto } from './dto/create-budget.dto'
 
 @Controller('api/reporting')
 @UseGuards(JwtAuthGuard)
@@ -111,9 +112,10 @@ export class ReportingController {
     }
 
     @Post('budgets')
-    createBudget(@Req() req: any, @Query('companyId') cid: string, @Body() body: any) {
+    @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    createBudget(@Req() req: any, @Query('companyId') cid: string, @Body() dto: CreateBudgetDto) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
-        return this.svc.createBudget(req.user.userId, cid, body)
+        return this.svc.createBudget(req.user.userId, cid, dto)
     }
 
     @Get('budgets/:budgetId')
@@ -137,9 +139,10 @@ export class ReportingController {
     // ─── Budget CRUD ──────────────────────────────────────────────────────────
 
     @Patch('budgets/:budgetId')
-    updateBudget(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string, @Body() body: { name?: string; status?: string; fiscalYear?: number }) {
+    @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    updateBudget(@Req() req: any, @Query('companyId') cid: string, @Param('budgetId') budgetId: string, @Body() dto: UpdateBudgetDto) {
         if (!cid) throw new BadRequestException('companyId query parameter is required')
-        return this.svc.updateBudget(req.user.userId, cid, budgetId, body)
+        return this.svc.updateBudget(req.user.userId, cid, budgetId, { name: dto.name, fiscalYear: dto.fiscalYear })
     }
 
     @Delete('budgets/:budgetId')

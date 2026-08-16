@@ -49,10 +49,11 @@ export interface BudgetVsActualRow {
 }
 
 export interface BudgetVsActualResponse {
-  budget: { id: string; name: string; fiscalYear: number }
+  budget: { id: string; name: string; fiscalYear: number; currency?: string }
   rows: BudgetVsActualRow[]
   from: string
   to: string
+  currency?: string
 }
 
 export const budgetService = {

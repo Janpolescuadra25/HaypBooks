@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, RefreshCw, TrendingUp, TrendingDown, Minus, Wallet, DollarSign, BarChart3 } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { budgetService, type BudgetVsActualResponse } from '@/services/budget.service'
@@ -83,6 +84,28 @@ export default function BudgetVsActualPage() {
       totalVariance: totalActual - totalBudgeted,
     }
   }, [data])
+
+  const monthlySeries = useMemo(() => {
+    const months = Array.from({ length: 12 }, (_, index) => ({
+      month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][index],
+      budgeted: 0,
+      actual: 0,
+    }))
+
+    if (!data?.rows?.length) return months
+
+    for (const row of data.rows) {
+      const monthIndex = row.month ? row.month - 1 : 12
+      if (monthIndex >= 0 && monthIndex < 12) {
+        months[monthIndex].budgeted += Number(row.budgeted) || 0
+        months[monthIndex].actual += Number(row.actual) || 0
+      }
+    }
+
+    return months
+  }, [data])
+
+  const displayCurrency = data?.currency ?? currency
 
   const sortedRows = useMemo(() => {
     if (!data?.rows?.length) return []
@@ -167,7 +190,7 @@ export default function BudgetVsActualPage() {
             </div>
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Budgeted</p>
-              <p className="text-lg font-semibold text-slate-900 mt-0.5">{formatCurrency(kpis.totalBudgeted, currency)}</p>
+              <p className="text-lg font-semibold text-slate-900 mt-0.5">{formatCurrency(kpis.totalBudgeted, displayCurrency)}</p>
             </div>
           </div>
         </div>
@@ -178,7 +201,7 @@ export default function BudgetVsActualPage() {
             </div>
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Actual</p>
-              <p className="text-lg font-semibold text-slate-900 mt-0.5">{formatCurrency(kpis.totalActual, currency)}</p>
+              <p className="text-lg font-semibold text-slate-900 mt-0.5">{formatCurrency(kpis.totalActual, displayCurrency)}</p>
             </div>
           </div>
         </div>
@@ -202,6 +225,26 @@ export default function BudgetVsActualPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-slate-900">Monthly Budget vs Actual</h2>
+          <p className="text-sm text-slate-500">Compare monthly budgeted and actual spending for the selected period.</p>
+        </div>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={monthlySeries} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip formatter={(value) => typeof value === 'number' ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : value} />
+              <Legend />
+              <Bar dataKey="budgeted" fill="#3b82f6" />
+              <Bar dataKey="actual" fill="#10b981" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -246,12 +289,12 @@ export default function BudgetVsActualPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{formatMonth(row.month)}</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{formatCurrency(Number(row.budgeted), currency)}</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{formatCurrency(Number(row.actual), currency)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{formatCurrency(Number(row.budgeted), displayCurrency)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{formatCurrency(Number(row.actual), displayCurrency)}</td>
                     <td className={`px-4 py-3 text-right font-medium ${varianceColor(variance)}`}>
                       <div className="flex items-center justify-end gap-1.5">
                         <VarianceIcon value={variance} />
-                        {formatCurrency(Math.abs(variance), currency)}
+                        {formatCurrency(Math.abs(variance), displayCurrency)}
                       </div>
                     </td>
                     <td className={`px-4 py-3 text-right font-medium ${varianceColor(variance)}`}>
@@ -265,12 +308,12 @@ export default function BudgetVsActualPage() {
               <tfoot>
                 <tr className="border-t-2 border-slate-200 bg-slate-50/50">
                   <td className="px-4 py-3 font-semibold text-slate-800" colSpan={2}>Total</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalBudgeted, currency)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalActual, currency)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalBudgeted, displayCurrency)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatCurrency(kpis.totalActual, displayCurrency)}</td>
                   <td className={`px-4 py-3 text-right font-semibold ${varianceColor(kpis.totalVariance)}`}>
                     <div className="flex items-center justify-end gap-1.5">
                       <VarianceIcon value={kpis.totalVariance} />
-                      {formatCurrency(Math.abs(kpis.totalVariance), currency)}
+                      {formatCurrency(Math.abs(kpis.totalVariance), displayCurrency)}
                     </div>
                   </td>
                   <td className={`px-4 py-3 text-right font-semibold ${varianceColor(kpis.totalVariance)}`}>

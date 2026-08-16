@@ -730,6 +730,10 @@ model User {
   auditLogs                 AuditLog[]
   recurringExpensesCreated  RecurringExpense[]  @relation("RecurringExpenseCreator")
   statementSchedulesCreated StatementSchedule[] @relation("StatementScheduleCreator")
+  budgetsCreated            Budget[]            @relation("Budget_createdBy")
+  budgetsUpdated            Budget[]            @relation("Budget_updatedBy")
+  budgetLinesCreated        BudgetLine[]        @relation("BudgetLine_createdBy")
+  budgetLinesUpdated        BudgetLine[]        @relation("BudgetLine_updatedBy")
   // Tasks relations
   tasksCreated              Task[]
   createdWorkflows          Workflow[]
@@ -4799,37 +4803,56 @@ model Budget {
   status      BudgetStatus   @default(DRAFT)
   fiscalYear  Int
   totalAmount Decimal?       @db.Decimal(19, 4)
+  currency    String?
+  exchangeRate Decimal?      @db.Decimal(18, 12)
+  baseAmount  Decimal?       @db.Decimal(19, 4)
   createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdById String?
+  updatedById String?
 
   workspace Workspace       @relation(fields: [workspaceId], references: [id])
   lines     BudgetLine[]
   // Budget versions (top-level)
   versions  BudgetVersion[]
 
+  createdBy User? @relation("Budget_createdBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("Budget_updatedBy", fields: [updatedById], references: [id])
   // Auto-added opposite relations (generated)
   comparisons BudgetActualComparison[]
 
   @@index([workspaceId, fiscalYear])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model BudgetLine {
-  id          String   @id @default(uuid())
-  budgetId    String
-  workspaceId String
-  accountId   String?
-  classId     String?
-  month       Int?
-  amount      Decimal  @db.Decimal(19, 4)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  budgetId     String
+  workspaceId  String
+  accountId    String?
+  classId      String?
+  month        Int?
+  amount       Decimal  @db.Decimal(19, 4)
+  exchangeRate Decimal? @db.Decimal(18, 12)
+  baseAmount   Decimal? @db.Decimal(19, 4)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String?
+  updatedById  String?
 
   budget    Budget    @relation(fields: [budgetId], references: [id])
   account   Account?  @relation(fields: [accountId], references: [id])
   class     Class?    @relation(fields: [classId], references: [id])
   workspace Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy User? @relation("BudgetLine_createdBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("BudgetLine_updatedBy", fields: [updatedById], references: [id])
 
   @@index([budgetId])
   @@index([accountId])
   @@index([workspaceId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model BudgetVersion {

@@ -583,7 +583,9 @@ export class ReportingService {
         const to = opts.to ? new Date(opts.to) : now
         const result = await this.repo.getBudgetVsActual(workspaceId, budgetId, from, to)
         if (!result) throw new NotFoundException('Budget not found')
-        return result
+
+        const baseCurrency = (await this.exchangeRateService.enforceCurrency(companyId, undefined, undefined, 1)).currency
+        return { ...result, currency: baseCurrency }
     }
 
     // ─── Budget CRUD ──────────────────────────────────────────────────────────
