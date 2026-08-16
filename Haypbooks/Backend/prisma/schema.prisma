@@ -8538,9 +8538,9 @@ model PaymentReceived {
   isDeposited        Boolean  @default(false)
   undepositedBatchId String?
 
-  currency     String?
-  exchangeRate Decimal?  @db.Decimal(18, 12)
-  baseAmount   Decimal?  @db.Decimal(19, 4)
+  currency     String    @default("USD")
+  exchangeRate Decimal   @default(1) @db.Decimal(18, 8)
+  baseAmount   Decimal   @default(0) @db.Decimal(18, 2)
   deletedAt    DateTime?
 
   workspace                 Workspace                   @relation(fields: [workspaceId], references: [id])
@@ -9048,9 +9048,9 @@ model BankDeposit {
   bankAccountId   String
   depositDate     DateTime          @default(now())
   totalAmount     Decimal           @db.Decimal(19, 4)
-  currency        String?
-  exchangeRate    Decimal?          @db.Decimal(18, 12)
-  baseAmount      Decimal?          @db.Decimal(19, 4)
+  currency        String            @default("USD")
+  exchangeRate    Decimal           @default(1) @db.Decimal(18, 8)
+  baseAmount      Decimal           @default(0) @db.Decimal(18, 2)
   status          BankDepositStatus @default(DRAFT) // DRAFT, POSTED, VOID
   referenceNumber String?
 
