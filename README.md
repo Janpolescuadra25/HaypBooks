@@ -1,5 +1,37 @@
 # HaypBooks
 
+## 🖥️ Infrastructure & Deployment Context
+
+### Server
+- **Provider**: Hetzner Cloud
+- **Server Name**: haypbooks-dev
+- **Type**: CX33 (4 vCPU, 8 GB RAM, 80 GB Disk)
+- **OS**: Ubuntu 26.04 LTS
+
+### Process Manager (PM2)
+PM2 is a production process manager for Node.js that keeps backend and frontend running as background services, auto-restarts on crash, and manages logs.
+- `haypbooks-backend` — NestJS API server
+- `haypbooks-frontend` — Next.js web server
+
+Common commands: `pm2 list`, `pm2 logs <name> --lines 50 --nostream`, `pm2 delete <name>`, `pm2 start npm --name <name> -- start`, `pm2 save`
+
+### VPS File Paths
+- **Repo**: `/root/HaypBooks/`
+- **Backend**: `/root/HaypBooks/Haypbooks/Backend/`
+- **Frontend**: `/root/HaypBooks/Haypbooks/Frontend/`
+- **Backend .env**: `/root/HaypBooks/Haypbooks/Backend/.env`
+- **PM2 logs**: `/root/.pm2/logs/`
+
+### Deploy Pipeline
+GitHub Actions → SSH → `deploy.sh` → npm install → build → prisma migrate → PM2 restart
+
+### Database
+Neon PostgreSQL (serverless, ap-southeast-1). Migrations via Prisma.
+
+### Domains
+- **Frontend**: https://haypbooks.com
+- **API**: https://api.haypbooks.com
+
 HaypBooks is a modern accounting and practice management suite with a Next.js frontend and NestJS backend. This repository includes a real JWT authentication flow, landing page, onboarding UI, and a foundation for business finance features.
 
 ## Tech Stack
