@@ -1021,11 +1021,44 @@ async function main() {
 
   console.log('Seeded fixed asset and depreciation')
 
+  // Seed currency master data before tenant-agnostic permissions
+  await seedCurrencies()
+
   // Seed default permissions for RBAC system
   await seedPermissions()
 
   // Seed default roles for demo tenant
   // await seedDefaultRolesForTenant(tenant.id)  // disabled during migration
+}
+
+async function seedCurrencies() {
+  const currencies = [
+    { code: 'USD', name: 'US Dollar', symbol: '$', decimalPlaces: 2, isActive: true },
+    { code: 'PHP', name: 'Philippine Peso', symbol: '₱', decimalPlaces: 2, isActive: true },
+    { code: 'EUR', name: 'Euro', symbol: '€', decimalPlaces: 2, isActive: true },
+    { code: 'GBP', name: 'British Pound', symbol: '£', decimalPlaces: 2, isActive: true },
+    { code: 'JPY', name: 'Japanese Yen', symbol: '¥', decimalPlaces: 0, isActive: true },
+    { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', decimalPlaces: 2, isActive: true },
+    { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', decimalPlaces: 2, isActive: true },
+    { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', decimalPlaces: 2, isActive: true },
+    { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', decimalPlaces: 2, isActive: true },
+    { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', decimalPlaces: 2, isActive: true },
+    { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', decimalPlaces: 2, isActive: true },
+    { code: 'KRW', name: 'South Korean Won', symbol: '₩', decimalPlaces: 0, isActive: true },
+    { code: 'THB', name: 'Thai Baht', symbol: '฿', decimalPlaces: 2, isActive: true },
+    { code: 'INR', name: 'Indian Rupee', symbol: '₹', decimalPlaces: 2, isActive: true },
+    { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', decimalPlaces: 2, isActive: true },
+  ]
+
+  console.log('Seeding currencies...')
+  for (const currency of currencies) {
+    await prisma.currency.upsert({
+      where: { code: currency.code },
+      update: {},
+      create: currency,
+    })
+  }
+  console.log(`✅ Seeded ${currencies.length} currencies`)
 }
 
 // Seed global permissions (tenant-agnostic)

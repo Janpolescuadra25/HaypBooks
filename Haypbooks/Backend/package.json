@@ -110,6 +110,9 @@
     "prepare": "husky install || true",
     "postinstall": "prisma generate --schema=prisma/schema.prisma"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "npm --prefix . run check:migrations && npm --prefix . run lint:migrations:rls && npm --prefix . run lint:db:tenant-coltypes && npm --prefix . run lint:db:schema-complete && npm --prefix . run verify:expected-schema && npm --prefix . run lint:db:fail-on-backups"
