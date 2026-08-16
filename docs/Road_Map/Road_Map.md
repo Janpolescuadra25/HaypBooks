@@ -7,6 +7,7 @@
 - ✅ **Logo Replacement** — All placeholder logos (LandingHeader, AuthLayout, CinematicIntro, landing.html) replaced with HB_Logo.png. Favicon and metadata configured.
 - ✅ **Repo Cleanup** — Removed stray root files, malformed filenames, and all "open source" references. HaypBooks is proprietary.
 - ✅ **Build Error Fixes** — Resolved TypeScript/Prisma build errors in owner.service.ts.
+- ✅ **Multi-Currency Support (Plan B)** — Full end-to-end multi-currency accounting: Currency/ExchangeRate models with 15 seeded currencies, ExchangeRateService with enforceCurrency() helper and live API rate fetching, currency enforcement in AR/Banking transaction services, shared formatCurrency() utility, company base currency selector, currency dropdowns with exchange rate preview on invoice/bill/payment forms, multi-currency financial reporting with display currency selector on P&L/Balance Sheet/Cash Flow/Trial Balance.
 
 ---
 
@@ -17,17 +18,6 @@
 - Expected output: production-grade Postgres deployment, reliable backups, and a secure connection configuration for HaypBooks.
 - Eliminates Supabase dependency, reduces costs, and gives full control over backups and scaling.
 - **Blocked by:** E2E testing completion
-
-### Plan B: Multi-Currency Support (ACTIVE)
-- Goal: Support multiple currencies across companies, transactions, and financial reporting.
-- Expected output: currency-aware transaction entries, exchange rate management, and multi-currency financial statements.
-- ✅ **Phase 1: Schema Foundation** — Currency/ExchangeRate models added, nullability standardized across `PaymentReceived`, `BankDeposit`, and `JournalEntry`; 15 currencies seeded
-- ✅ **Phase 2: Backend Logic** — `ExchangeRateService` with `enforceCurrency()` helper implemented; currency enforcement applied to AR and Banking transaction services; backend exchange rate endpoints exposed
-- ✅ **Phase 3: Frontend Display** — Shared currency formatting utility (Intl.NumberFormat + 15-currency symbol map), company base currency selector in settings, currency dropdowns with live exchange rate preview on invoice/bill/payment forms, all forms send transaction currency to backend
-- **Phase 4 — Multi-Currency Reporting:**
-  - Financial statements (P&L, balance sheet, cash flow) support multi-currency display
-  - Base currency conversion for consolidated reporting
-- **Blocked by:** None
 
 ### Plan C: Budgeting Module
 - Goal: Deliver budgeting capability with variance tracking and reporting.
