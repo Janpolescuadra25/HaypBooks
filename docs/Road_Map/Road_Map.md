@@ -87,6 +87,64 @@
 
 ---
 
+### Plan G: Comprehensive Product Maturity Audit & Polish
+**Status**: Not Started | **Depends on**: Memory leak resolved, all critical bugs fixed
+**What needs to be achieved**:
+
+A full multi-perspective audit of the entire HaypBooks application to bring it from MVP to production-grade quality. Each phase produces a detailed findings report and a prioritized list of Mantra-executable fixes.
+
+#### Phase 1: Accounting Flow & Logic Audit (Accountant Perspective)
+- Audit every data entry flow (invoices, bills, journal entries, payments, receipts) for logical correctness from a CPA's perspective
+- Verify chart of accounts structure, double-entry enforcement, debit/credit logic, and trial balance accuracy
+- Compare navigation and workflow against QuickBooks Online, Xero, and ERPNext
+- Assess whether every button, label, and action is in the right place for daily accounting work
+- Verify all financial reports (Income Statement, Balance Sheet, Cash Flow, Trial Balance) produce correct outputs
+- Check that general ledger entries are complete and accurate for every transaction type
+
+#### Phase 2: UI/UX Consistency & Design Audit (UI Designer + Frontend Engineer Perspective)
+- Audit every page for visual consistency: spacing, typography, colors, button styles, card layouts
+- Identify and eliminate redundant buttons, duplicate forms, or inconsistent patterns across pages
+- Review all reusable/shared components for consistency and proper abstraction
+- Verify responsive design across desktop, tablet, and mobile viewports
+- Audit empty states, loading states, and error states on every page
+- Ensure navigation structure is logical and grouped by function (not a flat 16+ item list)
+- Compare visual clarity and usability against QuickBooks, Xero, and modern SaaS accounting tools
+- **Known bug**: Dashboard shows "No company linked" banner even when `GET /api/companies/current` returns 200 with valid company data — frontend condition logic is broken
+
+#### Phase 3: Backend Architecture & API Audit (Backend Engineer Perspective)
+- Audit all API endpoints for proper error handling, validation, and consistent response formats
+- Review database queries for N+1 issues, missing indexes, and performance bottlenecks
+- **Known slow endpoint**: `GET /api/currency/currencies` takes 5+ seconds — needs profiling and optimization
+- Verify multi-tenant isolation (workspace/company data separation) across all endpoints
+- Audit Prisma schema for missing relations, orphaned models, or incorrect types
+- Review authentication and authorization guards on every protected route
+- Assess API versioning strategy and backward compatibility
+
+#### Phase 4: Security & Compliance Audit (Security Analyst + Auditor Perspective)
+- Audit authentication flow (JWT, session management, password policies)
+- Review authorization checks (CompanyAccessGuard, role-based access) for bypasses
+- Check for sensitive data exposure in API responses (passwords, internal IDs, system fields)
+- Verify CORS configuration, rate limiting, and input sanitization
+- Audit the audit trail system for completeness and tamper-resistance
+- Assess compliance readiness for basic accounting standards (data retention, audit logs)
+
+#### Phase 5: Business Logic & Financial Analysis Audit (Financial Analyst + Business Analyst Perspective)
+- Audit dashboard KPIs for accuracy and relevance to business decision-making
+- Verify budget vs actual variance calculations and alerting thresholds
+- Review multi-currency handling for correct exchange rate application
+- Assess the quality and actionability of financial reports
+- Identify missing features that would provide strategic value (forecasting, ratio analysis, trends)
+
+#### Phase 6: Folder Structure & Code Organization Audit
+- Review frontend and backend directory structures for logical grouping
+- Identify misplaced files, unused imports, dead code
+- Verify module boundaries in NestJS (proper module encapsulation)
+- Assess test coverage and identify critical untested paths
+
+**Execution approach**: Each phase should be executed as a separate Hydra audit prompt, followed by Mantra execution prompts for each batch of fixes. Phases can be partially parallelized (1-2 first, then 3-4, then 5-6).
+
+---
+
 ## Deferred Backend Stubs (22 Total)
 
 These modules have controller/service stubs that return placeholder data. They require full backend implementation before the frontend can be connected.
@@ -110,3 +168,7 @@ These modules have controller/service stubs that return placeholder data. They r
 ## Technical Debt
 - [ ] No automated test suite exists — all testing is currently manual
 - [ ] **Memory leak investigation** — Backend memory grows from ~60MB to 4GB over time, causing OOM kills and PM2 restarts. Source not yet identified; PDFKit usage in reporting.service.ts has been ruled out. Requires Node.js profiling (clinic.js, Chrome DevTools) to root-cause.
+- [ ] **Dashboard "No company" frontend bug** — Dashboard displays "No company linked to your account yet" banner even when `GET /api/companies/current` returns 200 with valid company data. Frontend condition logic is broken.
+- [ ] **Onboarding re-triggers after login** — After completing onboarding and signing out, logging back in shows the onboarding flow again. The onboarding completion flag is not being persisted or checked correctly on session restore.
+- [ ] **Slow `/api/currency/currencies` endpoint** — Takes 5+ seconds to respond. Needs profiling, caching, or query optimization.
+- [ ] **`bot-connect.js` 404 errors** — Frontend is requesting a non-existent `bot-connect.js` script, generating unnecessary 404 errors in backend logs.

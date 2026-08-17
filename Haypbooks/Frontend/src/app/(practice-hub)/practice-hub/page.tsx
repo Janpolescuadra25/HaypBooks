@@ -200,7 +200,9 @@ export default function PracticeHubPage() {
                 value: stats?.completedMtd ?? dashboard?.stats.completedMtd ?? 0,
                 sub: 'Tasks finished this month',
               },
-            }[label]
+            }[label as 'Active Clients' | 'Open Tasks' | 'Pending Reviews' | 'Completed This Month']
+
+            if (!cardData) return null
 
             const Icon = cardData.icon
             const value = cardData.value

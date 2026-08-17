@@ -27,6 +27,21 @@ const formatDate = (value: string) =>
     year: 'numeric',
   })
 
+const typeLabel = (type: string) => {
+  switch (type) {
+    case 'BOOKKEEPING':
+      return 'Bookkeeping'
+    case 'AUDIT':
+      return 'Audit'
+    case 'TAX':
+      return 'Tax'
+    case 'ADVISORY':
+      return 'Advisory'
+    default:
+      return type
+  }
+}
+
 export default function AcceptPracticeInvitePage() {
   const router = useRouter()
   const searchParams = useSearchParams()

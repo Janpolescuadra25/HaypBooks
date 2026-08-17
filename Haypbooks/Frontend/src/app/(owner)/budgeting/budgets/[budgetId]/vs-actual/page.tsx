@@ -151,6 +151,24 @@ export default function BudgetVsActualPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
+        <div className="flex gap-3 mb-4 flex-wrap">
+          <button
+            type="button"
+            onClick={() => companyId && window.open(`/api/companies/${companyId}/reporting/budgets/${budgetId}/vs-actual/csv`)}
+            className="border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-medium"
+            disabled={!companyId}
+          >
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => companyId && window.open(`/api/companies/${companyId}/reporting/budgets/${budgetId}/vs-actual/pdf`)}
+            className="border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-medium"
+            disabled={!companyId}
+          >
+            Export PDF
+          </button>
+        </div>
         <div className="flex flex-wrap items-center gap-4">
           <span className="text-sm font-medium text-slate-600">Period:</span>
           <div className="flex items-center gap-2">

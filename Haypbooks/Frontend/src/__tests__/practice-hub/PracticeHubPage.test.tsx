@@ -22,7 +22,7 @@ afterAll(() => {
   jest.restoreAllMocks()
 })
 
-import PracticeHubPage from '@/app/practice-hub/page'
+import PracticeHubPage from '@/app/(practice-hub)/practice-hub/page'
 
 async function renderHub() {
   let result: ReturnType<typeof render>
