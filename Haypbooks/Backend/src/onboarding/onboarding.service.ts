@@ -197,6 +197,7 @@ export class OnboardingService {
                   status: 'ACTIVE',
                   isOwner: true,
                   joinedAt: new Date(),
+                  lastAccessedAt: new Date(),
                   Role: { connect: { id: roleId } },
                 },
               })
@@ -208,6 +209,7 @@ export class OnboardingService {
                   Role: { connect: { id: roleId } },
                   isOwner: true,
                   joinedAt: new Date(),
+                  lastAccessedAt: new Date(),
                   status: 'ACTIVE',
                 } as any,
               })
