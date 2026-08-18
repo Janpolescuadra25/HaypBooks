@@ -25,6 +25,7 @@ export function useCompanyId() {
             const data = await res.json()
             if (!cancelled && data?.id) {
               setCompanyId(data.id)
+              setError(null)
               setLoading(false)
               return
             }
@@ -36,6 +37,7 @@ export function useCompanyId() {
           const list = await res.json()
           if (!cancelled && Array.isArray(list) && list.length > 0) {
             setCompanyId(list[0].id)
+            setError(null)
             setLoading(false)
             return
           }
@@ -47,6 +49,7 @@ export function useCompanyId() {
           const data = await res2.json()
           if (!cancelled && data?.id) {
             setCompanyId(data.id)
+            setError(null)
             setLoading(false)
             return
           }

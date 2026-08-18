@@ -127,7 +127,7 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {!companyId && !companyLoading && companyError && (
+      {!companyId && !companyLoading && (
         <div className="flex flex-col items-center gap-3 px-6 py-8 bg-amber-50 border border-amber-200 rounded-xl text-center">
           <AlertCircle size={24} className="text-amber-500" />
           <p className="text-sm font-medium text-amber-800">No company linked to your account yet.</p>
