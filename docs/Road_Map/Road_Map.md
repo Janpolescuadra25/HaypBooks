@@ -93,6 +93,12 @@
 
 A full multi-perspective audit of the entire HaypBooks application to bring it from MVP to production-grade quality. Each phase produces a detailed findings report and a prioritized list of Mantra-executable fixes.
 
+#### Phase 0: Production Stability (P0 — must complete before any other phase)
+- [ ] Memory leak investigation and fix (see Technical Debt section above)
+- [ ] Slow `/api/currency/currencies` endpoint (5+ second response time)
+- [ ] `bot-connect.js` 404 errors in frontend logs
+- [ ] Verify onboarding re-trigger bug is resolved after `lastAccessedAt` fix
+
 #### Phase 1: Accounting Flow & Logic Audit (Accountant Perspective)
 - Audit every data entry flow (invoices, bills, journal entries, payments, receipts) for logical correctness from a CPA's perspective
 - Verify chart of accounts structure, double-entry enforcement, debit/credit logic, and trial balance accuracy
@@ -167,7 +173,20 @@ These modules have controller/service stubs that return placeholder data. They r
 
 ## Technical Debt
 - [ ] No automated test suite exists — all testing is currently manual
-- [ ] **Memory leak investigation** — Backend memory grows from ~60MB to 4GB over time, causing OOM kills and PM2 restarts. Source not yet identified; PDFKit usage in reporting.service.ts has been ruled out. Requires Node.js profiling (clinic.js, Chrome DevTools) to root-cause.
+### Memory Leak Investigation (CRITICAL — P0)
+- **Symptom:** Backend starts at ~17.7MB after PM2 restart, grows to 4.0GB+ over time
+- **Impact:** VPS RAM exhaustion, eventual OOM kill, production downtime
+- **Investigation Steps:**
+  1. Add `clinic.js` heap profiling on VPS: `npm install -g clinic && clinic heapprofiler -- node dist/main.js`
+  2. Capture heap snapshots at intervals using Node.js `v8.writeHeapSnapshot()` via a dedicated admin endpoint (e.g., `GET /api/debug/heap-snapshot`) — protect with a simple env-flag gate
+  3. Check Prisma connection pool settings — verify `connection_limit` in DATABASE_URL and Prisma schema, ensure connections are released after each request
+  4. Audit all PDFKit/stream usage — ensure `doc.end()` is called, streams are piped properly, and no orphaned buffers exist
+  5. Audit all `setInterval`/`setTimeout` calls — ensure they are cleared on module destroy
+  6. Audit all event listeners (`on`, `addEventListener`) — ensure they have matching `off`/`removeEventListener` calls
+  7. Check for in-memory caches (Maps, Objects used as caches) that grow unbounded — add size limits or TTL where found
+  8. Use `process.memoryUsage()` logging on a 5-minute interval (temporary) to track growth rate and correlate with traffic patterns
+  9. Review PM2 logs for patterns — does memory spike after specific endpoints are called? (e.g., CSV/PDF export, onboarding, currency endpoint)
+- **Quick Mitigation (until root cause found):** PM2 `max_memory_restart 1G` already applied — backend auto-restarts at 1GB threshold
 - [ ] **Dashboard "No company" frontend bug** — Dashboard displays "No company linked to your account yet" banner even when `GET /api/companies/current` returns 200 with valid company data. Frontend condition logic is broken.
 - [ ] **Onboarding re-triggers after login** — After completing onboarding and signing out, logging back in shows the onboarding flow again. The onboarding completion flag is not being persisted or checked correctly on session restore.
 - [ ] **Slow `/api/currency/currencies` endpoint** — Takes 5+ seconds to respond. Needs profiling, caching, or query optimization.
