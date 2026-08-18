@@ -3,6 +3,8 @@
 > Last updated: August 17, 2026
 
 ## Completed Projects
+- ✅ **Dashboard Banner Bug Fix** — Resolved stale error state in `useCompanyId()` hook and fixed `OwnerDashboard.tsx` condition that incorrectly showed "No company linked" banner despite valid API responses
+- ✅ **Onboarding Re-Trigger Fix** — Added `lastAccessedAt: new Date()` to Owner WorkspaceUser create/update operations during onboarding, preventing the onboarding flow from reappearing after re-login
 - ✅ **Onboarding Transaction Timeout Fix** — Moved COA seeding outside the onboarding Prisma interactive transaction and replaced 40+ sequential `account.create()` calls with a single batched `createMany()` operation. Transaction duration reduced from 60+ seconds to under 2 seconds, resolving the production onboarding blocker.
 - ✅ **PDFKit Build Fix** — Added missing `@types/pdfkit` dev dependency to package.json, resolving VPS build error TS2307: Cannot find module 'pdfkit'.
 - ✅ **VPS Auto-Deploy Pipeline** — GitHub Actions → SSH → deploy.sh → PM2 restart. Fully operational. Every push to main auto-deploys to production.
@@ -94,12 +96,14 @@
 A full multi-perspective audit of the entire HaypBooks application to bring it from MVP to production-grade quality. Each phase produces a detailed findings report and a prioritized list of Mantra-executable fixes.
 
 #### Phase 0: Production Stability (P0 — must complete before any other phase)
+**Goal:** Eliminate all P0 production stability risks that cause downtime or data loss.
 - [ ] Memory leak investigation and fix (see Technical Debt section above)
 - [ ] Slow `/api/currency/currencies` endpoint (5+ second response time)
 - [ ] `bot-connect.js` 404 errors in frontend logs
-- [ ] Verify onboarding re-trigger bug is resolved after `lastAccessedAt` fix
+- [x] Verify onboarding re-trigger bug is resolved after `lastAccessedAt` fix
 
 #### Phase 1: Accounting Flow & Logic Audit (Accountant Perspective)
+**Goal:** Establish codebase health baseline with testing, monitoring, and dependency cleanup.
 - Audit every data entry flow (invoices, bills, journal entries, payments, receipts) for logical correctness from a CPA's perspective
 - Verify chart of accounts structure, double-entry enforcement, debit/credit logic, and trial balance accuracy
 - Compare navigation and workflow against QuickBooks Online, Xero, and ERPNext
@@ -108,6 +112,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - Check that general ledger entries are complete and accurate for every transaction type
 
 #### Phase 2: UI/UX Consistency & Design Audit (UI Designer + Frontend Engineer Perspective)
+**Goal:** Polish user-facing experience with better loading states, error messages, and report performance.
 - Audit every page for visual consistency: spacing, typography, colors, button styles, card layouts
 - Identify and eliminate redundant buttons, duplicate forms, or inconsistent patterns across pages
 - Review all reusable/shared components for consistency and proper abstraction
@@ -118,6 +123,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - **Known bug**: Dashboard shows "No company linked" banner even when `GET /api/companies/current` returns 200 with valid company data — frontend condition logic is broken
 
 #### Phase 3: Backend Architecture & API Audit (Backend Engineer Perspective)
+**Goal:** Complete all in-progress features (budgeting enhancements, budget templates).
 - Audit all API endpoints for proper error handling, validation, and consistent response formats
 - Review database queries for N+1 issues, missing indexes, and performance bottlenecks
 - **Known slow endpoint**: `GET /api/currency/currencies` takes 5+ seconds — needs profiling and optimization
@@ -127,6 +133,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - Assess API versioning strategy and backward compatibility
 
 #### Phase 4: Security & Compliance Audit (Security Analyst + Auditor Perspective)
+**Goal:** Secure sensitive financial data with encryption, audit trails, and access control.
 - Audit authentication flow (JWT, session management, password policies)
 - Review authorization checks (CompanyAccessGuard, role-based access) for bypasses
 - Check for sensitive data exposure in API responses (passwords, internal IDs, system fields)
@@ -135,6 +142,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - Assess compliance readiness for basic accounting standards (data retention, audit logs)
 
 #### Phase 5: Business Logic & Financial Analysis Audit (Financial Analyst + Business Analyst Perspective)
+**Goal:** Optimize application performance for scale and reduce frontend bundle size.
 - Audit dashboard KPIs for accuracy and relevance to business decision-making
 - Verify budget vs actual variance calculations and alerting thresholds
 - Review multi-currency handling for correct exchange rate application
@@ -142,6 +150,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - Identify missing features that would provide strategic value (forecasting, ratio analysis, trends)
 
 #### Phase 6: Folder Structure & Code Organization Audit
+**Goal:** Prepare production environment for public launch with monitoring and documentation.
 - Review frontend and backend directory structures for logical grouping
 - Identify misplaced files, unused imports, dead code
 - Verify module boundaries in NestJS (proper module encapsulation)
@@ -187,7 +196,5 @@ These modules have controller/service stubs that return placeholder data. They r
   8. Use `process.memoryUsage()` logging on a 5-minute interval (temporary) to track growth rate and correlate with traffic patterns
   9. Review PM2 logs for patterns — does memory spike after specific endpoints are called? (e.g., CSV/PDF export, onboarding, currency endpoint)
 - **Quick Mitigation (until root cause found):** PM2 `max_memory_restart 1G` already applied — backend auto-restarts at 1GB threshold
-- [ ] **Dashboard "No company" frontend bug** — Dashboard displays "No company linked to your account yet" banner even when `GET /api/companies/current` returns 200 with valid company data. Frontend condition logic is broken.
-- [ ] **Onboarding re-triggers after login** — After completing onboarding and signing out, logging back in shows the onboarding flow again. The onboarding completion flag is not being persisted or checked correctly on session restore.
 - [ ] **Slow `/api/currency/currencies` endpoint** — Takes 5+ seconds to respond. Needs profiling, caching, or query optimization.
 - [ ] **`bot-connect.js` 404 errors** — Frontend is requesting a non-existent `bot-connect.js` script, generating unnecessary 404 errors in backend logs.
