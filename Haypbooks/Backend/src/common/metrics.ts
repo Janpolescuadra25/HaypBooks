@@ -1,5 +1,10 @@
 const counts: Map<string, number> = new Map()
 
+// Reset metrics every hour to prevent unbounded memory growth
+setInterval(() => {
+  counts.clear()
+}, 3600000)
+
 export function increment(metricName: string) {
   counts.set(metricName, (counts.get(metricName) || 0) + 1)
   // Lightweight log so the metric increment is visible in logs during debugging

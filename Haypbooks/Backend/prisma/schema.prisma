@@ -23,6 +23,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Production: Append ?connection_limit=10 to DATABASE_URL in .env
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -3854,6 +3855,7 @@ model Currency {
   exchangeRatesFrom ExchangeRate[] @relation("ExchangeFrom")
   exchangeRatesTo   ExchangeRate[] @relation("ExchangeTo")
 
+  @@index([isActive])
   @@map("currencies")
 }
 

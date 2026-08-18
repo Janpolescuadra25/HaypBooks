@@ -5,6 +5,9 @@ import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
 export class ExchangeRateService {
+  private cachedCurrencies: any[] | null = null
+  private cacheTimestamp = 0
+
   constructor(private readonly prisma: PrismaService) {}
 
   private normalizeCode(code: string): string {
@@ -121,7 +124,13 @@ export class ExchangeRateService {
   }
 
   async getActiveCurrencies() {
-    return this.prisma.currency.findMany({ where: { isActive: true }, orderBy: { code: 'asc' } })
+    if (this.cachedCurrencies && Date.now() - this.cacheTimestamp < 3600000) {
+      return this.cachedCurrencies
+    }
+
+    this.cachedCurrencies = await this.prisma.currency.findMany({ where: { isActive: true }, orderBy: { code: 'asc' } })
+    this.cacheTimestamp = Date.now()
+    return this.cachedCurrencies
   }
 
   async fetchAutoExchangeRate(fromCode: string, toCode: string): Promise<Prisma.Decimal> {
