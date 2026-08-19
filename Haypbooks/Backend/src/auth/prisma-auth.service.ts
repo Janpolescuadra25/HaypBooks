@@ -51,6 +51,7 @@ export class PrismaAuthService {
     // Extended to 2h to prevent session expiry during onboarding flow
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
 
+    const onboardingStatus = await this.getOnboardingStatus(user.id)
     // Return consistent user object structure
     const userResponse = {
       id: user.id,
@@ -58,8 +59,8 @@ export class PrismaAuthService {
       name: user.name,
       role: user.role,
       isAccountant: user.isAccountant ?? false,
-      onboardingCompleted: user.onboardingComplete ?? false,
-      onboardingComplete: user.onboardingComplete ?? false,
+      onboardingCompleted: onboardingStatus,
+      onboardingComplete: onboardingStatus,
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
       // Per-hub flags
@@ -93,6 +94,20 @@ export class PrismaAuthService {
       this.logger.error(`[PrismaAuthService] ${context}: ${message}`)
     } else {
       this.logger.warn(`[PrismaAuthService] ${context}: ${message}`)
+    }
+  }
+
+  private async getOnboardingStatus(userId: string): Promise<boolean> {
+    if (!this.prisma) return false
+    try {
+      const onboardingData = await this.prisma.onboardingData.findUnique({
+        where: { userId },
+        select: { complete: true },
+      })
+      return onboardingData?.complete === true
+    } catch (e) {
+      this.logServiceError('failed to load onboarding status', e, 'debug')
+      return false
     }
   }
 
@@ -166,14 +181,15 @@ export class PrismaAuthService {
     })
 
     // Return consistent user object structure for frontend
+    const onboardingStatus = await this.getOnboardingStatus(user.id)
     const userResponse = {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
       isAccountant: user.isAccountant ?? false,
-      onboardingCompleted: user.onboardingComplete ?? false,
-      onboardingComplete: user.onboardingComplete ?? false, // Both formats for compatibility
+      onboardingCompleted: onboardingStatus,
+      onboardingComplete: onboardingStatus, // Both formats for compatibility
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
       ownerOnboardingCompleted: user.ownerOnboardingComplete ?? false,
@@ -236,14 +252,15 @@ export class PrismaAuthService {
       return null
     }
 
+    const onboardingStatus = await this.getOnboardingStatus(user.id)
     const userResponse = {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
       isAccountant: user.isAccountant ?? false,
-      onboardingCompleted: user.onboardingComplete ?? false,
-      onboardingComplete: user.onboardingComplete ?? false,
+      onboardingCompleted: onboardingStatus,
+      onboardingComplete: onboardingStatus,
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
       ownerOnboardingCompleted: user.ownerOnboardingComplete ?? false,
@@ -298,6 +315,7 @@ export class PrismaAuthService {
 
     try { this.logger.debug(`[auth:refresh] success for user=${user.id} newRefreshPrefix=${String(newRefresh).slice(0, 12)}`) } catch (e) { this.logServiceError('failed to log refresh success', e, 'debug') }
 
+    const onboardingStatus = await this.getOnboardingStatus(user.id)
     // Return consistent user structure
     const userResponse = {
       id: user.id,
@@ -305,8 +323,8 @@ export class PrismaAuthService {
       name: user.name,
       role: user.role,
       isAccountant: user.isAccountant ?? false,
-      onboardingCompleted: user.onboardingComplete ?? false,
-      onboardingComplete: user.onboardingComplete ?? false,
+      onboardingCompleted: onboardingStatus,
+      onboardingComplete: onboardingStatus,
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
       ownerOnboardingCompleted: user.ownerOnboardingComplete ?? false,

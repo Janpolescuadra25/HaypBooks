@@ -38,6 +38,6 @@ export class RolesGuard implements CanActivate {
     // Workspace owners always pass role checks
     if (user.isOwner === true) return true
 
-    return requiredRoles.includes(user.role)
+    return requiredRoles.some(r => r.toLowerCase() === (user.role || '').toLowerCase() || (r.toLowerCase() === 'owner' && user.role === 'business'))
   }
 }

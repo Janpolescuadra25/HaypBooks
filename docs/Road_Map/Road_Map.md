@@ -1,10 +1,16 @@
 # HaypBooks — Development Roadmap
 
-> Last updated: August 17, 2026
+> Last updated: August 19, 2026
 
 ## Completed Projects
+- ✅ **Memory Leak Fix** — Resolved unbounded metrics accumulation in `Backend/src/common/metrics.ts` with hourly `counts.clear()` + PM2 `max_memory_restart 1G` mitigation
+- ✅ **Slow Currency Endpoint Fix** — Fixed `GET /api/currency/currencies` latency with 1-hour TTL in-memory cache in `exchange-rate.service.ts:82-88`
+- ✅ **Fix 401 on Dashboard (Auth Cookie Routing)** — Changed `NEXT_PUBLIC_API_URL` from `https://api.haypbooks.com` to empty string in `.env.production` on VPS so axios requests stay same-origin through nginx proxy.
+- ✅ **Fix 403 on Dashboard (RolesGuard)** — Updated `Backend/src/auth/guards/roles.guard.ts` line 33 to treat `role='business'` as equivalent to `'owner'` (case-insensitive + business→owner mapping). Deployed to VPS but not yet committed to git.
+- ✅ **Fix DB Connection Limit** — Added `&connection_limit=10` to DATABASE_URL in `Backend/.env` on VPS.
+- ✅ **Fix CORS on api.haypbooks.com** — Added port 80 proxy block in nginx for `api.haypbooks.com`.
+- ✅ **Onboarding Re-Trigger Fix** — Fixed: added `getOnboardingStatus()` helper in `prisma-auth.service.ts` (L100-111) that queries `OnboardingData.complete` instead of non-existent `user.onboardingComplete` field. All 4 auth response locations (signup L54, login L184, createSessionForUser L255, refresh L318) updated. Build passes. Not yet deployed to VPS.
 - ✅ **Dashboard Banner Bug Fix** — Resolved stale error state in `useCompanyId()` hook and fixed `OwnerDashboard.tsx` condition that incorrectly showed "No company linked" banner despite valid API responses
-- ✅ **Onboarding Re-Trigger Fix** — Added `lastAccessedAt: new Date()` to Owner WorkspaceUser create/update operations during onboarding, preventing the onboarding flow from reappearing after re-login
 - ✅ **Onboarding Transaction Timeout Fix** — Moved COA seeding outside the onboarding Prisma interactive transaction and replaced 40+ sequential `account.create()` calls with a single batched `createMany()` operation. Transaction duration reduced from 60+ seconds to under 2 seconds, resolving the production onboarding blocker.
 - ✅ **PDFKit Build Fix** — Added missing `@types/pdfkit` dev dependency to package.json, resolving VPS build error TS2307: Cannot find module 'pdfkit'.
 - ✅ **VPS Auto-Deploy Pipeline** — GitHub Actions → SSH → deploy.sh → PM2 restart. Fully operational. Every push to main auto-deploys to production.
@@ -19,6 +25,12 @@
 ---
 
 ## In Progress
+
+### P0: Critical Production Fixes
+- **Fix JWT Payload** — JWT only contains `{ sub, email, role }`. Missing `isOwner` and `systemRole`. Files:
+  - `Backend/src/auth/strategies/jwt.strategy.ts:28-32` — add `isOwner` and `systemRole` to `validate()` return
+  - `Backend/src/auth/prisma-auth.service.ts` (lines 52, 158, 214, 280) — add `isOwner` and `systemRole` to JWT sign payload at all 4 sign locations
+- **Fix `mapRoleForFrontend` Inconsistency** — `Backend/src/auth/auth.controller.ts:33-40` maps `'business'` → `'admin'` in cookies, but JWT and `/api/users/me` return `'business'`. Three different role values for same user. Standardize to one source of truth.
 
 ### Plan C Phase 3: Budgeting Module Enhancements
 **Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
@@ -35,6 +47,28 @@
 
 ---
 
+## Priority Backlog
+
+### P1: High Priority
+- **Separate OwnerController Endpoints** — Move company-level endpoints (`financial-summary`, `cash-position`, `dashboard`) out of `OwnerController` to `CompanyController`. Keep `OwnerController` for platform-level endpoints only (storage, users, metrics) guarded with `@Roles('SUPER_ADMIN')` or `@Roles('ADMIN', 'SUPER_ADMIN')`. File: `Backend/src/owner/owner.controller.ts`
+- **Set Cookie Domain for Cross-Subdomain Support** — `Backend/src/auth/auth.controller.ts:80-84` cookie options: add `domain: '.haypbooks.com'` and change `sameSite: 'lax'` to `sameSite: 'none'` (with `secure: true`). ⚠️ Security-impacting change — verify CSRF protection still works after this. Test login/logout/refresh flows on both `haypbooks.com` and `api.haypbooks.com`.
+- **Add `credentials: 'include'` to All fetch() Calls** — 21 of 25 raw `fetch()` calls in the frontend don't set `credentials`. Files: `useCompanyId.ts`, `CompanySwitcher.tsx`, `HubSelectionModal.tsx`, `HubSwitcher.tsx`, `CompanyHub.tsx`, `AppShellHeader.tsx`, `PracticeHeader.tsx`, `SetupCenter.tsx`, `AddCompanyModal.tsx`, `AddPracticeModal.tsx`, `InvoiceCreatePage.tsx`, `CompanyModal.tsx`, `BusinessHealthClient.tsx`, payroll page, accounting-preferences page, accept-invite page, onboarding page, get-started pages, subscribe page, `lib/analytics.ts`.
+- **Consolidate API Clients** — Replace raw `fetch()` calls with the axios `apiClient` instance (has interceptors, error handling, `withCredentials`). Or create a shared `fetchWithAuth()` wrapper in `Frontend/src/lib/api.ts`.
+- **Fix `lib/api.ts` Fetch Wrapper** — `Frontend/src/lib/api.ts:13` is bare `fetch()` with no credentials, no auth, no interceptors. Add `credentials: 'include'` and Authorization header support.
+- **ClientRoot UI Fix** — `Frontend/src/app/client-root.tsx` currently uses `usePathname()` and `PUBLIC_PATH_PREFIXES` only. Add `useCompanyId()` hook and conditionally render minimal layout (no sidebar/topbar) when no company is linked.
+
+### P2: Medium Priority
+- **Fix Phantom `role` Field** — `Backend/src/repositories/interfaces/user.repository.interface.ts:8` declares 8 role values (`'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer' | 'accountant' | 'both'`) but DB has no `role` column — Prisma maps `systemRole` to `@map("role")`. Repository synthesizes `role` from `preferredHub` producing only `'business'` or `'accountant'`. Clean up the interface to match reality.
+- **Build Platform Owner Dashboard** — Separate UI for `SUPER_ADMIN` users (JP) to access platform endpoints: all users, storage usage, metrics, plan distribution. Current `OwnerDashboard` is for company admins, not platform owners. Backend endpoints already exist (`/api/owner/users`, `/api/owner/storage/usage`, `/api/owner/metrics/*`).
+- **Build Practice Dashboard** — Accountant workspace dashboard, separate from company dashboard.
+- **Three-Role Architecture** — Proper separation of: (1) Platform Owner (`SUPER_ADMIN` — manages the SaaS platform), (2) Company Admin (`business` / `preferredHub: OWNER` — manages their company), (3) Practice Admin (`accountant` / `preferredHub: ACCOUNTANT` — manages their practice). Each needs its own dashboard, routing guard, and API scope.
+- **Remove Stale Hardcoded Demo Data** — `Frontend/src/components/HubSidebar.tsx:54` has `juan@haypbooks.com` and `Frontend/src/components/TopBar.tsx:173` has `demo@haypbooks.com`. Replace with dynamic user data from `useUser()`.
+- **Reduce `--max-old-space-size`** — Currently 4096MB in `ecosystem.config.js`, should be 512-1024MB for a CX33 (4GB RAM VPS).
+- **Add Porkbun Domain Info to README** — Domain `haypbooks.com` purchased on Porkbun, DNS via Cloudflare.
+- **Verify Memory Leak Fix** — Monitor `haypbooks-backend` memory over 24-48hrs to confirm `metrics.ts` hourly `counts.clear()` resolves the issue long-term.
+
+---
+
 ## Future Plans
 
 | Plan | Name | Status | Blocked By |
@@ -43,6 +77,8 @@
 | D | Approval Workflows | Not Started | — |
 | E | Fixed Asset Management | Not Started | Core accounting E2E validation |
 | F-2 | Zypra AI Phase 2 (Persistent History, Document Q&A, Advanced Insights) | Not Started | — |
+| G | Comprehensive Product Maturity Audit & Polish | Not Started | All P0 items resolved |
+| H | Three-Role Architecture Refactor | Not Started | P0 items + Plan G completion |
 
 ### Plan A: Self-Hosted PostgreSQL Migration
 **Goal**: Migrate from Supabase hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
@@ -97,10 +133,10 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 
 #### Phase 0: Production Stability (P0 — must complete before any other phase)
 **Goal:** Eliminate all P0 production stability risks that cause downtime or data loss.
-- [ ] Memory leak investigation and fix (see Technical Debt section above)
-- [ ] Slow `/api/currency/currencies` endpoint (5+ second response time)
-- [ ] `bot-connect.js` 404 errors in frontend logs
-- [x] Verify onboarding re-trigger bug is resolved after `lastAccessedAt` fix
+- [x] Memory leak investigation and fix (see Technical Debt section above)
+- [x] Slow `/api/currency/currencies` endpoint (5+ second response time)
+- [x] `bot-connect.js` 404 errors in frontend logs — Resolved (no references found in Frontend codebase)
+- [x] Verify onboarding re-trigger bug is resolved — Fixed via `getOnboardingStatus()` in `prisma-auth.service.ts`
 
 #### Phase 1: Accounting Flow & Logic Audit (Accountant Perspective)
 **Goal:** Establish codebase health baseline with testing, monitoring, and dependency cleanup.
@@ -120,13 +156,11 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - Audit empty states, loading states, and error states on every page
 - Ensure navigation structure is logical and grouped by function (not a flat 16+ item list)
 - Compare visual clarity and usability against QuickBooks, Xero, and modern SaaS accounting tools
-- **Known bug**: Dashboard shows "No company linked" banner even when `GET /api/companies/current` returns 200 with valid company data — frontend condition logic is broken
 
 #### Phase 3: Backend Architecture & API Audit (Backend Engineer Perspective)
 **Goal:** Complete all in-progress features (budgeting enhancements, budget templates).
 - Audit all API endpoints for proper error handling, validation, and consistent response formats
 - Review database queries for N+1 issues, missing indexes, and performance bottlenecks
-- **Known slow endpoint**: `GET /api/currency/currencies` takes 5+ seconds — needs profiling and optimization
 - Verify multi-tenant isolation (workspace/company data separation) across all endpoints
 - Audit Prisma schema for missing relations, orphaned models, or incorrect types
 - Review authentication and authorization guards on every protected route
@@ -160,6 +194,105 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 
 ---
 
+### Plan H: Three-Role Architecture Refactor
+
+**Goal:** Fully separate three admin roles — Owner Admin (platform owner), Company Admin (business user), and Practice Admin (accountant) — with isolated dashboards, navigation, API endpoints, subscription enforcement, and database isolation.
+
+**Status:** Not Started
+**Blocked By:** P0 items (JWT payload fix, onboarding regression), Plan G completion
+**Priority:** HIGH — foundation for all future feature development
+
+**Context:** Currently the codebase has NO three-role separation. Only two effective roles exist (`business` and `accountant` synthesized from `preferredHub`). `SUPER_ADMIN` exists in the enum and has a seed script (`prisma/seed-admin.ts`) but is never used for access control — not in JWT, not in guards. Platform owner features (storage, metrics, user management) are visible to all Company Admin users in the sidebar. No subscription plan capacities are enforced.
+
+---
+
+#### Phase H-0: Foundation — JWT + Auth Chain Fix
+**Prerequisite:** Must complete BEFORE any other Phase H work.
+**Depends on:** P0 items (JWT payload, mapRoleForFrontend)
+
+- [ ] Add `systemRole` to JWT payload in `prisma-auth.service.ts` (4 sign locations: lines 52, 158, 214, 280)
+- [ ] Add `isOwner` to JWT payload (derive from `ownedWorkspaceId`)
+- [ ] Update `jwt.strategy.ts:28-32` validate() to return `systemRole` and `isOwner`
+- [ ] Update `RolesGuard` to check `systemRole === 'SUPER_ADMIN'` for platform endpoints
+- [ ] Fix `mapRoleForFrontend` in `auth.controller.ts:33-40` — standardize role values (currently maps `'business'` → `'admin'` in cookies, `'business'` in JWT and API — three different values for same user)
+- [ ] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
+- [ ] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
+- [ ] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`
+
+#### Phase H-1: Backend Role Separation
+**Depends on:** Phase H-0
+
+- [ ] Split `OwnerController` — move company-level endpoints (`financial-summary`, `cash-position`, `dashboard`) to `CompanyController` with `JwtAuthGuard` only
+- [ ] Update `OwnerController` to use `@Roles('SUPER_ADMIN')` (check `systemRole`, not workspace role) for platform endpoints: storage, users, metrics
+- [ ] Enhance existing `PracticeController` (`Backend/src/practice/practice.controller.ts`) and `PracticeHubController` (`Backend/src/practice-hub/practice-hub.controller.ts`) with additional practice-specific endpoints as needed
+- [ ] Add `systemRole`-based guard: new `SystemRoleGuard` that checks `req.user.systemRole` instead of workspace role
+- [ ] Prevent cross-role creation: Company Admin should NOT be able to create Practice entities, and vice versa
+- [ ] Onboarding separation: change `OnboardingData` from per-user to per-(user, hubType) to support separate company and practice onboarding
+
+#### Phase H-2: Frontend Navigation Isolation
+**Depends on:** Phase H-1
+
+- [ ] Remove 3 leaked nav sections from Company Admin sidebar (`ownerNavConfig.ts`): STORAGE → `/owner/storage`, METRICS → `/owner/metrics`, USERS → `/owner/users` — show these ONLY when `systemRole === 'SUPER_ADMIN'`
+- [ ] Remove COLLABORATION → Client Requests from Company Admin nav (practice-only feature)
+- [ ] Create separate nav configs: `companyAdminNavConfig.ts`, `ownerAdminNavConfig.ts`, `practiceAdminNavConfig.ts`
+- [ ] Route group separation: move platform admin pages out of `app/(owner)/owner/` into `app/(platform-admin)/`
+- [ ] Add routing guard: middleware or component that checks `systemRole` and redirects unauthorized role access
+- [ ] WorkspacePage: fix "Owner Dashboard" card that links to `/owner/storage` — should only show for SUPER_ADMIN
+
+#### Phase H-3: Owner Admin Dashboard
+**Depends on:** Phase H-1, H-2
+
+- [ ] Build Platform Owner Dashboard component (overview: total companies, users, revenue, storage, growth charts)
+- [ ] Build Storage Management page (per-company storage, limits, R2 usage)
+- [ ] Build User Management page (all users, suspend/reactivate, view sessions, role assignment)
+- [ ] Build Platform Metrics page (plan distribution, growth history, snapshots, MRR)
+- [ ] Build Subscription Overview page (all active subscriptions, revenue, churn)
+- [ ] Build Platform Settings page (global config, feature flags per workspace)
+- [ ] Owner Admin should see all three dashboards (Platform + Company + Practice) via a dashboard switcher
+- [ ] Owner Admin has NO subscription plan — unlimited access, no capacity restrictions
+
+#### Phase H-4: Subscription Enforcement
+**Depends on:** Phase H-1
+
+- [ ] Create `SubscriptionGuard` — checks plan capacity before allowing company/client creation
+- [ ] Enforce `Plan.maxCompanies` — block company creation when at capacity
+- [ ] Enforce `Plan.maxClients` — block client acceptance when at capacity
+- [ ] Create subscription status check middleware — block access when subscription is `PAST_DUE`, `CANCELED`, or `EXPIRED`
+- [ ] Build subscription limit UI — show current usage vs plan limits in settings
+- [ ] Upgrade/paywall flow — prompt users to upgrade when hitting limits
+- [ ] Seed plan records (FREE, STARTER, PRO, ENTERPRISE or equivalent) — currently no plans exist in DB
+
+#### Phase H-5: Practice Admin Enhancement
+**Depends on:** Phase H-1, H-2
+
+- [ ] Expand practice nav from 2 sections to: Dashboard, Clients, Team, Settings, Billing, Reports
+- [ ] Implement Practice XP/tier gamification system (schema fields `practiceTier`/`practiceXp` exist but are never read/written)
+- [ ] Practice subscription plans with capacity limits (clients per tier)
+- [ ] Practice Admin should see only Practice Dashboard (not Company Dashboard)
+- [ ] Subscription-plan users should only see two workspace options at creation: Company or Practice (not both unless allowed by plan)
+
+#### Phase H-6: Database & Schema Cleanup
+**Depends on:** All previous phases
+
+- [ ] Fix phantom `role` field in `User` interface — update `user.repository.interface.ts:8` to match reality (only `'business'` or `'accountant'` can be returned)
+- [ ] Consider renaming `preferredHub` values (`OWNER` → `COMPANY`) to eliminate confusion between "workspace owner" and "platform owner"
+- [ ] Clean up `WorkspaceType` enum usage — ensure Practice creation explicitly sets `type = PRACTICE`
+- [ ] Verify `practiceId` on `AuditLog` is populated for practice-scoped actions (field exists at `schema.prisma:9824` but may not be written consistently)
+- [ ] Include `seed-admin.ts` in the default deploy pipeline or document manual step
+
+---
+
+**Known Issues to Track:**
+- 🔴 3 platform nav sections (STORAGE, METRICS, USERS) visible to all Company Admin users
+- 🔴 3 company-level API endpoints trapped behind wrong guard in OwnerController
+- 🔴 No subscription capacity enforcement anywhere
+- 🔴 Practice XP/tier system is dead schema (fields exist, no code)
+- 🟡 COLLABORATION section (Client Requests) visible to Company Admins
+- 🟡 Cross-role creation allowed (Company Admin can create Practice)
+- 🟡 WorkspacePage shows platform admin link to any workspace owner
+
+---
+
 ## Deferred Backend Stubs (22 Total)
 
 These modules have controller/service stubs that return placeholder data. They require full backend implementation before the frontend can be connected.
@@ -182,19 +315,5 @@ These modules have controller/service stubs that return placeholder data. They r
 
 ## Technical Debt
 - [ ] No automated test suite exists — all testing is currently manual
-### Memory Leak Investigation (CRITICAL — P0)
-- **Symptom:** Backend starts at ~17.7MB after PM2 restart, grows to 4.0GB+ over time
-- **Impact:** VPS RAM exhaustion, eventual OOM kill, production downtime
-- **Investigation Steps:**
-  1. Add `clinic.js` heap profiling on VPS: `npm install -g clinic && clinic heapprofiler -- node dist/main.js`
-  2. Capture heap snapshots at intervals using Node.js `v8.writeHeapSnapshot()` via a dedicated admin endpoint (e.g., `GET /api/debug/heap-snapshot`) — protect with a simple env-flag gate
-  3. Check Prisma connection pool settings — verify `connection_limit` in DATABASE_URL and Prisma schema, ensure connections are released after each request
-  4. Audit all PDFKit/stream usage — ensure `doc.end()` is called, streams are piped properly, and no orphaned buffers exist
-  5. Audit all `setInterval`/`setTimeout` calls — ensure they are cleared on module destroy
-  6. Audit all event listeners (`on`, `addEventListener`) — ensure they have matching `off`/`removeEventListener` calls
-  7. Check for in-memory caches (Maps, Objects used as caches) that grow unbounded — add size limits or TTL where found
-  8. Use `process.memoryUsage()` logging on a 5-minute interval (temporary) to track growth rate and correlate with traffic patterns
-  9. Review PM2 logs for patterns — does memory spike after specific endpoints are called? (e.g., CSV/PDF export, onboarding, currency endpoint)
-- **Quick Mitigation (until root cause found):** PM2 `max_memory_restart 1G` already applied — backend auto-restarts at 1GB threshold
-- [ ] **Slow `/api/currency/currencies` endpoint** — Takes 5+ seconds to respond. Needs profiling, caching, or query optimization.
-- [ ] **`bot-connect.js` 404 errors** — Frontend is requesting a non-existent `bot-connect.js` script, generating unnecessary 404 errors in backend logs.
+- Resolved — see Completed Projects. Fix: hourly counts.clear() in metrics.ts + PM2 max_memory_restart 1G.
+- [x] **`bot-connect.js` 404 errors** — Resolved. No references to `bot-connect.js` found in Frontend codebase.
