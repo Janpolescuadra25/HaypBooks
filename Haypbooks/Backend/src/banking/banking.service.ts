@@ -3,6 +3,7 @@ import { BankingRepository } from './banking.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
 import { ExchangeRateService } from '../currency/exchange-rate.service'
+import { createAndPostJE } from '../shared/gl-integration'
 import { encryptField, safeDecryptField } from '../common/utils/field-encryption.util'
 
 @Injectable()
@@ -217,7 +218,6 @@ export class BankingService {
         let journalEntryId: string | undefined
         const isCategorizing = (data.status === 'categorized' || data.status === 'CATEGORIZED') && data.accountId
         if (isCategorizing) {
-            try {
                 const txn = existingTxn
                 const bankAcct = await this.prisma.bankAccount.findUnique({
                     where: { id: txn.bankAccountId },
@@ -253,26 +253,20 @@ export class BankingService {
                             { accountId: bankGlAccountId, debit: 0, credit: amount, description: txn.description },
                           ]
 
-                    const je = await this.prisma.journalEntry.create({
-                        data: {
+                    journalEntryId = await this.prisma.$transaction(async (tx) => {
+                        return createAndPostJE(tx, {
                             workspaceId: wid,
                             companyId,
                             date: txn.date,
                             description: `Bank Transaction — ${txn.description}`,
                             currency: await this.resolveCurrency(companyId),
-                            postingStatus: 'DRAFT',
                             createdById: userId,
                             transactionSource: 'Bank Transaction',
                             sourceReferenceId: bankTransactionId,
-                            lines: { create: lines.map(l => ({ companyId, workspaceId: wid, accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description })) },
-                        },
-                        select: { id: true },
+                            lines: lines.map(l => ({ accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description })),
+                        })
                     })
-                    journalEntryId = je.id
                 }
-            } catch {
-                // Journal entry creation is best-effort — do not block categorization
-            }
         }
 
         const newJournalEntryId = journalEntryId ?? data.journalEntryId
@@ -326,62 +320,70 @@ export class BankingService {
         if (!Array.isArray(splits) || splits.length < 2) throw new BadRequestException('At least 2 split lines required')
 
         // ── GL Integration: create a Journal Entry for split ─────────────────
-        try {
-            const txn = await this.prisma.bankTransaction.findUnique({
-                where: { id: bankTransactionId },
-                select: { date: true, description: true, amount: true, bankAccountId: true },
-            })
-            if (txn) {
-                const bankAcct = await this.prisma.bankAccount.findUnique({
-                    where: { id: txn.bankAccountId },
-                    select: { glAccountId: true },
-                })
-                let bankGlAccountId = bankAcct?.glAccountId
-                if (!bankGlAccountId) {
-                    const cashAcct = await this.prisma.account.findFirst({
-                        where: { companyId, isActive: true, deletedAt: null, isHeader: false, type: { category: 'ASSET' }, name: { contains: 'Cash', mode: 'insensitive' } },
-                        select: { id: true },
-                    })
-                    bankGlAccountId = cashAcct?.id
-                }
+        const txn = await this.prisma.bankTransaction.findUnique({
+            where: { id: bankTransactionId },
+            select: { date: true, description: true, amount: true, bankAccountId: true },
+        })
 
-                const splitAccountIds = splits.filter(s => s.accountId).map(s => s.accountId)
-                if (bankGlAccountId && splitAccountIds.length > 0) {
-                    const total = splits.reduce((s, l) => s + Math.abs(Number(l.amount)), 0)
-                    const isMoney_IN = Number(txn.amount) > 0
-                    const splitLines = splits.map(s => ({
-                        accountId: s.accountId,
-                        debit:  isMoney_IN ? 0 : Math.abs(Number(s.amount)),
-                        credit: isMoney_IN ? Math.abs(Number(s.amount)) : 0,
-                        description: s.description ?? txn.description,
-                    }))
-                    const bankLine = {
-                        accountId: bankGlAccountId,
-                        debit:  isMoney_IN ? total : 0,
-                        credit: isMoney_IN ? 0 : total,
-                        description: txn.description,
-                    }
-                    await this.prisma.journalEntry.create({
-                        data: {
-                            workspaceId: wid,
-                            companyId,
-                            date: txn.date,
-                            description: `Bank Transaction (Split) — ${txn.description}`,
-                            currency: await this.resolveCurrency(companyId),
-                            postingStatus: 'DRAFT',
-                            createdById: userId,
-                            transactionSource: 'Bank Transaction (Split)',
-                            sourceReferenceId: bankTransactionId,
-                            lines: { create: [...splitLines, bankLine].map(l => ({ companyId, workspaceId: wid, accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description })) },
-                        },
-                    })
-                }
+        if (txn) {
+            const bankAcct = await this.prisma.bankAccount.findUnique({
+                where: { id: txn.bankAccountId },
+                select: { glAccountId: true },
+            })
+            let bankGlAccountId = bankAcct?.glAccountId
+            if (!bankGlAccountId) {
+                const cashAcct = await this.prisma.account.findFirst({
+                    where: {
+                        companyId,
+                        isActive: true,
+                        deletedAt: null,
+                        isHeader: false,
+                        type: { category: 'ASSET' },
+                        name: { contains: 'Cash', mode: 'insensitive' },
+                    },
+                    select: { id: true },
+                })
+                bankGlAccountId = cashAcct?.id
             }
-        } catch {
-            // best-effort
+
+            const splitAccountIds = splits.filter((s) => s.accountId).map((s) => s.accountId)
+            if (bankGlAccountId && splitAccountIds.length > 0) {
+                const total = splits.reduce((s, l) => s + Math.abs(Number(l.amount)), 0)
+                const isMoney_IN = Number(txn.amount) > 0
+                const splitLines = splits.map((s) => ({
+                    accountId: s.accountId,
+                    debit: isMoney_IN ? 0 : Math.abs(Number(s.amount)),
+                    credit: isMoney_IN ? Math.abs(Number(s.amount)) : 0,
+                    description: s.description ?? txn.description,
+                }))
+                const bankLine = {
+                    accountId: bankGlAccountId,
+                    debit: isMoney_IN ? total : 0,
+                    credit: isMoney_IN ? 0 : total,
+                    description: txn.description,
+                }
+                await this.prisma.$transaction(async (tx) => {
+                    return createAndPostJE(tx, {
+                        workspaceId: wid,
+                        companyId,
+                        date: txn.date,
+                        description: `Bank Transaction (Split) — ${txn.description}`,
+                        currency: await this.resolveCurrency(companyId),
+                        createdById: userId,
+                        transactionSource: 'Bank Transaction (Split)',
+                        sourceReferenceId: bankTransactionId,
+                        lines: [...splitLines, bankLine].map((l) => ({
+                            accountId: l.accountId,
+                            debit: l.debit,
+                            credit: l.credit,
+                            description: l.description,
+                        })),
+                    })
+                })
+            }
         }
 
-        return this.repo.splitTransaction(wid, bankTransactionId, splits.map(s => ({
+        return this.repo.splitTransaction(wid, bankTransactionId, splits.map((s) => ({
             accountCode: s.accountCode ?? s.accountId ?? '',
             accountId: s.accountId,
             description: s.description ?? '',
@@ -434,7 +436,6 @@ export class BankingService {
         // Create ONE Journal Entry with multiple lines (one per transaction + bank offset per)
         let jeId: string | undefined
         if (bankGlAccountId) {
-            try {
                 const jeLines: Array<{ companyId: string; workspaceId: string; accountId: string; debit: number; credit: number; description?: string }> = []
                 let totalBankDebit = 0
                 let totalBankCredit = 0
@@ -454,26 +455,19 @@ export class BankingService {
                 if (totalBankDebit > 0) jeLines.push({ companyId, workspaceId: wid, accountId: bankGlAccountId, debit: totalBankDebit, credit: 0, description: 'Bank — batch categorize' })
                 if (totalBankCredit > 0) jeLines.push({ companyId, workspaceId: wid, accountId: bankGlAccountId, debit: 0, credit: totalBankCredit, description: 'Bank — batch categorize' })
 
-                const je = await this.prisma.journalEntry.create({
-                    data: {
+                jeId = await this.prisma.$transaction(async (tx) => {
+                    return createAndPostJE(tx, {
                         workspaceId: wid,
                         companyId,
                         date: txns[0].date,
                         description: `Batch Categorize — ${categoryName} (${txns.length} transactions)`,
                         currency: await this.resolveCurrency(companyId),
-                        postingStatus: 'DRAFT',
                         createdById: userId,
                         transactionSource: 'Bank Transaction (Batch)',
-                        lines: { create: jeLines },
-                    },
-                    select: { id: true },
+                        lines: jeLines.map(l => ({ accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description })),
+                    })
                 })
-                jeId = je.id
-            } catch {
-                // best-effort
             }
-        }
-
         // Update all transactions
         await this.prisma.bankTransaction.updateMany({
             where: { id: { in: body.transactionIds }, workspaceId: wid },

@@ -188,14 +188,31 @@ export class AccountingService {
         }
 
         const accountTypeCount = await db.accountType.count()
+
+        // Backfill: fix existing global AccountType records missing category/normalSide
+        // AccountType is global (shared across all companies), so this only needs to run once
+        const typeBackfills = [
+            { name: 'ASSET', category: 'ASSET' as any, normalSide: 'DEBIT' as any },
+            { name: 'LIABILITY', category: 'LIABILITY' as any, normalSide: 'CREDIT' as any },
+            { name: 'EQUITY', category: 'EQUITY' as any, normalSide: 'CREDIT' as any },
+            { name: 'INCOME', category: 'REVENUE' as any, normalSide: 'CREDIT' as any },
+            { name: 'EXPENSE', category: 'EXPENSE' as any, normalSide: 'DEBIT' as any },
+        ]
+        for (const tb of typeBackfills) {
+            await db.accountType.updateMany({
+                where: { name: tb.name, category: null },
+                data: { category: tb.category, normalSide: tb.normalSide },
+            })
+        }
+
         if (accountTypeCount === 0) {
             await db.accountType.createMany({
                 data: [
-                    { name: 'ASSET' },
-                    { name: 'LIABILITY' },
-                    { name: 'EQUITY' },
-                    { name: 'INCOME' },
-                    { name: 'EXPENSE' },
+                    { name: 'ASSET', category: 'ASSET', normalSide: 'DEBIT' },
+                    { name: 'LIABILITY', category: 'LIABILITY', normalSide: 'CREDIT' },
+                    { name: 'EQUITY', category: 'EQUITY', normalSide: 'CREDIT' },
+                    { name: 'INCOME', category: 'REVENUE', normalSide: 'CREDIT' },
+                    { name: 'EXPENSE', category: 'EXPENSE', normalSide: 'DEBIT' },
                 ],
                 skipDuplicates: true,
             })

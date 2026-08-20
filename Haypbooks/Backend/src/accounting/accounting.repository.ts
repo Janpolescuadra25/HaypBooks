@@ -757,11 +757,29 @@ export class AccountingRepository {
         return this.prisma.$transaction(async (tx) => {
             // Fetch all revenue & expense accounts with non-zero balances
             const revenueAccounts = await tx.account.findMany({
-                where: { companyId, isActive: true, deletedAt: null, type: { category: { in: ['REVENUE', 'CONTRA_REVENUE'] } }, NOT: { balance: 0 } },
+                where: {
+                    companyId,
+                    isActive: true,
+                    deletedAt: null,
+                    OR: [
+                        { type: { category: { in: ['REVENUE', 'CONTRA_REVENUE'] } } },
+                        { type: { name: 'INCOME', category: null } },
+                    ],
+                    NOT: { balance: 0 },
+                },
                 include: { type: { select: { normalSide: true } } },
             })
             const expenseAccounts = await tx.account.findMany({
-                where: { companyId, isActive: true, deletedAt: null, type: { category: { in: ['EXPENSE', 'CONTRA_EXPENSE'] } }, NOT: { balance: 0 } },
+                where: {
+                    companyId,
+                    isActive: true,
+                    deletedAt: null,
+                    OR: [
+                        { type: { category: { in: ['EXPENSE', 'CONTRA_EXPENSE'] } } },
+                        { type: { name: 'EXPENSE', category: null } },
+                    ],
+                    NOT: { balance: 0 },
+                },
                 include: { type: { select: { normalSide: true } } },
             })
 
