@@ -6,7 +6,7 @@
 - ✅ **Memory Leak Fix** — Resolved unbounded metrics accumulation in `Backend/src/common/metrics.ts` with hourly `counts.clear()` + PM2 `max_memory_restart 1G` mitigation
 - ✅ **Slow Currency Endpoint Fix** — Fixed `GET /api/currency/currencies` latency with 1-hour TTL in-memory cache in `exchange-rate.service.ts:82-88`
 - ✅ **Fix 401 on Dashboard (Auth Cookie Routing)** — Changed `NEXT_PUBLIC_API_URL` from `https://api.haypbooks.com` to empty string in `.env.production` on VPS so axios requests stay same-origin through nginx proxy.
-- ✅ **Fix 403 on Dashboard (RolesGuard)** — Updated `Backend/src/auth/guards/roles.guard.ts` line 33 to treat `role='business'` as equivalent to `'owner'` (case-insensitive + business→owner mapping). Deployed to VPS but not yet committed to git.
+- ✅ **Fix 403 on Dashboard (RolesGuard)** — Updated `Backend/src/auth/guards/roles.guard.ts` line 33 to treat `role='business'` as equivalent to `'owner'` (case-insensitive + business→owner mapping). Committed to git and deployed to VPS.
 - ✅ **Fix DB Connection Limit** — Added `&connection_limit=10` to DATABASE_URL in `Backend/.env` on VPS.
 - ✅ **Fix CORS on api.haypbooks.com** — Added port 80 proxy block in nginx for `api.haypbooks.com`.
 - ✅ **Onboarding Re-Trigger Fix** — Fixed: added `getOnboardingStatus()` helper in `prisma-auth.service.ts` (L100-111) that queries `OnboardingData.complete` instead of non-existent `user.onboardingComplete` field. All 4 auth response locations (signup L54, login L184, createSessionForUser L255, refresh L318) updated. Build passes. Not yet deployed to VPS.
@@ -27,10 +27,9 @@
 ## In Progress
 
 ### P0: Critical Production Fixes
-- **Fix JWT Payload** — JWT only contains `{ sub, email, role }`. Missing `isOwner` and `systemRole`. Files:
-  - `Backend/src/auth/strategies/jwt.strategy.ts:28-32` — add `isOwner` and `systemRole` to `validate()` return
-  - `Backend/src/auth/prisma-auth.service.ts` (lines 52, 158, 214, 280) — add `isOwner` and `systemRole` to JWT sign payload at all 4 sign locations
-- **Fix `mapRoleForFrontend` Inconsistency** — `Backend/src/auth/auth.controller.ts:33-40` maps `'business'` → `'admin'` in cookies, but JWT and `/api/users/me` return `'business'`. Three different role values for same user. Standardize to one source of truth.
+- ~~**Fix JWT Payload**~~ ✅ Fixed: added `systemRole` and `isOwner` to JWT payload at all 4 sign locations in `prisma-auth.service.ts`. Added `getIsOwner()` helper querying `Workspace.ownerUserId`. Updated `jwt.strategy.ts` validate() return. Added `systemRole` to User interface.
+- ~~**Fix `mapRoleForFrontend` Inconsistency**~~ ✅ NOT A BUG — Three orthogonal role layers confirmed: hub role (JWT `role` → `'business'`/`'accountant'`), RBAC role (cookie `role` → `'admin'`/`'manager'`/`'viewer'`), platform role (JWT `systemRole` → `'USER'`/`'SUPER_ADMIN'`). The `mapRoleForFrontend` function correctly maps workspace owners to `'admin'` RBAC permissions. Renaming deferred to Plan H. Documented in `docs/architecture/ROLE_SYSTEM.md`.
+- **Hub Selection Screen Redesign** — After login, the hub selection screen currently leaks the company_admin left nav and top nav. Redesign: (1) "My Companies" shows a list of companies the user belongs to, (2) "My Practice" shows a list of practices, (3) "Owner Admin" is a single button with no list/table (only one master dashboard for the platform owner — cannot create multiple owner dashboards). Pull the old clean hub selection design from git history. The selection screen must be fully isolated from any dashboard navigation.
 
 ### Plan C Phase 3: Budgeting Module Enhancements
 **Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
@@ -210,11 +209,11 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 **Prerequisite:** Must complete BEFORE any other Phase H work.
 **Depends on:** P0 items (JWT payload, mapRoleForFrontend)
 
-- [ ] Add `systemRole` to JWT payload in `prisma-auth.service.ts` (4 sign locations: lines 52, 158, 214, 280)
+- [x] Add `systemRole` and `isOwner` to JWT payload — done in prisma-auth.service.ts + jwt.strategy.ts
 - [ ] Add `isOwner` to JWT payload (derive from `ownedWorkspaceId`)
 - [ ] Update `jwt.strategy.ts:28-32` validate() to return `systemRole` and `isOwner`
 - [ ] Update `RolesGuard` to check `systemRole === 'SUPER_ADMIN'` for platform endpoints
-- [ ] Fix `mapRoleForFrontend` in `auth.controller.ts:33-40` — standardize role values (currently maps `'business'` → `'admin'` in cookies, `'business'` in JWT and API — three different values for same user)
+- [x] Standardize role values — NOT A BUG (three orthogonal layers, see docs/architecture/ROLE_SYSTEM.md). Renaming deferred to Phase H-1.
 - [ ] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
 - [ ] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
 - [ ] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`

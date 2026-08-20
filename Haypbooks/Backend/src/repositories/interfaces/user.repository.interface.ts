@@ -22,6 +22,7 @@ export interface User {
   // Whether the phone number has been verified (server-side canonical flag)
   isPhoneVerified?: boolean
   phoneVerifiedAt?: Date | null
+  systemRole?: 'USER' | 'SUPPORT' | 'ADMIN' | 'SUPER_ADMIN'
   // Password reset fields (dev/test only)
   resetToken?: string | null
   resetTokenExpiry?: number | null

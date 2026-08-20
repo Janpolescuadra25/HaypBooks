@@ -49,7 +49,14 @@ export class PrismaAuthService {
     await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })
 
     // Extended to 2h to prevent session expiry during onboarding flow
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
+    const isOwner = await this.getIsOwner(user.id)
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      systemRole: user.systemRole,
+      isOwner,
+    }, { expiresIn: '2h' })
 
     const onboardingStatus = await this.getOnboardingStatus(user.id)
     // Return consistent user object structure
@@ -107,6 +114,20 @@ export class PrismaAuthService {
       return onboardingData?.complete === true
     } catch (e) {
       this.logServiceError('failed to load onboarding status', e, 'debug')
+      return false
+    }
+  }
+
+  private async getIsOwner(userId: string): Promise<boolean> {
+    if (!this.prisma) return false
+    try {
+      const workspace = await this.prisma.workspace.findFirst({
+        where: { ownerUserId: userId },
+        select: { id: true },
+      })
+      return !!workspace
+    } catch (e) {
+      this.logServiceError('failed to check owner status', e, 'debug')
       return false
     }
   }
@@ -170,7 +191,14 @@ export class PrismaAuthService {
     await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_SUCCESS', ipAddress, userAgent })
 
     // Extended to 2h to prevent session expiry during onboarding flow
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
+    const isOwner = await this.getIsOwner(user.id)
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      systemRole: user.systemRole,
+      isOwner,
+    }, { expiresIn: '2h' })
     // create refresh session (longer lived)
     const tokenFamily = randomUUID()
     const refreshToken = this.jwtService.sign({ sub: user.id, nonce: randomUUID(), family: tokenFamily }, { expiresIn: '7d' })
@@ -227,7 +255,14 @@ export class PrismaAuthService {
     if (!user) return null
 
     // Extended to 2h to prevent session expiry during onboarding flow
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
+    const isOwner = await this.getIsOwner(user.id)
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      systemRole: user.systemRole,
+      isOwner,
+    }, { expiresIn: '2h' })
     const tokenFamily = randomUUID()
     const refreshToken = this.jwtService.sign({ sub: user.id, nonce: randomUUID(), family: tokenFamily }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -294,7 +329,14 @@ export class PrismaAuthService {
     }
 
     // Extended to 2h to prevent session expiry during onboarding flow
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
+    const isOwner = await this.getIsOwner(user.id)
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      systemRole: user.systemRole,
+      isOwner,
+    }, { expiresIn: '2h' })
     // Optional: rotate refresh token
     // Inherit tokenFamily from old session for replay-attack detection
     const tokenFamily = session.tokenFamily ?? randomUUID()
