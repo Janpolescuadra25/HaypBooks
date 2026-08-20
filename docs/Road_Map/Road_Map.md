@@ -9,7 +9,7 @@
 - ✅ **Fix 403 on Dashboard (RolesGuard)** — Updated `Backend/src/auth/guards/roles.guard.ts` line 33 to treat `role='business'` as equivalent to `'owner'` (case-insensitive + business→owner mapping). Committed to git and deployed to VPS.
 - ✅ **Fix DB Connection Limit** — Added `&connection_limit=10` to DATABASE_URL in `Backend/.env` on VPS.
 - ✅ **Fix CORS on api.haypbooks.com** — Added port 80 proxy block in nginx for `api.haypbooks.com`.
-- ✅ **Onboarding Re-Trigger Fix** — Fixed: added `getOnboardingStatus()` helper in `prisma-auth.service.ts` (L100-111) that queries `OnboardingData.complete` instead of non-existent `user.onboardingComplete` field. All 4 auth response locations (signup L54, login L184, createSessionForUser L255, refresh L318) updated. Build passes. Not yet deployed to VPS.
+- ✅ **Onboarding Re-Trigger Fix** — Fixed: added `getOnboardingStatus()` helper in `prisma-auth.service.ts` (L100-111) that queries `OnboardingData.complete` instead of non-existent `user.onboardingComplete` field. All 4 auth response locations (signup L54, login L184, createSessionForUser L255, refresh L318) updated. Build passes. ✅ Deployed to VPS (committed in `c238607f`, auto-deployed via GitHub Actions).
 - ✅ **Dashboard Banner Bug Fix** — Resolved stale error state in `useCompanyId()` hook and fixed `OwnerDashboard.tsx` condition that incorrectly showed "No company linked" banner despite valid API responses
 - ✅ **Onboarding Transaction Timeout Fix** — Moved COA seeding outside the onboarding Prisma interactive transaction and replaced 40+ sequential `account.create()` calls with a single batched `createMany()` operation. Transaction duration reduced from 60+ seconds to under 2 seconds, resolving the production onboarding blocker.
 - ✅ **PDFKit Build Fix** — Added missing `@types/pdfkit` dev dependency to package.json, resolving VPS build error TS2307: Cannot find module 'pdfkit'.
@@ -29,7 +29,7 @@
 ### P0: Critical Production Fixes
 - ~~**Fix JWT Payload**~~ ✅ Fixed: added `systemRole` and `isOwner` to JWT payload at all 4 sign locations in `prisma-auth.service.ts`. Added `getIsOwner()` helper querying `Workspace.ownerUserId`. Updated `jwt.strategy.ts` validate() return. Added `systemRole` to User interface.
 - ~~**Fix `mapRoleForFrontend` Inconsistency**~~ ✅ NOT A BUG — Three orthogonal role layers confirmed: hub role (JWT `role` → `'business'`/`'accountant'`), RBAC role (cookie `role` → `'admin'`/`'manager'`/`'viewer'`), platform role (JWT `systemRole` → `'USER'`/`'SUPER_ADMIN'`). The `mapRoleForFrontend` function correctly maps workspace owners to `'admin'` RBAC permissions. Renaming deferred to Plan H. Documented in `docs/architecture/ROLE_SYSTEM.md`.
-- **Hub Selection Screen Redesign** — After login, the hub selection screen currently leaks the company_admin left nav and top nav. Redesign: (1) "My Companies" shows a list of companies the user belongs to, (2) "My Practice" shows a list of practices, (3) "Owner Admin" is a single button with no list/table (only one master dashboard for the platform owner — cannot create multiple owner dashboards). Pull the old clean hub selection design from git history. The selection screen must be fully isolated from any dashboard navigation.
+- ✅ **Hub Selection Screen Redesign** — Fixed: Added `isHubSelection` check to `client-root.tsx` (L102, L119) to exclude `/workspace` from the OwnerTopBar + OwnerSidebar layout. The hub selection page now renders as a clean full-page experience. The existing WorkspacePage component already had all three panels (Companies list, Practice list, Owner Dashboard button). No git history revert needed.
 
 ### Plan C Phase 3: Budgeting Module Enhancements
 **Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
@@ -54,17 +54,37 @@
 - **Add `credentials: 'include'` to All fetch() Calls** — 21 of 25 raw `fetch()` calls in the frontend don't set `credentials`. Files: `useCompanyId.ts`, `CompanySwitcher.tsx`, `HubSelectionModal.tsx`, `HubSwitcher.tsx`, `CompanyHub.tsx`, `AppShellHeader.tsx`, `PracticeHeader.tsx`, `SetupCenter.tsx`, `AddCompanyModal.tsx`, `AddPracticeModal.tsx`, `InvoiceCreatePage.tsx`, `CompanyModal.tsx`, `BusinessHealthClient.tsx`, payroll page, accounting-preferences page, accept-invite page, onboarding page, get-started pages, subscribe page, `lib/analytics.ts`.
 - **Consolidate API Clients** — Replace raw `fetch()` calls with the axios `apiClient` instance (has interceptors, error handling, `withCredentials`). Or create a shared `fetchWithAuth()` wrapper in `Frontend/src/lib/api.ts`.
 - **Fix `lib/api.ts` Fetch Wrapper** — `Frontend/src/lib/api.ts:13` is bare `fetch()` with no credentials, no auth, no interceptors. Add `credentials: 'include'` and Authorization header support.
-- **ClientRoot UI Fix** — `Frontend/src/app/client-root.tsx` currently uses `usePathname()` and `PUBLIC_PATH_PREFIXES` only. Add `useCompanyId()` hook and conditionally render minimal layout (no sidebar/topbar) when no company is linked.
+- **ClientRoot UI Fix** — Nav leak on `/workspace` fixed via `isHubSelection` check (see Hub Selection above). Remaining: `useCompanyId()` hook for conditionally rendering minimal layout when no company is selected is still open — separate concern.
+- **Owner Dashboard Distinct Layout** — Currently `/owner/*` routes share the same `OwnerTopBar + OwnerSidebar` chrome as company admin routes (`client-root.tsx` L120-129). The platform owner dashboard must have its OWN separate layout component (e.g., `PlatformTopBar` + `PlatformSidebar`) with platform-level navigation items. In `client-root.tsx`, add `isOwnerRoute = pathname.startsWith('/owner')` and render the platform layout instead of the company admin layout for owner routes. The owner dashboard is NOT a company admin view — it's the master control panel for the entire HaypBooks platform.
 
 ### P2: Medium Priority
 - **Fix Phantom `role` Field** — `Backend/src/repositories/interfaces/user.repository.interface.ts:8` declares 8 role values (`'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer' | 'accountant' | 'both'`) but DB has no `role` column — Prisma maps `systemRole` to `@map("role")`. Repository synthesizes `role` from `preferredHub` producing only `'business'` or `'accountant'`. Clean up the interface to match reality.
-- **Build Platform Owner Dashboard** — Separate UI for `SUPER_ADMIN` users (JP) to access platform endpoints: all users, storage usage, metrics, plan distribution. Current `OwnerDashboard` is for company admins, not platform owners. Backend endpoints already exist (`/api/owner/users`, `/api/owner/storage/usage`, `/api/owner/metrics/*`).
+- **Build Platform Owner Dashboard** — Separate UI for `SUPER_ADMIN` users (JP) to access platform endpoints: all users, storage usage, metrics, plan distribution. Current `OwnerDashboard` is for company admins, not platform owners. Backend endpoints already exist (`/api/owner/users`, `/api/owner/storage/usage`, `/api/owner/metrics/*`). Full platform owner dashboard with dedicated layout (see P1: Owner Dashboard Distinct Layout). The owner is the HaypBooks platform master — this dashboard monitors and controls everything across all companies and practices. Required navigation sections:
+
+  **1. 📊 Overview** — Platform KPIs at a glance: total companies, practices, users; subscription health (active/trial/expired); revenue metrics; recent signups; system health indicators.
+
+  **2. 🏢 Companies** — All companies on the platform. Table: name, owner, plan, status (active/trial/expired/suspended), user count, storage usage, created date. Actions: view details, suspend, activate. Search and filter by plan/status.
+
+  **3. 📑 Practices** — All accounting practices. Table: practice name, accountant, plan, status, linked companies count, created date. Actions: view details, suspend, activate. Search and filter.
+
+  **4. 👥 Users** — Platform-wide user management. Table: name, email, role, company/practice, status, last login. Actions: view, delete (with file cleanup — see P2: User Account Deletion). Search and filter by role/status/company.
+
+  **5. 💳 Subscriptions** — Subscription health and management. Overview cards: MRR, active count, churn rate. Subscription list with plan details and status. Expiring soon alerts. Plan definitions if dynamic pricing is implemented.
+
+  **6. 📁 Storage** — Platform storage monitoring. Total usage, per-company breakdown, file type distribution, cleanup tools. Identify storage-heavy tenants.
+
+  **7. 📋 Audit Log** — Platform activity tracking. Table: timestamp, user, action, entity, details. Filters: by user, action type, date range, entity. Login history.
+
+  **8. ⚙️ Platform Settings** — Global configuration. Feature flags, email templates, maintenance mode toggle, default subscription plans, platform branding.
+
+  **9. 🩺 System Health** — Infrastructure monitoring. CPU, RAM, disk usage; API error rates; database size; active sessions; uptime.
 - **Build Practice Dashboard** — Accountant workspace dashboard, separate from company dashboard.
 - **Three-Role Architecture** — Proper separation of: (1) Platform Owner (`SUPER_ADMIN` — manages the SaaS platform), (2) Company Admin (`business` / `preferredHub: OWNER` — manages their company), (3) Practice Admin (`accountant` / `preferredHub: ACCOUNTANT` — manages their practice). Each needs its own dashboard, routing guard, and API scope.
 - **Remove Stale Hardcoded Demo Data** — `Frontend/src/components/HubSidebar.tsx:54` has `juan@haypbooks.com` and `Frontend/src/components/TopBar.tsx:173` has `demo@haypbooks.com`. Replace with dynamic user data from `useUser()`.
 - **Reduce `--max-old-space-size`** — Currently 4096MB in `ecosystem.config.js`, should be 512-1024MB for a CX33 (4GB RAM VPS).
 - **Add Porkbun Domain Info to README** — Domain `haypbooks.com` purchased on Porkbun, DNS via Cloudflare.
 - **Verify Memory Leak Fix** — Monitor `haypbooks-backend` memory over 24-48hrs to confirm `metrics.ts` hourly `counts.clear()` resolves the issue long-term.
+- **User Account Deletion with File Cleanup** — Owner/Admin can permanently delete a user account. When a user is deleted, all their associated files (uploaded documents, attachments, exported reports) are also permanently deleted from storage. Requires cascade delete logic across User → WorkspaceUser → Company memberships, and a file cleanup service that removes the user's files from storage.
 
 ---
 
@@ -210,8 +230,8 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 **Depends on:** P0 items (JWT payload, mapRoleForFrontend)
 
 - [x] Add `systemRole` and `isOwner` to JWT payload — done in prisma-auth.service.ts + jwt.strategy.ts
-- [ ] Add `isOwner` to JWT payload (derive from `ownedWorkspaceId`)
-- [ ] Update `jwt.strategy.ts:28-32` validate() to return `systemRole` and `isOwner`
+- [x] Add `isOwner` to JWT payload — done (L52, L194, L258, L332 in `prisma-auth.service.ts`)
+- [x] Update `jwt.strategy.ts:28-32` validate() to return `systemRole` and isOwner — done (L32-33)
 - [ ] Update `RolesGuard` to check `systemRole === 'SUPER_ADMIN'` for platform endpoints
 - [x] Standardize role values — NOT A BUG (three orthogonal layers, see docs/architecture/ROLE_SYSTEM.md). Renaming deferred to Phase H-1.
 - [ ] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account

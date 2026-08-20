@@ -99,6 +99,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
   // in one place and tests / runtime logic stay consistent.
   const isPublic = pathname === '/' || PUBLIC_PATH_PREFIXES.some(p => p !== '/' && pathname.startsWith(p))
   const isPractice = pathname.startsWith('/practice-hub')
+  const isHubSelection = pathname.startsWith('/workspace')
   const isFullScreen =
     pathname.includes('/journal-entries/') ||
     pathname.endsWith('/audit-log') ||
@@ -115,8 +116,8 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
       {/* Early return only for public pages (login, signup, etc.) */}
       {isPublic ? (
         <main id="main" className="h-full overflow-y-auto">{children}</main>
-      ) : isPractice || isFullScreen ? (
-        // all practice-hub routes and full-screen pages render without any header/sidebar
+      ) : isPractice || isFullScreen || isHubSelection ? (
+        // all practice-hub routes, hub selection, and full-screen pages render without any header/sidebar
         <main id="main" className="w-full h-full">{children}</main>
       ) : (
         /* Owner accounting app — full layout: green topbar + collapsible sidebar */
