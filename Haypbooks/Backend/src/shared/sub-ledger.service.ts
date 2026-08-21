@@ -785,7 +785,7 @@ const lines = (invoice as any).lines ?? []
       if (deposit.journalEntryId) return
 
       const cashAccountId = await this.resolveAccount(deposit.companyId, deposit.bankAccountId, '1010')
-      const undepositedFundsId = await this.findAccountByCode(deposit.companyId, '1050')
+      const undepositedFundsId = await this.findAccountByCode(deposit.companyId, SYSTEM_ACCOUNTS.UNDEPOSITED_FUNDS.code)
 
       if (!cashAccountId || !undepositedFundsId) {
         this.logger.warn(`[SubLedger] Cannot post bank deposit ${depositId}: required accounts not found`)

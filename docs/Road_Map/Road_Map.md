@@ -7,6 +7,7 @@
 - ✅ **Slow Currency Endpoint Fix** — Fixed `GET /api/currency/currencies` latency with 1-hour TTL in-memory cache in `exchange-rate.service.ts:82-88`
 - ✅ **Fix 401 on Dashboard (Auth Cookie Routing)** — Changed `NEXT_PUBLIC_API_URL` from `https://api.haypbooks.com` to empty string in `.env.production` on VPS so axios requests stay same-origin through nginx proxy.
 - ✅ **Fix 403 on Dashboard (RolesGuard)** — Updated `Backend/src/auth/guards/roles.guard.ts` line 33 to treat `role='business'` as equivalent to `'owner'` (case-insensitive + business→owner mapping). Committed to git and deployed to VPS.
+- ✅ **Fix Undeposited Funds Account Code Mismatch** — Replaced hardcoded `'1050'` in `Backend/src/shared/sub-ledger.service.ts` with `SYSTEM_ACCOUNTS.UNDEPOSITED_FUNDS.code` for `postBankDepositToGL`. This fixes bank deposit GL posting by using the current COA code `'1170'` instead of the legacy, missing `'1050'` account.
 - ✅ **Fix DB Connection Limit** — Added `&connection_limit=10` to DATABASE_URL in `Backend/.env` on VPS.
 - ✅ **Fix CORS on api.haypbooks.com** — Added port 80 proxy block in nginx for `api.haypbooks.com`.
 - ✅ **Onboarding Re-Trigger Fix** — Fixed: added `getOnboardingStatus()` helper in `prisma-auth.service.ts` (L100-111) that queries `OnboardingData.complete` instead of non-existent `user.onboardingComplete` field. All 4 auth response locations (signup L54, login L184, createSessionForUser L255, refresh L318) updated. Build passes. ✅ Deployed to VPS (committed in `c238607f`, auto-deployed via GitHub Actions).
