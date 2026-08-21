@@ -193,12 +193,14 @@ export async function createReversingJE(
     companyId: string,
     originalJeId: string,
     reason: string,
+    date?: Date,
 ): Promise<string | null> {
     const origJe = await tx.journalEntry.findFirst({
         where: { id: originalJeId, companyId },
         select: {
             id: true,
             workspaceId: true,
+            date: true,
             createdById: true,
             currency: true,
             postingStatus: true,
@@ -227,7 +229,7 @@ export async function createReversingJE(
     const jeId = await createAndPostJE(tx, {
         workspaceId: origJe.workspaceId,
         companyId,
-        date: new Date(),
+        date: date ?? origJe.date,
         description: `Reversal – ${reason}`,
         createdById: origJe.createdById ?? 'system',
         currency: origJe.currency ?? await resolveCompanyCurrency(tx, companyId),

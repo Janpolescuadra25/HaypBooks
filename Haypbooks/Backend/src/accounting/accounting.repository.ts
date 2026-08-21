@@ -651,7 +651,7 @@ export class AccountingRepository {
                 data: {
                     workspaceId: je.workspaceId,
                     companyId,
-                    date: new Date(),
+                    date: je.date,
                     entryNumber: `VOID-${je.entryNumber ?? jeId}`,
                     description: `VOID of ${je.entryNumber ?? jeId}: ${reason}`,
                     currency: je.currency,

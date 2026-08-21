@@ -371,12 +371,12 @@ const lines = (invoice as any).lines ?? []
       }))
 
       await this.prisma.$transaction(async (tx) => {
-        await this.assertPeriodOpen(invoice.companyId, new Date(), tx)
+        await this.assertPeriodOpen(invoice.companyId, originalJE.date, tx)
         const entryNumber = await this.nextEntryNumber(invoice.companyId, 'ARV')
         const je = await this.createPostedJE(tx, {
           workspaceId: invoice.workspaceId,
           companyId: invoice.companyId,
-          date: new Date(),
+          date: originalJE.date,
           description: `Invoice reversal ${invoice.invoiceNumber ?? invoice.id}`,
           currency: invoice.currency ?? undefined,
           createdById: postedById,
@@ -486,12 +486,12 @@ const lines = (invoice as any).lines ?? []
           this.logger.warn(`[SubLedger] Cannot reverse payment ${paymentId}: missing companyId`)
           return
         }
-        await this.assertPeriodOpen(companyId, new Date(), tx)
+        await this.assertPeriodOpen(companyId, originalJE.date, tx)
         const entryNumber = await this.nextEntryNumber(companyId, 'RVP')
         const je = await this.createPostedJE(tx, {
           workspaceId: payment.workspaceId,
           companyId,
-          date: new Date(),
+          date: originalJE.date,
           description: `Payment reversal ${payment.referenceNumber ?? paymentId}`,
           currency: payment.currency ?? undefined,
           createdById: postedById,
@@ -1004,12 +1004,12 @@ const lines = (invoice as any).lines ?? []
       const amount = Number(cn.totalAmount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
-        await this.assertPeriodOpen(cn.companyId, new Date(), tx)
+        await this.assertPeriodOpen(cn.companyId, cn.issuedAt, tx)
         const entryNumber = await this.nextEntryNumber(cn.companyId, 'CNV')
         await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
           companyId: cn.companyId,
-          date: new Date(),
+          date: cn.issuedAt,
           description: `Credit Note Void ${cn.creditNoteNumber}`,
           currency: company.currency,
           createdById: postedById,
@@ -1102,12 +1102,12 @@ const lines = (invoice as any).lines ?? []
       const amount = Number(writeOff.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
-        await this.assertPeriodOpen(writeOff.companyId, new Date(), tx)
+        await this.assertPeriodOpen(writeOff.companyId, writeOff.writeOffDate, tx)
         const entryNumber = await this.nextEntryNumber(writeOff.companyId, 'WOV')
         await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
           companyId: writeOff.companyId,
-          date: new Date(),
+          date: writeOff.writeOffDate,
           description: `Write-off Reversed ${writeOffId}`,
           currency: company.currency,
           createdById: postedById,
@@ -1201,12 +1201,12 @@ const lines = (invoice as any).lines ?? []
       const amount = Number(refund.amount ?? 0)
 
       await this.prisma.$transaction(async (tx) => {
-        await this.assertPeriodOpen(refund.companyId, new Date(), tx)
+        await this.assertPeriodOpen(refund.companyId, refund.refundDate, tx)
         const entryNumber = await this.nextEntryNumber(refund.companyId, 'RFV')
         await this.createPostedJE(tx, {
           workspaceId: company.workspaceId,
           companyId: refund.companyId,
-          date: new Date(),
+          date: refund.refundDate,
           description: `Refund Reversed ${refund.referenceNumber ?? refundId}`,
           currency: refund.currency ?? company.currency,
           createdById: postedById,
@@ -1287,17 +1287,19 @@ const lines = (invoice as any).lines ?? []
     postedById?: string
   }): Promise<void> {
     try {
+      const rr = await this.prisma.revenueRecognition.findUnique({ where: { id: data.recognitionId } })
+      if (!rr) return
       const deferredRevenueId = await this.findAccountByCode(data.companyId, '2110')
       const revenueAccountId = await this.findAccountByCode(data.companyId, '4010')
       if (!deferredRevenueId || !revenueAccountId) return
 
       await this.prisma.$transaction(async (tx) => {
-        await this.assertPeriodOpen(data.companyId, new Date(), tx)
+        await this.assertPeriodOpen(data.companyId, rr.startDate, tx)
         const entryNumber = await this.nextEntryNumber(data.companyId, 'RRV')
         await this.createPostedJE(tx, {
           workspaceId: data.workspaceId,
           companyId: data.companyId,
-          date: new Date(),
+          date: rr.startDate,
           description: `Revenue Recognition Reversed ${data.recognitionId}`,
           currency: data.currency,
           createdById: data.postedById,
