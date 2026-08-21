@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { createReversingJE } from '../shared/gl-integration'
 
 @Injectable()
 export class BankingRepository {
@@ -377,9 +378,12 @@ export class BankingRepository {
         const deposit = await this.prisma.bankDeposit.findFirst({ where: { id: depositId, companyId }, include: { lines: true } })
         if (!deposit) return null
         return this.prisma.$transaction(async (tx) => {
+            if (deposit.journalEntryId) {
+                await createReversingJE(tx, companyId, deposit.journalEntryId, `Void bank deposit ${depositId}`, deposit.depositDate)
+            }
             const paymentIds = deposit.lines.map((l) => l.paymentReceivedId)
             await tx.paymentReceived.updateMany({ where: { id: { in: paymentIds } }, data: { isDeposited: false, bankAccountId: null } })
-            return tx.bankDeposit.update({ where: { id: depositId }, data: { status: 'VOID' } })
+            return tx.bankDeposit.update({ where: { id: depositId }, data: { status: 'VOID', journalEntryId: null } })
         })
     }
 
