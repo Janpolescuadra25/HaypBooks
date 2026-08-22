@@ -9,6 +9,7 @@ interface User {
   firstName?: string
   lastName?: string
   role: string
+  systemRole?: string
   avatarUrl?: string
   companyName?: string
   preferredHub?: string

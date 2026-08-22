@@ -236,6 +236,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [x] Add `isOwner` to JWT payload — done (L52, L194, L258, L332 in `prisma-auth.service.ts`)
 - [x] Update `jwt.strategy.ts:28-32` validate() to return `systemRole` and isOwner — done (L32-33)
 - [x] Update `RolesGuard` to check `systemRole === 'SUPER_ADMIN'` for platform endpoints
+- [x] Expose `systemRole` in API responses and frontend User types (backend users.service.ts, prisma-auth.service.ts + frontend auth.service.ts, use-user.ts)
 - [x] Standardize role values — NOT A BUG (three orthogonal layers, see docs/architecture/ROLE_SYSTEM.md). Renaming deferred to Phase H-1.
 - [ ] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
 - [ ] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`

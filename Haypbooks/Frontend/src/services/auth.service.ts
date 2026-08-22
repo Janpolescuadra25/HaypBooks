@@ -27,10 +27,13 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
+  systemRole?: string;
   onboardingCompleted: boolean;
   ownerOnboardingCompleted?: boolean;
   accountantOnboardingCompleted?: boolean;
-  preferredHub?: 'OWNER' | 'ACCOUNTANT';  isOwner?: boolean}
+  preferredHub?: 'OWNER' | 'ACCOUNTANT';
+  isOwner?: boolean
+}
 
 export interface AuthResponse {
   user: User;

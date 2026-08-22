@@ -80,6 +80,7 @@ export class UsersService {
       practices: uniquePractices,
       ownedWorkspaceId,
       isOwner: !!ownedWorkspaceId,
+      systemRole: result.systemRole,
       // Back-compat: global flag
       onboardingCompleted: result.onboardingComplete ?? false,
       onboardingMode: result.onboardingMode || 'full',
