@@ -244,10 +244,10 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 #### Phase H-1: Backend Role Separation
 **Depends on:** Phase H-0
 
-- [ ] Split `OwnerController` — move company-level endpoints (`financial-summary`, `cash-position`, `dashboard`) to `CompanyController` with `JwtAuthGuard` only
-- [ ] Update `OwnerController` to use `@Roles('SUPER_ADMIN')` (check `systemRole`, not workspace role) for platform endpoints: storage, users, metrics
+- [ ] Split `OwnerController` — move company-level endpoints to `CompanyController` (deferred to H-2, when frontend routes are updated simultaneously; guard-level separation done in this phase)
+- [x] Update `OwnerController` to use `@SystemRoles('SUPER_ADMIN')` (via new SystemRoleGuard) for platform endpoints: storage, users, metrics
 - [ ] Enhance existing `PracticeController` (`Backend/src/practice/practice.controller.ts`) and `PracticeHubController` (`Backend/src/practice-hub/practice-hub.controller.ts`) with additional practice-specific endpoints as needed
-- [ ] Add `systemRole`-based guard: new `SystemRoleGuard` that checks `req.user.systemRole` instead of workspace role
+- [x] Add `systemRole`-based guard: new `SystemRoleGuard` that checks `req.user.systemRole` instead of workspace role
 - [ ] Prevent cross-role creation: Company Admin should NOT be able to create Practice entities, and vice versa
 - [ ] Onboarding separation: change `OnboardingData` from per-user to per-(user, hubType) to support separate company and practice onboarding
 
@@ -306,7 +306,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 
 **Known Issues to Track:**
 - 🔴 3 platform nav sections (STORAGE, METRICS, USERS) visible to all Company Admin users
-- 🔴 3 company-level API endpoints trapped behind wrong guard in OwnerController
+- ✅ 3 company-level API endpoints trapped behind wrong guard in OwnerController
 - 🔴 No subscription capacity enforcement anywhere
 - 🔴 Practice XP/tier system is dead schema (fields exist, no code)
 - 🟡 COLLABORATION section (Client Requests) visible to Company Admins

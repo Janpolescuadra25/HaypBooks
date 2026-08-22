@@ -9,6 +9,7 @@ import { VerificationService } from './verification.service'
 import { VerificationController } from './verification.controller'
 import { PendingSignupService } from './pending-signup.service'
 import { RolesGuard } from './guards/roles.guard'
+import { SystemRoleGuard } from './guards/system-role.guard'
 
 @Module({
   imports: [
@@ -19,7 +20,21 @@ import { RolesGuard } from './guards/roles.guard'
     }),
   ],
   controllers: [AuthController, VerificationController],
-  providers: [PrismaAuthService, JwtStrategy, MailService, VerificationService, PendingSignupService, RolesGuard],
-  exports: [PrismaAuthService, VerificationService, PendingSignupService, RolesGuard],
+  providers: [
+    PrismaAuthService,
+    JwtStrategy,
+    MailService,
+    VerificationService,
+    PendingSignupService,
+    RolesGuard,
+    SystemRoleGuard,
+  ],
+  exports: [
+    PrismaAuthService,
+    VerificationService,
+    PendingSignupService,
+    RolesGuard,
+    SystemRoleGuard,
+  ],
 })
 export class AuthModule {}
