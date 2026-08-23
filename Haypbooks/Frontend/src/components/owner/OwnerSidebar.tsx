@@ -4,7 +4,10 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { navigationData, NavSection, NavItem } from './ownerNavConfig'
+import { navigationData as ownerAdminNavData } from './ownerAdminNavConfig'
+import { navigationData as practiceAdminNavData } from './practiceAdminNavConfig'
+import { navigationData as companyAdminNavData } from './companyAdminNavConfig'
+import { NavSection, NavItem } from './ownerNavTypes'
 import { useCompany } from '@/hooks/use-company'
 import { useUser } from '@/hooks/use-user'
 import { motion, AnimatePresence } from 'motion/react'
@@ -224,9 +227,15 @@ export default function OwnerSidebar() {
   const { company } = useCompany()
   const { user } = useUser()
   const country = company?.country?.toUpperCase()
+  const navConfig = useMemo(() => {
+    if (!user) return []
+    if (user.systemRole === 'SUPER_ADMIN') return ownerAdminNavData
+    if (user.role === 'accountant') return practiceAdminNavData
+    return companyAdminNavData
+  }, [user])
   const filteredNavigation = useMemo(
-    () => filterNavigationData(navigationData, country, user?.systemRole, user?.role),
-    [country, user?.systemRole, user?.role]
+    () => filterNavigationData(navConfig, country, user?.systemRole, user?.role),
+    [navConfig, country, user?.systemRole, user?.role]
   )
   const pathname = usePathname()
   // Initialise from the current URL so a page refresh lands on the right section

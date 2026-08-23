@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { X, ListChecks, ChevronDown, ChevronRight, Search } from 'lucide-react'
-import { navigationData, NavItem } from './ownerNavConfig'
+import { navigationData } from './ownerNavReference'
+import { NavItem } from './ownerNavTypes'
 
 // ─── Pages with real content (auto-detected / hardcoded) ─────────────────────
 const BUILT_PATHS = new Set([

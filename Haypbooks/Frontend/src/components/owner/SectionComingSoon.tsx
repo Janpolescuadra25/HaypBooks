@@ -1,5 +1,5 @@
 import ComingSoon from '@/components/ui/ComingSoonPage'
-import { ownerNav } from '@/components/owner/ownerNavConfig'
+import { ownerNav } from '@/components/owner/ownerNavReference'
 
 type SectionComingSoonProps = {
   sectionId: string

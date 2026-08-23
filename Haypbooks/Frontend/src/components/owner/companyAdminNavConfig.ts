@@ -1,94 +1,5 @@
-// Owner Books — Navigation Configuration
-// Paths mapped to actual Next.js (owner) route structure
-
-import {
-  Home,
-  CheckSquare,
-  Building2,
-  Landmark,
-  DollarSign,
-  CreditCard,
-  Package,
-  HeartHandshake,
-  Store,
-  FolderKanban,
-  Clock,
-  Users,
-  Receipt,
-  BookOpen,
-  ShoppingCart,
-  BarChart3,
-  ShieldCheck,
-  Zap,
-  UserCog,
-  Wallet,
-  Plug,
-  Brain,
-  Flag,
-  Settings,
-  Briefcase,
-  FileCheck,
-  HardDrive,
-} from 'lucide-react'
-
-
-export interface NavTab {
-  label: string
-  value: string
-  status: 'existing' | 'ghost-fix' | 'coming-soon'
-}
-
-export interface NavItem {
-  title: string
-  /** Display label (alias for title used by slug pages) */
-  label?: string
-  path?: string
-  /** href alias for path used by slug/router pages */
-  href?: string
-  items?: NavItem[]
-  /** Tabs shown in ModuleTabs bar when this group is active */
-  tabs?: NavTab[]
-  isEnterprise?: boolean
-  /** When true, render as a visual section divider (not clickable) */
-  isSectionLabel?: boolean
-  /** Restrict visibility to specific country codes (ISO2) */
-  countries?: string[]
-  /** Restrict visibility to specific system roles */
-  systemRoleRestrictions?: string[]
-  /** Restrict visibility to specific hub roles */
-  roleRestrictions?: string[]
-}
-
-export interface NavGroup {
-  title?: string
-  icon?: any
-  items: NavItem[]
-  /** Restrict visibility to specific country codes (ISO2) */
-  countries?: string[]
-  /** Restrict visibility to specific system roles */
-  systemRoleRestrictions?: string[]
-  /** Restrict visibility to specific hub roles */
-  roleRestrictions?: string[]
-}
-
-export interface NavSection {
-  title: string
-  /** Short label shown in the primary rail button (max ~8 chars). Falls back to first word of title. */
-  label?: string
-  /** Section identifier used by [[...slug]] routing pages */
-  id?: string
-  icon: any
-  items?: NavItem[]
-  /** Grouped navigation items used by [[...slug]] routing pages */
-  groups?: NavGroup[]
-  isEnterprise?: boolean
-  /** Restrict visibility to specific country codes (ISO2) */
-  countries?: string[]
-  /** Restrict visibility to specific system roles */
-  systemRoleRestrictions?: string[]
-  /** Restrict visibility to specific hub roles */
-  roleRestrictions?: string[]
-}
+import { Home, Briefcase, Landmark, ShoppingCart, Receipt, Package, FolderKanban, Clock, BarChart3, Users, ShieldCheck, Wallet, CheckSquare, FileCheck, Zap, Settings } from 'lucide-react'
+import { NavSection } from './ownerNavTypes'
 
 export const navigationData: NavSection[] = [
   {
@@ -106,55 +17,9 @@ export const navigationData: NavSection[] = [
     ],
   },
   {
-    title: 'STORAGE',
-    label: 'STORAGE',
-    icon: HardDrive,
-    systemRoleRestrictions: ['SUPER_ADMIN'],
-    groups: [
-      {
-        title: 'Monitoring',
-        icon: HardDrive,
-        items: [
-          { title: 'Storage Overview', path: '/owner/storage' },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'METRICS',
-    label: 'METRICS',
-    icon: BarChart3,
-    systemRoleRestrictions: ['SUPER_ADMIN'],
-    groups: [
-      {
-        title: 'Platform Metrics',
-        icon: BarChart3,
-        items: [
-          { title: 'Metrics Dashboard', path: '/owner/metrics' },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'USERS',
-    label: 'USERS',
-    icon: Users,
-    systemRoleRestrictions: ['SUPER_ADMIN'],
-    groups: [
-      {
-        title: 'User Management',
-        icon: Users,
-        items: [
-          { title: 'All Users', path: '/owner/users' },
-        ],
-      },
-    ],
-  },
-  {
     title: 'OPERATIONS',
     label: 'OPS',
     icon: Briefcase,
-    // ── Nested 2-level structure: sections → subsections ──────────────────────
     groups: [
       {
         title: 'Banking',
@@ -164,19 +29,19 @@ export const navigationData: NavSection[] = [
             title: 'Bank Transactions',
             path: '/banking/transactions',
             tabs: [
-              { label: 'Bank Transactions', value: 'transactions',      status: 'existing' },
+              { label: 'Bank Transactions', value: 'transactions', status: 'existing' },
               { label: 'Undeposited Funds', value: 'undeposited-funds', status: 'existing' },
-              { label: 'Deposits',         value: 'deposits',         status: 'existing' },
-              { label: 'Bank Rules',       value: 'rules',            status: 'existing' },
+              { label: 'Deposits', value: 'deposits', status: 'existing' },
+              { label: 'Bank Rules', value: 'rules', status: 'existing' },
             ],
           },
           {
             title: 'Reconciliation',
             path: '/banking/reconciliation',
             tabs: [
-              { label: 'Reconcile',          value: 'reconcile',          status: 'existing' },
-              { label: 'History',            value: 'history',            status: 'existing' },
-              { label: 'Statement Archive',  value: 'statement-archive',  status: 'existing' },
+              { label: 'Reconcile', value: 'reconcile', status: 'existing' },
+              { label: 'History', value: 'history', status: 'existing' },
+              { label: 'Statement Archive', value: 'statement-archive', status: 'existing' },
             ],
           },
         ],
@@ -189,50 +54,50 @@ export const navigationData: NavSection[] = [
             title: 'Customers',
             path: '/sales/customers',
             tabs: [
-              { label: 'Customers',   value: 'customers',   status: 'existing' },
-              { label: 'Groups',      value: 'groups',      status: 'existing' },
-              { label: 'Portal',      value: 'portal',      status: 'coming-soon' },
+              { label: 'Customers', value: 'customers', status: 'existing' },
+              { label: 'Groups', value: 'groups', status: 'existing' },
+              { label: 'Portal', value: 'portal', status: 'coming-soon' },
             ],
           },
           {
             title: 'Sales',
             path: '/sales/opportunities',
             tabs: [
-              { label: 'Pipeline',            value: 'pipeline',          status: 'existing' },
+              { label: 'Pipeline', value: 'pipeline', status: 'existing' },
               { label: 'Products & Services', value: 'products-services', status: 'existing' },
-              { label: 'Quotes',              value: 'quotes',            status: 'existing' },
-              { label: 'Sales Orders',        value: 'orders',            status: 'existing' },
+              { label: 'Quotes', value: 'quotes', status: 'existing' },
+              { label: 'Sales Orders', value: 'orders', status: 'existing' },
             ],
           },
           {
             title: 'Billing',
             path: '/sales/billing',
             tabs: [
-              { label: 'Invoices',           value: 'invoices',    status: 'existing' },
-              { label: 'Recurring Invoices', value: 'recurring',   status: 'existing' },
-              { label: 'Payment Links',      value: 'payment-links', status: 'existing' },
+              { label: 'Invoices', value: 'invoices', status: 'existing' },
+              { label: 'Recurring Invoices', value: 'recurring', status: 'existing' },
+              { label: 'Payment Links', value: 'payment-links', status: 'existing' },
             ],
           },
           {
             title: 'Collections',
             path: '/sales/collections',
             tabs: [
-              { label: 'Customer Payments',   value: 'payments',   status: 'existing' },
-              { label: 'A/R Aging',           value: 'aging',      status: 'existing' },
-              { label: 'Collections Center',  value: 'center',     status: 'existing' },
-              { label: 'Dunning',             value: 'dunning',    status: 'existing' },
-              { label: 'Dunning Profiles',    value: 'dunning-profiles', status: 'existing' },
-              { label: 'Write-Offs',          value: 'write-offs', status: 'existing' },
-              { label: 'Refunds',             value: 'refunds',    status: 'existing' },
+              { label: 'Customer Payments', value: 'payments', status: 'existing' },
+              { label: 'A/R Aging', value: 'aging', status: 'existing' },
+              { label: 'Collections Center', value: 'center', status: 'existing' },
+              { label: 'Dunning', value: 'dunning', status: 'existing' },
+              { label: 'Dunning Profiles', value: 'dunning-profiles', status: 'existing' },
+              { label: 'Write-Offs', value: 'write-offs', status: 'existing' },
+              { label: 'Refunds', value: 'refunds', status: 'existing' },
             ],
           },
           {
             title: 'Revenue',
             path: '/sales/revenue',
             tabs: [
-              { label: 'Credit Notes',        value: 'credit-notes',  status: 'existing' },
-              { label: 'Revenue Recognition', value: 'recognition',   status: 'existing' },
-              { label: 'Deferred Revenue',    value: 'deferred',      status: 'existing' },
+              { label: 'Credit Notes', value: 'credit-notes', status: 'existing' },
+              { label: 'Revenue Recognition', value: 'recognition', status: 'existing' },
+              { label: 'Deferred Revenue', value: 'deferred', status: 'existing' },
             ],
           },
         ],
@@ -252,33 +117,33 @@ export const navigationData: NavSection[] = [
             title: 'Procurement',
             path: '/expenses/procurement',
             tabs: [
-              { label: 'Purchase Requests',  value: 'purchase-requests',  status: 'existing' },
-              { label: 'Purchase Orders',    value: 'purchase-orders',    status: 'existing' },
-              { label: 'RFQs',               value: 'rfq',                status: 'existing' },
-              { label: 'Approvals',          value: 'approvals',          status: 'existing' },
+              { label: 'Purchase Requests', value: 'purchase-requests', status: 'existing' },
+              { label: 'Purchase Orders', value: 'purchase-orders', status: 'existing' },
+              { label: 'RFQs', value: 'rfq', status: 'existing' },
+              { label: 'Approvals', value: 'approvals', status: 'existing' },
             ],
           },
           {
             title: 'Bills & Payments',
             path: '/expenses/bills-payments',
             tabs: [
-              { label: 'Bills',             value: 'bills',             status: 'existing' },
-              { label: 'Recurring Bills',   value: 'recurring-bills',   status: 'existing' },
-              { label: 'Payments',          value: 'bill-payments',     status: 'existing' },
-              { label: 'Payment Runs',      value: 'payment-runs',      status: 'existing' },
-              { label: 'Vendor Credits',    value: 'vendor-credits',    status: 'existing' },
-              { label: 'A/P Aging',         value: 'ap-aging',          status: 'existing' },
+              { label: 'Bills', value: 'bills', status: 'existing' },
+              { label: 'Recurring Bills', value: 'recurring-bills', status: 'existing' },
+              { label: 'Payments', value: 'bill-payments', status: 'existing' },
+              { label: 'Payment Runs', value: 'payment-runs', status: 'existing' },
+              { label: 'Vendor Credits', value: 'vendor-credits', status: 'existing' },
+              { label: 'A/P Aging', value: 'ap-aging', status: 'existing' },
             ],
           },
           {
             title: 'Expenses',
             path: '/expenses/employee-expenses',
             tabs: [
-              { label: 'Expense Reports',  value: 'expenses',         status: 'existing' },
-              { label: 'Receipts',         value: 'receipts',         status: 'existing' },
-              { label: 'Mileage',          value: 'mileage',          status: 'existing' },
-              { label: 'Per Diem',         value: 'per-diem',         status: 'existing' },
-              { label: 'Reimbursements',   value: 'reimbursements',   status: 'existing' },
+              { label: 'Expense Reports', value: 'expenses', status: 'existing' },
+              { label: 'Receipts', value: 'receipts', status: 'existing' },
+              { label: 'Mileage', value: 'mileage', status: 'existing' },
+              { label: 'Per Diem', value: 'per-diem', status: 'existing' },
+              { label: 'Reimbursements', value: 'reimbursements', status: 'existing' },
             ],
           },
         ],
@@ -291,49 +156,49 @@ export const navigationData: NavSection[] = [
             title: 'Items',
             path: '/inventory/items',
             tabs: [
-              { label: 'Inventory Items', value: 'item-list',    status: 'existing' },
-              { label: 'Categories',      value: 'categories',   status: 'coming-soon' },
-              { label: 'Bundles',         value: 'bundles',      status: 'coming-soon' },
-              { label: 'Units',           value: 'units',        status: 'coming-soon' },
+              { label: 'Inventory Items', value: 'item-list', status: 'existing' },
+              { label: 'Categories', value: 'categories', status: 'coming-soon' },
+              { label: 'Bundles', value: 'bundles', status: 'coming-soon' },
+              { label: 'Units', value: 'units', status: 'coming-soon' },
             ],
           },
           {
             title: 'Operations',
             path: '/inventory/stock-operations',
             tabs: [
-              { label: 'Item Receipts',    value: 'item-receipts',    status: 'existing' },
-              { label: 'Stock Movements',  value: 'stock-movements',  status: 'coming-soon' },
-              { label: 'Adjustments',      value: 'adjustments',      status: 'coming-soon' },
-              { label: 'Transfers',        value: 'transfers',        status: 'coming-soon' },
+              { label: 'Item Receipts', value: 'item-receipts', status: 'existing' },
+              { label: 'Stock Movements', value: 'stock-movements', status: 'coming-soon' },
+              { label: 'Adjustments', value: 'adjustments', status: 'coming-soon' },
+              { label: 'Transfers', value: 'transfers', status: 'coming-soon' },
             ],
           },
           {
             title: 'Warehousing',
             path: '/inventory/warehouses',
             tabs: [
-              { label: 'Warehouses',    value: 'warehouse-list', status: 'existing' },
+              { label: 'Warehouses', value: 'warehouse-list', status: 'existing' },
               { label: 'Bin Locations', value: 'bin-locations', status: 'coming-soon' },
-              { label: 'Zones',         value: 'zones',         status: 'coming-soon' },
+              { label: 'Zones', value: 'zones', status: 'coming-soon' },
             ],
           },
           {
             title: 'Control',
             path: '/inventory/control',
             tabs: [
-              { label: 'Cycle Counts',      value: 'cycle-counts',      status: 'coming-soon' },
-              { label: 'Physical Counts',   value: 'physical-counts',   status: 'coming-soon' },
+              { label: 'Cycle Counts', value: 'cycle-counts', status: 'coming-soon' },
+              { label: 'Physical Counts', value: 'physical-counts', status: 'coming-soon' },
               { label: 'Lot/Serial Tracking', value: 'lot-serial-tracking', status: 'coming-soon' },
-              { label: 'Reorder Points',    value: 'reorder-points',    status: 'coming-soon' },
+              { label: 'Reorder Points', value: 'reorder-points', status: 'coming-soon' },
             ],
           },
           {
             title: 'Valuation',
             path: '/inventory/valuation',
             tabs: [
-              { label: 'Valuation',         value: 'inventory-valuation', status: 'existing' },
-              { label: 'Landed Costs',      value: 'landed-costs',      status: 'coming-soon' },
-              { label: 'Cost Adjustments',  value: 'cost-adjustments',  status: 'coming-soon' },
-              { label: 'Write-Downs',       value: 'write-downs',       status: 'coming-soon' },
+              { label: 'Valuation', value: 'inventory-valuation', status: 'existing' },
+              { label: 'Landed Costs', value: 'landed-costs', status: 'coming-soon' },
+              { label: 'Cost Adjustments', value: 'cost-adjustments', status: 'coming-soon' },
+              { label: 'Write-Downs', value: 'write-downs', status: 'coming-soon' },
             ],
           },
         ],
@@ -346,38 +211,38 @@ export const navigationData: NavSection[] = [
             title: 'Setup',
             path: '/projects/project-setup',
             tabs: [
-              { label: 'Projects',   value: 'projects',   status: 'existing' },
-              { label: 'Templates',  value: 'templates',  status: 'coming-soon' },
+              { label: 'Projects', value: 'projects', status: 'existing' },
+              { label: 'Templates', value: 'templates', status: 'coming-soon' },
               { label: 'Milestones', value: 'milestones', status: 'coming-soon' },
-              { label: 'Contracts',  value: 'contracts',  status: 'coming-soon' },
+              { label: 'Contracts', value: 'contracts', status: 'coming-soon' },
             ],
           },
           {
             title: 'Execution',
             path: '/projects/tasks',
             tabs: [
-              { label: 'Tasks',              value: 'task-list',          status: 'existing' },
-              { label: 'Schedule',           value: 'schedule',           status: 'coming-soon' },
-              { label: 'Resource Planning',  value: 'resource-planning',  status: 'coming-soon' },
-              { label: 'Time & Expenses',    value: 'time-expenses',      status: 'coming-soon' },
+              { label: 'Tasks', value: 'task-list', status: 'existing' },
+              { label: 'Schedule', value: 'schedule', status: 'coming-soon' },
+              { label: 'Resource Planning', value: 'resource-planning', status: 'coming-soon' },
+              { label: 'Time & Expenses', value: 'time-expenses', status: 'coming-soon' },
             ],
           },
           {
             title: 'Billing',
             path: '/projects/billing',
             tabs: [
-              { label: 'Project Billing',   value: 'project-billing',   status: 'coming-soon' },
-              { label: 'Progress Billing',  value: 'progress-billing',  status: 'coming-soon' },
-              { label: 'Change Orders',     value: 'change-orders',     status: 'coming-soon' },
-              { label: 'WIP',               value: 'wip',               status: 'coming-soon' },
+              { label: 'Project Billing', value: 'project-billing', status: 'coming-soon' },
+              { label: 'Progress Billing', value: 'progress-billing', status: 'coming-soon' },
+              { label: 'Change Orders', value: 'change-orders', status: 'coming-soon' },
+              { label: 'WIP', value: 'wip', status: 'coming-soon' },
             ],
           },
           {
             title: 'Financials',
             path: '/projects/financials',
             tabs: [
-              { label: 'Project Profitability', value: 'profitability',      status: 'coming-soon' },
-              { label: 'Budget vs Actual',      value: 'budget-vs-actual',   status: 'coming-soon' },
+              { label: 'Project Profitability', value: 'profitability', status: 'coming-soon' },
+              { label: 'Budget vs Actual', value: 'budget-vs-actual', status: 'coming-soon' },
             ],
           },
         ],
@@ -391,8 +256,8 @@ export const navigationData: NavSection[] = [
             path: '/time/entry',
             tabs: [
               { label: 'Time Entries', value: 'time-entries', status: 'existing' },
-              { label: 'Timesheets',   value: 'timesheets',   status: 'coming-soon' },
-              { label: 'Timer',        value: 'timer',        status: 'coming-soon' },
+              { label: 'Timesheets', value: 'timesheets', status: 'coming-soon' },
+              { label: 'Timer', value: 'timer', status: 'coming-soon' },
             ],
           },
           {
@@ -400,7 +265,7 @@ export const navigationData: NavSection[] = [
             path: '/time/review',
             tabs: [
               { label: 'Billable Review', value: 'billable-time-review', status: 'coming-soon' },
-              { label: 'Time Approvals',  value: 'time-approvals',   status: 'coming-soon' },
+              { label: 'Time Approvals', value: 'time-approvals', status: 'coming-soon' },
             ],
           },
         ],
@@ -528,10 +393,10 @@ export const navigationData: NavSection[] = [
       {
         title: 'Tax Center',
         items: [
-          { title: 'Tax Dashboard',    path: '/taxes/tax-center/tax-dashboard' },
-          { title: 'Tax Liabilities',  path: '/taxes/tax-center/tax-liabilities' },
+          { title: 'Tax Dashboard', path: '/taxes/tax-center/tax-dashboard' },
+          { title: 'Tax Liabilities', path: '/taxes/tax-center/tax-liabilities' },
           { title: 'Filing & Payments', path: '/taxes/tax-center/filing-payments' },
-          { title: 'Tax Calendar',     path: '/taxes/tax-center/tax-calendar' },
+          { title: 'Tax Calendar', path: '/taxes/tax-center/tax-calendar' },
         ],
       },
       {
@@ -649,20 +514,6 @@ export const navigationData: NavSection[] = [
     ],
   },
   {
-    title: 'COLLABORATION',
-    label: 'TEAM',
-    icon: UserCog,
-    roleRestrictions: ['accountant'],
-    groups: [
-      {
-        title: 'Communication',
-        items: [
-          { title: 'Client Requests', path: '/accountant-workspace/client-requests' },
-        ],
-      },
-    ],
-  },
-  {
     title: 'AUTOMATION',
     label: 'AUTO',
     icon: Zap,
@@ -764,6 +615,3 @@ export const navigationData: NavSection[] = [
     ],
   },
 ]
-
-// Back-compat alias
-export const ownerNav = navigationData
