@@ -185,29 +185,32 @@ function findSectionForPath(sections: NavSection[], pathname: string): NavSectio
   return null
 }
 
-function filterNavItems(items: NavItem[] | undefined, country?: string, userSystemRole?: string): NavItem[] {
+function filterNavItems(items: NavItem[] | undefined, country?: string, userSystemRole?: string, userRole?: string): NavItem[] {
   if (!items) return []
   return items
     .map((item) => {
       if (item.systemRoleRestrictions && !item.systemRoleRestrictions.includes(userSystemRole ?? '')) return null
+      if (item.roleRestrictions && !item.roleRestrictions.includes(userRole ?? '')) return null
       if (!matchesCountry(item, country)) return null
       if (!item.items) return item
-      const filtered = filterNavItems(item.items, country, userSystemRole)
+      const filtered = filterNavItems(item.items, country, userSystemRole, userRole)
       if (filtered.length === 0) return null
       return { ...item, items: filtered }
     })
     .filter(Boolean) as NavItem[]
 }
 
-function filterNavigationData(data: NavSection[], country?: string, userSystemRole?: string): NavSection[] {
+function filterNavigationData(data: NavSection[], country?: string, userSystemRole?: string, userRole?: string): NavSection[] {
   return data
     .map((section) => {
       if (section.systemRoleRestrictions && !section.systemRoleRestrictions.includes(userSystemRole ?? '')) return null
+      if (section.roleRestrictions && !section.roleRestrictions.includes(userRole ?? '')) return null
       if (!matchesCountry(section, country)) return null
-      const fromItems = filterNavItems(section.items, country, userSystemRole)
+      const fromItems = filterNavItems(section.items, country, userSystemRole, userRole)
       const fromGroups = section.groups?.flatMap((group) => {
         if (group.systemRoleRestrictions && !group.systemRoleRestrictions.includes(userSystemRole ?? '')) return []
-        return filterNavItems(group.items, country, userSystemRole)
+        if (group.roleRestrictions && !group.roleRestrictions.includes(userRole ?? '')) return []
+        return filterNavItems(group.items, country, userSystemRole, userRole)
       }) || []
       const combined = [...fromItems, ...fromGroups]
       if (combined.length === 0) return null
@@ -222,8 +225,8 @@ export default function OwnerSidebar() {
   const { user } = useUser()
   const country = company?.country?.toUpperCase()
   const filteredNavigation = useMemo(
-    () => filterNavigationData(navigationData, country, user?.systemRole),
-    [country, user?.systemRole]
+    () => filterNavigationData(navigationData, country, user?.systemRole, user?.role),
+    [country, user?.systemRole, user?.role]
   )
   const pathname = usePathname()
   // Initialise from the current URL so a page refresh lands on the right section

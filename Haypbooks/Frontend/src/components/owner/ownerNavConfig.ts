@@ -55,6 +55,8 @@ export interface NavItem {
   countries?: string[]
   /** Restrict visibility to specific system roles */
   systemRoleRestrictions?: string[]
+  /** Restrict visibility to specific hub roles */
+  roleRestrictions?: string[]
 }
 
 export interface NavGroup {
@@ -65,6 +67,8 @@ export interface NavGroup {
   countries?: string[]
   /** Restrict visibility to specific system roles */
   systemRoleRestrictions?: string[]
+  /** Restrict visibility to specific hub roles */
+  roleRestrictions?: string[]
 }
 
 export interface NavSection {
@@ -82,6 +86,8 @@ export interface NavSection {
   countries?: string[]
   /** Restrict visibility to specific system roles */
   systemRoleRestrictions?: string[]
+  /** Restrict visibility to specific hub roles */
+  roleRestrictions?: string[]
 }
 
 export const navigationData: NavSection[] = [
@@ -646,6 +652,7 @@ export const navigationData: NavSection[] = [
     title: 'COLLABORATION',
     label: 'TEAM',
     icon: UserCog,
+    roleRestrictions: ['accountant'],
     groups: [
       {
         title: 'Communication',
