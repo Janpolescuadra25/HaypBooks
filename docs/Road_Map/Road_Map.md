@@ -306,7 +306,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 ---
 
 **Known Issues to Track:**
-- 🔴 3 platform nav sections (STORAGE, METRICS, USERS) visible to all Company Admin users
+- ✅ 3 platform nav sections (STORAGE, METRICS, USERS) visible to all Company Admin users
 - ✅ 3 company-level API endpoints trapped behind wrong guard in OwnerController
 - 🔴 No subscription capacity enforcement anywhere
 - 🔴 Practice XP/tier system is dead schema (fields exist, no code)
