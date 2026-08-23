@@ -259,7 +259,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [ ] Remove COLLABORATION → Client Requests from Company Admin nav (practice-only feature)
 - [ ] Create separate nav configs: `companyAdminNavConfig.ts`, `ownerAdminNavConfig.ts`, `practiceAdminNavConfig.ts`
 - [ ] Route group separation: move platform admin pages out of `app/(owner)/owner/` into `app/(platform-admin)/`
-- [ ] Add routing guard: middleware or component that checks `systemRole` and redirects unauthorized role access
+- [x] Add routing guard: middleware or component that checks `systemRole` and redirects unauthorized role access
 - [x] WorkspacePage: fix "Owner Dashboard" card that links to `/owner/storage` — should only show for SUPER_ADMIN
 
 #### Phase H-3: Owner Admin Dashboard
