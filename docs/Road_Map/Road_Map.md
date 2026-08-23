@@ -310,7 +310,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - ✅ 3 company-level API endpoints trapped behind wrong guard in OwnerController
 - 🔴 No subscription capacity enforcement anywhere
 - 🔴 Practice XP/tier system is dead schema (fields exist, no code)
-- 🟡 COLLABORATION section (Client Requests) visible to Company Admins
+- ✅ COLLABORATION section (Client Requests) visible to Company Admins
 - 🟡 Cross-role creation allowed (Company Admin can create Practice)
 - 🟡 WorkspacePage shows platform admin link to any workspace owner
 
