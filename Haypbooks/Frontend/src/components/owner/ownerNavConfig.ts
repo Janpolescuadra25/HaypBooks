@@ -53,6 +53,8 @@ export interface NavItem {
   isSectionLabel?: boolean
   /** Restrict visibility to specific country codes (ISO2) */
   countries?: string[]
+  /** Restrict visibility to specific system roles */
+  systemRoleRestrictions?: string[]
 }
 
 export interface NavGroup {
@@ -61,6 +63,8 @@ export interface NavGroup {
   items: NavItem[]
   /** Restrict visibility to specific country codes (ISO2) */
   countries?: string[]
+  /** Restrict visibility to specific system roles */
+  systemRoleRestrictions?: string[]
 }
 
 export interface NavSection {
@@ -76,6 +80,8 @@ export interface NavSection {
   isEnterprise?: boolean
   /** Restrict visibility to specific country codes (ISO2) */
   countries?: string[]
+  /** Restrict visibility to specific system roles */
+  systemRoleRestrictions?: string[]
 }
 
 export const navigationData: NavSection[] = [
@@ -97,6 +103,7 @@ export const navigationData: NavSection[] = [
     title: 'STORAGE',
     label: 'STORAGE',
     icon: HardDrive,
+    systemRoleRestrictions: ['SUPER_ADMIN'],
     groups: [
       {
         title: 'Monitoring',
@@ -111,6 +118,7 @@ export const navigationData: NavSection[] = [
     title: 'METRICS',
     label: 'METRICS',
     icon: BarChart3,
+    systemRoleRestrictions: ['SUPER_ADMIN'],
     groups: [
       {
         title: 'Platform Metrics',
@@ -125,6 +133,7 @@ export const navigationData: NavSection[] = [
     title: 'USERS',
     label: 'USERS',
     icon: Users,
+    systemRoleRestrictions: ['SUPER_ADMIN'],
     groups: [
       {
         title: 'User Management',

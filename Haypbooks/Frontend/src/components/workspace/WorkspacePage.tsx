@@ -395,7 +395,7 @@ export default function WorkspacePage() {
           onCtaClick={() => { router.push('/onboarding/business') }}
         />
 
-        {profile?.isOwner && (
+        {profile?.isOwner && profile?.systemRole === 'SUPER_ADMIN' && (
           <BookCard
             title="Owner Dashboard"
             subtitle="HB_Owner master control panel"

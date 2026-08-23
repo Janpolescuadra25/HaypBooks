@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { navigationData, NavSection, NavItem } from './ownerNavConfig'
 import { useCompany } from '@/hooks/use-company'
+import { useUser } from '@/hooks/use-user'
 import { motion, AnimatePresence } from 'motion/react'
 
 
@@ -184,25 +185,30 @@ function findSectionForPath(sections: NavSection[], pathname: string): NavSectio
   return null
 }
 
-function filterNavItems(items: NavItem[] | undefined, country?: string): NavItem[] {
+function filterNavItems(items: NavItem[] | undefined, country?: string, userSystemRole?: string): NavItem[] {
   if (!items) return []
   return items
     .map((item) => {
+      if (item.systemRoleRestrictions && !item.systemRoleRestrictions.includes(userSystemRole ?? '')) return null
       if (!matchesCountry(item, country)) return null
       if (!item.items) return item
-      const filtered = filterNavItems(item.items, country)
+      const filtered = filterNavItems(item.items, country, userSystemRole)
       if (filtered.length === 0) return null
       return { ...item, items: filtered }
     })
     .filter(Boolean) as NavItem[]
 }
 
-function filterNavigationData(data: NavSection[], country?: string): NavSection[] {
+function filterNavigationData(data: NavSection[], country?: string, userSystemRole?: string): NavSection[] {
   return data
     .map((section) => {
+      if (section.systemRoleRestrictions && !section.systemRoleRestrictions.includes(userSystemRole ?? '')) return null
       if (!matchesCountry(section, country)) return null
-      const fromItems = filterNavItems(section.items, country)
-      const fromGroups = section.groups?.flatMap((g) => filterNavItems(g.items, country)) || []
+      const fromItems = filterNavItems(section.items, country, userSystemRole)
+      const fromGroups = section.groups?.flatMap((group) => {
+        if (group.systemRoleRestrictions && !group.systemRoleRestrictions.includes(userSystemRole ?? '')) return []
+        return filterNavItems(group.items, country, userSystemRole)
+      }) || []
       const combined = [...fromItems, ...fromGroups]
       if (combined.length === 0) return null
       return { ...section, items: combined }
@@ -213,10 +219,11 @@ function filterNavigationData(data: NavSection[], country?: string): NavSection[
 // ─── Owner Sidebar ────────────────────────────────────────────────────────────
 export default function OwnerSidebar() {
   const { company } = useCompany()
+  const { user } = useUser()
   const country = company?.country?.toUpperCase()
   const filteredNavigation = useMemo(
-    () => filterNavigationData(navigationData, country),
-    [country]
+    () => filterNavigationData(navigationData, country, user?.systemRole),
+    [country, user?.systemRole]
   )
   const pathname = usePathname()
   // Initialise from the current URL so a page refresh lands on the right section

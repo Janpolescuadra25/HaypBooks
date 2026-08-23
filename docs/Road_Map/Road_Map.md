@@ -255,12 +255,12 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 #### Phase H-2: Frontend Navigation Isolation
 **Depends on:** Phase H-1
 
-- [ ] Remove 3 leaked nav sections from Company Admin sidebar (`ownerNavConfig.ts`): STORAGE → `/owner/storage`, METRICS → `/owner/metrics`, USERS → `/owner/users` — show these ONLY when `systemRole === 'SUPER_ADMIN'`
+- [x] Remove 3 leaked nav sections from Company Admin sidebar (`ownerNavConfig.ts`): STORAGE → `/owner/storage`, METRICS → `/owner/metrics`, USERS → `/owner/users` — show these ONLY when `systemRole === 'SUPER_ADMIN'`
 - [ ] Remove COLLABORATION → Client Requests from Company Admin nav (practice-only feature)
 - [ ] Create separate nav configs: `companyAdminNavConfig.ts`, `ownerAdminNavConfig.ts`, `practiceAdminNavConfig.ts`
 - [ ] Route group separation: move platform admin pages out of `app/(owner)/owner/` into `app/(platform-admin)/`
 - [ ] Add routing guard: middleware or component that checks `systemRole` and redirects unauthorized role access
-- [ ] WorkspacePage: fix "Owner Dashboard" card that links to `/owner/storage` — should only show for SUPER_ADMIN
+- [x] WorkspacePage: fix "Owner Dashboard" card that links to `/owner/storage` — should only show for SUPER_ADMIN
 
 #### Phase H-3: Owner Admin Dashboard
 **Depends on:** Phase H-1, H-2
