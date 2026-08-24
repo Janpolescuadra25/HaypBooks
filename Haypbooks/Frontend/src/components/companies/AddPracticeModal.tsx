@@ -30,7 +30,7 @@ export default function AddPracticeModal({ workspaceId, onClose, onSuccess }: Pr
 
     setLoading(true)
     try {
-      const res = await fetch('/api/tenants/practices', {
+      const res = await fetch('/api/tenants/practices', { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

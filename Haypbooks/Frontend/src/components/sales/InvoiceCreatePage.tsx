@@ -157,7 +157,7 @@ export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', i
   // Load global accounting preferences and apply as defaults
   useEffect(() => {
     if (!companyId) return
-    fetch(`/api/companies/${companyId}/settings`, { cache: 'no-store' })
+    fetch(`/api/companies/${encodeURIComponent(companyId)}/settings`, { credentials: 'include', cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return

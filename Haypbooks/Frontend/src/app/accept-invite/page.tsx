@@ -37,7 +37,8 @@ export default function AcceptInvitePage() {
     setLoading(true)
 
     try {
-      const res = await fetch(`/api/companies/invites/${encodeURIComponent(code)}/accept`, {
+      const res = await fetch(`/api/companies/${encodeURIComponent(code)}/accept`, {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

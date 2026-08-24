@@ -37,7 +37,8 @@ export default function Page() {
     setLoading(true)
     setError(null)
 
-    fetch(`/api/companies/${companyId}/payroll/employees?${params.toString()}`, {
+    fetch(`/api/companies/${encodeURIComponent(companyId)}/payroll/employees?${params.toString()}`, {
+      credentials: 'include',
       cache: 'no-store',
       signal: controller.signal,
     })

@@ -10,7 +10,7 @@ export default function CompanyCompletePage() {
   useEffect(() => {
     async function redirect() {
       try {
-        const res = await fetch('/api/users/me')
+        const res = await fetch('/api/users/me', { credentials: 'include' })
         if (!res.ok) {
           router.replace('/hub')
           return

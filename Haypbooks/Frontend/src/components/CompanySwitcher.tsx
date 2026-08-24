@@ -15,7 +15,7 @@ export default function CompanySwitcher() {
     let mounted = true
     async function load() {
       try {
-        const res = await fetch('/api/companies/recent', { cache: 'no-store' })
+        const res = await fetch('/api/companies/recent', { credentials: 'include', cache: 'no-store' })
         if (!res.ok) return
         const d = await res.json()
         if (mounted) setCompanies(Array.isArray(d) ? d : [])
@@ -28,7 +28,7 @@ export default function CompanySwitcher() {
   async function visitCompany(company: any) {
     // Optimistic nav: update lastAccessed then navigate
     try {
-      await fetch(`/api/companies/${company.id}/last-accessed`, { method: 'PATCH' })
+      await fetch(`/api/companies/${encodeURIComponent(company.id)}/last-accessed`, { credentials: 'include', method: 'PATCH' })
     } catch {}
     window.location.href = `/dashboard?company=${encodeURIComponent(company.id)}`
   }

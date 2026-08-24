@@ -10,7 +10,7 @@ export default function PracticeCompletePage() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const res = await fetch('/api/users/me')
+        const res = await fetch('/api/users/me', { credentials: 'include' })
         if (!res.ok) return
         const json = await res.json()
         const firstPractice = json?.practices?.[0]

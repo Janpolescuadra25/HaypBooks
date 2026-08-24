@@ -149,8 +149,8 @@ export default function AccountingPreferencesPage() {
     if (!companyId) return
     setLoading(true)
     Promise.all([
-      fetch(`/api/companies/${companyId}/settings`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
-      fetch(`/api/companies/${companyId}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
+      fetch(`/api/companies/${encodeURIComponent(companyId)}/settings`, { credentials: 'include', cache: 'no-store' }).then(r => r.ok ? r.json() : null),
+      fetch(`/api/companies/${encodeURIComponent(companyId)}`, { credentials: 'include', cache: 'no-store' }).then(r => r.ok ? r.json() : null),
     ]).then(([settings, company]) => {
       if (settings) {
         setPrefs(p => ({
@@ -201,7 +201,8 @@ export default function AccountingPreferencesPage() {
     if (!companyId) return
     setStatementSaving(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/ar/settings/statement-email`, {
+      const res = await fetch(`/api/companies/${encodeURIComponent(companyId)}/ar/settings/statement-email`, {
+        credentials: 'include',
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(statementSettings),
@@ -223,7 +224,8 @@ export default function AccountingPreferencesPage() {
       const payload: any = { ...prefs }
       if (prefs.defaultPaymentTerms === 'custom') payload.customPaymentDays = customPaymentDays
       delete payload.baseCurrency // read-only
-      const res = await fetch(`/api/companies/${companyId}/settings`, {
+      const res = await fetch(`/api/companies/${encodeURIComponent(companyId)}/settings`, {
+        credentials: 'include',
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

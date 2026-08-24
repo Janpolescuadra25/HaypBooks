@@ -50,7 +50,7 @@ export default function AppShellHeader() {
     let alive = true
     async function loadClosed() {
       try {
-        const res = await fetch('/api/periods', { cache: 'no-store' })
+        const res = await fetch('/api/periods', { credentials: 'include', cache: 'no-store' })
         if (!res.ok) return
         const data = await res.json()
         if (alive) setClosedThrough(data?.closedThrough || null)

@@ -62,7 +62,8 @@ export default function InviteAccountantModal({ tenantId, onClose, onSuccess, ro
       }
       if (roleName) body.roleName = roleName
 
-      const res = await fetch(`/api/tenants/${tenantId}/invites`, {
+      const res = await fetch(`/api/tenants/${encodeURIComponent(tenantId)}/invites`, {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -99,7 +100,8 @@ export default function InviteAccountantModal({ tenantId, onClose, onSuccess, ro
       }
       if (roleName) body.roleName = roleName
 
-      const res = await fetch(`/api/tenants/${tenantId}/invites`, {
+      const res = await fetch(`/api/tenants/${encodeURIComponent(tenantId)}/invites`, {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -126,7 +128,8 @@ export default function InviteAccountantModal({ tenantId, onClose, onSuccess, ro
     setPendingLinkLoading(true)
 
     try {
-      const res = await fetch(`/api/tenants/${tenantId}/invites/${pendingLinkInviteId}/cancel`, {
+      const res = await fetch(`/api/tenants/${encodeURIComponent(tenantId)}/invites/${encodeURIComponent(pendingLinkInviteId)}/cancel`, {
+        credentials: 'include',
         method: 'POST',
       })
       if (!res.ok) {
@@ -161,7 +164,7 @@ export default function InviteAccountantModal({ tenantId, onClose, onSuccess, ro
     const loadPendingLink = async () => {
       setPendingLinkLoading(true)
       try {
-        const res = await fetch('/api/tenants/invites/pending', { cache: 'no-store' })
+        const res = await fetch('/api/tenants/invites/pending', { credentials: 'include', cache: 'no-store' })
         if (!res.ok) return
         const data = await res.json()
         if (!mounted || !Array.isArray(data)) return

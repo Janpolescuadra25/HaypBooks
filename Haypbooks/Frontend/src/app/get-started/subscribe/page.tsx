@@ -57,7 +57,7 @@ function CheckoutPage() {
   const handlePayment = (e: React.FormEvent) => {
     e.preventDefault()
     setIsProcessing(true)
-    fetch('/api/subscriptions/create', {
+    fetch('/api/subscriptions/create', { credentials: 'include',
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ plan: planKey }),

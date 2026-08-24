@@ -38,8 +38,8 @@ export default function CompanyHub() {
     setLoading(true)
     try {
       const [r1, r2] = await Promise.all([
-        fetch('/api/companies?filter=owned', { cache: 'no-store' }),
-        fetch('/api/companies?filter=invited', { cache: 'no-store' }),
+        fetch('/api/companies?filter=owned', { credentials: 'include', cache: 'no-store' }),
+        fetch('/api/companies?filter=invited', { credentials: 'include', cache: 'no-store' }),
       ])
       
       if (r1.ok) {
@@ -86,7 +86,7 @@ export default function CompanyHub() {
 
       // Also fetch current user profile so we can auto-create a company if needed
       try {
-        const meRes = await fetch('/api/users/me', { cache: 'no-store' })
+        const meRes = await fetch('/api/users/me', { credentials: 'include', cache: 'no-store' })
         if (meRes.ok) {
           const j = await meRes.json()
           console.log('[CompanyHub] User profile:', j)
@@ -134,11 +134,11 @@ export default function CompanyHub() {
       setAutoCreateAttempted(true)
       try {
         // Best-effort: request backend to create a company and attach the current user as owner.
-        const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: companyName, workspaceId: me?.ownedWorkspaceId }) })
+        const res = await fetch('/api/companies', { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: companyName, workspaceId: me?.ownedWorkspaceId }) })
         if (res.ok) {
           push({ type: 'success', message: `Your company ${companyName} was added to your Hub` })
           // Refresh the owned list
-          const r = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
+          const r = await fetch('/api/companies?filter=owned', { credentials: 'include', cache: 'no-store' })
           if (r.ok) setOwned(await r.json())
         }
       } catch (e) {
@@ -154,10 +154,10 @@ export default function CompanyHub() {
   async function handleCreateFromProfile() {
     if (!me || !me.companyName) return
     try {
-      const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: me.companyName, workspaceId: me?.ownedWorkspaceId }) })
+      const res = await fetch('/api/companies', { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: me.companyName, workspaceId: me?.ownedWorkspaceId }) })
       if (res.ok) {
         push({ type: 'success', message: `Your company ${me.companyName} was added to your Hub` })
-        const r = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
+        const r = await fetch('/api/companies?filter=owned', { credentials: 'include', cache: 'no-store' })
         if (r.ok) setOwned(await r.json())
       } else {
         push({ type: 'error', message: 'Failed to create company — try again' })

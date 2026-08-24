@@ -7,7 +7,12 @@ export async function trackEvent(eventName: string, payload: Record<string, any>
       return
     }
     // Fallback to fetch
-    await fetch('/api/analytics/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: eventName, payload, timestamp: new Date().toISOString() }) }).catch(() => {})
+    await fetch('/api/analytics/event', { credentials: 'include',
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: eventName, payload, timestamp: new Date().toISOString() }),
+    }).catch(() => {})
   } catch (e) {
     // swallow analytics errors
     console.warn('[analytics] failed to track event', e)

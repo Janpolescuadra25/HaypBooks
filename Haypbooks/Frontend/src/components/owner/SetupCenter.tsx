@@ -183,7 +183,7 @@ export default function SetupCenter() {
       }
       setCompanyLoading(true)
       try {
-        const res = await fetch(`/api/companies/${companyId}`, { cache: 'no-store' })
+        const res = await fetch(`/api/companies/${encodeURIComponent(companyId)}`, { credentials: 'include', cache: 'no-store' })
         if (!res.ok) throw new Error('Company data not found')
         const data = await res.json()
         setCompanyName(data.name || '')
@@ -280,7 +280,8 @@ export default function SetupCenter() {
     setIsSaving(true)
     setMessage(null)
     try {
-      const response = await fetch(`/api/companies/${companyId}`, {
+      const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}`, {
+        credentials: 'include',
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: companyName, address: companyAddress }),
@@ -309,7 +310,8 @@ export default function SetupCenter() {
         throw new Error('Missing companyId')
       }
 
-      const response = await fetch(`/api/companies/${companyId}/accounting/accounts/seed-default`, {
+      const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/accounting/accounts/seed-default`, {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

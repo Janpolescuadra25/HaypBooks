@@ -62,13 +62,13 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
 
     async function fetchCounts() {
       try {
-        const r1 = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
+        const r1 = await fetch('/api/companies?filter=owned', { credentials: 'include', cache: 'no-store' })
         if (r1.ok) {
           const data = await r1.json()
           if (mounted) setOwnerCount(Array.isArray(data) ? data.length : 0)
         }
 
-        const r2 = await fetch('/api/tenants/clients', { cache: 'no-store' })
+        const r2 = await fetch('/api/tenants/clients', { credentials: 'include', cache: 'no-store' })
         if (r2.ok) {
           const d2 = await r2.json()
           if (mounted) setClientCountState(Array.isArray(d2) ? d2.length : 0)
@@ -88,7 +88,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
   async function chooseHub(hub: 'OWNER' | 'ACCOUNTANT') {
     setLoading(true)
     try {
-      await fetch('/api/users/preferred-hub', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferredHub: hub }) })
+      await fetch('/api/users/preferred-hub', { credentials: 'include', method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferredHub: hub }) })
       if (typeof window !== 'undefined') {
         const u = localStorage.getItem('user')
         if (u) {

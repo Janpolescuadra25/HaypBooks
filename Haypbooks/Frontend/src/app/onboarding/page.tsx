@@ -186,7 +186,7 @@ export default function OnboardingPage() {
       try {
         let saved: any = {}
         if (USE_MOCK) {
-          const r = await fetch('/api/onboarding/save')
+          const r = await fetch('/api/onboarding/save', { credentials: 'include' })
           saved = (await r.json()) || {}
         } else {
           const r = await apiClient.get('/api/onboarding/save')
@@ -263,8 +263,8 @@ export default function OnboardingPage() {
       data = { automatedFeeds: formData.automatedFeeds, accounts: formData.bankAccounts }
     }
     try {
-      if (USE_MOCK) {
         await fetch('/api/onboarding/save', {
+          credentials: 'include',
           method: 'POST',
           body: JSON.stringify({ step: key, data }),
           headers: { 'Content-Type': 'application/json' },
@@ -308,9 +308,10 @@ export default function OnboardingPage() {
       setCompleting(true)
       try {
         let resJson: any = null
-        if (USE_MOCK) {
           const r = await fetch('/api/onboarding/complete', {
-            method: 'POST', body: JSON.stringify({ type: 'full' }),
+            credentials: 'include',
+            method: 'POST',
+            body: JSON.stringify({ type: 'full' }),
             headers: { 'Content-Type': 'application/json' },
           })
           resJson = await r.json().catch(() => null)

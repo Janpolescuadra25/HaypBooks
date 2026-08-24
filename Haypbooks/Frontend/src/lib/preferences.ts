@@ -5,7 +5,7 @@ const isBrowser = typeof window !== 'undefined'
 
 export async function getReportFilters(reportKey: string): Promise<Pref> {
   try {
-    const res = await fetch(`/api/user/preferences/report-filters?reportKey=${encodeURIComponent(reportKey)}`, { cache: 'no-store' })
+    const res = await fetch(`/api/user/preferences/report-filters?reportKey=${encodeURIComponent(reportKey)}`, { credentials: 'include', cache: 'no-store' })
     if (!res.ok) throw new Error(String(res.status))
     return (await res.json()) as Pref
   } catch {
@@ -23,7 +23,7 @@ export async function getReportFilters(reportKey: string): Promise<Pref> {
 export async function setReportFilters(reportKey: string, filters: Filters): Promise<Pref> {
   const body = JSON.stringify({ reportKey, filters })
   try {
-    const res = await fetch('/api/user/preferences/report-filters', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })
+    const res = await fetch('/api/user/preferences/report-filters', { credentials: 'include', method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })
     if (!res.ok) throw new Error(String(res.status))
     const pref = (await res.json()) as Pref
     if (isBrowser) localStorage.setItem(`prefs:${reportKey}`, JSON.stringify(pref))

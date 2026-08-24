@@ -10,7 +10,11 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (useMock) {
     return mockApi<T>(path, init)
   }
-  const res = await fetch(path, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } })
+  const res = await fetch(path, {
+    credentials: 'include',
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+  })
   if (!res.ok) throw new Error(`Request failed: ${res.status}`)
   return res.json() as Promise<T>
 }

@@ -22,10 +22,10 @@ export default function CompanyModal({ company, onClose, onSuccess }: any) {
     setLoading(true)
     try {
       // mark preferred workspace so user lands in owner hub
-      await fetch('/api/users/preferred-workspace', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'company', id: company.id }) })
+      await fetch('/api/users/preferred-workspace', { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'company', id: company.id }) })
       // record last-accessed so the company appears first in /api/companies/recent
       try {
-        await fetch(`/api/companies/${company.id}/last-accessed`, { method: 'PATCH' })
+        await fetch(`/api/companies/${encodeURIComponent(company.id)}/last-accessed`, { credentials: 'include', method: 'PATCH' })
       } catch (e) {
         // non-fatal; we still navigate even if patch fails
         console.warn('[CompanyModal] failed to patch last-accessed (tolerance)', e)

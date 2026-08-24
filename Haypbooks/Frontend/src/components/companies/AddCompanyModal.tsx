@@ -30,7 +30,7 @@ export default function AddCompanyModal({ workspaceId, onClose, onSuccess }: Pro
 
     setLoading(true)
     try {
-      const res = await fetch('/api/companies', {
+      const res = await fetch('/api/companies', { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

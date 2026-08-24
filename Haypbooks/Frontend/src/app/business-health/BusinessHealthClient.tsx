@@ -251,7 +251,7 @@ export default function BusinessHealthClient() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch('/api/companies/recent', { cache: 'no-store' })
+    fetch('/api/companies/recent', { credentials: 'include', cache: 'no-store' })
       .then((response) => response.ok ? response.json() : [])
       .then((companies: Array<{ id: string }>) => {
         if (companies.length > 0) setCompanyId(companies[0].id)

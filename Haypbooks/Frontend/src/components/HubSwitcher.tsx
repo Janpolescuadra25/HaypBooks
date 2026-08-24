@@ -22,7 +22,7 @@ export default function HubSwitcher() {
 
   async function switchHub(hub: 'OWNER'|'ACCOUNTANT') {
     try {
-      await fetch('/api/users/preferred-hub', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferredHub: hub }) })
+      await fetch('/api/users/preferred-hub', { credentials: 'include', method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferredHub: hub }) })
       // Navigate to the hub
       // Redirect to unified Dashboard for all hub choices
       location.href = '/dashboard'

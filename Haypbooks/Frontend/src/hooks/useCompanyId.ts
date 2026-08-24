@@ -20,7 +20,7 @@ export function useCompanyId() {
       try {
         // Query param overrides other sources
         if (queryCompany) {
-          const res = await fetch(`/api/companies/${encodeURIComponent(queryCompany)}`, { cache: 'no-store' })
+          const res = await fetch(`/api/companies/${encodeURIComponent(queryCompany)}`, { credentials: 'include', cache: 'no-store' })
           if (res.ok) {
             const data = await res.json()
             if (!cancelled && data?.id) {
@@ -32,7 +32,7 @@ export function useCompanyId() {
           }
         }
 
-        const res = await fetch('/api/companies/recent', { cache: 'no-store' })
+        const res = await fetch('/api/companies/recent', { credentials: 'include', cache: 'no-store' })
         if (res.ok) {
           const list = await res.json()
           if (!cancelled && Array.isArray(list) && list.length > 0) {
@@ -44,7 +44,7 @@ export function useCompanyId() {
         }
 
         // fallback
-        const res2 = await fetch('/api/companies/current', { cache: 'no-store' })
+        const res2 = await fetch('/api/companies/current', { credentials: 'include', cache: 'no-store' })
         if (res2.ok) {
           const data = await res2.json()
           if (!cancelled && data?.id) {
