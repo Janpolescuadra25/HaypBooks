@@ -4,7 +4,7 @@
  * Defines the full tab-based hierarchy for the 6 Operations sections:
  *   Section  →  Subsection (primary tab)  →  Tab (leaf page)
  *
- * Paths are kept in sync with ownerNavConfig.ts and the Next.js (owner)
+ * Paths are kept in sync with ownerAdminNavConfig.ts and the Next.js (owner)
  * route structure so any component can use this as a single source of truth.
  */
 

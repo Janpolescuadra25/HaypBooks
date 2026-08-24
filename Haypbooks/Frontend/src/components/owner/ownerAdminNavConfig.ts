@@ -25,7 +25,7 @@ export const navigationData: NavSection[] = [
         title: 'Monitoring',
         icon: HardDrive,
         items: [
-          { title: 'Storage Overview', path: '/owner/storage' },
+          { title: 'Storage Overview', path: '/platform-admin/storage' },
         ],
       },
     ],
@@ -39,7 +39,7 @@ export const navigationData: NavSection[] = [
         title: 'Platform Metrics',
         icon: BarChart3,
         items: [
-          { title: 'Metrics Dashboard', path: '/owner/metrics' },
+          { title: 'Metrics Dashboard', path: '/platform-admin/metrics' },
         ],
       },
     ],
@@ -53,7 +53,7 @@ export const navigationData: NavSection[] = [
         title: 'User Management',
         icon: Users,
         items: [
-          { title: 'All Users', path: '/owner/users' },
+          { title: 'All Users', path: '/platform-admin/users' },
         ],
       },
     ],
