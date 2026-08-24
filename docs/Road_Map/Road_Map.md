@@ -252,23 +252,13 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [ ] Prevent cross-role creation: Company Admin should NOT be able to create Practice entities, and vice versa
 - [ ] Onboarding separation: change `OnboardingData` from per-user to per-(user, hubType) to support separate company and practice onboarding
 
-#### Phase H-2: Frontend Navigation Isolation
-**Depends on:** Phase H-1
-
-- [x] Remove 3 leaked nav sections from Company Admin sidebar (`ownerNavConfig.ts`): STORAGE → `/owner/storage`, METRICS → `/owner/metrics`, USERS → `/owner/users` — show these ONLY when `systemRole === 'SUPER_ADMIN'`
-- [x] Remove COLLABORATION → Client Requests from Company Admin nav (practice-only feature)
-- [x] Create separate nav configs: `companyAdminNavConfig.ts`, `ownerAdminNavConfig.ts`, `practiceAdminNavConfig.ts`
-- [x] Route group separation: move platform admin pages out of `app/(owner)/owner/` into `app/(platform-admin)/`
-- [x] Add routing guard: middleware or component that checks `systemRole` and redirects unauthorized role access
-- [x] WorkspacePage: fix "Owner Dashboard" card that links to `/owner/storage` — should only show for SUPER_ADMIN
-
 #### Phase H-3: Owner Admin Dashboard
 **Depends on:** Phase H-1, H-2
 
 - [ ] Build Platform Owner Dashboard component (overview: total companies, users, revenue, storage, growth charts)
-- [ ] Build Storage Management page (per-company storage, limits, R2 usage)
-- [ ] Build User Management page (all users, suspend/reactivate, view sessions, role assignment)
-- [ ] Build Platform Metrics page (plan distribution, growth history, snapshots, MRR)
+- [x] Build Storage Management page (per-company storage, limits, R2 usage)
+- [x] Build User Management page (all users, suspend/reactivate, view sessions, role assignment)
+- [x] Build Platform Metrics page (plan distribution, growth history, snapshots, MRR)
 - [ ] Build Subscription Overview page (all active subscriptions, revenue, churn)
 - [ ] Build Platform Settings page (global config, feature flags per workspace)
 - [ ] Owner Admin should see all three dashboards (Platform + Company + Practice) via a dashboard switcher
