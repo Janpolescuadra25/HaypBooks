@@ -54,11 +54,11 @@
 ### P1: High Priority
 - **Separate OwnerController Endpoints** — Move company-level endpoints (`financial-summary`, `cash-position`, `dashboard`) out of `OwnerController` to `CompanyController`. Keep `OwnerController` for platform-level endpoints only (storage, users, metrics) guarded with `@Roles('SUPER_ADMIN')` or `@Roles('ADMIN', 'SUPER_ADMIN')`. File: `Backend/src/owner/owner.controller.ts`
 - **Set Cookie Domain for Cross-Subdomain Support** — `Backend/src/auth/auth.controller.ts:80-84` cookie options: add `domain: '.haypbooks.com'` and change `sameSite: 'lax'` to `sameSite: 'none'` (with `secure: true`). ⚠️ Security-impacting change — verify CSRF protection still works after this. Test login/logout/refresh flows on both `haypbooks.com` and `api.haypbooks.com`.
-- **Add `credentials: 'include'` to All fetch() Calls** — 21 of 25 raw `fetch()` calls in the frontend don't set `credentials`. Files: `useCompanyId.ts`, `CompanySwitcher.tsx`, `HubSelectionModal.tsx`, `HubSwitcher.tsx`, `CompanyHub.tsx`, `AppShellHeader.tsx`, `PracticeHeader.tsx`, `SetupCenter.tsx`, `AddCompanyModal.tsx`, `AddPracticeModal.tsx`, `InvoiceCreatePage.tsx`, `CompanyModal.tsx`, `BusinessHealthClient.tsx`, payroll page, accounting-preferences page, accept-invite page, onboarding page, get-started pages, subscribe page, `lib/analytics.ts`.
+- **Add `credentials: 'include'` to All fetch() Calls** — 78 of 84 production fetch() calls in `Frontend/src/` lack credentials. Only 6 calls currently include it (verification page, `AddPhoneForm`, `use-user` hook, `UserMenu`, `DevReauth`, `reporting.service.ts`). Required before cross-subdomain cookie support can work. ⬜ NOT STARTED
 - **Consolidate API Clients** — Replace raw `fetch()` calls with the axios `apiClient` instance (has interceptors, error handling, `withCredentials`). Or create a shared `fetchWithAuth()` wrapper in `Frontend/src/lib/api.ts`.
 - **Fix `lib/api.ts` Fetch Wrapper** — `Frontend/src/lib/api.ts:13` is bare `fetch()` with no credentials, no auth, no interceptors. Add `credentials: 'include'` and Authorization header support.
 - **ClientRoot UI Fix** — Nav leak on `/workspace` fixed via `isHubSelection` check (see Hub Selection above). Remaining: `useCompanyId()` hook for conditionally rendering minimal layout when no company is selected is still open — separate concern.
-- **Owner Dashboard Distinct Layout** — Currently `/owner/*` routes share the same `OwnerTopBar + OwnerSidebar` chrome as company admin routes (`client-root.tsx` L120-129). The platform owner dashboard must have its OWN separate layout component (e.g., `PlatformTopBar` + `PlatformSidebar`) with platform-level navigation items. In `client-root.tsx`, add `isOwnerRoute = pathname.startsWith('/owner')` and render the platform layout instead of the company admin layout for owner routes. The owner dashboard is NOT a company admin view — it's the master control panel for the entire HaypBooks platform.
+- **Owner Dashboard Distinct Layout** — Implemented dedicated layout at `Frontend/src/app/(platform-admin)/layout.tsx` with `SUPER_ADMIN` guard. Platform-admin routes (`metrics`, `storage`, `users`) are now fully isolated from company admin routes.
 
 ### P2: Medium Priority
 - **Fix Phantom `role` Field** — `Backend/src/repositories/interfaces/user.repository.interface.ts:8` declares 8 role values (`'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer' | 'accountant' | 'both'`) but DB has no `role` column — Prisma maps `systemRole` to `@map("role")`. Repository synthesizes `role` from `preferredHub` producing only `'business'` or `'accountant'`. Clean up the interface to match reality.
@@ -241,6 +241,8 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [ ] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
 - [ ] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
 - [ ] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`
+
+*(Deployment tasks — to be executed on VPS after next deploy, not code changes)*
 
 #### Phase H-3: Owner Admin Dashboard
 **Depends on:** Phase H-1, H-2
