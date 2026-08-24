@@ -1,6 +1,6 @@
 # HaypBooks — Development Roadmap
 
-> Last updated: August 19, 2026
+> Last updated: August 24, 2026
 
 ## Completed Projects
 - ✅ **Memory Leak Fix** — Resolved unbounded metrics accumulation in `Backend/src/common/metrics.ts` with hourly `counts.clear()` + PM2 `max_memory_restart 1G` mitigation
@@ -241,16 +241,6 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [ ] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
 - [ ] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
 - [ ] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`
-
-#### Phase H-1: Backend Role Separation
-**Depends on:** Phase H-0
-
-- [x] Split `OwnerController` — move company-level endpoints to `CompanyController` (deferred to H-2, when frontend routes are updated simultaneously; guard-level separation done in this phase)
-- [x] Update `OwnerController` to use `@SystemRoles('SUPER_ADMIN')` (via new SystemRoleGuard) for platform endpoints: storage, users, metrics
-- [ ] Enhance existing `PracticeController` (`Backend/src/practice/practice.controller.ts`) and `PracticeHubController` (`Backend/src/practice-hub/practice-hub.controller.ts`) with additional practice-specific endpoints as needed
-- [x] Add `systemRole`-based guard: new `SystemRoleGuard` that checks `req.user.systemRole` instead of workspace role
-- [x] Prevent cross-role creation: Company Admin should NOT be able to create Practice entities, and vice versa
-- [ ] Onboarding separation: change `OnboardingData` from per-user to per-(user, hubType) to support separate company and practice onboarding
 
 #### Phase H-3: Owner Admin Dashboard
 **Depends on:** Phase H-1, H-2
