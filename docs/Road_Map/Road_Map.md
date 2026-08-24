@@ -52,13 +52,9 @@
 ## Priority Backlog
 
 ### P1: High Priority
-- **Separate OwnerController Endpoints** — Move company-level endpoints (`financial-summary`, `cash-position`, `dashboard`) out of `OwnerController` to `CompanyController`. Keep `OwnerController` for platform-level endpoints only (storage, users, metrics) guarded with `@Roles('SUPER_ADMIN')` or `@Roles('ADMIN', 'SUPER_ADMIN')`. File: `Backend/src/owner/owner.controller.ts`
 - **Set Cookie Domain for Cross-Subdomain Support** — `Backend/src/auth/auth.controller.ts:80-84` cookie options: add `domain: '.haypbooks.com'` and change `sameSite: 'lax'` to `sameSite: 'none'` (with `secure: true`). ⚠️ Security-impacting change — verify CSRF protection still works after this. Test login/logout/refresh flows on both `haypbooks.com` and `api.haypbooks.com`.
-- ✅ **Add `credentials: 'include'` to All fetch() Calls** — COMPLETED: Added `credentials: 'include'` to `Frontend/src/lib/api.ts` (covers 73 consumers via single-line fix), remaining client-side raw fetch calls in onboarding pages, and analytics.ts fallback fetch. All production client-side fetch calls now include credentials. Unblocks cross-subdomain cookie support (P1 #2).
 - **Consolidate API Clients** — Replace raw `fetch()` calls with the axios `apiClient` instance (has interceptors, error handling, `withCredentials`). Or create a shared `fetchWithAuth()` wrapper in `Frontend/src/lib/api.ts`.
-- ✅ **Fix `lib/api.ts` Fetch Wrapper** — COMPLETED: Added `credentials: 'include'` to the fetch call in `api.ts:13`. Authorization header support is not required since the backend uses cookie-based JWT authentication.
 - **ClientRoot UI Fix** — Nav leak on `/workspace` fixed via `isHubSelection` check (see Hub Selection above). Remaining: `useCompanyId()` hook for conditionally rendering minimal layout when no company is selected is still open — separate concern.
-- **Owner Dashboard Distinct Layout** — Implemented dedicated layout at `Frontend/src/app/(platform-admin)/layout.tsx` with `SUPER_ADMIN` guard. Platform-admin routes (`metrics`, `storage`, `users`) are now fully isolated from company admin routes.
 
 ### P2: Medium Priority
 - **Fix Phantom `role` Field** — `Backend/src/repositories/interfaces/user.repository.interface.ts:8` declares 8 role values (`'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer' | 'accountant' | 'both'`) but DB has no `role` column — Prisma maps `systemRole` to `@map("role")`. Repository synthesizes `role` from `preferredHub` producing only `'business'` or `'accountant'`. Clean up the interface to match reality.
