@@ -8,6 +8,8 @@ import { CompanyService } from './company.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
+import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
+import { WorkspaceTypeGuard } from '../auth/guards/workspace-type.guard'
 import { CreateCompanyDto } from './dto/create-company.dto'
 import { UpdateCompanyDto } from './dto/update-company.dto'
 import { CompanyGrantAccessDto, CompanySendInviteDto } from './dto/company-access.dto'
@@ -19,7 +21,8 @@ export class CompaniesController {
   // ─── Create ───────────────────────────────────────────────────────────────
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @RequireWorkspaceType('OWNER')
+  @UseGuards(JwtAuthGuard, WorkspaceTypeGuard)
   async create(@Req() req: any, @Body() body: CreateCompanyDto) {
     const userId = req.user?.userId
     const payload: any = body

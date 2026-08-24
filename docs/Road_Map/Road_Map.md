@@ -249,7 +249,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [x] Update `OwnerController` to use `@SystemRoles('SUPER_ADMIN')` (via new SystemRoleGuard) for platform endpoints: storage, users, metrics
 - [ ] Enhance existing `PracticeController` (`Backend/src/practice/practice.controller.ts`) and `PracticeHubController` (`Backend/src/practice-hub/practice-hub.controller.ts`) with additional practice-specific endpoints as needed
 - [x] Add `systemRole`-based guard: new `SystemRoleGuard` that checks `req.user.systemRole` instead of workspace role
-- [ ] Prevent cross-role creation: Company Admin should NOT be able to create Practice entities, and vice versa
+- [x] Prevent cross-role creation: Company Admin should NOT be able to create Practice entities, and vice versa
 - [ ] Onboarding separation: change `OnboardingData` from per-user to per-(user, hubType) to support separate company and practice onboarding
 
 #### Phase H-3: Owner Admin Dashboard

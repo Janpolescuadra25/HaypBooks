@@ -1,5 +1,7 @@
 import { Controller, Get, Req, UseGuards, Post, Body, BadRequestException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
+import { WorkspaceTypeGuard } from '../auth/guards/workspace-type.guard'
 import { PracticeService } from './practice.service'
 
 @UseGuards(JwtAuthGuard)
@@ -8,6 +10,8 @@ export class PracticeController {
   constructor(private readonly service: PracticeService) {}
 
   @Post()
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(JwtAuthGuard, WorkspaceTypeGuard)
   async createPractice(@Req() req: any, @Body() body: { name?: string; displayName?: string; servicesOffered?: string }) {
     const userId = req.user?.userId
     console.log('[PracticeController] POST /api/practices called:', {

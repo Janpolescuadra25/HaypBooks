@@ -58,8 +58,8 @@ export class OnboardingService {
           await this.prisma.workspace.create({
             data: {
               ownerUserId: userId,
-              type: 'OWNER' as any,
-              status: 'ACTIVE' as any,
+              type: 'OWNER',
+              status: 'ACTIVE',
             }
           })
         } catch (e) {
@@ -97,8 +97,8 @@ export class OnboardingService {
           const newWs = await this.prisma.workspace.create({
             data: {
               ownerUserId: userId,
-              type: 'PRACTICE' as any,
-              status: 'ACTIVE' as any,
+              type: 'PRACTICE',
+              status: 'ACTIVE',
             }
           })
           try {

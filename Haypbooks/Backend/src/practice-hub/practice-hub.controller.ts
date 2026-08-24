@@ -1,5 +1,7 @@
 import { Controller, Get, Param, Req, UnauthorizedException, NotFoundException, UseGuards, Post, Body, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
+import { WorkspaceTypeGuard } from '../auth/guards/workspace-type.guard'
 import { PracticeHubService } from './practice-hub.service'
 import { CreatePracticeInviteDto } from './dto/create-practice-invite.dto'
 import { AcceptPracticeInviteDto } from './dto/accept-practice-invite.dto'
@@ -69,6 +71,8 @@ export class PracticeHubController {
 
   /** POST /api/practice-hub/invites */
   @Post('invites')
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(WorkspaceTypeGuard)
   async createInvite(@Req() req: any, @Body() body: CreatePracticeInviteDto) {
     const userId = req.user?.userId
     return this.service.createInvite(userId, body)
