@@ -20,7 +20,7 @@ async function main() {
     const passwordHash = await bcrypt.hash(defaultPassword, 10)
 
     // Desired founder email (can be overridden via env var)
-    const adminEmail = process.env.ADMIN_EMAIL || 'founder@haypbooks.com'
+    const adminEmail = process.env.ADMIN_EMAIL || 'paulescuadra25@gmail.com'
 
     const superAdmin = await prisma.user.upsert({
         where: { email: adminEmail },
