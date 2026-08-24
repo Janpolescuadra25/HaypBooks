@@ -1,180 +1,222 @@
 # Auth Module
 
-Handles all authentication and user-identity flows for HaypBooks.
+This document describes the authentication and authorization architecture for the backend auth module.
 
----
+## Overview
 
-## 1. Architecture
+The auth module is responsible for user login/signup, JWT validation, workspace role checks, system role enforcement, and workspace-type protection.
 
-```
-src/auth/
-├── auth.controller.ts       — HTTP endpoints (/api/auth/*)
-├── auth.module.ts           — NestJS module wiring
-├── prisma-auth.service.ts   — Core sign-in / session / OTP logic (Prisma)
-├── auth.service.ts          — Thin wrapper / legacy shim
-├── pending-signup.service.ts— Temporary records during multi-step registration
-├── verification.service.ts  — OTP generation + email / phone sending
-├── decorators/
-│   └── roles.decorator.ts   — @Roles(...roleNames) metadata decorator
-├── dto/
-│   ├── auth.dto.ts          — LoginDto, SignupDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto
-│   └── …                    — send-code, setup-pin, verify-code, verify-pin DTOs
-├── guards/
-│   ├── jwt-auth.guard.ts    — Verifies JWT from cookie/header; applied globally on protected routes
-│   └── roles.guard.ts       — Reads @Roles() metadata; checks user.role / user.isOwner
-└── strategies/
-    └── jwt.strategy.ts      — Passport JWT strategy that deserialises the token payload
-```
+### Key files
 
----
+- `auth.module.ts` — NestJS module registration and provider wiring
+- `auth.controller.ts` — auth endpoints and cookie handling
+- `prisma-auth.service.ts` — core auth logic, credential validation, JWT creation, refresh token/session management, and user response shaping
+- `pending-signup.service.ts` — temporary state store for multi-step signup flows
+- `verification.service.ts` — OTP generation and verification logic
+- `decorators/roles.decorator.ts` — `@Roles(...roles)` metadata helper
+- `decorators/system-roles.decorator.ts` — `@SystemRoles(...roles)` metadata helper
+- `decorators/workspace-type.decorator.ts` — `@RequireWorkspaceType(...types)` metadata helper
+- `guards/jwt-auth.guard.ts` — JWT validation guard
+- `guards/system-role.guard.ts` — system role guard for platform owner routes
+- `guards/roles.guard.ts` — workspace role guard for most protected routes
+- `guards/workspace-type.guard.ts` — workspace type guard preventing cross-role entity creation
+- `guards/company-access.guard.ts` — company-scoped access guard for `:companyId` routes
+- `strategies/jwt.strategy.ts` — Passport JWT strategy for token extraction and payload validation
 
-## 2. Sign-up Flow (two-step with OTP verification)
+## Guard execution order
 
-```
-POST /api/auth/pre-signup
-  body: { email, password, name?, phone?, role, preferredHub?, companyName? }
-  → validates credentials, creates PendingSignup record, sends email OTP (or phone OTP)
-  → dev: returns { signupToken, otp } (OTP hidden in prod)
+The auth guard architecture is layered:
 
-POST /api/auth/complete-signup
-  body: { signupToken, code, method: 'email'|'phone' }
-  → verifies OTP, creates User record, sets JWT + refreshToken cookies
-  → returns { token, user }
-```
+1. `JwtAuthGuard` — validates the JWT token
+2. `SystemRoleGuard` — enforces system-level roles from `user.systemRole`
+3. `RolesGuard` — enforces workspace role checks from `@Roles()` metadata
+4. `WorkspaceTypeGuard` — enforces workspace type restrictions from `@RequireWorkspaceType()`
 
----
+Not every controller applies every guard; guards are combined where route-specific protection is required.
 
-## 3. Sign-in Flow
-
-```
-POST /api/auth/login
-  body: { email, password }
-  → bcrypt password check, creates session, sets cookies
-  → returns { token, user }
-
-POST /api/auth/refresh
-  cookie: refreshToken
-  → validates refresh token, rotates both JWT cookies
-  → returns { token }
-
-POST /api/auth/logout
-  → clears all auth cookies
-
-GET /api/auth/me
-  guard: JwtAuthGuard
-  → returns current user from DB
-```
-
----
-
-## 4. Password Reset Flow
-
-```
-POST /api/auth/forgot-password
-  body: { email }
-  → rate-limited (5 per 60 min per email)
-  → creates 6-digit OTP (60-minute TTL), sends via MailService.buildPasswordResetHtml
-  → dev: returns { success, otp }
-
-POST /api/auth/verify-otp
-  body: { email?, phone?, otpCode }
-  → verifies OTP; marks email/phone as verified if the OTP purpose is VERIFY_EMAIL/MFA
-  → returns { success }
-
-POST /api/auth/reset-password
-  body: { email, otpCode, newPassword }
-  → verifies OTP + updates hashed password, clears OTP row
-```
-
----
-
-## 5. Email Verification
-
-```
-GET /api/auth/verify-email?email=…&otp=…
-  → verifies link-in-email OTP, marks isEmailVerified=true
-  → auto-login if ENABLE_AUTO_VERIFY_LOGIN=true
-  → redirects to FRONTEND_URL/verify-email?status=success|error|invalid
-```
-
----
-
-## 6. OTP / Send-code Flows
-
-```
-POST /api/auth/send-verification   — send/resend email or phone OTP during signup
-POST /api/auth/send-code           — (verification.controller) standalone OTP send
-POST /api/auth/verify-code         — (verification.controller) OTP check
-POST /api/auth/setup-pin           — set a PIN for the user
-POST /api/auth/verify-pin          — verify a PIN
-```
-
----
-
-## 7. Guards Usage
+## Guards
 
 ### JwtAuthGuard
-Validates the `token` HTTP-only cookie (or `Authorization: Bearer …` header).  
-Apply to any protected route:
-```typescript
+
+- File: `guards/jwt-auth.guard.ts`
+- Purpose: Authenticate requests by validating the JWT
+- Behavior: extends `AuthGuard('jwt')`
+- Token sources: `Authorization: Bearer ...`, cookie named `token`, or raw `cookie` header containing `token=`.
+- Usage example:
+
+```ts
 @UseGuards(JwtAuthGuard)
-@Get('profile')
-getProfile(@Req() req) { return req.user }
+@Get('me')
+me(@Req() req: any) { return req.user }
+```
+
+### SystemRoleGuard
+
+- File: `guards/system-role.guard.ts`
+- Purpose: Enforce system-level roles such as `SUPER_ADMIN`
+- Decorator: `@SystemRoles(...roles)`
+- Behavior:
+  - If no required roles are configured, allows access
+  - If `user.systemRole` is missing, throws `ForbiddenException`
+  - If `user.systemRole` matches one of the required roles, allows access
+  - Otherwise throws `ForbiddenException`
+- Usage example:
+
+```ts
+@UseGuards(SystemRoleGuard)
+@SystemRoles('SUPER_ADMIN')
+@Get('platform-metrics')
+getPlatformMetrics() { ... }
 ```
 
 ### RolesGuard
-Layered on top of `JwtAuthGuard` for fine-grained role checks.  
-Supported roles: **Owner**, **Admin**, **Accountant**, **Bookkeeper**, **Viewer**.  
-Workspace owners (`user.isOwner === true`) always pass.
 
-```typescript
-import { Roles } from '../auth/decorators/roles.decorator'
-import { RolesGuard } from '../auth/guards/roles.guard'
+- File: `guards/roles.guard.ts`
+- Purpose: Enforce workspace-level roles using `@Roles()` metadata
+- Behavior:
+  - If no `@Roles()` metadata exists, allows access
+  - If `req.user` is missing, denies access
+  - If `user.systemRole === 'SUPER_ADMIN'`, allows access (bypass)
+  - If `user.isOwner === true`, allows access (workspace owner bypass)
+  - Otherwise compares required roles case-insensitively against `user.role`
+  - Special case: `@Roles('Owner')` also accepts backend `user.role === 'business'`
+- Usage example:
 
+```ts
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('Owner', 'Admin')
-@Delete(':id')
-remove(@Param('id') id: string) { … }
+@Post(':id')
+update(@Param('id') id: string) { ... }
 ```
 
----
+### WorkspaceTypeGuard (DONE)
 
-## 8. Database Entities
+- File: `guards/workspace-type.guard.ts`
+- Purpose: Prevent cross-role entity creation by enforcing workspace type
+- Decorator: `@RequireWorkspaceType(...types)`
+- Behavior:
+  - If no types are configured, allows access
+  - If `req.user` is missing, denies access
+  - If `user.systemRole === 'SUPER_ADMIN'`, allows access (bypass)
+  - Otherwise queries Prisma for the workspace belonging to `user.userId`
+  - If the workspace type matches a required type, allows access
+  - Otherwise throws `ForbiddenException`
+- Status: DONE — implemented and build errors fixed
+- Usage example:
 
-| Table | Purpose |
-|-------|---------|
-| `User` | Core user record; `isEmailVerified`, `isPhoneVerified`, `role` |
-| `Session` | One row per active refresh token; rotated on each `/refresh` call |
-| `Otp` | Short-lived codes for email/phone/MFA/password-reset; `purpose` discriminates flow |
-| `PendingSignup` | Temporary state between pre-signup and complete-signup |
-| `SecurityEvent` | Audit log for logins, failures, suspicious activity |
-| `WorkspaceUser` | Links `User` → `Workspace`; `roleId` FK → `Role` table |
+```ts
+@RequireWorkspaceType('OWNER')
+@UseGuards(JwtAuthGuard, WorkspaceTypeGuard)
+@Post()
+create(@Req() req: any, @Body() body: CreateCompanyDto) { ... }
+```
 
----
+### CompanyAccessGuard
 
-## 9. Security Features
+- File: `guards/company-access.guard.ts`
+- Purpose: Enforce that the authenticated user can access the company identified by `:companyId`
+- Behavior:
+  1. Reads `companyId` from `request.params`
+  2. Reads `userId` from `request.user.userId` or `request.user.id`
+  3. If `companyId` is missing, the guard is a no-op
+  4. Verifies the company exists via Prisma
+  5. Verifies the user is an ACTIVE member of the owning workspace via `WorkspaceUser`
+  6. Attaches `request.companyWorkspaceId` and sets async request context for downstream use
+- Usage example:
 
-- **Bcrypt** password hashing (via `src/utils/bcrypt-fallback.ts`)
-- **HMAC** phone normalisation (HMAC_KEY env var)
-- **HTTP-only cookies** for JWT + refresh token (no JS access)
-- **Rate limiting** on forgot-password (5 req / 60 min / email)
-- **OTP TTL**: 10 min (email verify), 60 min (password reset)
-- **Audit trail**: all sign-in / sign-up / refresh events written to `SecurityEvent`
-- **Email enumeration protection**: all unauthenticated endpoints return the same shape on user-not-found
+```ts
+@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@Get(':companyId/invoices')
+listInvoices(@Param('companyId') companyId: string) { ... }
+```
 
----
+## Decorators
 
-## 10. Environment Variables
+### @SystemRoles(...roles)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `JWT_SECRET` | ✅ | JWT signing secret |
-| `FRONTEND_URL` | ✅ | Base URL for redirect links in emails |
-| `SENDGRID_API_KEY` | prod | SendGrid API key |
-| `SENDGRID_FROM` | prod | Sender address for SendGrid |
-| `SMTP_HOST` | dev | SMTP host (MailHog / Mailtrap) |
-| `HMAC_KEY` | prod | HMAC key for phone hashing |
-| `ENABLE_AUTO_VERIFY_LOGIN` | optional | Auto-login after email link click |
-| `ALLOW_TEST_ENDPOINTS` | dev | Expose debug OTP endpoints |
+- File: `decorators/system-roles.decorator.ts`
+- Purpose: Attach required system-level roles to routes/controllers
+- Usage example:
 
-See [../../.env.example](../../.env.example) for the full list.
+```ts
+@SystemRoles('SUPER_ADMIN')
+@UseGuards(SystemRoleGuard)
+@Get('owner-dashboard')
+ownerDashboard() { ... }
+```
+
+### @Roles(...roles)
+
+- File: `decorators/roles.decorator.ts`
+- Purpose: Attach required workspace roles to routes/controllers
+- Usage example:
+
+```ts
+@Roles('Owner', 'Admin')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Patch(':id')
+update(@Param('id') id: string) { ... }
+```
+
+### @RequireWorkspaceType(...types)
+
+- File: `decorators/workspace-type.decorator.ts`
+- Purpose: Attach required workspace types to routes/controllers
+- Usage example:
+
+```ts
+@RequireWorkspaceType('PRACTICE')
+@UseGuards(JwtAuthGuard, WorkspaceTypeGuard)
+@Post('invite')
+invite(@Body() body: InviteDto) { ... }
+```
+
+## Services
+
+### PrismaAuthService
+
+- File: `prisma-auth.service.ts`
+- Purpose: Core authentication service used by `AuthController`
+- Responsibilities:
+  - `signup()` — create users, hash passwords, sign JWTs with `systemRole` and `isOwner`
+  - `login()` — validate credentials, enforce verification, create refresh sessions, sign JWTs
+  - `getIsOwner()` — determine workspace ownership using Prisma
+  - `getOnboardingStatus()` — read onboarding completion state from `OnboardingData`
+- Notes:
+  - JWT payload includes `sub`, `email`, `role`, `systemRole`, and `isOwner`
+  - `systemRole` is included in returned user responses for frontend consumption
+
+## Strategy
+
+### JwtStrategy
+
+- File: `strategies/jwt.strategy.ts`
+- Purpose: Passport JWT validation and payload transformation
+- Behavior:
+  - Accepts JWT from `Authorization` header or `token` cookie
+  - Uses `process.env.JWT_SECRET`
+  - `validate()` returns:
+    - `userId: payload.sub`
+    - `email: payload.email`
+    - `role: payload.role`
+    - `systemRole: payload.systemRole`
+    - `isOwner: payload.isOwner`
+
+## Cross-role prevention files
+
+- `guards/workspace-type.guard.ts`
+- `decorators/workspace-type.decorator.ts`
+- `companies/company.controller.ts` — `@RequireWorkspaceType('OWNER')` on `POST /api/companies`
+- `practice/practice.controller.ts` — `@RequireWorkspaceType('PRACTICE')` on practice creation
+- `practice-hub/practice-hub.controller.ts` — `@RequireWorkspaceType('PRACTICE')` on invite creation
+
+## Notes
+
+- `WorkspaceTypeGuard` uses a Prisma lookup to find the workspace type. A future optimization would add `workspaceType` to the JWT payload to avoid the DB query.
+- The Prisma schema defines `Workspace.type` as an enum with values `OWNER` and `PRACTICE`.
+- The `Workspace` model includes `ownerUserId String @unique`, ensuring one workspace per owner user.
+- All guards use NestJS `CanActivate` and `Reflector.getAllAndOverride()` for metadata resolution.
+
+## Existing auth flow reference
+
+This file retains the original auth flow documentation while adding the full current guard/decorator architecture. The sign-up, login, refresh, OTP, and email verification flows remain valid context for future agents.
