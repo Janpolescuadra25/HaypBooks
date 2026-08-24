@@ -66,7 +66,6 @@ export class PrismaAuthService {
       name: user.name,
       role: user.role,
       systemRole: user.systemRole,
-      systemRole: user.systemRole,
       isAccountant: user.isAccountant ?? false,
       onboardingCompleted: onboardingStatus,
       onboardingComplete: onboardingStatus,

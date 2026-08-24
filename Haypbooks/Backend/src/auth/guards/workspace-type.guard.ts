@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import { PrismaService } from '../repositories/prisma/prisma.service'
+import { PrismaService } from '../../repositories/prisma/prisma.service'
 
 const WORKSPACE_TYPES_KEY = 'workspace-types'
 
