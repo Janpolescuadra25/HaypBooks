@@ -1,10 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
-import { RolesGuard } from '../auth/guards/roles.guard'
 import { SystemRoleGuard } from '../auth/guards/system-role.guard'
-import { Roles } from '../auth/decorators/roles.decorator'
 import { SystemRoles } from '../auth/decorators/system-roles.decorator'
-import { CompanyService } from '../companies/company.service'
 import { OwnerService } from './owner.service'
 
 @UseGuards(JwtAuthGuard)
@@ -12,7 +9,6 @@ import { OwnerService } from './owner.service'
 export class OwnerController {
   constructor(
     private readonly ownerService: OwnerService,
-    private readonly companyService: CompanyService,
   ) {}
 
   @Get('health')
@@ -20,27 +16,6 @@ export class OwnerController {
   @SystemRoles('SUPER_ADMIN')
   async health() {
     return this.ownerService.getHealth()
-  }
-
-  @Get('dashboard')
-  @UseGuards(RolesGuard)
-  @Roles('Owner', 'Admin')
-  async getDashboard(@Req() req: any) {
-    return this.companyService.getOwnerDashboard(req.user?.userId)
-  }
-
-  @Get('cash-position')
-  @UseGuards(RolesGuard)
-  @Roles('Owner', 'Admin')
-  async getCashPosition(@Req() req: any) {
-    return this.companyService.getOwnerCashPosition(req.user?.userId)
-  }
-
-  @Get('financial-summary')
-  @UseGuards(RolesGuard)
-  @Roles('Owner', 'Admin')
-  async getFinancialSummary(@Req() req: any) {
-    return this.companyService.getOwnerFinancialSummary(req.user?.userId)
   }
 
   @Get('storage/usage')

@@ -59,8 +59,8 @@ export default function OwnerDashboard() {
     setError('')
     try {
       const [kpiRes, cashRes] = await Promise.all([
-        apiClient.get('/api/owner/financial-summary'),
-        apiClient.get('/api/owner/cash-position'),
+        apiClient.get('/api/companies/financial-summary'),
+        apiClient.get('/api/companies/cash-position'),
       ])
       setKpis(kpiRes.data)
       setCash(cashRes.data)

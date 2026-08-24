@@ -21,7 +21,7 @@ export function useOwnerDashboard() {
     setLoading(true)
     setError(null)
     try {
-      const res = await apiClient.get<OwnerDashboardData>('/api/owner/dashboard')
+      const res = await apiClient.get<OwnerDashboardData>('/api/companies/dashboard')
       setData(res.data)
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || 'Failed to load owner dashboard')

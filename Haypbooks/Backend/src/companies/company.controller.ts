@@ -6,6 +6,8 @@ import {
 import { SkipThrottle } from '@nestjs/throttler'
 import { CompanyService } from './company.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { RolesGuard } from '../auth/guards/roles.guard'
+import { Roles } from '../auth/decorators/roles.decorator'
 import { CreateCompanyDto } from './dto/create-company.dto'
 import { UpdateCompanyDto } from './dto/update-company.dto'
 import { CompanyGrantAccessDto, CompanySendInviteDto } from './dto/company-access.dto'
@@ -211,6 +213,27 @@ export class CompaniesController {
   @UseGuards(JwtAuthGuard)
   async listRoles(@Req() req: any, @Param('id') id: string) {
     return this.svc.listRoles(req.user?.userId, id)
+  }
+
+  @Get('dashboard')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Owner', 'Admin')
+  async getOwnerDashboard(@Req() req: any) {
+    return this.svc.getOwnerDashboard(req.user?.userId)
+  }
+
+  @Get('cash-position')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Owner', 'Admin')
+  async getOwnerCashPosition(@Req() req: any) {
+    return this.svc.getOwnerCashPosition(req.user?.userId)
+  }
+
+  @Get('financial-summary')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Owner', 'Admin')
+  async getOwnerFinancialSummary(@Req() req: any) {
+    return this.svc.getOwnerFinancialSummary(req.user?.userId)
   }
 
   // ─── Invite accept (cross-company, no :id needed) ─────────────────────────

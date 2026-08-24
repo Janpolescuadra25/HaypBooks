@@ -220,7 +220,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 
 **Goal:** Fully separate three admin roles — Owner Admin (platform owner), Company Admin (business user), and Practice Admin (accountant) — with isolated dashboards, navigation, API endpoints, subscription enforcement, and database isolation.
 
-**Status:** Not Started
+**Status:** In Progress
 **Blocked By:** P0 items (JWT payload fix, onboarding regression), Plan G completion
 **Priority:** HIGH — foundation for all future feature development
 
@@ -245,7 +245,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 #### Phase H-1: Backend Role Separation
 **Depends on:** Phase H-0
 
-- [ ] Split `OwnerController` — move company-level endpoints to `CompanyController` (deferred to H-2, when frontend routes are updated simultaneously; guard-level separation done in this phase)
+- [x] Split `OwnerController` — move company-level endpoints to `CompanyController` (deferred to H-2, when frontend routes are updated simultaneously; guard-level separation done in this phase)
 - [x] Update `OwnerController` to use `@SystemRoles('SUPER_ADMIN')` (via new SystemRoleGuard) for platform endpoints: storage, users, metrics
 - [ ] Enhance existing `PracticeController` (`Backend/src/practice/practice.controller.ts`) and `PracticeHubController` (`Backend/src/practice-hub/practice-hub.controller.ts`) with additional practice-specific endpoints as needed
 - [x] Add `systemRole`-based guard: new `SystemRoleGuard` that checks `req.user.systemRole` instead of workspace role
