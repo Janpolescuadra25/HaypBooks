@@ -1,6 +1,6 @@
 # HaypBooks — Development Roadmap
 
-> Last updated: August 24, 2026
+> Last updated: August 26, 2026
 
 ## Completed Projects
 - ✅ **Memory Leak Fix** — Resolved unbounded metrics accumulation in `Backend/src/common/metrics.ts` with hourly `counts.clear()` + PM2 `max_memory_restart 1G` mitigation
@@ -24,6 +24,7 @@
 - ✅ **Zypra AI Assistant (Plan F, Phase 1)** — Floating chat widget with Gemini-powered accounting Q&A, lazy initialization, quick actions, system prompt guardrails.
 - ✅ **Cinematic Intro Restoration** — Reverted intro animation from HB logo back to "Haypbooks" text via git history.
 - ✅ **Owner Module DI Fix** — Added CompaniesModule to OwnerModule imports, resolving 478-restart crash loop in production.
+- ✅ **Hub Selection Screen Redesign** — Fixed: Added `isHubSelection` check to `client-root.tsx` (L102, L119) to exclude `/workspace` from the OwnerTopBar + OwnerSidebar layout. The hub selection page now renders as a clean full-page experience. The existing WorkspacePage component already had all three panels (Companies list, Practice list, Owner Dashboard button). No git history revert needed.
 
 ---
 
@@ -32,7 +33,6 @@
 ### P0: Critical Production Fixes
 - ~~**Fix JWT Payload**~~ ✅ Fixed: added `systemRole` and `isOwner` to JWT payload at all 4 sign locations in `prisma-auth.service.ts`. Added `getIsOwner()` helper querying `Workspace.ownerUserId`. Updated `jwt.strategy.ts` validate() return. Added `systemRole` to User interface.
 - ~~**Fix `mapRoleForFrontend` Inconsistency**~~ ✅ NOT A BUG — Three orthogonal role layers confirmed: hub role (JWT `role` → `'business'`/`'accountant'`), RBAC role (cookie `role` → `'admin'`/`'manager'`/`'viewer'`), platform role (JWT `systemRole` → `'USER'`/`'SUPER_ADMIN'`). The `mapRoleForFrontend` function correctly maps workspace owners to `'admin'` RBAC permissions. Renaming deferred to Plan H. Documented in `docs/architecture/ROLE_SYSTEM.md`.
-- ✅ **Hub Selection Screen Redesign** — Fixed: Added `isHubSelection` check to `client-root.tsx` (L102, L119) to exclude `/workspace` from the OwnerTopBar + OwnerSidebar layout. The hub selection page now renders as a clean full-page experience. The existing WorkspacePage component already had all three panels (Companies list, Practice list, Owner Dashboard button). No git history revert needed.
 
 ### Plan C Phase 3: Budgeting Module Enhancements
 **Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
