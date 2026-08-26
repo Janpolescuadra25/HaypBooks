@@ -54,6 +54,12 @@
 - **Cash Flow Integration**: Link budget data to cash flow forecasting so projected cash positions account for budgeted income and expenses by month
 - **Budget Ownership & Comments**: Assign budget line ownership to team members and add comment threads on individual budget lines for collaboration during budget review cycles
 
+*Status note (Aug 27, 2026): Core budgeting module (Plan C
+Phases 1-2) is deployed; Phase 3 enhancements — templates,
+variance alerts, rolling forecasts, cash-flow integration,
+ownership/comments — remain unimplemented. Retained under
+In Progress to track future priorities.*
+
 ---
 
 ## Priority Backlog
@@ -129,7 +135,7 @@
 
 ### P1: Accounting Ledger Integrity Workstream (NEW)
 > All items verified by Audit 001/001-B (August 27, 2026). These defects let business events bypass or corrupt the General Ledger.
-- **Silent unbalanced postings** — `Backend/src/shared/sub-ledger.service.ts:L120-L125`: when debits ≠ credits (tolerance 0.005), logs a warning and returns null; business transaction proceeds with NO GL posting. Must become fail-closed (abort entire transaction).
+- **Silent unbalanced postings** — `Backend/src/shared/sub-ledger.service.ts:L133-L137`: when debits ≠ credits (tolerance 0.005), logs a warning and returns null; business transaction proceeds with NO GL posting. Must become fail-closed (abort entire transaction).
 - **Non-atomic business + GL writes** — invoice-send / payment / deposit flows run business-data and JE-posting in SEPARATE Prisma `$transaction`s; a crash between them permanently desyncs books.
 - **Balance Sheet missing Current Year Earnings** — `reporting.service.ts:L514-L533`: equity aggregates only equity-class accounts; no YTD-net-income plug → BS out of balance between closes.
 - **Document numbering races** — atomic `DocumentSequence.upsert()` exists (`schema.prisma:L5137`; invoices + sales orders only, `ar.repository.ts:L133-L162`). Extend it to Journal Entries (currently max()+1 scans in sub-ledger/accounting repository) and credit notes (count()+1).
@@ -203,7 +209,7 @@ remains the leading candidate input for Phase 1.
 **Blocked By:** P0 items (JWT payload fix, onboarding regression), Plan G completion
 **Priority:** HIGH — foundation for all future feature development
 
-**Context:** Currently the codebase has NO three-role separation. Only two effective roles exist (`business` and `accountant` synthesized from `preferredHub`). `SUPER_ADMIN` exists in the enum and has a seed script (`prisma/seed-admin.ts`) but is never used for access control — not in JWT, not in guards. Platform owner features (storage, metrics, user management) are visible to all Company Admin users in the sidebar. No subscription plan capacities are enforced.
+**Context:** Since Phase H-0 (completed August 27, 2026), SUPER_ADMIN is provisioned via prisma/seed-admin.ts, carries systemRole in the JWT (jwt.strategy.ts:32) and API responses (prisma-auth.service.ts:57), and receives platform-endpoint access through the RolesGuard check (roles.guard.ts:38). Effective hub roles remain 'business' and 'accountant' (synthesized from preferredHub) and all workspace owners map to RBAC 'admin' — see docs/architecture/ROLE_SYSTEM.md. Dedicated three-role separation (distinct Owner / Company / Practice dashboards, subscription enforcement, database isolation) is NOT yet implemented, and no subscription plan capacities are enforced.
 
 ---
 
@@ -217,25 +223,27 @@ remains the leading candidate input for Phase 1.
 - [x] Update `jwt.strategy.ts:28-32` validate() to return `systemRole` and isOwner — done (L32-33)
 - [x] Update `RolesGuard` to check `systemRole === 'SUPER_ADMIN'` for platform endpoints
 - [x] Expose `systemRole` in API responses and frontend User types (backend users.service.ts, prisma-auth.service.ts + frontend auth.service.ts, use-user.ts)
-- [x] Standardize role values — NOT A BUG (three orthogonal layers, see docs/architecture/ROLE_SYSTEM.md). Renaming deferred to Phase H-1.
+- [x] Standardize role values — NOT A BUG (three orthogonal layers, see docs/architecture/ROLE_SYSTEM.md). Renaming deferred to Phase H-6.
 - [x] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
 - [x] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
 - [x] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`
 
 #### Phase H-3: Owner Admin Dashboard
-**Depends on:** Phase H-1, H-2
+**Depends on:** None — prerequisite work completed
 
 - [ ] Build Platform Owner Dashboard component (overview: total companies, users, revenue, storage, growth charts)
 - [x] Build Storage Management page (per-company storage, limits, R2 usage)
 - [x] Build User Management page (all users, suspend/reactivate, view sessions, role assignment)
 - [x] Build Platform Metrics page (plan distribution, growth history, snapshots, MRR)
+
+*Implementation note (Aug 27, 2026): these pages exist as frontend routes calling live-shaped APIs, but are absent from the sidebar (linked via WorkspacePage/TopBar), client-gated to SUPER_ADMIN via src/app/(platform-admin)/layout.tsx, and their backend endpoints (/api/owner/storage/*, /api/platform/*) are UNIMPLEMENTED — UI-only until backend development lands.*
 - [ ] Build Subscription Overview page (all active subscriptions, revenue, churn)
 - [ ] Build Platform Settings page (global config, feature flags per workspace)
 - [ ] Owner Admin should see all three dashboards (Platform + Company + Practice) via a dashboard switcher
 - [ ] Owner Admin has NO subscription plan — unlimited access, no capacity restrictions
 
 #### Phase H-4: Subscription Enforcement
-**Depends on:** Phase H-1
+**Depends on:** None — prerequisite work completed
 
 - [ ] Create `SubscriptionGuard` — checks plan capacity before allowing company/client creation
 - [ ] Enforce `Plan.maxCompanies` — block company creation when at capacity
@@ -248,7 +256,7 @@ remains the leading candidate input for Phase 1.
 - [ ] Auto-Delete Exemption Rule — the platform owner / SUPER_ADMIN account(s) are permanently exempt from subscription expiry checks and auto-deletion, without exception
 
 #### Phase H-5: Practice Admin Enhancement
-**Depends on:** Phase H-1, H-2
+**Depends on:** None — prerequisite work completed
 
 - [ ] Expand practice nav from 2 sections to: Dashboard, Clients, Team, Settings, Billing, Reports
 - [ ] Implement Practice XP/tier gamification system (schema fields `practiceTier`/`practiceXp` exist but are never read/written)
@@ -274,6 +282,12 @@ remains the leading candidate input for Phase 1.
 - 🟡 WorkspacePage shows platform admin link to any workspace owner
 
 ---
+
+- 🟡 Platform admin pages (/platform-admin/storage,
+  /platform-admin/users, /platform-admin/metrics) are
+  frontend UI only; their backend APIs (/api/owner/*,
+  /api/platform/*) are unimplemented. Pages are client-
+  gated to SUPER_ADMIN, so no server-side exposure exists.
 
 ### Documentation Rule (Standing Policy)
 
@@ -311,3 +325,4 @@ These modules have controller/service stubs that return placeholder data. They r
 - [ ] Test suite exists but coverage is uneven (~87 genuine tests at cd3d30e8: 47 backend spec/test files incl. general-ledger, AP lifecycle, sub-ledger reversal, auth integration; 22 frontend component/route tests; 18 Playwright e2e specs). Still uncovered/thin: payroll→GL posting, banking reconciliation matching, tenant-isolation scoping, document-numbering concurrency, financial-report correctness. No coverage thresholds enforced in CI.
 - Resolved — see Completed Projects. Fix: hourly counts.clear() in metrics.ts + PM2 max_memory_restart 1G.
 - [x] **`bot-connect.js` 404 errors** — Resolved. No references to `bot-connect.js` found in Frontend codebase.
+- [ ] Stabilize 3 flaky tests: 2 backend (prisma seed race conditions in auth tests), 1 frontend (Sidebar permission-check timing issue).

@@ -64,5 +64,7 @@ docs/erpnext/
 docs/Quickbooks_api/
 docs/Stripes/
 
+docs/Prompt_only/
+
 # Root clutter
 dummy.txt
