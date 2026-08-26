@@ -263,6 +263,7 @@ export default function OnboardingPage() {
       data = { automatedFeeds: formData.automatedFeeds, accounts: formData.bankAccounts }
     }
     try {
+      if (USE_MOCK) {
         await fetch('/api/onboarding/save', {
           credentials: 'include',
           method: 'POST',
@@ -308,6 +309,7 @@ export default function OnboardingPage() {
       setCompleting(true)
       try {
         let resJson: any = null
+        if (USE_MOCK) {
           const r = await fetch('/api/onboarding/complete', {
             credentials: 'include',
             method: 'POST',

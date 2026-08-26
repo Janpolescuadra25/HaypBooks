@@ -21,6 +21,9 @@ echo "Installing frontend dependencies..."
 cd Frontend
 npm install
 
+echo "Cleaning stale Next.js build cache..."
+rm -rf .next
+
 echo "Building frontend..."
 npm run build
 cd ..
