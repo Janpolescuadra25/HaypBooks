@@ -1,6 +1,6 @@
 # HaypBooks — Development Roadmap
 
-> Last updated: August 26, 2026
+> Last updated: August 27, 2026
 
 ## Completed Projects
 - ✅ **Memory Leak Fix** — Resolved unbounded metrics accumulation in `Backend/src/common/metrics.ts` with hourly `counts.clear()` + PM2 `max_memory_restart 1G` mitigation
@@ -29,6 +29,7 @@
 - ✅ **Fix `mapRoleForFrontend` Inconsistency** — Completed August 24, 2026: Confirmed NOT a bug. Three orthogonal role layers exist: hub role (JWT `role`), RBAC role (cookie `role`), platform role (JWT `systemRole`). The `mapRoleForFrontend` function correctly maps workspace owners to `'admin'` RBAC permissions. Documented in `docs/architecture/ROLE_SYSTEM.md`.
 - ✅ **Deploy.sh Stale Cache Fix** — Completed August 26, 2026: Added `rm -rf .next` to deploy.sh before `npm run build` to prevent corrupted Next.js incremental builds from causing 400 errors on static assets.
 - ✅ **Onboarding Page Syntax Fix** — Completed August 26, 2026: Fixed malformed `saveCurrentStep()` function in `onboarding/page.tsx` that was causing build failures on the VPS.
+- ✅ **Phase H-0 Three-Role Foundation (SUPER_ADMIN Provisioning)** — Completed August 27, 2026: All code changes previously verified (systemRole + isOwner in JWT at all sign locations in prisma-auth.service.ts, jwt.strategy validate(), RolesGuard SUPER_ADMIN check). VPS tasks executed: ADMIN_EMAIL and ADMIN_DEFAULT_PASSWORD added to Backend .env, seed-admin run via `npm run db:seed:admin` (required transient NODE_OPTIONS=--max-old-space-size=8192 after OOM), SUPER_ADMIN login verified — decoded JWT contains systemRole: 'SUPER_ADMIN' and isOwner: true. All three H-0 boxes now closed.
 
 ---
 
@@ -96,7 +97,7 @@
 | E | Fixed Asset Management | Not Started | Core accounting E2E validation |
 | F-2 | Zypra AI Phase 2 (Persistent History, Document Q&A, Advanced Insights) | Not Started | — |
 | G | Comprehensive Product Maturity Audit & Polish | Not Started | All P0 items resolved |
-| H | Three-Role Architecture Refactor | Not Started | P0 items + Plan G completion |
+| H | Three-Role Architecture Refactor | In Progress — H-0 Complete | Plan G completion |
 
 ### Plan A: Self-Hosted PostgreSQL Migration
 **Goal**: Migrate from Supabase hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
@@ -119,6 +120,17 @@
 - Add manager sign-off step to bank reconciliation completion — reconciliation cannot be finalized until an approver reviews and approves
 - Build an approvals dashboard listing pending items for the current user with one-click approve/reject actions and comment/reason fields
 - Emit audit log entries for every approval action (who approved, when, reason, linked record)
+
+### P1: Accounting Ledger Integrity Workstream (NEW)
+> All items verified by Audit 001/001-B (August 27, 2026). These defects let business events bypass or corrupt the General Ledger.
+- **Silent unbalanced postings** — `Backend/src/shared/sub-ledger.service.ts:L120-L125`: when debits ≠ credits (tolerance 0.005), logs a warning and returns null; business transaction proceeds with NO GL posting. Must become fail-closed (abort entire transaction).
+- **Non-atomic business + GL writes** — invoice-send / payment / deposit flows run business-data and JE-posting in SEPARATE Prisma `$transaction`s; a crash between them permanently desyncs books.
+- **Balance Sheet missing Current Year Earnings** — `reporting.service.ts:L514-L533`: equity aggregates only equity-class accounts; no YTD-net-income plug → BS out of balance between closes.
+- **Document numbering races** — atomic `DocumentSequence.upsert()` exists (`schema.prisma:L5137`; invoices + sales orders only, `ar.repository.ts:L133-L162`). Extend it to Journal Entries (currently max()+1 scans in sub-ledger/accounting repository) and credit notes (count()+1).
+- **Banking integrity gaps** — reconciliation completion does not enforce difference == 0; auto-match ignores amounts; transaction import lacks dedup fingerprinting (re-import double-counts); newly created bank accounts get no linked GL account.
+- **Payroll never posts to GL** — `payroll.repository.ts:L174-L176`: postPayrollRun() flips status only; no salary-expense or net-pay-liability JournalEntries ever created.
+- **Fixed assets: depreciation runs & disposals insert records but create NO journal entries** — `inventory.repository.ts:L320-L375`.
+- **FX revaluation placeholder** — endpoint returns last-50-JEs proxy; real unrealized gain/loss computation + posting absent. Unify base-currency fallbacks ('PHP' vs 'USD' across sub-ledger/gl-integration/exchange-rate/accounting).
 
 ### Plan E: Fixed Asset Management
 **Goal**: Add fixed asset tracking, depreciation scheduling, and disposal/revaluation workflows for long-term asset accounting.
@@ -225,7 +237,7 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 ---
 
 #### Phase H-0: Foundation — JWT + Auth Chain Fix
-> **Status**: All code changes complete. Remaining: VPS deployment tasks only (run `seed-admin.ts`, add env vars, verify SUPER_ADMIN login).
+> **Status**: ✅ FULLY COMPLETED — August 27, 2026. Code changes deployed; VPS provisioning executed and verified (SUPER_ADMIN created, login + JWT payload confirmed).
 **Prerequisite:** Must complete BEFORE any other Phase H work.
 **Depends on:** P0 items (JWT payload, mapRoleForFrontend)
 
@@ -235,11 +247,9 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [x] Update `RolesGuard` to check `systemRole === 'SUPER_ADMIN'` for platform endpoints
 - [x] Expose `systemRole` in API responses and frontend User types (backend users.service.ts, prisma-auth.service.ts + frontend auth.service.ts, use-user.ts)
 - [x] Standardize role values — NOT A BUG (three orthogonal layers, see docs/architecture/ROLE_SYSTEM.md). Renaming deferred to Phase H-1.
-- [ ] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
-- [ ] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
-- [ ] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`
-
-*(Deployment tasks — to be executed on VPS after next deploy, not code changes)*
+- [x] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
+- [x] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
+- [x] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`
 
 #### Phase H-3: Owner Admin Dashboard
 **Depends on:** Phase H-1, H-2
@@ -263,6 +273,8 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 - [ ] Build subscription limit UI — show current usage vs plan limits in settings
 - [ ] Upgrade/paywall flow — prompt users to upgrade when hitting limits
 - [ ] Seed plan records (FREE, STARTER, PRO, ENTERPRISE or equivalent) — currently no plans exist in DB
+- [ ] Subscription Lifecycle Auto-Delete Policy — user/company accounts with no active plan AND no active free trial receive a deletion WARNING at day 25 and are PERMANENTLY DELETED (including associated data) at day 30; users must avail a plan to keep the account alive
+- [ ] Auto-Delete Exemption Rule — the platform owner / SUPER_ADMIN account(s) are permanently exempt from subscription expiry checks and auto-deletion, without exception
 
 #### Phase H-5: Practice Admin Enhancement
 **Depends on:** Phase H-1, H-2
@@ -316,6 +328,6 @@ These modules have controller/service stubs that return placeholder data. They r
 ---
 
 ## Technical Debt
-- [ ] No automated test suite exists — all testing is currently manual
+- [ ] Test suite exists but coverage is uneven (~87 genuine tests at cd3d30e8: 47 backend spec/test files incl. general-ledger, AP lifecycle, sub-ledger reversal, auth integration; 22 frontend component/route tests; 18 Playwright e2e specs). Still uncovered/thin: payroll→GL posting, banking reconciliation matching, tenant-isolation scoping, document-numbering concurrency, financial-report correctness. No coverage thresholds enforced in CI.
 - Resolved — see Completed Projects. Fix: hourly counts.clear() in metrics.ts + PM2 max_memory_restart 1G.
 - [x] **`bot-connect.js` 404 errors** — Resolved. No references to `bot-connect.js` found in Frontend codebase.
