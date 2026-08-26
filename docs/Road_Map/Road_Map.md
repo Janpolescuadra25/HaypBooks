@@ -3,6 +3,9 @@
 > Last updated: August 27, 2026
 
 ## Completed Projects
+<details>
+<summary>Archived completed projects (older)</summary>
+
 - ✅ **Memory Leak Fix** — Resolved unbounded metrics accumulation in `Backend/src/common/metrics.ts` with hourly `counts.clear()` + PM2 `max_memory_restart 1G` mitigation
 - ✅ **Slow Currency Endpoint Fix** — Fixed `GET /api/currency/currencies` latency with 1-hour TTL in-memory cache in `exchange-rate.service.ts:82-88`
 - ✅ **Fix 401 on Dashboard (Auth Cookie Routing)** — Changed `NEXT_PUBLIC_API_URL` from `https://api.haypbooks.com` to empty string in `.env.production` on VPS so axios requests stay same-origin through nginx proxy.
@@ -20,10 +23,13 @@
 - ✅ **Logo Replacement** — All placeholder logos replaced with HB_Logo.png. Favicon and metadata configured.
 - ✅ **Repo Cleanup** — Removed stray root files, malformed filenames, and all "open source" references. HaypBooks is proprietary.
 - ✅ **Build Error Fixes** — Resolved TypeScript/Prisma build errors in owner.service.ts.
+</details>
+
 - ✅ **Multi-Currency Support (Plan B)** — Full end-to-end multi-currency accounting: Currency/ExchangeRate models with 15 seeded currencies, ExchangeRateService with enforceCurrency() helper and live API rate fetching, currency enforcement in transaction services, shared formatCurrency() utility, company base currency selector, multi-currency financial reporting with display currency selector on P&L/Balance Sheet/Cash Flow/Trial Balance.
 - ✅ **Zypra AI Assistant (Plan F, Phase 1)** — Floating chat widget with Gemini-powered accounting Q&A, lazy initialization, quick actions, system prompt guardrails.
 - ✅ **Cinematic Intro Restoration** — Reverted intro animation from HB logo back to "Haypbooks" text via git history.
 - ✅ **Owner Module DI Fix** — Added CompaniesModule to OwnerModule imports, resolving 478-restart crash loop in production.
+
 - ✅ **Hub Selection Screen Redesign** — Fixed: Added `isHubSelection` check to `client-root.tsx` (L102, L119) to exclude `/workspace` from the OwnerTopBar + OwnerSidebar layout. The hub selection page now renders as a clean full-page experience. The existing WorkspacePage component already had all three panels (Companies list, Practice list, Owner Dashboard button). No git history revert needed.
 - ✅ **Fix JWT Payload** — Completed August 25, 2026: Added `systemRole` and `isOwner` to JWT payload at all 4 sign locations in `prisma-auth.service.ts`. Added `getIsOwner()` helper querying `Workspace.ownerUserId`. Updated `jwt.strategy.ts` validate() return. Added `systemRole` to User interface.
 - ✅ **Fix `mapRoleForFrontend` Inconsistency** — Completed August 24, 2026: Confirmed NOT a bug. Three orthogonal role layers exist: hub role (JWT `role`), RBAC role (cookie `role`), platform role (JWT `systemRole`). The `mapRoleForFrontend` function correctly maps workspace owners to `'admin'` RBAC permissions. Documented in `docs/architecture/ROLE_SYSTEM.md`.
@@ -96,7 +102,7 @@
 | D | Approval Workflows | Not Started | — |
 | E | Fixed Asset Management | Not Started | Core accounting E2E validation |
 | F-2 | Zypra AI Phase 2 (Persistent History, Document Q&A, Advanced Insights) | Not Started | — |
-| G | Comprehensive Product Maturity Audit & Polish | Not Started | All P0 items resolved |
+| G | Product Maturity Standard & Audit Framework | In Progress — Standard v1.0 adopted; Phase 1 audit pending | All six audit phases (S1–S6) completed and signed off |
 | H | Three-Role Architecture Refactor | In Progress — H-0 Complete | Plan G completion |
 
 ### Plan A: Self-Hosted PostgreSQL Migration
@@ -155,72 +161,37 @@
 
 ---
 
-### Plan G: Comprehensive Product Maturity Audit & Polish
-**Status**: Not Started | **Depends on**: Memory leak resolved, all critical bugs fixed
-**What needs to be achieved**:
+### Plan G: Product Maturity Standard & Audit Framework
 
-A full multi-perspective audit of the entire HaypBooks application to bring it from MVP to production-grade quality. Each phase produces a detailed findings report and a prioritized list of Mantra-executable fixes.
+**Status**: Active — framework formally adopted via
+`docs/standards/PRODUCT_MATURITY_STANDARD.md`.
 
-#### Phase 0: Production Stability (P0 — must complete before any other phase)
-**Goal:** Eliminate all P0 production stability risks that cause downtime or data loss.
-- [x] Memory leak investigation and fix (see Technical Debt section above)
-- [x] Slow `/api/currency/currencies` endpoint (5+ second response time)
-- [x] `bot-connect.js` 404 errors in frontend logs — Resolved (no references found in Frontend codebase)
-- [x] Verify onboarding re-trigger bug is resolved — Fixed via `getOnboardingStatus()` in `prisma-auth.service.ts`
+**Role**: This plan operationalizes the Product Maturity Standard
+as the project's Definition of Done. The standard document is the
+single source of truth for the six audit perspectives, the
+five-tier maturity scale, P0–P3 classification, the ERPNext /
+QuickBooks benchmark protocol, the standard A–W audit report
+structure, and the binding anti-feature-creep rule.
 
-#### Phase 1: Accounting Flow & Logic Audit (Accountant Perspective)
-**Goal:** Establish codebase health baseline with testing, monitoring, and dependency cleanup.
-- Audit every data entry flow (invoices, bills, journal entries, payments, receipts) for logical correctness from a CPA's perspective
-- Verify chart of accounts structure, double-entry enforcement, debit/credit logic, and trial balance accuracy
-- Compare navigation and workflow against QuickBooks Online, Xero, and ERPNext
-- Assess whether every button, label, and action is in the right place for daily accounting work
-- Verify all financial reports (Income Statement, Balance Sheet, Cash Flow, Trial Balance) produce correct outputs
-- Check that general ledger entries are complete and accurate for every transaction type
+**Audit phases** (each phase = one HYDRA audit prompt producing an
+A–W report, followed by MANTRA execution prompts for each batch of
+fixes):
+  Phase 1 — Accounting & Ledger Integrity (S1)
+  Phase 2 — Security (S2)
+  Phase 3 — Data Integrity & Persistence (S3)
+  Phase 4 — Concurrency & Reliability (S4)
+  Phase 5 — UX & API Consistency (S5)
+  Phase 6 — Quality Operations (S6)
 
-#### Phase 2: UI/UX Consistency & Design Audit (UI Designer + Frontend Engineer Perspective)
-**Goal:** Polish user-facing experience with better loading states, error messages, and report performance.
-- Audit every page for visual consistency: spacing, typography, colors, button styles, card layouts
-- Identify and eliminate redundant buttons, duplicate forms, or inconsistent patterns across pages
-- Review all reusable/shared components for consistency and proper abstraction
-- Verify responsive design across desktop, tablet, and mobile viewports
-- Audit empty states, loading states, and error states on every page
-- Ensure navigation structure is logical and grouped by function (not a flat 16+ item list)
-- Compare visual clarity and usability against QuickBooks, Xero, and modern SaaS accounting tools
+**Execution approach**: Each phase should be executed as a separate
+Hydra audit prompt, followed by Mantra execution prompts for each
+batch of fixes. Phases can be partially parallelized (1-2 first,
+then 3-4, then 5-6).
 
-#### Phase 3: Backend Architecture & API Audit (Backend Engineer Perspective)
-**Goal:** Complete all in-progress features (budgeting enhancements, budget templates).
-- Audit all API endpoints for proper error handling, validation, and consistent response formats
-- Review database queries for N+1 issues, missing indexes, and performance bottlenecks
-- Verify multi-tenant isolation (workspace/company data separation) across all endpoints
-- Audit Prisma schema for missing relations, orphaned models, or incorrect types
-- Review authentication and authorization guards on every protected route
-- Assess API versioning strategy and backward compatibility
-
-#### Phase 4: Security & Compliance Audit (Security Analyst + Auditor Perspective)
-**Goal:** Secure sensitive financial data with encryption, audit trails, and access control.
-- Audit authentication flow (JWT, session management, password policies)
-- Review authorization checks (CompanyAccessGuard, role-based access) for bypasses
-- Check for sensitive data exposure in API responses (passwords, internal IDs, system fields)
-- Verify CORS configuration, rate limiting, and input sanitization
-- Audit the audit trail system for completeness and tamper-resistance
-- Assess compliance readiness for basic accounting standards (data retention, audit logs)
-
-#### Phase 5: Business Logic & Financial Analysis Audit (Financial Analyst + Business Analyst Perspective)
-**Goal:** Optimize application performance for scale and reduce frontend bundle size.
-- Audit dashboard KPIs for accuracy and relevance to business decision-making
-- Verify budget vs actual variance calculations and alerting thresholds
-- Review multi-currency handling for correct exchange rate application
-- Assess the quality and actionability of financial reports
-- Identify missing features that would provide strategic value (forecasting, ratio analysis, trends)
-
-#### Phase 6: Folder Structure & Code Organization Audit
-**Goal:** Prepare production environment for public launch with monitoring and documentation.
-- Review frontend and backend directory structures for logical grouping
-- Identify misplaced files, unused imports, dead code
-- Verify module boundaries in NestJS (proper module encapsulation)
-- Assess test coverage and identify critical untested paths
-
-**Execution approach**: Each phase should be executed as a separate Hydra audit prompt, followed by Mantra execution prompts for each batch of fixes. Phases can be partially parallelized (1-2 first, then 3-4, then 5-6).
+**Defect intake**: confirmed defects enter the roadmap Priority
+Backlog under their P-classification with the audit report section
+as citation. The existing P1 Accounting Ledger Integrity Workstream
+remains the leading candidate input for Phase 1.
 
 ---
 
@@ -297,15 +268,24 @@ A full multi-perspective audit of the entire HaypBooks application to bring it f
 ---
 
 **Known Issues to Track:**
-- ✅ 3 platform nav sections (STORAGE, METRICS, USERS) visible to all Company Admin users
-- ✅ 3 company-level API endpoints trapped behind wrong guard in OwnerController
 - 🔴 No subscription capacity enforcement anywhere
 - 🔴 Practice XP/tier system is dead schema (fields exist, no code)
-- ✅ COLLABORATION section (Client Requests) visible to Company Admins
 - 🟡 Cross-role creation allowed (Company Admin can create Practice)
 - 🟡 WorkspacePage shows platform admin link to any workspace owner
 
 ---
+
+### Documentation Rule (Standing Policy)
+
+- Every implemented module or subsystem must maintain its own
+  `README.md` located at the module root.
+- Each module README records: architecture overview, key
+  components and responsibilities, important files, behavioral
+  contracts, decisions and their rationale, and usage examples.
+- A roadmap item may be marked DONE only when its behavior is
+  verified AND its module README exists and is accurate.
+- Purpose: preserve durable context for future AI agents and
+  human maintainers working on this repository.
 
 ## Deferred Backend Stubs (22 Total)
 
