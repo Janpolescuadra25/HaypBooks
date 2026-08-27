@@ -120,8 +120,9 @@ export class SubLedgerService {
     const totalDebit = data.lines.reduce((s, l) => s + l.debit, 0)
     const totalCredit = data.lines.reduce((s, l) => s + l.credit, 0)
     if (Math.abs(totalDebit - totalCredit) > 0.005) {
-      this.logger.warn(`[SubLedger] Unbalanced JE skipped: ${data.entryNumber} (DR=${totalDebit} CR=${totalCredit})`)
-      return null
+      throw new BadRequestException(
+        `Journal entry ${data.entryNumber} is unbalanced: debit ${totalDebit} vs credit ${totalCredit}`,
+      )
     }
 
     const created = await tx.journalEntry.create({
