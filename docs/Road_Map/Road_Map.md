@@ -1,6 +1,6 @@
 # HaypBooks — Development Roadmap
 
-> Last updated: August 27, 2026
+> Last updated: August 29, 2026
 
 ## Completed Projects
 <details>
@@ -11,7 +11,7 @@
 - ✅ **Fix 401 on Dashboard (Auth Cookie Routing)** — Changed `NEXT_PUBLIC_API_URL` from `https://api.haypbooks.com` to empty string in `.env.production` on VPS so axios requests stay same-origin through nginx proxy.
 - ✅ **Fix 403 on Dashboard (RolesGuard)** — Updated `Backend/src/auth/guards/roles.guard.ts` line 33 to treat `role='business'` as equivalent to `'owner'` (case-insensitive + business→owner mapping). Committed to git and deployed to VPS.
 - ✅ **Fix Undeposited Funds Account Code Mismatch** — Replaced hardcoded `'1050'` in `Backend/src/shared/sub-ledger.service.ts` with `SYSTEM_ACCOUNTS.UNDEPOSITED_FUNDS.code` for `postBankDepositToGL`. This fixes bank deposit GL posting by using the current COA code `'1170'` instead of the legacy, missing `'1050'` account.
-- ✅ **Fail-fast unbalanced JE postings** — Changed `Backend/src/shared/sub-ledger.service.ts` so `createPostedJE()` throws `BadRequestException` when total debits and credits differ by more than 0.005 instead of quietly returning null and skipping the journal entry.
+- ✅ **Fail-fast unbalanced JE postings** — Changed `Backend/src/shared/sub-ledger.service.ts` so `createPostedJE()` throws `BadRequestException` when total debits and credits differ by more than 0.005 instead of quietly returning null and skipping the journal entry. — The P1 workstream item on silent unbalanced postings is closed by this fix; removed from the active P1 list (roadmap reconciliation, August 2026).
 - ✅ **Fix Void/Reversal JE Dating** — All void/reversal methods (createReversingJE + 8 callers, reverseInvoiceGL, reversePaymentReceivedGL, reverseCreditNoteGL, reverseWriteOffGL, reverseRefundGL, reverseRevenueRecognitionGL, voidJournalEntry) now use the original entry's date instead of `new Date()`, preventing accounting period corruption. Voids in closed periods now correctly fail.
 - ✅ **Fix voidDeposit Missing GL Reversal** — Added `createReversingJE` call to `voidDeposit` in `banking.repository.ts`, creating a proper GL reversal JE when a bank deposit is voided. Previously the original deposit JE remained posted, permanently overstating cash and understating undeposited funds.
 - ✅ **Fix DB Connection Limit** — Added `&connection_limit=10` to DATABASE_URL in `Backend/.env` on VPS.
@@ -72,7 +72,7 @@ In Progress to track future priorities.*
 
 ### P2: Medium Priority
 - **Fix Phantom `role` Field** — `Backend/src/repositories/interfaces/user.repository.interface.ts:8` declares 8 role values (`'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer' | 'accountant' | 'both'`) but DB has no `role` column — Prisma maps `systemRole` to `@map("role")`. Repository synthesizes `role` from `preferredHub` producing only `'business'` or `'accountant'`. Clean up the interface to match reality.
-- **Build Platform Owner Dashboard** — Separate UI for `SUPER_ADMIN` users (JP) to access platform endpoints: all users, storage usage, metrics, plan distribution. Current `OwnerDashboard` is for company admins, not platform owners. Backend endpoints already exist (`/api/owner/users`, `/api/owner/storage/usage`, `/api/owner/metrics/*`). Full platform owner dashboard with dedicated layout (see P1: Owner Dashboard Distinct Layout). The owner is the HaypBooks platform master — this dashboard monitors and controls everything across all companies and practices. Required navigation sections:
+- **Build Platform Owner Dashboard** — Separate UI for `SUPER_ADMIN` users (JP) to access platform endpoints: all users, storage usage, metrics, plan distribution. Current `OwnerDashboard` is for company admins, not platform owners. Backend endpoints already exist (`/api/owner/users`, `/api/owner/storage/usage`, `/api/owner/metrics/*`). Full platform owner dashboard with dedicated layout. The owner is the HaypBooks platform master — this dashboard monitors and controls everything across all companies and practices. Required navigation sections:
 
   **1. 📊 Overview** — Platform KPIs at a glance: total companies, practices, users; subscription health (active/trial/expired); revenue metrics; recent signups; system health indicators.
 
@@ -113,12 +113,12 @@ In Progress to track future priorities.*
 | H | Three-Role Architecture Refactor | In Progress — H-0 Complete | Plan G completion |
 
 ### Plan A: Self-Hosted PostgreSQL Migration
-**Goal**: Migrate from Supabase hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
+**Goal**: Migrate from Neon hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
 
 **What needs to be achieved**:
 - Install and configure PostgreSQL on the VPS (or a separate DB server) with production-grade settings (shared_buffers, work_mem, connection pooling via PgBouncer)
 - Set up automated backup with pg_dump cron jobs (daily full, hourly WAL archiving) and verified restore procedures
-- Migrate all existing data from Supabase using `pg_dump`/`pg_restore` with zero-downtime cutover (dual-write or DNS switchover)
+- Migrate all existing data from Neon using `pg_dump`/`pg_restore` with zero-downtime cutover (dual-write or DNS switchover)
 - Update all environment variables (DATABASE_URL) and verify Prisma migrations apply cleanly against the new instance
 - Configure firewall rules so only the VPS (and local dev) can reach PostgreSQL port 5432
 - **Blocked by:** E2E testing completion — we need confidence that the data layer works correctly before migrating to self-hosted
@@ -237,7 +237,7 @@ remains the leading candidate input for Phase 1.
 - [x] Build User Management page (all users, suspend/reactivate, view sessions, role assignment)
 - [x] Build Platform Metrics page (plan distribution, growth history, snapshots, MRR)
 
-*Implementation note (Aug 27, 2026): these pages exist as frontend routes calling live-shaped APIs, but are absent from the sidebar (linked via WorkspacePage/TopBar), client-gated to SUPER_ADMIN via src/app/(platform-admin)/layout.tsx, and their backend endpoints (/api/owner/storage/*, /api/platform/*) are UNIMPLEMENTED — UI-only until backend development lands.*
+*Implementation note (Aug 27, 2026): these pages exist as frontend routes calling live-shaped APIs, but are absent from the sidebar (linked via WorkspacePage/TopBar), client-gated to SUPER_ADMIN via src/app/(platform-admin)/layout.tsx. All 9 /api/owner/* endpoints are implemented and guarded (JwtAuthGuard + SystemRoleGuard, SUPER_ADMIN-only) in Backend/src/owner/owner.controller.ts: health, storage/usage, storage/usage/:companyId, storage/limits/:companyId, users, users/:userId/status, metrics/plan-distribution, metrics/snapshot, metrics/history. The (platform-admin) pages consume them via apiClient. No /api/platform/* endpoints exist anywhere; the earlier "unimplemented" note was a doc error.*
 - [ ] Build Subscription Overview page (all active subscriptions, revenue, churn)
 - [ ] Build Platform Settings page (global config, feature flags per workspace)
 - [ ] Owner Admin should see all three dashboards (Platform + Company + Practice) via a dashboard switcher
@@ -284,11 +284,7 @@ remains the leading candidate input for Phase 1.
 
 ---
 
-- 🟡 Platform admin pages (/platform-admin/storage,
-  /platform-admin/users, /platform-admin/metrics) are
-  frontend UI only; their backend APIs (/api/owner/*,
-  /api/platform/*) are unimplemented. Pages are client-
-  gated to SUPER_ADMIN, so no server-side exposure exists.
+- 🟡 Owner-API doc error corrected — all 9 /api/owner/* endpoints are implemented and SUPER_ADMIN-guarded (owner.controller.ts) and consumed by the platform-admin pages via apiClient; no /api/platform/* endpoints exist.
 
 ### Documentation Rule (Standing Policy)
 
@@ -324,6 +320,7 @@ These modules have controller/service stubs that return placeholder data. They r
 
 ## Technical Debt
 - [ ] Test suite exists but coverage is uneven (~87 genuine tests at cd3d30e8: 47 backend spec/test files incl. general-ledger, AP lifecycle, sub-ledger reversal, auth integration; 22 frontend component/route tests; 18 Playwright e2e specs). Still uncovered/thin: payroll→GL posting, banking reconciliation matching, tenant-isolation scoping, document-numbering concurrency, financial-report correctness. No coverage thresholds enforced in CI.
+- [ ] **Backend unit-suite baseline unproven** — Five audit attempts could not capture a complete npm test:unit run: the log stops after the npm invocation + ts-jest deprecation warning (zero suites start), and the --json retry produced a 0-byte results file. tsc --noEmit is clean and targeted specs pass, but a green full-suite baseline has never been evidenced. Requires one machine-level successful full run before test-suite health can be claimed.
 - Resolved — see Completed Projects. Fix: hourly counts.clear() in metrics.ts + PM2 max_memory_restart 1G.
 - [x] **`bot-connect.js` 404 errors** — Resolved. No references to `bot-connect.js` found in Frontend codebase.
 - [ ] Stabilize 3 flaky tests: 2 backend (prisma seed race conditions in auth tests), 1 frontend (Sidebar permission-check timing issue).
