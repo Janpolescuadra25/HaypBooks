@@ -37,6 +37,8 @@
 - ✅ **Deploy.sh Stale Cache Fix** — Completed August 26, 2026: Added `rm -rf .next` to deploy.sh before `npm run build` to prevent corrupted Next.js incremental builds from causing 400 errors on static assets.
 - ✅ **Onboarding Page Syntax Fix** — Completed August 26, 2026: Fixed malformed `saveCurrentStep()` function in `onboarding/page.tsx` that was causing build failures on the VPS.
 - ✅ **Phase H-0 Three-Role Foundation (SUPER_ADMIN Provisioning)** — Completed August 27, 2026: All code changes previously verified (systemRole + isOwner in JWT at all sign locations in prisma-auth.service.ts, jwt.strategy validate(), RolesGuard SUPER_ADMIN check). VPS tasks executed: ADMIN_EMAIL and ADMIN_DEFAULT_PASSWORD added to Backend .env, seed-admin run via `npm run db:seed:admin` (required transient NODE_OPTIONS=--max-old-space-size=8192 after OOM), SUPER_ADMIN login verified — decoded JWT contains systemRole: 'SUPER_ADMIN' and isOwner: true. All three H-0 boxes now closed.
+- ✅ **Add companies module README** — Created `Haypbooks/Backend/src/companies/README.md` documenting the multi-company management module's architecture, endpoints, and GL integration, complying with the Product Maturity Standard's documentation requirements.
+- ✅ **Add banking module README** — Created `Haypbooks/Backend/src/banking/README.md` documenting the banking module's bank account management, reconciliation workflows, and GL posting integration, complying with the Product Maturity Standard's documentation requirements.
 
 ---
 
