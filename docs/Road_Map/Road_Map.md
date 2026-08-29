@@ -138,7 +138,6 @@ In Progress to track future priorities.*
 
 ### P1: Accounting Ledger Integrity Workstream (NEW)
 > All items verified by Audit 001/001-B (August 27, 2026). These defects let business events bypass or corrupt the General Ledger.
-- **Silent unbalanced postings** — `Backend/src/shared/sub-ledger.service.ts:L133-L137`: when debits ≠ credits (tolerance 0.005), logs a warning and returns null; business transaction proceeds with NO GL posting. Must become fail-closed (abort entire transaction).
 - **Non-atomic business + GL writes** — invoice-send / payment / deposit flows run business-data and JE-posting in SEPARATE Prisma `$transaction`s; a crash between them permanently desyncs books.
 - **Balance Sheet missing Current Year Earnings** — `reporting.service.ts:L514-L533`: equity aggregates only equity-class accounts; no YTD-net-income plug → BS out of balance between closes.
 - **Document numbering races** — atomic `DocumentSequence.upsert()` exists (`schema.prisma:L5137`; invoices + sales orders only, `ar.repository.ts:L133-L162`). Extend it to Journal Entries (currently max()+1 scans in sub-ledger/accounting repository) and credit notes (count()+1).
