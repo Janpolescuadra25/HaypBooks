@@ -40,27 +40,6 @@
 
 ---
 
-## In Progress
-
-### Plan C Phase 3: Budgeting Module Enhancements
-**Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
-
-**Goal**: Extend the budgeting module with templates, alerts, exports, and forecasting capabilities.
-
-**What needs to be achieved**:
-- **Budget Templates**: Pre-built budget templates for common industries (retail, SaaS, professional services, manufacturing) that auto-populate account lines with realistic defaults based on chart of accounts structure
-- **Variance Alerts**: Automated notifications (in-app first, email later) when actual spending exceeds budgeted amounts by a configurable threshold (e.g., 10%, 20%, 50%) — alert rules stored in database with per-company customization
-- ~~**CSV/PDF Export**: Export budget vs actual reports to CSV (with proper number formatting and column headers) and PDF (styled to match the existing financial report layout) from the vs-actual page~~ — COMPLETED: CSV/PDF budget exports are fully functional and deployed.
-- **Rolling Forecasts**: Ability to update budget amounts mid-fiscal-year and compare original budget vs. revised forecast vs. actuals — requires a `scenario` field extension (DRAFT, ORIGINAL, REVISED, FORECAST)
-- **Cash Flow Integration**: Link budget data to cash flow forecasting so projected cash positions account for budgeted income and expenses by month
-- **Budget Ownership & Comments**: Assign budget line ownership to team members and add comment threads on individual budget lines for collaboration during budget review cycles
-
-*Status note (Aug 27, 2026): Core budgeting module (Plan C
-Phases 1-2) is deployed; Phase 3 enhancements — templates,
-variance alerts, rolling forecasts, cash-flow integration,
-ownership/comments — remain unimplemented. Retained under
-In Progress to track future priorities.*
-
 ---
 
 ## Priority Backlog
@@ -106,11 +85,12 @@ In Progress to track future priorities.*
 | Plan | Name | Status | Blocked By |
 |------|------|--------|------------|
 | A | Self-Hosted PostgreSQL Migration | Not Started | E2E testing completion |
+| C-3 | Budgeting Module Enhancements | Not Started | — |
 | D | Approval Workflows | Not Started | — |
 | E | Fixed Asset Management | Not Started | Core accounting E2E validation |
 | F-2 | Zypra AI Phase 2 (Persistent History, Document Q&A, Advanced Insights) | Not Started | — |
 | G | Product Maturity Standard & Audit Framework | In Progress — Standard v1.0 adopted; Phase 1 audit pending | All six audit phases (S1–S6) completed and signed off |
-| H | Three-Role Architecture Refactor | In Progress — H-0 Complete | Plan G completion |
+| H | Three-Role Architecture Refactor | H-3 Partially Implemented | Plan G completion |
 
 ### Plan A: Self-Hosted PostgreSQL Migration
 **Goal**: Migrate from Neon hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
@@ -122,6 +102,25 @@ In Progress to track future priorities.*
 - Update all environment variables (DATABASE_URL) and verify Prisma migrations apply cleanly against the new instance
 - Configure firewall rules so only the VPS (and local dev) can reach PostgreSQL port 5432
 - **Blocked by:** E2E testing completion — we need confidence that the data layer works correctly before migrating to self-hosted
+
+### Plan C Phase 3: Budgeting Module Enhancements
+**Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
+
+**Goal**: Extend the budgeting module with templates, alerts, exports, and forecasting capabilities.
+
+**What needs to be achieved**:
+- **Budget Templates**: Pre-built budget templates for common industries (retail, SaaS, professional services, manufacturing) that auto-populate account lines with realistic defaults based on chart of accounts structure
+- **Variance Alerts**: Automated notifications (in-app first, email later) when actual spending exceeds budgeted amounts by a configurable threshold (e.g., 10%, 20%, 50%) — alert rules stored in database with per-company customization
+- ~~**CSV/PDF Export**: Export budget vs actual reports to CSV (with proper number formatting and column headers) and PDF (styled to match the existing financial report layout) from the vs-actual page~~ — COMPLETED: CSV/PDF budget exports are fully functional and deployed.
+- **Rolling Forecasts**: Ability to update budget amounts mid-fiscal-year and compare original budget vs. revised forecast vs. actuals — requires a `scenario` field extension (DRAFT, ORIGINAL, REVISED, FORECAST)
+- **Cash Flow Integration**: Link budget data to cash flow forecasting so projected cash positions account for budgeted income and expenses by month
+- **Budget Ownership & Comments**: Assign budget line ownership to team members and add comment threads on individual budget lines for collaboration during budget review cycles
+
+*Status note (Aug 27, 2026): Core budgeting module (Plan C
+Phases 1-2) is deployed; Phase 3 enhancements — templates,
+variance alerts, rolling forecasts, cash-flow integration,
+ownership/comments — remain unimplemented. Retained under
+In Progress to track future priorities.*
 
 ### Plan D: Approval Workflows
 **Goal**: Provide controlled approval flows for high-risk accounting actions to enforce internal controls and audit compliance.
