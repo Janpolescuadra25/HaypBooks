@@ -2,17 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Bell, HelpCircle, ChevronDown, LayoutGrid, ListChecks } from 'lucide-react'
+import { Search, Plus, Bell, HelpCircle, ChevronDown, LayoutGrid } from 'lucide-react'
 import { authService } from '@/services/auth.service'
 import { useCompany } from '@/hooks/use-company'
-import OwnerProgressChecklist from './OwnerProgressChecklist'
 
 export default function OwnerTopBar() {
   const router = useRouter()
   const [user, setUser] = useState<any | null>(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [checklistOpen, setChecklistOpen] = useState(false)
 
   // company context for header label
   const { company, loading: companyLoading } = useCompany()
@@ -133,13 +131,6 @@ export default function OwnerTopBar() {
             <button className="p-2.5 text-emerald-300 hover:bg-white/10 hover:text-white rounded-xl transition-all">
               <HelpCircle size={20} />
             </button>
-            <button
-              onClick={() => setChecklistOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-emerald-300 hover:bg-white/10 hover:text-white rounded-xl transition-all text-xs font-bold"
-            >
-              <ListChecks size={16} />
-              <span className="hidden xl:inline">Checklist</span>
-            </button>
           </div>
 
           <div className="h-8 w-px bg-white/10 mx-1" />
@@ -172,8 +163,6 @@ export default function OwnerTopBar() {
           </div>
         </div>
       </header>
-
-      <OwnerProgressChecklist open={checklistOpen} onClose={() => setChecklistOpen(false)} />
 
       {/* Logout confirmation modal */}
       {showLogoutConfirm && (
