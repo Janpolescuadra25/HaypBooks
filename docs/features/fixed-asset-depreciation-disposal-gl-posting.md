@@ -33,3 +33,8 @@ This feature documents the new fixed asset depreciation and disposal posting flo
 - Disposal postings do not currently include separate FX revaluation treatment for multi-currency asset dispositions.
 - Posted depreciation and disposal entries are not editable; corrections must be handled through reversals and new correcting entries.
 - The current implementation does not yet provide a dedicated fixed asset ledger review UI; it is validated through backend posting service flows.
+
+- **Legacy `createAndPostJE` drops `entryNumber`** — the legacy path accepts an `entryNumber` argument but omits it from the `journalEntry.create` payload, so posted entries from that path carry no explicit entry number. Reported, not yet fixed; tracked as a P1 item in `Road_Map.md`.
+- **Entry-number race window (verify-then-write)** — entry numbers are assigned by a read-then-write sequence; the payroll/fixed-asset posting methods scope number assignment inside the Prisma transaction, but the legacy window remains open for other callers until numbering is unified (e.g., `DocumentSequence.upsert()`).
+- **`createPostedJE` signature extended additively** — `transactionSource` and `sourceReferenceId` were added to support sub-ledger linkage; existing callers are unaffected.
+- **Out-of-band migration reconciliation** — migration `20260830160000_add_journal_entry_id_to_payroll_and_fixed_asset_models` was applied out-of-band and recorded with `prisma migrate resolve --applied`; see the migration folder's README.md.

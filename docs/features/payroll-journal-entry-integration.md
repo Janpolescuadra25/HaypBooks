@@ -31,3 +31,8 @@ This feature documents the new payroll-to-general-ledger posting flow.
 - The current implementation is service-layer only and does not include a dedicated UI review workflow for posted payroll journal entries.
 - Journal entries are created as `POSTED` immediately; corrections require reversal journal entries rather than editing a posted entry.
 - Very small rounding differences are tolerated up to 0.005, but larger payroll rounding mismatches will still fail the posting.
+
+- **Legacy `createAndPostJE` drops `entryNumber`** — the legacy path accepts an `entryNumber` argument but omits it from the `journalEntry.create` payload, so posted entries from that path carry no explicit entry number. Reported, not yet fixed; tracked as a P1 item in `Road_Map.md`.
+- **Entry-number race window (verify-then-write)** — entry numbers are assigned by a read-then-write sequence; the payroll/fixed-asset posting methods scope number assignment inside the Prisma transaction, but the legacy window remains open for other callers until numbering is unified (e.g., `DocumentSequence.upsert()`).
+- **`createPostedJE` signature extended additively** — `transactionSource` and `sourceReferenceId` were added to support sub-ledger linkage; existing callers are unaffected.
+- **Out-of-band migration reconciliation** — migration `20260830160000_add_journal_entry_id_to_payroll_and_fixed_asset_models` was applied out-of-band and recorded with `prisma migrate resolve --applied`; see the migration folder's README.md.
