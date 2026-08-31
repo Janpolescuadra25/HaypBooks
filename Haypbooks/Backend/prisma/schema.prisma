@@ -2182,21 +2182,25 @@ model FixedAsset {
 }
 
 model FixedAssetDepreciation {
-  id          String   @id @default(uuid())
-  assetId     String
-  companyId   String
-  scheduleId  String?
-  periodStart DateTime
-  periodEnd   DateTime
-  amount      Decimal  @db.Decimal(19, 4)
-  createdAt   DateTime @default(now())
+  id             String   @id @default(uuid())
+  assetId        String
+  companyId      String
+  scheduleId     String?
+  periodStart    DateTime
+  periodEnd      DateTime
+  amount         Decimal  @db.Decimal(19, 4)
+  postingStatus  PostingStatus @default(DRAFT)
+  journalEntryId String?
+  createdAt      DateTime @default(now())
 
-  asset    FixedAsset          @relation(fields: [assetId], references: [id])
-  schedule FixedAssetSchedule? @relation(fields: [scheduleId], references: [id])
-  company  Company             @relation(fields: [companyId], references: [id])
+  asset       FixedAsset          @relation(fields: [assetId], references: [id])
+  schedule    FixedAssetSchedule? @relation(fields: [scheduleId], references: [id])
+  company     Company             @relation(fields: [companyId], references: [id])
+  journalEntry JournalEntry?      @relation("JournalEntry_FixedAssetDepreciations", fields: [journalEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([assetId])
   @@index([companyId])
+  @@index([journalEntryId])
 }
 
 model FixedAssetSchedule {
@@ -2220,21 +2224,25 @@ model FixedAssetSchedule {
 }
 
 model AssetDisposal {
-  id           String              @id @default(uuid())
-  companyId    String
-  assetId      String
-  disposalDate DateTime
-  method       AssetDisposalMethod
-  proceeds     Decimal?            @db.Decimal(19, 4)
-  gainLoss     Decimal?            @db.Decimal(19, 4)
-  description  String?
-  createdAt    DateTime            @default(now())
+  id             String              @id @default(uuid())
+  companyId      String
+  assetId        String
+  disposalDate   DateTime
+  method         AssetDisposalMethod
+  proceeds       Decimal?            @db.Decimal(19, 4)
+  gainLoss       Decimal?            @db.Decimal(19, 4)
+  postingStatus  PostingStatus       @default(DRAFT)
+  journalEntryId String?
+  description    String?
+  createdAt      DateTime            @default(now())
 
-  company Company    @relation(fields: [companyId], references: [id])
-  asset   FixedAsset @relation(fields: [assetId], references: [id])
+  company      Company    @relation(fields: [companyId], references: [id])
+  asset        FixedAsset @relation(fields: [assetId], references: [id])
+  journalEntry JournalEntry? @relation("JournalEntry_AssetDisposals", fields: [journalEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([companyId, disposalDate])
   @@index([assetId])
+  @@index([journalEntryId])
 }
 
 model AssetImpairment {
@@ -5562,6 +5570,9 @@ model JournalEntry {
   customerRefunds       CustomerRefund[]       @relation("JournalEntry_CustomerRefunds")
   vendorRefunds         VendorRefund[]         @relation("JournalEntry_VendorRefunds")
   writeOffs             WriteOff[]             @relation("JournalEntry_WriteOffs")
+  payrollRuns           PayrollRun[]           @relation("JournalEntry_PayrollRuns")
+  fixedAssetDepreciations FixedAssetDepreciation[] @relation("JournalEntry_FixedAssetDepreciations")
+  assetDisposals        AssetDisposal[]        @relation("JournalEntry_AssetDisposals")
 
   // Auto-added opposite relations (generated)
   intercompanyFromTransactions IntercompanyTransaction[] @relation("IntercompanyFromJE")
@@ -6055,24 +6066,27 @@ model PaySchedule {
 
 model PayrollRun {
   id            String           @id @default(uuid())
-  companyId     String
-  payScheduleId String?
-  startDate     DateTime
-  endDate       DateTime
-  status        PayrollRunStatus @default(DRAFT) // DRAFT | SUBMITTED | POSTED | VOID
-  createdAt     DateTime         @default(now())
-  submittedAt   DateTime?
-  deletedAt     DateTime?
+  companyId      String
+  payScheduleId  String?
+  startDate      DateTime
+  endDate        DateTime
+  status         PayrollRunStatus @default(DRAFT) // DRAFT | SUBMITTED | POSTED | VOID
+  postingStatus  PostingStatus     @default(DRAFT)
+  journalEntryId String?
+  createdAt      DateTime          @default(now())
+  submittedAt    DateTime?
+  deletedAt      DateTime?
 
   company       Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
   paySchedule   PaySchedule?         @relation(fields: [payScheduleId], references: [id])
   employees     PayrollRunEmployee[]
   paychecks     Paycheck[]
-  postingStatus PostingStatus        @default(DRAFT)
+  journalEntry  JournalEntry?        @relation("JournalEntry_PayrollRuns", fields: [journalEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([companyId, startDate, endDate])
   @@index([companyId, status])
   @@index([deletedAt])
+  @@index([journalEntryId])
 }
 
 model PayrollRunEmployee {
