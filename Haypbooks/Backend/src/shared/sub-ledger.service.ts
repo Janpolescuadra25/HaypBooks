@@ -134,6 +134,8 @@ export class SubLedgerService {
         currency: await this.resolveCurrency(data.companyId, data.currency),
         postingStatus: 'POSTED',
         entryNumber: data.entryNumber,
+        transactionSource: data.transactionSource,
+        sourceReferenceId: data.sourceReferenceId,
         createdById: data.createdById ?? null,
         lines: {
           create: data.lines.map(l => ({
@@ -1838,5 +1840,233 @@ const lines = (invoice as any).lines ?? []
         await run(txClient)
       })
     }
+  }
+
+  async postPayrollRunToGL(params: {
+    companyId: string
+    workspaceId: string
+    payrollRunId: string
+    postedById?: string
+  }, tx?: any): Promise<string | null> {
+    const executor = tx ?? this.prisma
+
+    const runFn = async (db: any) => {
+      const run = await db.payrollRun.findFirst({
+        where: { id: params.payrollRunId, companyId: params.companyId, deletedAt: null },
+        select: { id: true, companyId: true, startDate: true, endDate: true, journalEntryId: true, postingStatus: true },
+      })
+      if (!run) return null
+      if (run.journalEntryId || run.postingStatus === 'POSTED') return run.journalEntryId
+
+      const paychecks = await db.paycheck.aggregate({
+        where: { payrollRunId: run.id, companyId: params.companyId, deletedAt: null },
+        _sum: { grossAmount: true, netAmount: true },
+        _count: { _all: true },
+      })
+
+      const totalGross = this.roundMoney(Number(paychecks._sum.grossAmount ?? 0))
+      const totalNet = this.roundMoney(Number(paychecks._sum.netAmount ?? 0))
+      const totalDeduction = this.roundMoney(totalGross - totalNet)
+
+      if ((paychecks._count?._all ?? 0) === 0) {
+        throw new BadRequestException(`Payroll run ${params.payrollRunId} has no paychecks to post`)
+      }
+      if (totalGross <= 0.005) {
+        throw new BadRequestException(`Payroll run ${params.payrollRunId} has no positive gross pay to post`)    }
+      if (totalNet > totalGross) {
+        throw new BadRequestException(`Payroll run ${params.payrollRunId} has invalid totals: gross ${totalGross}, net ${totalNet}`)
+      }
+
+      await this.assertPeriodOpen(params.companyId, run.endDate, db)
+
+      const salaryExpense = await resolveAccount(db, params.companyId, { code: '6010', name: 'Salaries and Wages', typeId: 2 })
+      const accruedWages = await resolveAccount(db, params.companyId, { code: '2030', name: 'Accrued Salaries and Wages', typeId: 4 })
+      if (!salaryExpense?.id || !accruedWages?.id) {
+        throw new BadRequestException('Required payroll GL account not found')
+      }
+      const salaryExpenseId = salaryExpense.id
+      const accruedWagesId = accruedWages.id
+
+      const entryNumber = await this.nextEntryNumber(params.companyId, 'PR', db)
+      const je = await this.createPostedJE(db, {
+        workspaceId: params.workspaceId,
+        companyId: params.companyId,
+        date: run.endDate,
+        description: `Payroll Run ${run.id}`,
+        createdById: params.postedById,
+        entryNumber,
+        transactionSource: 'Payroll Run',
+        sourceReferenceId: params.payrollRunId,
+        lines: [
+          { accountId: salaryExpenseId, debit: totalGross, credit: 0, memo: 'Payroll expense' },
+          { accountId: accruedWagesId, debit: 0, credit: totalNet, memo: 'Accrued salaries and wages' },
+          ...(totalDeduction > 0.005 ? [{ accountId: (await resolveAccount(db, params.companyId, { code: '2070', name: 'SSS Contributions Payable', typeId: 4 })).id!, debit: 0, credit: totalDeduction, memo: 'Payroll deductions' }] : []),
+        ],
+      })
+
+      await db.payrollRun.update({
+        where: { id: run.id },
+        data: {
+          journalEntryId: je.id,
+          postingStatus: 'POSTED',
+          status: 'POSTED',
+        },
+      })
+      return je.id
+    }
+
+    if (tx) {
+      return runFn(executor)
+    }
+    return this.prisma.$transaction(async (txClient) => runFn(txClient))
+  }
+
+  async postAssetDepreciationToGL(params: {
+    companyId: string
+    workspaceId: string
+    depreciationId: string
+    amount: number
+    date: Date
+    postedById?: string
+  }, tx?: any): Promise<string | null> {
+    const executor = tx ?? this.prisma
+
+    const runFn = async (db: any) => {
+      const depreciation = await db.fixedAssetDepreciation.findFirst({
+        where: { id: params.depreciationId, companyId: params.companyId },
+        include: { asset: true },
+      })
+      if (!depreciation) return null
+      if (depreciation.journalEntryId || depreciation.postingStatus === 'POSTED') return depreciation.journalEntryId
+
+      if (!depreciation.asset?.depreciationExpenseAccountId || !depreciation.asset?.accumulatedDepreciationId) {
+        throw new BadRequestException(`Fixed asset ${depreciation.assetId} is missing GL account links (accumulatedDepreciationId, depreciationExpenseAccountId) required for depreciation posting`)
+      }
+
+      const amount = this.roundMoney(params.amount)
+      if (amount <= 0.005) {
+        throw new BadRequestException('Nothing to post')
+      }
+
+      await this.assertPeriodOpen(params.companyId, params.date, db)
+
+      const entryNumber = await this.nextEntryNumber(params.companyId, 'DEP', db)
+      const je = await this.createPostedJE(db, {
+        workspaceId: params.workspaceId,
+        companyId: params.companyId,
+        date: params.date,
+        description: `Fixed Asset Depreciation ${depreciation.id}`,
+        createdById: params.postedById,
+        entryNumber,
+        transactionSource: 'Fixed Asset Depreciation',
+        sourceReferenceId: params.depreciationId,
+        lines: [
+          { accountId: depreciation.asset.depreciationExpenseAccountId, debit: amount, credit: 0, memo: 'Depreciation expense' },
+          { accountId: depreciation.asset.accumulatedDepreciationId, debit: 0, credit: amount, memo: 'Accumulated depreciation' },
+        ],
+      })
+
+      await db.fixedAssetDepreciation.update({
+        where: { id: depreciation.id },
+        data: { journalEntryId: je.id, postingStatus: 'POSTED' },
+      })
+      return je.id
+    }
+
+    if (tx) {
+      return runFn(executor)
+    }
+    return this.prisma.$transaction(async (txClient) => runFn(txClient))
+  }
+
+  async postAssetDisposalToGL(params: {
+    companyId: string
+    workspaceId: string
+    disposalId: string
+    cost: number
+    accumulated: number
+    proceeds: number
+    date: Date
+    postedById?: string
+  }, tx?: any): Promise<string | null> {
+    const executor = tx ?? this.prisma
+
+    const runFn = async (db: any) => {
+      const disposal = await db.assetDisposal.findFirst({
+        where: { id: params.disposalId, companyId: params.companyId },
+        include: { asset: true },
+      })
+      if (!disposal) return null
+      if (disposal.journalEntryId || disposal.postingStatus === 'POSTED') return disposal.journalEntryId
+      if (!disposal.asset?.assetAccountId || !disposal.asset?.accumulatedDepreciationId) {
+        throw new BadRequestException(`Fixed asset ${disposal.assetId} is missing GL account links (assetAccountId, accumulatedDepreciationId) required for disposal posting`)
+      }
+
+      const gainAccount = await resolveAccount(db, params.companyId, { code: '4530', name: 'Gain on Sale of Assets', typeId: 3 })
+      const lossAccount = await resolveAccount(db, params.companyId, { code: '9020', name: 'Loss on Sale of Assets', typeId: 2 })
+      const cashAccount = params.proceeds > 0 ? await resolveAccount(db, params.companyId, SYSTEM_ACCOUNTS.CASH) : null
+
+      const costAmount = this.roundMoney(params.cost)
+      const accumulatedAmount = this.roundMoney(params.accumulated)
+      const proceedsAmount = this.roundMoney(params.proceeds)
+      const bookValue = this.roundMoney(costAmount - accumulatedAmount)
+      const gainLoss = this.roundMoney(proceedsAmount - bookValue)
+
+      const lines: Array<{ accountId: string; debit: number; credit: number; memo?: string }> = []
+      if (accumulatedAmount > 0.005) {
+        lines.push({ accountId: disposal.asset.accumulatedDepreciationId, debit: accumulatedAmount, credit: 0, memo: 'Accumulated depreciation' })
+      }
+      if (proceedsAmount > 0.005) {
+        if (!cashAccount?.id) {
+          throw new BadRequestException('Cash account not found for disposal proceeds')
+        }
+        lines.push({ accountId: cashAccount.id, debit: proceedsAmount, credit: 0, memo: 'Proceeds from disposal' })
+      }
+      if (gainLoss > 0.005) {
+        if (!gainAccount?.id) {
+          throw new BadRequestException('Gain on Sale account not found')
+        }
+        lines.push({ accountId: gainAccount.id, debit: 0, credit: gainLoss, memo: 'Gain on disposal' })
+      } else if (gainLoss < -0.005) {
+        if (!lossAccount?.id) {
+          throw new BadRequestException('Loss on Sale account not found')
+        }
+        lines.push({ accountId: lossAccount.id, debit: this.roundMoney(Math.abs(gainLoss)), credit: 0, memo: 'Loss on disposal' })
+      }
+      lines.push({ accountId: disposal.asset.assetAccountId, debit: 0, credit: costAmount, memo: 'Asset carrying amount' })
+
+      const totalDebit = lines.reduce((sum, l) => sum + l.debit, 0)
+      const totalCredit = lines.reduce((sum, l) => sum + l.credit, 0)
+      if (lines.length === 0 || (totalDebit <= 0.005 && totalCredit <= 0.005)) {
+        throw new BadRequestException('Nothing to post')
+      }
+
+      await this.assertPeriodOpen(params.companyId, params.date, db)
+
+      const entryNumber = await this.nextEntryNumber(params.companyId, 'FA', db)
+      const je = await this.createPostedJE(db, {
+        workspaceId: params.workspaceId,
+        companyId: params.companyId,
+        date: params.date,
+        description: `Fixed Asset Disposal ${disposal.id}`,
+        createdById: params.postedById,
+        entryNumber,
+        transactionSource: 'Fixed Asset Disposal',
+        sourceReferenceId: params.disposalId,
+        lines,
+      })
+
+      await db.assetDisposal.update({
+        where: { id: disposal.id },
+        data: { journalEntryId: je.id, postingStatus: 'POSTED' },
+      })
+
+      return je.id
+    }
+
+    if (tx) {
+      return runFn(executor)
+    }
+    return this.prisma.$transaction(async (txClient) => runFn(txClient))
   }
 }
