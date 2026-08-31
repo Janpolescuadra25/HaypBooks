@@ -321,8 +321,9 @@ export class InventoryRepository {
         })
     }
 
-    async runDepreciation(companyId: string, assetId: string, periodStart: Date, periodEnd: Date) {
-        const asset = await this.prisma.fixedAsset.findFirst({ where: { id: assetId, companyId, deletedAt: null } })
+    async runDepreciation(companyId: string, assetId: string, periodStart: Date, periodEnd: Date, tx?: any) {
+        const db = tx ?? this.prisma
+        const asset = await db.fixedAsset.findFirst({ where: { id: assetId, companyId, deletedAt: null } })
         if (!asset) return null
 
         const depreciableBase = Number(asset.cost) - Number(asset.salvageValue ?? 0)
@@ -331,43 +332,52 @@ export class InventoryRepository {
             : 0
 
         // Get already depreciated total
-        const totalDepreciated = await this.prisma.fixedAssetDepreciation.aggregate({
+        const totalDepreciated = await db.fixedAssetDepreciation.aggregate({
             where: { assetId }, _sum: { amount: true },
         })
         const alreadyDepreciated = Number(totalDepreciated._sum.amount ?? 0)
         const remaining = depreciableBase - alreadyDepreciated
         const amount = Math.min(monthlyDepreciation, remaining)
 
-        if (amount <= 0) return { message: 'Asset is fully depreciated', assetId }
+        if (amount <= 0) {
+            return { message: 'Asset is fully depreciated', assetId }
+        }
 
-        return this.prisma.fixedAssetDepreciation.create({
+        return db.fixedAssetDepreciation.create({
             data: { companyId, assetId, periodStart, periodEnd, amount },
         })
     }
 
     async disposeFixedAsset(companyId: string, assetId: string, data: {
         disposalDate: Date; method: string; proceeds?: number
-    }) {
-        const asset = await this.prisma.fixedAsset.findFirst({ where: { id: assetId, companyId } })
+    }, tx?: any) {
+        const db = tx ?? this.prisma
+        const asset = await db.fixedAsset.findFirst({ where: { id: assetId, companyId } })
         if (!asset) return null
 
-        const totalDepreciated = await this.prisma.fixedAssetDepreciation.aggregate({
+        const totalDepreciated = await db.fixedAssetDepreciation.aggregate({
             where: { assetId }, _sum: { amount: true },
         })
         const accumulated = Number(totalDepreciated._sum.amount ?? 0)
         const bookValue = Number(asset.cost) - accumulated
         const gainLoss = (data.proceeds ?? 0) - bookValue
 
-        return this.prisma.$transaction(async (tx) => {
-            const disposal = await tx.assetDisposal.create({
-                data: {
-                    companyId, assetId, disposalDate: data.disposalDate,
-                    method: data.method as any, proceeds: data.proceeds ?? null, gainLoss, description: `Disposed: ${data.method}`,
-                },
-            })
-            await tx.fixedAsset.update({ where: { id: assetId }, data: { status: 'DISPOSED', deletedAt: new Date() } })
-            return { disposal, gainLoss }
+        const disposalResult = await db.assetDisposal.create({
+            data: {
+                companyId, assetId, disposalDate: data.disposalDate,
+                method: data.method as any, proceeds: data.proceeds ?? null, gainLoss, description: `Disposed: ${data.method}`,
+            },
         })
+        await db.fixedAsset.update({ where: { id: assetId }, data: { status: 'DISPOSED', deletedAt: new Date() } })
+
+        return {
+            disposal: disposalResult,
+            gainLoss,
+            cost: Number(asset.cost),
+            accumulated,
+            assetAccountId: asset.assetAccountId,
+            accumulatedDepreciationId: asset.accumulatedDepreciationId,
+        }
     }
 
     // ─── Asset Depreciation Schedule ─────────────────────────────────────────

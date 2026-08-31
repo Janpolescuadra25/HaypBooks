@@ -1,16 +1,27 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { PayrollRepository } from './payroll.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { SubLedgerService } from '../shared/sub-ledger.service'
 
 @Injectable()
 export class PayrollService {
-    constructor(private readonly repo: PayrollRepository, private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly repo: PayrollRepository,
+        private readonly prisma: PrismaService,
+        private readonly subLedger: SubLedgerService,
+    ) { }
 
     private async assertAccess(userId: string, companyId: string) {
         const m = await this.prisma.workspaceUser.findFirst({
             where: { status: 'ACTIVE', userId, workspace: { companies: { some: { id: companyId } } } },
         })
         if (!m) throw new ForbiddenException('Access denied')
+    }
+
+    private async getWorkspaceId(companyId: string) {
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { workspaceId: true } })
+        if (!company) throw new NotFoundException('Company not found')
+        return company.workspaceId
     }
 
     // ─── Employees ────────────────────────────────────────────────────────────
@@ -101,7 +112,10 @@ export class PayrollService {
         const run = await this.repo.findPayrollRunById(companyId, runId)
         if (!run) throw new NotFoundException('Payroll run not found')
         if (run.status !== 'SUBMITTED') throw new BadRequestException('Only SUBMITTED payroll runs can be posted')
-        return this.repo.postPayrollRun(companyId, runId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+        const updatedRun = await this.subLedger.postPayrollRunToGL({ companyId, workspaceId, payrollRunId: runId, postedById: userId })
+        if (!updatedRun) throw new NotFoundException('Payroll run not found')
+        return updatedRun
     }
 
     async voidPayrollRun(userId: string, companyId: string, runId: string) {

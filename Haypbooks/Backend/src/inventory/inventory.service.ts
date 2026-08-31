@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { InventoryRepository } from './inventory.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { SubLedgerService } from '../shared/sub-ledger.service'
 
 @Injectable()
 export class InventoryService {
-    constructor(private readonly repo: InventoryRepository, private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly repo: InventoryRepository,
+        private readonly prisma: PrismaService,
+        private readonly subLedger: SubLedgerService,
+    ) { }
 
     private async getWorkspaceId(companyId: string) {
         const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { workspaceId: true } })
@@ -360,7 +365,36 @@ export class InventoryService {
     async runDepreciation(userId: string, companyId: string, assetId: string, data: any) {
         await this.assertAccess(userId, companyId)
         if (!data.periodStart || !data.periodEnd) throw new BadRequestException('periodStart and periodEnd are required')
-        const result = await this.repo.runDepreciation(companyId, assetId, new Date(data.periodStart), new Date(data.periodEnd))
+
+        const asset = await this.prisma.fixedAsset.findFirst({ where: { id: assetId, companyId, deletedAt: null } })
+        if (!asset) throw new NotFoundException('Asset not found or fully depreciated')
+        if (asset.status === 'DISPOSED') throw new BadRequestException('Cannot depreciate a disposed asset')
+        if (!asset.depreciationExpenseAccountId || !asset.accumulatedDepreciationId) {
+            throw new BadRequestException('Fixed asset is missing GL account links (accumulatedDepreciationId, depreciationExpenseAccountId) required for depreciation posting')
+        }
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        const result = await this.prisma.$transaction(async (tx) => {
+            const depreciation = await this.repo.runDepreciation(companyId, assetId, new Date(data.periodStart), new Date(data.periodEnd), tx)
+            if (!depreciation || !(depreciation as any).id) return depreciation
+            const expenseAccountId = asset.depreciationExpenseAccountId!
+            const accumulatedAccountId = asset.accumulatedDepreciationId!
+            const jeId = await this.subLedger.postAssetDepreciationToGL({
+                companyId,
+                workspaceId,
+                depreciationId: (depreciation as any).id,
+                expenseAccountId,
+                accumulatedAccountId,
+                amount: Number((depreciation as any).amount),
+                date: new Date(data.periodEnd),
+                postedById: userId,
+            }, tx)
+            if (!jeId) {
+                throw new BadRequestException('Depreciation GL posting failed')
+            }
+            return depreciation
+        })
+
         if (!result) throw new NotFoundException('Asset not found or fully depreciated')
         return result
     }
@@ -369,10 +403,46 @@ export class InventoryService {
         await this.assertAccess(userId, companyId)
         if (!data.disposalDate) throw new BadRequestException('disposalDate is required')
         if (!data.method) throw new BadRequestException('method is required (SALE, SCRAPPED, DONATED)')
-        const result = await this.repo.disposeFixedAsset(companyId, assetId, {
-            disposalDate: new Date(data.disposalDate), method: data.method, proceeds: data.proceeds ? Number(data.proceeds) : undefined,
+
+        const asset = await this.prisma.fixedAsset.findFirst({ where: { id: assetId, companyId } })
+        if (!asset) throw new NotFoundException('Asset not found')
+        if (asset.status === 'DISPOSED') throw new BadRequestException('Asset already disposed')
+
+        const existingDisposal = await this.prisma.assetDisposal.findFirst({ where: { assetId } })
+        if (existingDisposal) throw new BadRequestException('Asset already has a disposal record')
+        if (!asset.assetAccountId || !asset.accumulatedDepreciationId) {
+            throw new BadRequestException('Fixed asset is missing GL account links (assetAccountId, accumulatedDepreciationId) required for disposal posting')
+        }
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        const result = await this.prisma.$transaction(async (tx) => {
+            const disposalResult = await this.repo.disposeFixedAsset(companyId, assetId, {
+                disposalDate: new Date(data.disposalDate),
+                method: data.method,
+                proceeds: data.proceeds ? Number(data.proceeds) : undefined,
+            }, tx)
+            if (!disposalResult) throw new NotFoundException('Asset not found')
+
+            const assetAccountId = asset.assetAccountId!
+            const accumulatedAccountId = asset.accumulatedDepreciationId!
+            const jeId = await this.subLedger.postAssetDisposalToGL({
+                companyId,
+                workspaceId,
+                disposalId: disposalResult.disposal.id,
+                assetAccountId,
+                accumulatedAccountId,
+                cost: Number(asset.cost),
+                accumulated: disposalResult.accumulated,
+                proceeds: data.proceeds ? Number(data.proceeds) : 0,
+                date: new Date(data.disposalDate),
+                postedById: userId,
+            }, tx)
+            if (!jeId) {
+                throw new BadRequestException('Asset disposal GL posting failed')
+            }
+            return { ...disposalResult, journalEntryId: jeId }
         })
-        if (!result) throw new NotFoundException('Asset not found')
+
         return result
     }
 
@@ -396,6 +466,9 @@ export class InventoryService {
                 salvageValue: data.salvageValue != null ? Number(data.salvageValue) : undefined,
                 usefulLifeMonths: data.usefulLifeMonths ? Number(data.usefulLifeMonths) : undefined,
                 depreciationMethod: data.depreciationMethod,
+                assetAccountId: data.assetAccountId,
+                accumulatedDepreciationId: data.accumulatedDepreciationId,
+                depreciationExpenseAccountId: data.depreciationExpenseAccountId,
             },
         })
     }
