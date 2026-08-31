@@ -144,6 +144,7 @@ In Progress to track future priorities.*
 - **Banking integrity gaps** — reconciliation completion does not enforce difference == 0; auto-match ignores amounts; transaction import lacks dedup fingerprinting (re-import double-counts); newly created bank accounts get no linked GL account.
 - **Payroll never posts to GL** — `payroll.repository.ts:L174-L176`: postPayrollRun() flips status only; no salary-expense or net-pay-liability JournalEntries ever created.
 - **Fixed assets: depreciation runs & disposals insert records but create NO journal entries** — `inventory.repository.ts:L320-L375`.
+- **Payroll and fixed asset GL posting remains incomplete** — payroll runs, depreciation records, and disposals still need a fully audited, end-to-end POSTED `JournalEntry` flow for all business paths.
 - **FX revaluation placeholder** — endpoint returns last-50-JEs proxy; real unrealized gain/loss computation + posting absent. Unify base-currency fallbacks ('PHP' vs 'USD' across sub-ledger/gl-integration/exchange-rate/accounting).
 
 ### Plan E: Fixed Asset Management
