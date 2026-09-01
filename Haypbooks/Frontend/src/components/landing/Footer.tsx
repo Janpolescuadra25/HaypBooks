@@ -1,72 +1,132 @@
-'use client'
-import { BookOpen } from 'lucide-react'
+"use client";
 
-const COLS = [
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { RotateCcw } from "lucide-react";
+import { PixelLabel } from "./Hud";
+
+const COLS: { title: string; links: { label: string; href: string }[] }[] = [
   {
-    title: 'Product',
-    links: ['Invoicing', 'Expenses', 'Inventory', 'Payroll', 'Insights'],
+    title: "Modules",
+    links: [
+      { label: "Core Accounting", href: "#worlds" },
+      { label: "Sales & Invoicing", href: "#worlds" },
+      { label: "Expenses & Payables", href: "#worlds" },
+      { label: "Banking", href: "#worlds" },
+      { label: "Payroll", href: "#worlds" },
+      { label: "Inventory", href: "#worlds" },
+    ],
   },
   {
-    title: 'Company',
-    links: ['About Us', 'Careers', 'Press', 'Partners', 'Security'],
+    title: "Company",
+    links: [
+      { label: "Practice Hub", href: "/accountants" },
+      { label: "For Accountants", href: "/accountants" },
+      { label: "For Business Owners", href: "#worlds" },
+      { label: "Pricing", href: "#pricing" },
+      { label: "Start Free Trial", href: "/signup" },
+    ],
   },
   {
-    title: 'Support',
-    links: ['Help Center', 'Contact Us', 'API Docs', 'Status', 'Changelog'],
+    title: "Support",
+    links: [
+      { label: "Help Center", href: "/learn-support" },
+      { label: "Getting Started Guide", href: "/learn-support" },
+      { label: "Video Tutorials", href: "/learn-support" },
+      { label: "Contact Us", href: "/learn-support" },
+    ],
   },
-]
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy Policy", href: "#top" },
+      { label: "Terms of Service", href: "#top" },
+      { label: "Security", href: "#achievements" },
+      { label: "Compliance", href: "#achievements" },
+    ],
+  },
+];
 
 export default function Footer() {
-  return (
-    <footer className="bg-emerald-950 text-white/80">
-      <div className="max-w-7xl mx-auto px-6 pt-20 pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const resolve = (href: string) => (href.startsWith("#") && !isHome ? `/${href}` : href);
 
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-white font-bold text-lg tracking-tight">HaypBooks</span>
-            </div>
-            <p className="text-sm text-white/50 leading-relaxed mb-6">
-              The all-in-one business platform for modern businesses. Simplify, automate, and grow.
-            </p>
-            <div className="flex gap-3">
-              {['fb', 'tw', 'li'].map(s => (
-                <div key={s} className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-xs font-bold cursor-default hover:bg-emerald-600 transition-colors">
-                  {s === 'fb' ? 'f' : s === 'tw' ? 'X' : 'in'}
+  const replayIntro = () => {
+    try {
+      sessionStorage.removeItem("hb-intro-seen");
+    } catch {
+      /* storage unavailable — reload anyway */
+    }
+    window.location.href = "/";
+  };
+
+  return (
+    <footer className="relative z-10 bg-navy-950 text-navy-100 mt-auto">
+      <div className="border-t-4 border-quest-500" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-10">
+          <div className="col-span-2">
+            <div className="flex items-center gap-3">
+              <span className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 grid place-items-center p-1.5">
+                <Image src="/hb-logo.png" alt="HaypBooks logo" width={44} height={44} className="w-full h-full object-contain" />
+              </span>
+              <div>
+                <div className="font-display font-extrabold text-lg tracking-widest text-white">
+                  HAYP<span className="text-quest-400">BOOKS</span>
                 </div>
-              ))}
+                <PixelLabel className="text-navy-300/80 text-[7px]">MODERN ACCOUNTING REIMAGINED</PixelLabel>
+              </div>
+            </div>
+            <p className="mt-5 font-head text-sm text-navy-200/70 leading-relaxed max-w-xs">
+              The accounting & practice management suite that keeps your books clean,
+              your team in sync and your month-end stress-free.
+            </p>
+            <div className="mt-6 inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+              <span className="w-2 h-2 rounded-full bg-quest-400 hb-blink" />
+              <span className="font-pixel text-[8px] text-quest-300">ALL SYSTEMS ONLINE</span>
             </div>
           </div>
 
-          {/* Link columns */}
-          {COLS.map(col => (
-            <div key={col.title}>
-              <h4 className="text-white font-bold text-sm uppercase tracking-widest mb-6">{col.title}</h4>
-              <ul className="space-y-3">
-                {col.links.map(link => (
-                  <li key={link}>
-                    <span className="text-white/50 text-sm hover:text-emerald-400 transition-colors cursor-default">{link}</span>
+          {COLS.map((c) => (
+            <nav key={c.title} aria-label={`${c.title} links`}>
+              <h3 className="font-display text-xs font-bold uppercase tracking-[0.22em] text-quest-400">
+                {c.title}
+              </h3>
+              <ul className="mt-4 space-y-2.5">
+                {c.links.map((l) => (
+                  <li key={l.label}>
+                    <a
+                      href={resolve(l.href)}
+                      className="font-head text-sm text-navy-200/75 hover:text-quest-300 transition-colors"
+                    >
+                      {l.label}
+                    </a>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-white/40 text-sm">© 2026 HaypBooks Inc. All rights reserved.</p>
-          <div className="flex gap-6">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
-              <span key={item} className="text-white/40 text-sm hover:text-white/70 transition-colors cursor-default">{item}</span>
-            ))}
+        <div className="mt-12 pt-7 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="font-head text-xs text-navy-300/70">
+            © 2026 HaypBooks · haypbooks.com · All rights reserved.
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={replayIntro}
+              className="inline-flex items-center gap-1.5 font-head text-xs font-semibold text-navy-200/70 hover:text-quest-300 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Replay intro
+            </button>
+            <p className="font-pixel text-[8px] text-navy-300/60">
+              MADE FOR MODERN ACCOUNTANTS
+            </p>
           </div>
         </div>
       </div>
     </footer>
-  )
+  );
 }
