@@ -7,9 +7,9 @@ export async function trackEvent(eventName: string, payload: Record<string, any>
       return
     }
     // Fallback to fetch
-    await fetch('/api/analytics/event', { credentials: 'include',
-      method: 'POST',
+    await fetch('/api/analytics/event', {
       credentials: 'include',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: eventName, payload, timestamp: new Date().toISOString() }),
     }).catch(() => {})
