@@ -20,6 +20,31 @@ const config: Config = {
           slate: '#94A3B8',
           primary: '#0d9488'
         },
+        navy: {
+          50: '#eef4fb',
+          100: '#d9e6f5',
+          200: '#b3cbe9',
+          300: '#7fa6d4',
+          400: '#4d7db5',
+          500: '#2b5c96',
+          600: '#1b4274',
+          700: '#123058',
+          800: '#0c1f42',
+          900: '#081631',
+          950: '#050f24',
+        },
+        quest: {
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+        },
         /* Override Tailwind's teal palette to steer the app toward a light-green theme */
         teal: {
           50: '#f0fdfa',
@@ -33,6 +58,12 @@ const config: Config = {
           800: '#115e54',
           900: '#134339'
         }
+      },
+      fontFamily: {
+        display: ['Orbitron', 'Space Grotesk', 'system-ui', 'sans-serif'],
+        pixel: ['Press Start 2P', 'Orbitron', 'monospace'],
+        head: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       backdropBlur: {
         xs: '2px',

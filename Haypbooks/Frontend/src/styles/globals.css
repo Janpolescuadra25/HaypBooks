@@ -3,6 +3,145 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes hb-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes hb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes hb-float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-24px) rotate(3deg); }
+}
+@keyframes hb-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+@keyframes hb-grid-pan {
+  from { background-position: 0 0; }
+  to { background-position: 0 44px; }
+}
+@keyframes hb-pulse-glow {
+  0%, 100% { box-shadow: 0 0 24px rgba(16, 185, 129, 0.35), 0 0 64px rgba(16, 185, 129, 0.12); }
+  50% { box-shadow: 0 0 44px rgba(16, 185, 129, 0.6), 0 0 96px rgba(16, 185, 129, 0.22); }
+}
+@keyframes hb-shine {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(240%) skewX(-18deg); }
+}
+@keyframes hb-spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes hb-bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-10px) rotate(4deg); }
+}
+@keyframes hb-scroll-dot {
+  0% { transform: translateY(0); opacity: 1; }
+  70% { transform: translateY(14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+@keyframes hbshake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+@keyframes hbfade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hb-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: hb-marquee 36s linear infinite;
+}
+.hb-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.hb-float { animation: hb-float 6s ease-in-out infinite; }
+.hb-float-slow { animation: hb-float-slow 9s ease-in-out infinite; }
+.hb-blink { animation: hb-blink 1.4s step-end infinite; }
+.hb-pulse-glow { animation: hb-pulse-glow 3s ease-in-out infinite; }
+.hb-bob { animation: hb-bob 5s ease-in-out infinite; }
+
+.hb-grid-floor {
+  background-image:
+    linear-gradient(rgba(16, 185, 129, 0.16) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(27, 66, 116, 0.14) 1.5px, transparent 1.5px);
+  background-size: 44px 44px;
+  transform: perspective(620px) rotateX(58deg) scale(1.9);
+  transform-origin: top center;
+  animation: hb-grid-pan 2.4s linear infinite;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 82%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 82%);
+}
+
+.hb-dots {
+  background-image: radial-gradient(rgba(16, 185, 129, 0.18) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+.hb-shine {
+  position: relative;
+  overflow: hidden;
+}
+.hb-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+.hb-shine:hover::after {
+  animation: hb-shine 0.9s ease forwards;
+}
+
+.hb-glow {
+  text-shadow: 0 0 22px rgba(16, 185, 129, 0.45), 0 0 60px rgba(16, 185, 129, 0.18);
+}
+.hb-glow-navy {
+  text-shadow: 0 0 30px rgba(27, 66, 116, 0.35);
+}
+
+.hb-pixel-shadow {
+  box-shadow: 5px 5px 0 0 #0c1f42;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.hb-pixel-shadow:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 3px 3px 0 0 #0c1f42;
+}
+.hb-pixel-shadow:active {
+  transform: translate(5px, 5px);
+  box-shadow: 0 0 0 0 #0c1f42;
+}
+
+.hb-spin-slow { animation: hb-spin-slow 14s linear infinite; }
+.hb-scroll-dot { animation: hb-scroll-dot 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-marquee-track,
+  .hb-float,
+  .hb-float-slow,
+  .hb-blink,
+  .hb-pulse-glow,
+  .hb-bob,
+  .hb-grid-floor,
+  .hb-spin-slow,
+  .hb-scroll-dot {
+    animation: none !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
 /* Layout utilities */
 @import './layout.css';
 /* (reserved) helper classes removed to avoid CSS lint noise; using utilities inline */

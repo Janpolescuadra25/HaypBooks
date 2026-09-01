@@ -1,9 +1,7 @@
 'use client'
 
-import dynamic from 'next/dynamic'
-
-const CinematicIntro = dynamic(() => import('@/components/CinematicIntro'), { ssr: false })
+import LandingExperience from '@/components/landing/LandingExperience'
 
 export default function Home() {
-  return <CinematicIntro />
+  return <LandingExperience />
 }

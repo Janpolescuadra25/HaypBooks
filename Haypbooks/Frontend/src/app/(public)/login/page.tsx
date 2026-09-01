@@ -1,14 +1,15 @@
 "use client"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Lock, Mail } from 'lucide-react'
 import { authService } from '@/services/auth.service'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import dynamic from 'next/dynamic'
 const HubSelectionModal = dynamic(() => import('@/components/HubSelectionModal'), { ssr: false })
-import AuthLayout from '@/components/auth/AuthLayout' 
+import AuthShell from '@/components/auth/AuthShell'
+import { ErrorBanner, PasswordField, TextField } from '@/components/auth/fields'
 
 export default function LoginPage() {
   // If the user is already signed in, don't allow visiting login page
@@ -47,7 +48,7 @@ export default function LoginPage() {
     return () => { mounted = false }
   }, [router])
   const schema = z.object({ email: z.string().email('Invalid email'), password: z.string().min(1, 'Password required') })
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({ resolver: zodResolver(schema) })
+  const { control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } })
 
   useEffect(() => {
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
@@ -56,7 +57,6 @@ export default function LoginPage() {
   }, [setValue])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
   const [showHubSelection, setShowHubSelection] = useState(false)
   const [hubSelectionUser, setHubSelectionUser] = useState<any | null>(null)
   // Support helpful resend flow when login fails due to unverified account
@@ -266,10 +266,10 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout>
+    <AuthShell title="Welcome back" subtitle="Please enter your details to sign in to your account.">
         <div className="mb-10">
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h2>
-          <p className="text-slate-500">Please enter your details to sign in to your account.</p>
+          <h2 className="text-3xl font-bold text-navy-900 mb-2">Welcome Back</h2>
+          <p className="text-navy-500">Please enter your details to sign in to your account.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
@@ -277,61 +277,38 @@ export default function LoginPage() {
           {showHubSelection && hubSelectionUser ? (
             <HubSelectionModal user={hubSelectionUser} onClose={() => setShowHubSelection(false)} />
           ) : null}
-          <div className="relative group">
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2 transition-colors group-focus-within:text-emerald-600">
-              Email address
-            </label>
-            <div className="relative">
-              <input
+          <Controller
+            name="email"
+            control={control}
+            render={({ field, fieldState }) => (
+              <TextField
+                {...field}
                 id="email"
+                label="Email address"
+                icon={Mail}
                 type="email"
-                {...register('email')}
-                className="w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                 placeholder="name@company.com"
-                required
+                autoComplete="email"
+                error={fieldState.error?.message}
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-              </svg>
-            </div>
-            {errors.email && <p className="text-sm text-red-600 mt-1 animate-shake">{String(errors.email?.message)}</p>}
-          </div>
+            )}
+          />
 
-          <div className="relative group">
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2 transition-colors group-focus-within:text-emerald-600">
-              Password
-            </label>
-            <div className="relative">
-              <input
+          <Controller
+            name="password"
+            control={control}
+            render={({ field, fieldState }) => (
+              <PasswordField
+                {...field}
                 id="password"
-                type={showPassword ? "text" : "password"}
-                {...register('password')}
-                className="w-full pl-11 pr-12 py-3.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                label="Password"
+                icon={Lock}
                 placeholder="••••••••"
-                required
+                autoComplete="current-password"
+                error={fieldState.error?.message}
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                {showPassword ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-            {errors.password && <p className="text-sm text-red-600 mt-1 animate-shake">{String(errors.password?.message)}</p>}
-          </div>
+            )}
+          />
 
           <div className="flex justify-end">
             <a href="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
@@ -339,14 +316,7 @@ export default function LoginPage() {
             </a>
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm animate-slide-down flex items-start gap-2">
-              <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>{error}</span>
-            </div>
-          )}
+          {error && <ErrorBanner message={error} />}
 
           {/* Show resend verification action when the backend indicates account is unverified */}
           {unverifiedEmail && lastTriedEmail && (
@@ -394,7 +364,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+            className="w-full bg-quest-600 hover:bg-quest-700 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-quest-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
             disabled={loading}
           >
             {loading || isSubmitting ? (
@@ -410,22 +380,22 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-navy-600">
             Don&apos;t have an account?{' '}
-            <a href="/signup?showSignup=1" onClick={() => { if (typeof window !== 'undefined') { localStorage.setItem('hasSeenIntro','true'); window.dispatchEvent(new Event('suppressIntro')) } }} className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
+            <a href="/signup?showSignup=1" onClick={() => { if (typeof window !== 'undefined') { localStorage.setItem('hasSeenIntro','true'); window.dispatchEvent(new Event('suppressIntro')) } }} className="text-quest-600 hover:text-quest-700 font-semibold transition-colors">
               Sign up for free
             </a>
           </p>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-slate-200 text-center">
-          <a href="/landing" className="text-sm text-slate-500 hover:text-slate-700 transition-colors inline-flex items-center gap-1">
+        <div className="mt-6 pt-6 border-t border-navy-900/10 text-center">
+          <a href="/landing" className="text-sm text-navy-500 hover:text-navy-700 transition-colors inline-flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to home
           </a>
         </div>
-      </AuthLayout>
+      </AuthShell>
   )
 }
