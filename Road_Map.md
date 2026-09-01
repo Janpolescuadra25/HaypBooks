@@ -15,7 +15,7 @@
 - Requirements: Zero new npm dependencies; design folder read-only and untracked; explicit-path staging; local-only commits; never push; no prisma commands.
 - Dependencies: `motion` 12.34.3 (pre-installed); Tailwind v3 configuration; existing `(public)` route group.
 - Completion criteria: typecheck green; lint clean for changed files; build failure proven pre-existing (identical at baseline 83cec1ed); diff limited to the approved allowlist (plus one isolated analytics.ts type fix committed separately); design port committed locally; handoff notes delivered.
-- Evidence: Hydra Stage-4 audit (025A); commits 7f45d9f (analytics fix), 8cbd442 (design port), <COMMIT-C> (this roadmap + section README).
+- Evidence: Hydra Stage-4 audit (025A); commits 7f45d9f (analytics fix), 8cbd442 (design port), <COMMIT-C> (this roadmap + section README). Restoration follow-up: a regression removed the shared LandingExperience orchestrator and reverted Hero/Footer to the old production shell; the fix restored those files and re-verified the frontend with `npm run typecheck` (green).
 
 ### Phase 2 — Journal Entry entryNumber Correctness Fix
 - Status: NOT STARTED

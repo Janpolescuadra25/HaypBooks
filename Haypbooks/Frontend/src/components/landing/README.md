@@ -25,6 +25,7 @@ strategy. Production behavior — especially the login auth contract — is full
 | AchievementToast | Achievement notification chrome |
 | IntroSequence | Once-per-session intro (3 slides, skip, dots, progress) |
 | Hud | Shared HUD primitives |
+| LandingExperience | Shared landing orchestrator that renders the full experience on `/` and `/landing` |
 
 Note: this directory also contains PRE-EXISTING tracked components (e.g.
 LandingHeader.tsx, StoryHero.tsx) and the previous intro (CinematicIntro) elsewhere;
@@ -54,9 +55,12 @@ Supporting files: `src\components\auth\AuthShell.tsx`, `BrandCanvas.tsx`, `field
   call, timeout, redirect matrix, error map, resend flow).
 
 ## Verification
-- `npm run typecheck`: green (Hydra-verified).
+- `npm run typecheck`: green (verified locally after restoring LandingExperience, Hero, and Footer).
 - `npm run lint`: zero new issues in changed files (Hydra-verified).
 - `npm run build`: fails on a PRE-EXISTING error/404 prerender defect identical at
   baseline 83cec1ed (Hydra worktree baseline test) — tracked as Road_Map Phase 9.
 - jest e2e (login-ui, signup-ui): deferred — requires a live DB + dev server.
 - Owner visual smoke: pending (Stage 5).
+
+## Restoration Note
+A regression had removed the shared landing orchestrator and reverted the landing hero/footer to the older production shell. The restoration reintroduced [Haypbooks/Frontend/src/components/landing/LandingExperience.tsx](Haypbooks/Frontend/src/components/landing/LandingExperience.tsx), restored the new hero/footer markup, and re-verified the frontend with `npm run typecheck`.
