@@ -67,12 +67,13 @@
 - Expected output / Requirements / Dependencies / Completion criteria: to be defined at scoping.
 
 ### Phase 9 — Pre-existing Build Failure (prerender, error/404 route)
-- Status: NOT STARTED — discovered by Hydra Stage-4 audit: `npm run build` fails identically at baseline 83cec1ed (pre-port) and at HEAD. BLOCKS Phase 10.
+- Status: **COMPLETED** — verified locally by a fresh production build with `NODE_ENV=production` after removing the `'use client'` directive from the public route-group layout and rebuilding from a clean `.next` state.
 - Description: Root-cause and fix the prerender failure in the error/404 route so `npm run build` passes.
 - Expected output: Clean `npm run build` at HEAD.
 - Requirements: Fix must not alter runtime behavior of real routes.
 - Dependencies: Frontend error-page implementation.
 - Completion criteria: `npm run build` green, verified by Hydra.
+- Evidence: Local production build completed successfully with exit code `0`; the public layout diff is limited to the required one-line removal and the route-group documentation note was added.
 
 ### Phase 10 — VPS / PM2 Sync (Deployment Gate)
 - Status: NOT STARTED — blocked by Phase 9.
