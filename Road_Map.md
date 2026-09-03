@@ -67,13 +67,13 @@
 - Expected output / Requirements / Dependencies / Completion criteria: to be defined at scoping.
 
 ### Phase 9 — Pre-existing Build Failure (prerender, error/404 route)
-- Status: **COMPLETED** — verified locally by a fresh production build with `NODE_ENV=production` after removing the `'use client'` directive from the public route-group layout and rebuilding from a clean `.next` state.
+- Status: **COMPLETED** — verified 2026-09-03 by independent witnessed reproduction of npm run build (exit 0, 347/347 pages) at f256845d
 - Description: Root-cause and fix the prerender failure in the error/404 route so `npm run build` passes.
 - Expected output: Clean `npm run build` at HEAD.
 - Requirements: Fix must not alter runtime behavior of real routes.
 - Dependencies: Frontend error-page implementation.
 - Completion criteria: `npm run build` green, verified by Hydra.
-- Evidence: Local production build completed successfully with exit code `0`; the public layout diff is limited to the required one-line removal and the route-group documentation note was added.
+- Evidence: Build green restored by removing the stray 'use client' from src/app/(public)/layout.tsx (dynamic = 'force-dynamic' retained; see (public)/README.md attribution). Root cause not definitively isolated — candidate contributors: stale .next artifacts, NODE_ENV dev/prod mixing, Next 14.2.32 export machinery — corrections applied together; re-verified green 2026-09-03 via witnessed reproduction: exit 0, 347/347 pages, BUILD_ID 4drlmY5Pd3Rq-IJWCBRKfQ, ~115 s
 
 ### Phase 10 — VPS / PM2 Sync (Deployment Gate)
 - Status: NOT STARTED — blocked by Phase 9.
