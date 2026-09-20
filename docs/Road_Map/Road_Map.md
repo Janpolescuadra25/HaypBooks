@@ -1,8 +1,323 @@
-﻿# HaypBooks â€” Development Roadmap
+# HaypBooks — End-to-End Completion Roadmap
 
-> Last updated: August 29, 2026
+Updated 2026-09-12. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
-## Completed Projects
+Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
+
+## Current audit findings
+
+Paths below are repository-relative. Rediscover anchors before implementation.
+
+| Evidence | Confirmed source behavior | Priority / phase |
+|---|---|---|
+| E1: `Haypbooks/Backend/src/test/test.controller.ts:21–40`; `src/app.module.ts:97` | Test controller registered; environment-token presence enables helpers without comparing caller token. OTP helpers use this check. Live exposure UNKNOWN. | P0 / 12 |
+| E2: `Haypbooks/Frontend/src/app/get-started/subscribe/page.tsx:60–67`; practice equivalent `get-started/practice/subscribe/page.tsx:40–46` | Company errors swallowed and timer sets success independently; practice uses simulated success. | P0 / 13 |
+| E3: `Haypbooks/Backend/src/shared/gl-integration.ts:99–155` | createAndPostJE accepts entryNumber but omits it from create data; subsequently updates balances and posts. Schema/default/caller impact needs reproduction. | P0 affected posting / 2 |
+| E4: `Haypbooks/Backend/src/reporting/reporting.service.ts:514–546` | Balance sheet classifies asset/liability/equity without explicit current-year income/expense earnings presentation. | P0 reports / 4 |
+| E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237–278` | DRAFT transaction creation changes stock without a GL call inside that transaction. | P0 inventory / 5 |
+| E6: `Haypbooks/Backend/src/banking/banking.service.ts:611–636`; `banking.repository.ts:237–255` | Auto-match selects by date, supplies no journal line, and repository permits matched=true with null journal reference. | P0 banking / 6 |
+| E7: `Haypbooks/Backend/src/accounting/accounting.service.ts:1092–1110` | Revaluation is a journal-entry proxy; upper date filter overwrites lower filter; query failure becomes empty data. | P1 / 7 |
+| E8: `Haypbooks/Frontend/next.config.js:14,19`; backend package scripts | Build skips lint/type errors; backend E2E script runs migrations and seed. | P0 validation / 9 |
+| E9: `Haypbooks/Backend/src/companies/company.repository.prisma.ts:97,678`; frontend public signup line 150 | FREE/TRIAL bootstrap and 14-day copy conflict with four paid plans/30-day direction. | P0 billing / 13 |
+| E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
+| E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |
+
+## Audit review (attachment A–W)
+
+**A — Executive summary:** Real product foundations exist, but security, payment truthfulness and accounting integrity block a readiness claim. No live compromise, customer loss or actual erroneous charge is established by this source audit.
+
+**B — Repository:** Next.js/React frontend and NestJS/Prisma backend already contain accounting, auth, subscriptions and practice structures. Complete existing workflows rather than replace them.
+
+**C — Major findings:** E1/E2 are immediate release gates. E3–E7 require targeted reproduction and correction. E8 invalidates build-only assurance. E9 contradicts owner direction.
+
+**D — Accounting:** Balance validation/reversals exist. Verify precision, posting dates, periods, tax rounding, allocation, source links and ledger effects across all transaction producers.
+
+**E — Auditor:** Require actor/company/source/reason and reversal traceability for financial mutations. Distinguish draft deletion from posted-history controls. Historical evidence records are not independent execution proof.
+
+**F — Security:** Existing ValidationPipe/CORS/helmet in backend main.ts and access guards do not prove complete coverage. Audit company/practice ownership, roles, sessions, OTP/reset, uploads, exports and logs. Fix E1; deployed exposure is UNKNOWN.
+
+**G — UX:** Browser parity with HB_clone remains UNKNOWN. Audit every shipped action, responsive/keyboard behavior and loading/error/retry/cancel/success states. E2 demonstrates false success risk.
+
+**H — Financial analysis:** Reconcile balance sheet, profit/loss, trial balance, cash flow and aging on shared dated fixtures before adding dashboards. Broader report accuracy is UNKNOWN.
+
+**I — Business:** Complete company and practice onboarding/billing separately. Four paid levels/30 days are direction; prices, capacities, tax and trial-card policy still need decisions.
+
+**J — Backend:** Trace service/repository transaction boundaries, idempotency, errors and concurrent requests. Reuse existing ledger services; avoid speculative rewrites.
+
+**K — Frontend:** Server-confirmed state must drive financial/subscription success. Audit API contracts, persistence after reload, validation and shared components. Build is not typecheck.
+
+**L — Structure:** Keep reference repositories and ignored evidence distinct from product code. Change folder/package structure only for demonstrated maintenance or operational benefit.
+
+**M — Testing:** Unit/integration/Playwright infrastructure exists; this update does not claim passing suites. Inspect setup before running migration/seed-bearing tests; use disposable databases and assert financial outcomes, not just response codes.
+
+**N — Workflows:** Trace screen → validation → authorization → service → transaction → persistence → GL/report → visible outcome. Include cancel, failure, duplicate, concurrent, edit/reversal and reload cases.
+
+**O — ERPNext:** Inspected `docs/erpnext/erpnext/accounts/general_ledger.py:34–75` validates periods/disabled accounts and updates payment ledger, with separate cancellation handling. Essential concept: uniform posting invariants and linked reversals. HaypBooks has shared posting but equivalent coverage is not established. Adopt concepts within NestJS/Prisma; do not copy source/UI.
+
+**P — QuickBooks:** Local `docs/Quickbooks_api/quickbooks.api.md:78–83` describes SyncToken rejection of stale updates. Evaluate equivalent optimistic concurrency for financial edits: transactions alone do not prevent lost updates. No literal SyncToken requirement and no full QuickBooks parity claim.
+
+**Q — Missing:** Actual revaluation calculation is NOT FOUND in the inspected endpoint; inventory GL is NOT FOUND in the inspected create transaction. These are scoped findings, not repository-wide absence claims.
+
+**R — Partial:** Public/auth, practice, subscription onboarding, GL, banking, inventory and reporting have real code; improve it rather than duplicate it.
+
+**S — Maturity:** Public/auth and practice are PARTIALLY IMPLEMENTED; checkout/GL/banking/inventory/reports IMPLEMENTED BUT INCOMPLETE; FX endpoint PARTIALLY IMPLEMENTED. Security/tenancy only PARTIALLY VERIFIED. Payroll/assets/tax/AI and operations remain UNKNOWN pending dedicated audits. No module is certified MATURE or PRODUCTION-READY.
+
+**T — Improvements:** Active phases specify required outputs and gates. P0/P1 apply to released scope; progression and AI expansion can remain optional.
+
+**U — Order:** 12 + 9 first; then 2/14 → 6/5 → 4, with 7 if FX offered. Scope 13 immediately and finish before paid onboarding. Complete 1/15, 11, 16 → 17 → 10. Documentation 3 accompanies every phase; AI 8 follows core stability.
+
+**V — Risks:** Unknown deployment config, historical evidence corruption, data drift, silent failures, concurrent mutations and inconsistent plans. Never seed an unknown database or delete history to resolve capacity/accounting issues.
+
+**W — Recommendation:** Next bounded task is test-endpoint audit/containment with production-mode negative tests (12), supported by reproducible baseline (9). This roadmap update does not implement those fixes.
+
+## Active completion plan
+
+Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, DONE. P0 means release-blocking for affected scope, not proof of a live incident. VERIFIED means inspected source; UNKNOWN must not be silently promoted to passing behavior.
+
+Original phase IDs retained. Phase 9 is active again; no original phase is verified fully complete. Owner-only push and preservation of unrelated changes/stashes remain mandatory. Roadmap inclusion does not itself authorize deployment, migration or historical data repair.
+
+### 1 — Landing, intro and auth (PARTIAL, P1)
+
+- Audit first: map every reference page/state in `docs/HB_new_(landingpage, intro, & login)/HB_clone` to production; compare desktop/mobile screenshots and interactions. Record intentional differences for real auth and approved pricing.
+- Deliver: approved visual parity through shared LandingExperience/AuthShell plus per-page hub composition (server page composing Navbar + hub component + Footer); retain `/` and `/landing`, `hb-intro-seen`, real OTP/reset/login behavior. Never copy simulated success.
+- Requirements: preserve zero-new-dependency, read-only/untracked reference, Next14/Tailwind3/motion-react and no-Prisma constraints; explicit staging/local-only commit when authorized. Reverify historical baseline 83cec1ed/analytics-fix claims.
+- Depends on: 9 validation and 13 copy. Done: route/state matrix, responsive/keyboard/reduced-motion, auth success/error/retry, lint/typecheck and handoff verified. Historical build failure is not release acceptance.
+- L1 AccountantsHub (2026-09-13): DONE for the L1 subtask only - Phase 1 remains PARTIAL. Reference Accountants hub ported verbatim to Haypbooks/Frontend/src/components/landing/AccountantsHub.tsx (31674 B, LF) with single adaptation framer-motion -> motion/react import, and /accountants rebuilt as a server page with typed Metadata composing Navbar + AccountantsHub + Footer (746 B, CRLF). Typecheck/build reported green in the L1 execution run; not re-verified by this record's audit - re-verification scheduled with L2. Browser visual check pending (stale dev server holds port 3000; user-side restart required).
+- L2 LearnSupport (2026-09-14): DONE for the L2 subtask only - Phase 1 remains PARTIAL. Reference Learn & Support hub ported to Haypbooks/Frontend/src/components/landing/LearnSupport.tsx (14865 B, SHA-256 DA1C77F6710868A58E6C7BFD7D9ACBB363E726EEF05EC6FC06D7FD64875E676C, "use client" directive, motion/react only) with route page Haypbooks/Frontend/src/app/(public)/learn-support/page.tsx (670 B, SHA-256 4F14321FBE06B7F45549BE3F301D01A8EBD7BB93014B24B8941939C1AE400461, renders Navbar + LearnSupport + Footer); AccountantsHub transitional CTA now resolves to /learn-support and the previous 404 is eliminated. Gates recorded at L2 execution: typecheck (tsc --noEmit) EXIT=0 and next build EXIT=0 with /learn-support 5.92 kB present in build output; not re-run by the R3 post-state audit. Caveat: next.config.js sets ignoreDuringBuilds and ignoreBuildErrors to true, so tsc --noEmit is the authoritative type gate. Open items: browser visual parity and backend build validation remain open (L5 and Phase 1 PARTIAL).
+- ✅ **Landing Page scroll freeze resolution (Task 266)** — Implemented client-side layout normalization hook in `LandingExperience.tsx` that unconstrains html/body height for landing routes, resolving scroll animation freezes for sticky sections (BossFight, Classes). Preserves original viewport styles on unmount to avoid cross-route contamination.
+- L4: verify the landing link matrix against the reference (top bar/nav targets, Learn & Support route, Accountant/Bookkeeper click targets).
+- L5: compare landing scroll and runtime behavior against the reference (user visual checks; scroll animations preserved).
+- L6 (LAST): remove the old accountant/bookkeeper pages and components once L1-L5 are verified.
+
+### 2 — Journal numbering (NOT STARTED, P0 affected paths)
+
+- Audit: callers, schema defaults/uniqueness and existing number allocation; reproduce E3 and inspect existing data read-only.
+- Deliver: valid supplied numbers or atomic company-scoped allocation; transactional JE/lines/balances/source links. No silent historical renumbering or unnecessary schema change.
+- Depends on: 9 fixtures and 14 controls. Done: supplied/generated/conflict/concurrent/retry/rollback/cross-company cases pass; valid history preserved.
+
+### 3 — Section READMEs and evidence (PARTIAL, P1 continuous)
+
+- Audit: distinguish source presence, observed execution and historical claims. Auth artifact has corrupted excerpts; any rebuild remains separately scoped. Never invent timestamps/transcripts.
+- Deliver: update/create each implemented section's README in its existing documentation location; link frontend/backend, architecture, files, APIs, decisions, permissions, behavior, validation results and limits.
+- Depends on: verified phase results. Done: each completed section has reproducible evidence and matching roadmap status. Only then mark DONE, preserve durable README and remove completed active-phase detail. Documentation-only within this phase.
+
+### 4 — Reports and current-year earnings (NOT STARTED, P0 reports)
+
+- Audit: posted-only balances, fiscal dates, retained earnings, closing journals, currency/sign/rounding and alternative earnings paths.
+- Deliver: correct earnings without double-counting closed years; verify balance sheet/P&L/trial balance/cash flow/aging/drill-down/export. No report mutation of closed periods; query error distinct from empty result.
+- Depends on: 2/14 and 5/6/7 effects. Done: accountant-reviewed opening/year-close/profit-loss/reversal/partial-payment/FX fixtures reconcile; assets equal liabilities plus equity; screen/export agree.
+
+### 5 — Inventory lifecycle and GL (NOT STARTED, P0 inventory)
+
+- Audit: receipt/shipment/return/adjustment/transfer, draft/post rules, valuation, accounts and negative stock.
+- Deliver: atomic stock/valuation/financially applicable GL with linked reversals and no duplicate posting; reuse subledger. No invented cost or silent retrospective correction.
+- Depends on: 2/14 and approved costing policy. Done: concurrency, insufficient stock, retry, rollback, returns/transfers pass; valuation reconciles to GL; company/item/location references validated.
+
+### 6 — Banking (NOT STARTED, P0 banking)
+
+- Audit: imports, deduplication, ownership, matching/unmatch and completion; distinguish clearing from ledger matching.
+- Deliver: company/account/currency/amount/date-aware candidates; ambiguous results reviewed; no unsupported matched flag. Prevent duplicate reuse except explicit split/group rules.
+- Depends on: 2/14. Done: duplicate imports, ambiguity, supported splits, unmatch and concurrent completion pass; statement differences explained and audit history retained.
+
+### 7 — FX (AUDIT REQUIRED, P1; gate if offered)
+
+- Audit: rates, monetary scope, existing engines and realized/unrealized policy; reproduce E7.
+- Deliver: correct filters/errors, dated-rate preview, approval, gain/loss posting and policy-defined reversal; explicit precision/missing-rate behavior and idempotency.
+- Depends on: 2/4/14 and accountant policy. Done: date bounds/rate changes/rounding/missing rate/closed period/retry/reversal pass. If deferred, do not advertise proxy results as functioning revaluation.
+
+### 8 — AI Phase 2 (AUDIT REQUIRED, P3 optional)
+
+- Audit: existing AI, tenant data exposure, provider cost, failures and owner/JP goals.
+- Deliver: agreed assistance with source traceability, uncertainty and human review for financial writes; permissions/budgets/secrets enforced. Autonomous posting requires separate approved controls.
+- Depends on: 12/14/17. Done: agreed evaluations, cross-tenant denial, incorrect answer, outage and cost-limit cases pass. Does not block non-AI release.
+
+### 9 — Build/test baseline (PARTIAL, P0 supporting gate)
+
+- Audit: scripts/configuration/setup; independently verify public-layout/history claims and classify current failures.
+- Deliver: separate frontend lint/typecheck/build, backend compile/unit/integration, disposable database and deterministic E2E setup. Never disable checks for green status or seed an unverified database.
+- Depends on: isolated environment. Done: versions/commands/results reproducible in CI or equivalent; critical failed/skipped checks remain blockers.
+
+### 10 — VPS release (BLOCKED, P1 final gate)
+
+- Audit: read-only local/remote revisions, server checkout, PM2, TLS/proxy, environment/migration state. Historical drift claims are not fresh facts.
+- Deliver: reviewed revision → owner push → controlled pull/install/build/migration if approved → restart/health check, with rollback. No blind overwrite of server changes.
+- Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
+- Depends on: 9/12/13/16/17 and released accounting phases. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
+
+### 11 — Practice Hub (PARTIAL, P1 core; P2 progression)
+
+- Audit: owner/staff/client roles, invite expiry/races, engagements/tasks/reviews/switching/revocation. Reuse E10 foundation.
+- Deliver: reliable client work and server-enforced capacities. Proposed XP needs approved qualifying activities, thresholds, event ledger and anti-abuse rules before implementation.
+- Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
+- Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
+
+### 12 — Security and tenant isolation (AUDIT REQUIRED, P0)
+
+- Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
+- Deliver: test helpers disabled in production by default; approved test use authenticates actual caller in isolated configuration. Repair demonstrated authorization/validation/file gaps.
+- Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
+- Depends on: 9 negative-test harness. Done: helpers denied in production even with token variable set; anonymous/wrong-role/cross-tenant requests denied, valid flows preserved; uploads/logs reviewed. One fix is not a full security certificate.
+
+### 13 — Paid plans, trials and Stripe (AUDIT REQUIRED, P0 before checkout)
+
+- Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
+- Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.
+- Deliver: authoritative catalog shared by landing/checkout/settings/backend. Capacity matrix specifies company seats/storage/documents or transactions/AI/features and practice staff/active clients/engagements/storage, units/reset periods/add-ons/overage.
+- Provider-confirmed state drives success; authenticated idempotent webhook handling covers trial/active/overdue/canceled/expired, delays/out-of-order events. No timer-based payment success.
+- Requirements: explicit existing-customer migration, no silent charge/conversion/data deletion; trial distinct from free plan, bonuses distinct from paid base.
+- Depends on: 9/12, owner economics, 11 bonuses. Done: sandbox trial expiry/payment failure/challenge/canceled checkout/duplicate events/upgrade/downgrade/proration/cancel/over-limit pass and all surfaces agree.
+
+### 14 — Accounting lifecycle controls (AUDIT REQUIRED, P0)
+
+- Audit: JE, AR invoice/payment/credit/refund, AP bill/payment/credit, expenses/transfers and offered payroll/assets. Trace callers before judging repository helpers in isolation.
+- Deliver: explicit states, uniform company/account/period/balance/precision checks, atomic source+GL, idempotency, stale-edit protection, source/actor/reason audit history and linked reversals; reuse services.
+- Depends on: 2/9/12. Done: applicable draft/submit/post/pay/partial/void/reverse cases for each producer; duplicate/concurrent/forced failures leave no partial writes; subledger/GL reconcile; no silent lost updates.
+
+### 15 — Every shipped route/action (AUDIT REQUIRED, P1)
+
+- Audit: inventory owner/staff/accountant/client routes and actions, real data sources and release/finish/defer disposition, including settings/reports/exports.
+- Deliver: fix dead buttons, mock-live data, persistence, navigation/validation; reuse shared tables/forms/status patterns where beneficial. Keyboard/mobile and loading/error/success/retry/cancel required.
+- Depends on: 1/11/13/14. Done: no unexplained shipped placeholders; reload restores server truth; realistic company/accountant/practice tasks and permission failures pass; visual differences documented.
+
+### 16 — Data, performance and remaining modules (AUDIT REQUIRED, P1)
+
+- Audit: schema/migrations/isolated DB, FKs/indexes/RLS, precision/timezone, retention/import/export/jobs; tax/payroll/assets and every advertised module not covered. Select jurisdictions with owner; do not invent compliance scope.
+- Deliver: demonstrated defects repaired with reviewed reversible changes, bounded queries, retry-safe jobs, secure storage and recovery. Restructure only for demonstrated benefit.
+- Requirements: read-only profiling before explicit data-repair plan; no blanket reseed/delete. Depends on: 9/12/14.
+- Done: migration rehearsal, pre/post counts/balances, restore, realistic large-tenant load and job recovery pass; other advertised modules verified or excluded from release.
+
+### 17 — Integrated acceptance (NOT STARTED, P1 mandatory)
+
+- Deliver: deterministic full-workflow fixtures connecting UI/API/persistence/ledger/reports/billing/permissions; independently review results and route defects to owning phases.
+- Requirements: realistic roles/data sizes, revision/environment/commands/expected-actual results and honest limitations. No inferred passes.
+- Depends on: every phase required for release scope. Done: matrix below passes, no P0, residual risks scoped/accepted, READMEs/support/rollback ready; then release 10.
+
+## End-to-end acceptance matrix
+
+For each row: success, invalid input, permission denial, network/server failure, cancel, repeated/concurrent submission, reload and permitted edit/reversal. Verify persisted and displayed states agree; assert financial/audit effects where applicable.
+
+| Journey | Outcome |
+|---|---|
+| Signup → OTP → company/practice → trial → login/reset | Correct identity/workspace; no duplicate ownership/subscription |
+| Trial → paid → change plan → overdue/cancel | Provider/UI/entitlements/history agree; no permanent free tier |
+| Customer → invoice → post → partial/full payment → credit/refund | Source/allocation/AR/cash/revenue/tax/reports reconcile |
+| Vendor → bill → post → payment → credit/void | AP/expense or asset/cash/tax/reversal reconcile |
+| JE → approve/post → reverse → close | Balanced, numbered, traceable and period-protected |
+| Inventory receipt/shipment/return/adjustment | Quantity/valuation/applicable GL agree |
+| Bank import → match → reconcile → correct | No duplicate import/false match; differences explained |
+| FX preview → approve/post → reverse | Correct rate/date/currency/gain-loss/idempotency |
+| Practice invite → staff/client work → revoke | Correct tenant access throughout |
+| Report → filter → drill-down → export | Same posted dataset and totals |
+| Tax/payroll/assets/other released modules | Approved business rules and downstream effects |
+| Backup → restore → deploy → health → rollback | Recoverable data and exact monitored revision |
+
+## Definition of finished
+
+Declared release scope has verified functionality, accounting integrity, permissions, usable failures, concurrency safety, tests, READMEs and operational recovery. Optional features may remain deferred. Unsupported features must not be advertised as working. Do not claim 100% functional or production-ready without scope-specific evidence.
+
+## Consolidation decisions and original-plan crosswalk
+
+Reviewed both complete roadmaps on 2026-09-12. The former root active phases 1–17 are retained above. Unique work from the August 29 documentation roadmap is integrated below; these supplements are part of the same active plan. Historical completion claims are preserved separately and are not fresh verification.
+
+The governing [Product Maturity Standard](../standards/PRODUCT_MATURITY_STANDARD.md) remains authoritative for formal maturity audits: S1 accounting, S2 security, S3 persistence, S4 concurrency, S5 UX/API, S6 operations; formal tiers T1–T5 require evidence. The descriptive labels and attachment-shaped A–W summary above are planning assessments, not formal tier awards or a substitute for the standard's audit report. Defect priorities must be assessed under that standard; phase labels indicate scheduling urgency. Reference-inspired product expansion requires its prescribed proposal and owner approval.
+
+| Previous plan/backlog | Active destination |
+|---|---|
+| Plan A self-hosted database | 16A below; optional infrastructure decision, not assumed necessary |
+| Plan B multicurrency completion claim | 4/7/14 regression verification; does not establish revaluation completion |
+| Plan C-3 budgeting | 16B below |
+| Plan D approvals | 14A below |
+| Plan E fixed assets | 16C below |
+| Plan F-1/F-2 AI | 8 plus supplement below |
+| Plan G / S1–S6 | 2/4/5/6/7/14 (S1), 12 (S2), 16 (S3), 9/14/16 (S4), 1/15 (S5), 3/9/10/17 (S6) |
+| H-3 platform owner | 15A below |
+| H-4 subscriptions | 13; old FREE seeding and automatic deletion requirements superseded |
+| H-5 practice | 11/13/15; entitlement/access decisions verified server-side |
+| H-6 role/schema cleanup | 12/16; preserve distinct platform, hub and RBAC roles |
+| Ledger backlog | 2/4/6/7/14; reverify older atomicity/numbering/bank-account-link claims |
+| Deferred stubs and technical debt | 16D and 9 supplements below |
+
+Conflicts resolved:
+
+- One canonical roadmap at this path. The root copy is removed after consolidation verification; the prior root's duplicated historical phase list is not retained as a competing plan.
+- Four paid plans and a 30-day trial replace the older FREE-plan proposal. Trial expiry must not trigger automatic permanent deletion. Data retention/deletion needs explicit ownership, retention and recovery policy; historical financial records and other members' shared files are protected.
+- The old recommendation to broaden cookie domain/change SameSite is now audit-first. Verify actual same-origin/proxy requirements and CSRF defenses; do not weaken cookie boundaries by rote.
+- Old 4 GB server and fixed 512–1024 MB heap advice is not a current sizing decision. Measure the actual server and workloads; owner reported 8 GB. Preserve 24–48-hour memory monitoring as a validation task.
+- Automatic deployment was historically claimed operational. Audit workflow triggers before any push; owner-only push still applies and may initiate a live deployment.
+- Existing models must be reused: current Prisma schema includes FixedAsset, Approval, ApprovalWorkflow and ApprovalRequest. Do not execute old instructions to create duplicate models. Practice XP fields exist; field presence alone does not prove a working progression system.
+- Current owner controller uses SystemRoleGuard/SUPER_ADMIN declarations. Do not replace existing owner APIs based on older blank-feature claims. Trace endpoint and frontend coverage first.
+- The older '22 stubs' count and test counts are historical inventory claims, not verified current totals. Re-enumerate actual implementations before classifying missing work.
+
+### 14A — Approval workflow completion (legacy Plan D; AUDIT REQUIRED)
+
+- Scope: configurable action/amount/role approval matrix, JE thresholds, reconciliation sign-off, pending dashboard and single/sequential approval as actually required. Inspect existing approval models, services and states first.
+- Output: server-enforced transitions including pending/approved/rejected/canceled, reasons and actor/source audit linkage; no self-approval or bypass where policy forbids it. Approved content cannot change unnoticed afterward.
+- Dependencies: 12 identity/permissions, 14 posting lifecycle, owner/accountant policy. Acceptance: threshold boundaries, rejected/canceled/replayed requests, changed documents, concurrent approvers and unauthorized approval tests; accepted records post once. Reuse existing models and README.
+
+### 15A — Platform administration and three-role navigation (legacy H-3; PARTIAL / AUDIT REQUIRED)
+
+- 15A — PARTIAL: server-side RBAC is implemented and verified for the owner controller; broader authorization coverage is pending further audit.
+- Distinguish SUPER_ADMIN platform administration, company administration and practice administration. Build an authorized dashboard switcher; hiding navigation is not authorization. Platform administration itself is not a paid customer plan; any bypass must be server-side, auditable and limited to platform operations. Company/practice tenant access still needs explicit policy.
+- Verify workspace creation choices, no-company layout, useCompanyId behavior, stale demo identities, and platform links shown to ordinary workspace owners. Company/practice crossover follows owner-approved membership/plan policy, not a blanket role-name assumption.
+- Dependencies: 12/13/15. Acceptance: full role/route/API matrix, denied direct URLs/requests, persistent status changes, pagination/filtering, consistent metrics and audit entries. No blanket cascade user/file deletion.
+
+### 16A — Database hosting decision (legacy Plan A; AUDIT REQUIRED, optional)
+
+- Compare current hosted database with VPS/dedicated hosting for cost, capacity, availability, maintenance and recovery. Do not migrate just because a prior plan proposed it.
+- If selected: document PostgreSQL/pooling/resource configuration, network restrictions, backup/WAL retention and restore process, migration compatibility and explicit cutover/rollback procedure. A pg_dump plus DNS change does not guarantee zero downtime; define allowable downtime or a proven replication strategy.
+- Dependencies: 9/16/17 data-layer evidence and owner infrastructure decision. Acceptance: rehearsal on isolated data, reconciled counts/balances, restore and rollback, measured downtime, verified connection/security settings. Production migration requires its own bounded authorization.
+
+### 16B — Budget enhancements (legacy C-3; AUDIT REQUIRED, P2)
+
+- Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
+- Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
+- Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
+### 16C — Fixed assets (legacy Plan E; AUDIT REQUIRED)
+
+- Audit existing asset/category/schedule/depreciation models and GL integration. Complete register/filter/summary, acquisition, straight-line/declining-balance methods where supported, scheduled depreciation, disposal proceeds/gain-loss and approved revaluation/impairment scope.
+- Requirements: accountant-approved useful life/salvage/rounding/proration and revaluation policy; no duplicate asset schema or postings. Dependencies: 2/4/14 core accounting verification.
+- Acceptance: schedule totals, partial periods, disposal, retry, reversal, closed periods and asset-to-GL reconciliation; unsupported methods clearly excluded from released scope.
+
+### 16D — Explicit remaining-module inventory and retention
+
+- Recheck each old stub claim: inventory CRUD/adjustments/valuation/warehouses/movements/reports (5); employees/payroll/tax/payslips/contributions (14/16); projects/time/billing/profitability/milestones/reports (16); asset insurance, period-close sign-offs, advanced reports and import/export (14/16).
+- Output: one item per real capability with route, controller, service, repository/model, current behavior, tests, owning phase and release/defer decision. The old payroll list repeats payslip generation; do not count it twice.
+- Audit role-interface versus preferredHub/systemRole/RBAC mappings, WorkspaceType PRACTICE assignment and practiceId in audit records. Renaming values needs migration/compatibility proof, not cosmetic cleanup.
+- Account deletion: define requester authority, shared versus personal ownership, retention holds, export/grace/recovery and idempotent cleanup before implementation. Do not cascade-delete company evidence because one user leaves. Subscription expiry is not deletion consent.
+- Done when every advertised capability has verified implementation or explicit exclusion; schema/data/retention changes have isolated migration and negative-permission tests.
+
+### Existing-phase supplements retained from the older roadmap
+
+- Phase 8: specifically scope persistent company/user-bound chat history, document Q&A, anomaly insights and context-aware responses; any quick-action execution requires review and existing financial controls. These are inherited goals, not evidence they already work.
+- Phase 9: capture a full backend unit-suite run, not a log that stops before suites start; re-evaluate historical empty JSON output and claimed seed-race/sidebar timing flakes. Record current inventory/coverage and risk-based CI thresholds; do not reuse the old approximate 87-test count.
+- Phase 10/16: verify metrics accumulation and currency cache behavior, observe memory for 24–48 hours, inspect connection pooling and deployment cache handling. Reconfirm registrar/DNS ownership before documenting Porkbun/Cloudflare as current operational facts.
+- Phase 12/15: unify API authentication/error handling using existing apiClient or a justified shared wrapper after inventory; avoid indiscriminate fetch replacement. Test login/logout/refresh through the actual production routing arrangement.
+- Phase 14: carry forward invoice/payment/deposit atomicity, credit-note/document-number concurrency and banking account-to-GL mapping audits; older allegations remain audit inputs until current paths are traced.
+- Phase 3: retain module-root README policy and link the canonical roadmap from future documentation. Read historical completion claims before rebuilding any functionality, but require current evidence before re-certifying it.
+
+---
+
+## Appendix: Completed Resolutions & Historical Verifications
+The following items have been fully completed, verified against the actual repository, and pruned from active roadmap tracking:
+
+- ✅ **Finding E11 (AuthShell Migration & Layout Retirement):**
+  * E11 migration complete: 7 auth pages import AuthShell; deprecated AuthLayout.tsx was fully removed from the repository.
+  * Verified: Exactly 7 public auth and onboarding pages import and utilize `AuthShell.tsx` (`login`, `signup`, `forgot-password`, `reset-password`, `verify-otp`, `verification`, `onboarding/welcome`). Dashboard pages do not import `AuthShell`.
+  * Documented in: `Haypbooks/Frontend/src/components/auth/README.md`.
+  * Resolution Date: 2026-09-20.
+
+- ✅ **Phase 1 L3 (IntroSequence Overlay Parity):**
+  * Fully resolved: Added solid base backdrop `bg-navy-950` to `SlideTwo` root container in `IntroSequence.tsx`.
+  * Verified: Eliminates landing page bleed-through during playback; typecheck exits with 0.
+  * Documented in: `Haypbooks/Frontend/src/components/landing/README.md`.
+  * Resolution Date: 2026-09-20.
+
+## Historical completion index from the documentation roadmap
+
+The following entries were labeled complete in the August 29 document. They are retained as historical context only, not new verification of source, deployed configuration or tests. Regressions belong in the owning active phase. Checked boxes or deployment claims here do not override current release gates.
+
+### Historical claims (not re-certified)
 <details>
 <summary>Archived completed projects (older)</summary>
 
@@ -37,293 +352,8 @@
 - âœ… **Deploy.sh Stale Cache Fix** â€” Completed August 26, 2026: Added `rm -rf .next` to deploy.sh before `npm run build` to prevent corrupted Next.js incremental builds from causing 400 errors on static assets.
 - âœ… **Onboarding Page Syntax Fix** â€” Completed August 26, 2026: Fixed malformed `saveCurrentStep()` function in `onboarding/page.tsx` that was causing build failures on the VPS.
 - âœ… **Phase H-0 Three-Role Foundation (SUPER_ADMIN Provisioning)** â€” Completed August 27, 2026: All code changes previously verified (systemRole + isOwner in JWT at all sign locations in prisma-auth.service.ts, jwt.strategy validate(), RolesGuard SUPER_ADMIN check). VPS tasks executed: ADMIN_EMAIL and ADMIN_DEFAULT_PASSWORD added to Backend .env, seed-admin run via `npm run db:seed:admin` (required transient NODE_OPTIONS=--max-old-space-size=8192 after OOM), SUPER_ADMIN login verified â€” decoded JWT contains systemRole: 'SUPER_ADMIN' and isOwner: true. All three H-0 boxes now closed.
-- âœ… **Add companies module README** â€” Created `Haypbooks/Backend/src/companies/README.md` documenting the multi-company management module's architecture, endpoints, and GL integration, complying with the Product Maturity Standard's documentation requirements.
-- âœ… **Add banking module README** â€” Created `Haypbooks/Backend/src/banking/README.md` documenting the banking module's bank account management, reconciliation workflows, and GL posting integration, complying with the Product Maturity Standard's documentation requirements.
-- âœ… **Remove stale dev-only checklists** â€” Deleted unused development tracking components: removed the Checklist button from OwnerTopBar.tsx, deleted OwnerProgressChecklist.tsx (unused hardcoded tracker), and deleted PracticeProgressChecklist.tsx (never-rendered unused modal). No production code impacted. Commit: 220864e8.
+H-0 addendum: The duplicate H-0 completion entry dated 2026-09-12 (which cited stale anchors prisma-auth.service.ts:45-62 and jwt.strategy.ts:31-47) was identified by the Hydra repository audit and removed as erroneous. The retained H-0 entry above remains the authoritative record.
 
 ---
 
 ---
-
-## Priority Backlog
-
-### P1: High Priority
-- **Set Cookie Domain for Cross-Subdomain Support** â€” `Backend/src/auth/auth.controller.ts:80-84` cookie options: add `domain: '.haypbooks.com'` and change `sameSite: 'lax'` to `sameSite: 'none'` (with `secure: true`). âš ï¸ Security-impacting change â€” verify CSRF protection still works after this. Test login/logout/refresh flows on both `haypbooks.com` and `api.haypbooks.com`.
-- **Consolidate API Clients** â€” Replace raw `fetch()` calls with the axios `apiClient` instance (has interceptors, error handling, `withCredentials`). Or create a shared `fetchWithAuth()` wrapper in `Frontend/src/lib/api.ts`.
-- **ClientRoot UI Fix** â€” Nav leak on `/workspace` fixed via `isHubSelection` check (see Hub Selection above). Remaining: `useCompanyId()` hook for conditionally rendering minimal layout when no company is selected is still open â€” separate concern.
-
-### P2: Medium Priority
-- **Fix Phantom `role` Field** â€” `Backend/src/repositories/interfaces/user.repository.interface.ts:8` declares 8 role values (`'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer' | 'accountant' | 'both'`) but DB has no `role` column â€” Prisma maps `systemRole` to `@map("role")`. Repository synthesizes `role` from `preferredHub` producing only `'business'` or `'accountant'`. Clean up the interface to match reality.
-- **Build Platform Owner Dashboard** â€” Separate UI for `SUPER_ADMIN` users (JP) to access platform endpoints: all users, storage usage, metrics, plan distribution. Current `OwnerDashboard` is for company admins, not platform owners. Backend endpoints already exist (`/api/owner/users`, `/api/owner/storage/usage`, `/api/owner/metrics/*`). Full platform owner dashboard with dedicated layout. The owner is the HaypBooks platform master â€” this dashboard monitors and controls everything across all companies and practices. Required navigation sections:
-
-  **1. ðŸ“Š Overview** â€” Platform KPIs at a glance: total companies, practices, users; subscription health (active/trial/expired); revenue metrics; recent signups; system health indicators.
-
-  **2. ðŸ¢ Companies** â€” All companies on the platform. Table: name, owner, plan, status (active/trial/expired/suspended), user count, storage usage, created date. Actions: view details, suspend, activate. Search and filter by plan/status.
-
-  **3. ðŸ“‘ Practices** â€” All accounting practices. Table: practice name, accountant, plan, status, linked companies count, created date. Actions: view details, suspend, activate. Search and filter.
-
-  **4. ðŸ‘¥ Users** â€” Platform-wide user management. Table: name, email, role, company/practice, status, last login. Actions: view, delete (with file cleanup â€” see P2: User Account Deletion). Search and filter by role/status/company.
-
-  **5. ðŸ’³ Subscriptions** â€” Subscription health and management. Overview cards: MRR, active count, churn rate. Subscription list with plan details and status. Expiring soon alerts. Plan definitions if dynamic pricing is implemented.
-
-  **6. ðŸ“ Storage** â€” Platform storage monitoring. Total usage, per-company breakdown, file type distribution, cleanup tools. Identify storage-heavy tenants.
-
-  **7. ðŸ“‹ Audit Log** â€” Platform activity tracking. Table: timestamp, user, action, entity, details. Filters: by user, action type, date range, entity. Login history.
-
-  **8. âš™ï¸ Platform Settings** â€” Global configuration. Feature flags, email templates, maintenance mode toggle, default subscription plans, platform branding.
-
-  **9. ðŸ©º System Health** â€” Infrastructure monitoring. CPU, RAM, disk usage; API error rates; database size; active sessions; uptime.
-- **Build Practice Dashboard** â€” Accountant workspace dashboard, separate from company dashboard.
-- **Three-Role Architecture** â€” Proper separation of: (1) Platform Owner (`SUPER_ADMIN` â€” manages the SaaS platform), (2) Company Admin (`business` / `preferredHub: OWNER` â€” manages their company), (3) Practice Admin (`accountant` / `preferredHub: ACCOUNTANT` â€” manages their practice). Each needs its own dashboard, routing guard, and API scope.
-- **Remove Stale Hardcoded Demo Data** â€” `Frontend/src/components/HubSidebar.tsx:54` has `juan@haypbooks.com` and `Frontend/src/components/TopBar.tsx:173` has `demo@haypbooks.com`. Replace with dynamic user data from `useUser()`.
-- **Reduce `--max-old-space-size`** â€” Currently 4096MB in `ecosystem.config.js`, should be 512-1024MB for a CX33 (4GB RAM VPS).
-- **Add Porkbun Domain Info to README** â€” Domain `haypbooks.com` purchased on Porkbun, DNS via Cloudflare.
-- **Verify Memory Leak Fix** â€” Monitor `haypbooks-backend` memory over 24-48hrs to confirm `metrics.ts` hourly `counts.clear()` resolves the issue long-term.
-- **User Account Deletion with File Cleanup** â€” Owner/Admin can permanently delete a user account. When a user is deleted, all their associated files (uploaded documents, attachments, exported reports) are also permanently deleted from storage. Requires cascade delete logic across User â†’ WorkspaceUser â†’ Company memberships, and a file cleanup service that removes the user's files from storage.
-
----
-
-## Future Plans
-
-| Plan | Name | Status | Blocked By |
-|------|------|--------|------------|
-| A | Self-Hosted PostgreSQL Migration | Not Started | E2E testing completion |
-| C-3 | Budgeting Module Enhancements | Not Started | â€” |
-| D | Approval Workflows | Not Started | â€” |
-| E | Fixed Asset Management | Not Started | Core accounting E2E validation |
-| F-2 | Zypra AI Phase 2 (Persistent History, Document Q&A, Advanced Insights) | Not Started | â€” |
-| G | Product Maturity Standard & Audit Framework | In Progress â€” Standard v1.0 adopted; Phase 1 audit pending | All six audit phases (S1â€“S6) completed and signed off |
-| H | Three-Role Architecture Refactor | H-3 Partially Implemented | Plan G completion |
-
-### Plan A: Self-Hosted PostgreSQL Migration
-**Goal**: Migrate from Neon hosted PostgreSQL to a self-hosted PostgreSQL instance on the VPS or a dedicated database server.
-
-**What needs to be achieved**:
-- Install and configure PostgreSQL on the VPS (or a separate DB server) with production-grade settings (shared_buffers, work_mem, connection pooling via PgBouncer)
-- Set up automated backup with pg_dump cron jobs (daily full, hourly WAL archiving) and verified restore procedures
-- Migrate all existing data from Neon using `pg_dump`/`pg_restore` with zero-downtime cutover (dual-write or DNS switchover)
-- Update all environment variables (DATABASE_URL) and verify Prisma migrations apply cleanly against the new instance
-- Configure firewall rules so only the VPS (and local dev) can reach PostgreSQL port 5432
-- **Blocked by:** E2E testing completion â€” we need confidence that the data layer works correctly before migrating to self-hosted
-
-### Plan C Phase 3: Budgeting Module Enhancements
-**Status**: Not Started | **Depends on**: Plan C Phase 2 (fully completed and deployed)
-
-**Goal**: Extend the budgeting module with templates, alerts, exports, and forecasting capabilities.
-
-**What needs to be achieved**:
-- **Budget Templates**: Pre-built budget templates for common industries (retail, SaaS, professional services, manufacturing) that auto-populate account lines with realistic defaults based on chart of accounts structure
-- **Variance Alerts**: Automated notifications (in-app first, email later) when actual spending exceeds budgeted amounts by a configurable threshold (e.g., 10%, 20%, 50%) â€” alert rules stored in database with per-company customization
-- ~~**CSV/PDF Export**: Export budget vs actual reports to CSV (with proper number formatting and column headers) and PDF (styled to match the existing financial report layout) from the vs-actual page~~ â€” COMPLETED: CSV/PDF budget exports are fully functional and deployed.
-- **Rolling Forecasts**: Ability to update budget amounts mid-fiscal-year and compare original budget vs. revised forecast vs. actuals â€” requires a `scenario` field extension (DRAFT, ORIGINAL, REVISED, FORECAST)
-- **Cash Flow Integration**: Link budget data to cash flow forecasting so projected cash positions account for budgeted income and expenses by month
-- **Budget Ownership & Comments**: Assign budget line ownership to team members and add comment threads on individual budget lines for collaboration during budget review cycles
-
-*Status note (Aug 27, 2026): Core budgeting module (Plan C
-Phases 1-2) is deployed; Phase 3 enhancements â€” templates,
-variance alerts, rolling forecasts, cash-flow integration,
-ownership/comments â€” remain unimplemented. Retained under
-In Progress to track future priorities.*
-
-### Plan D: Approval Workflows
-**Goal**: Provide controlled approval flows for high-risk accounting actions to enforce internal controls and audit compliance.
-
-**What needs to be achieved**:
-- Implement role-based approval matrix: define which roles can approve which action types (journal entries, bank reconciliations, payments above threshold)
-- Create an `Approval` model with states (PENDING, APPROVED, REJECTED, CANCELLED) and approval chains supporting single-approver and multi-level sequential approval
-- Add approval requirement to journal entry creation when the entry total exceeds a configurable company-level threshold
-- Add manager sign-off step to bank reconciliation completion â€” reconciliation cannot be finalized until an approver reviews and approves
-- Build an approvals dashboard listing pending items for the current user with one-click approve/reject actions and comment/reason fields
-- Emit audit log entries for every approval action (who approved, when, reason, linked record)
-
-### P1: Accounting Ledger Integrity Workstream (NEW)
-> All items verified by Audit 001/001-B (August 27, 2026). These defects let business events bypass or corrupt the General Ledger.
-- **Non-atomic business + GL writes** â€” invoice-send / payment / deposit flows run business-data and JE-posting in SEPARATE Prisma `$transaction`s; a crash between them permanently desyncs books.
-- **Balance Sheet missing Current Year Earnings** â€” `reporting.service.ts:L514-L533`: equity aggregates only equity-class accounts; no YTD-net-income plug â†’ BS out of balance between closes.
-- **Document numbering races** â€” atomic `DocumentSequence.upsert()` exists (`schema.prisma:L5137`; invoices + sales orders only, `ar.repository.ts:L133-L162`). Extend it to Journal Entries (currently max()+1 scans in sub-ledger/accounting repository) and credit notes (count()+1).
-- **Banking integrity gaps** â€” reconciliation completion does not enforce difference == 0; auto-match ignores amounts; transaction import lacks dedup fingerprinting (re-import double-counts); newly created bank accounts get no linked GL account.
-
-
-- **Legacy `createAndPostJE` drops the `entryNumber` parameter before `journalEntry.create`** â€” tracked defect in sub-ledger entry numbering: the legacy path persists posted JEs without their intended entry number; honor the parameter or retire the legacy path.
-- **FX revaluation placeholder** â€” endpoint returns last-50-JEs proxy; real unrealized gain/loss computation + posting absent. Unify base-currency fallbacks ('PHP' vs 'USD' across sub-ledger/gl-integration/exchange-rate/accounting).
-
-### Plan E: Fixed Asset Management
-**Goal**: Add fixed asset tracking, depreciation scheduling, and disposal/revaluation workflows for long-term asset accounting.
-
-**What needs to be achieved**:
-- Create FixedAsset model with fields: name, description, purchaseDate, purchasePrice, salvageValue, usefulLifeYears, depreciationMethod (STRAIGHT_LINE, DECLINING_BALANCE), currentBookValue, status (ACTIVE, DISPOSED, UNDER_REVIEW)
-- Build asset register page with CRUD, filtering by department/category/status, and summary cards showing total asset value and accumulated depreciation
-- Implement depreciation calculation engine supporting straight-line and declining balance methods with monthly depreciation journal entries auto-generated on schedule
-- Create asset disposal workflow: mark asset as disposed, record disposal date/proceeds/loss-or-gain, generate disposal journal entry
-- Add asset revaluation workflow: record new fair value, generate revaluation surplus/impairment journal entry
-- **Blocked by:** Core accounting E2E validation â€” need verified journal entry and financial statement accuracy before generating automated depreciation entries
-
-### Plan F-2: Zypra AI Phase 2
-**Goal**: Evolve Zypra from a simple Q&A widget into a persistent, context-aware accounting assistant.
-
-**What needs to be achieved**:
-- Persistent conversation history stored in database (linked to userId and companyId) so users can reference previous questions
-- Document Q&A: upload invoices, bank statements, or receipts and have Zypra extract and answer questions about the document content
-- Advanced insights: Zypra proactively identifies anomalies (unusual expenses, missing reconciliations, late payments) and surfaces them in the chat
-- Context-aware responses: Zypra knows which company the user is viewing and filters all responses to that company's data
-- Quick action execution: users can ask Zypra to perform actions ("create a journal entry for $500 rent expense") with confirmation prompts
-
----
-
-### Plan G: Product Maturity Standard & Audit Framework
-
-**Status**: Active â€” framework formally adopted via
-`docs/standards/PRODUCT_MATURITY_STANDARD.md`.
-
-**Role**: This plan operationalizes the Product Maturity Standard
-as the project's Definition of Done. The standard document is the
-single source of truth for the six audit perspectives, the
-five-tier maturity scale, P0â€“P3 classification, the ERPNext /
-QuickBooks benchmark protocol, the standard Aâ€“W audit report
-structure, and the binding anti-feature-creep rule.
-
-**Audit phases** (each phase = one HYDRA audit prompt producing an
-Aâ€“W report, followed by MANTRA execution prompts for each batch of
-fixes):
-  Phase 1 â€” Accounting & Ledger Integrity (S1)
-  Phase 2 â€” Security (S2)
-  Phase 3 â€” Data Integrity & Persistence (S3)
-  Phase 4 â€” Concurrency & Reliability (S4)
-  Phase 5 â€” UX & API Consistency (S5)
-  Phase 6 â€” Quality Operations (S6)
-
-**Execution approach**: Each phase should be executed as a separate
-Hydra audit prompt, followed by Mantra execution prompts for each
-batch of fixes. Phases can be partially parallelized (1-2 first,
-then 3-4, then 5-6).
-
-**Defect intake**: confirmed defects enter the roadmap Priority
-Backlog under their P-classification with the audit report section
-as citation. The existing P1 Accounting Ledger Integrity Workstream
-remains the leading candidate input for Phase 1.
-
----
-
-### Plan H: Three-Role Architecture Refactor
-
-**Goal:** Fully separate three admin roles â€” Owner Admin (platform owner), Company Admin (business user), and Practice Admin (accountant) â€” with isolated dashboards, navigation, API endpoints, subscription enforcement, and database isolation.
-
-**Status:** In Progress
-**Blocked By:** P0 items (JWT payload fix, onboarding regression), Plan G completion
-**Priority:** HIGH â€” foundation for all future feature development
-
-**Context:** Since Phase H-0 (completed August 27, 2026), SUPER_ADMIN is provisioned via prisma/seed-admin.ts, carries systemRole in the JWT (jwt.strategy.ts:32) and API responses (prisma-auth.service.ts:57), and receives platform-endpoint access through the RolesGuard check (roles.guard.ts:38). Effective hub roles remain 'business' and 'accountant' (synthesized from preferredHub) and all workspace owners map to RBAC 'admin' â€” see docs/architecture/ROLE_SYSTEM.md. Dedicated three-role separation (distinct Owner / Company / Practice dashboards, subscription enforcement, database isolation) is NOT yet implemented, and no subscription plan capacities are enforced.
-
----
-
-#### Phase H-0: Foundation â€” JWT + Auth Chain Fix
-> **Status**: âœ… FULLY COMPLETED â€” August 27, 2026. Code changes deployed; VPS provisioning executed and verified (SUPER_ADMIN created, login + JWT payload confirmed).
-**Prerequisite:** Must complete BEFORE any other Phase H work.
-**Depends on:** P0 items (JWT payload, mapRoleForFrontend)
-
-- [x] Add `systemRole` and `isOwner` to JWT payload â€” done in prisma-auth.service.ts + jwt.strategy.ts
-- [x] Add `isOwner` to JWT payload â€” done (L52, L194, L258, L332 in `prisma-auth.service.ts`)
-- [x] Update `jwt.strategy.ts:28-32` validate() to return `systemRole` and isOwner â€” done (L32-33)
-- [x] Update `RolesGuard` to check `systemRole === 'SUPER_ADMIN'` for platform endpoints
-- [x] Expose `systemRole` in API responses and frontend User types (backend users.service.ts, prisma-auth.service.ts + frontend auth.service.ts, use-user.ts)
-- [x] Standardize role values â€” NOT A BUG (three orthogonal layers, see docs/architecture/ROLE_SYSTEM.md). Renaming deferred to Phase H-6.
-- [x] Run `seed-admin.ts` on VPS with `ADMIN_EMAIL=paulescuadra25@gmail.com` to create the Owner Admin account
-- [x] Add `ADMIN_EMAIL` and `ADMIN_DEFAULT_PASSWORD` to VPS `.env`
-- [x] Verify SUPER_ADMIN can log in and JWT contains `systemRole: 'SUPER_ADMIN'`
-
-#### Phase H-3: Owner Admin Dashboard
-**Depends on:** None â€” prerequisite work completed
-
-- [ ] Build Platform Owner Dashboard component (overview: total companies, users, revenue, storage, growth charts)
-- [x] Build Storage Management page (per-company storage, limits, R2 usage)
-- [x] Build User Management page (all users, suspend/reactivate, view sessions, role assignment)
-- [x] Build Platform Metrics page (plan distribution, growth history, snapshots, MRR)
-
-*Implementation note (Aug 27, 2026): these pages exist as frontend routes calling live-shaped APIs, but are absent from the sidebar (linked via WorkspacePage/TopBar), client-gated to SUPER_ADMIN via src/app/(platform-admin)/layout.tsx. All 9 /api/owner/* endpoints are implemented and guarded (JwtAuthGuard + SystemRoleGuard, SUPER_ADMIN-only) in Backend/src/owner/owner.controller.ts: health, storage/usage, storage/usage/:companyId, storage/limits/:companyId, users, users/:userId/status, metrics/plan-distribution, metrics/snapshot, metrics/history. The (platform-admin) pages consume them via apiClient. No /api/platform/* endpoints exist anywhere; the earlier "unimplemented" note was a doc error.*
-- [ ] Build Subscription Overview page (all active subscriptions, revenue, churn)
-- [ ] Build Platform Settings page (global config, feature flags per workspace)
-- [ ] Owner Admin should see all three dashboards (Platform + Company + Practice) via a dashboard switcher
-- [ ] Owner Admin has NO subscription plan â€” unlimited access, no capacity restrictions
-
-#### Phase H-4: Subscription Enforcement
-**Depends on:** None â€” prerequisite work completed
-
-- [ ] Create `SubscriptionGuard` â€” checks plan capacity before allowing company/client creation
-- [ ] Enforce `Plan.maxCompanies` â€” block company creation when at capacity
-- [ ] Enforce `Plan.maxClients` â€” block client acceptance when at capacity
-- [ ] Create subscription status check middleware â€” block access when subscription is `PAST_DUE`, `CANCELED`, or `EXPIRED`
-- [ ] Build subscription limit UI â€” show current usage vs plan limits in settings
-- [ ] Upgrade/paywall flow â€” prompt users to upgrade when hitting limits
-- [ ] Seed plan records (FREE, STARTER, PRO, ENTERPRISE or equivalent) â€” currently no plans exist in DB
-- [ ] Subscription Lifecycle Auto-Delete Policy â€” user/company accounts with no active plan AND no active free trial receive a deletion WARNING at day 25 and are PERMANENTLY DELETED (including associated data) at day 30; users must avail a plan to keep the account alive
-- [ ] Auto-Delete Exemption Rule â€” the platform owner / SUPER_ADMIN account(s) are permanently exempt from subscription expiry checks and auto-deletion, without exception
-
-#### Phase H-5: Practice Admin Enhancement
-**Depends on:** None â€” prerequisite work completed
-
-- [ ] Expand practice nav from 2 sections to: Dashboard, Clients, Team, Settings, Billing, Reports
-- [ ] Implement Practice XP/tier gamification system (schema fields `practiceTier`/`practiceXp` exist but are never read/written)
-- [ ] Practice subscription plans with capacity limits (clients per tier)
-- [ ] Practice Admin should see only Practice Dashboard (not Company Dashboard)
-- [ ] Subscription-plan users should only see two workspace options at creation: Company or Practice (not both unless allowed by plan)
-
-#### Phase H-6: Database & Schema Cleanup
-**Depends on:** All previous phases
-
-- [ ] Fix phantom `role` field in `User` interface â€” update `user.repository.interface.ts:8` to match reality (only `'business'` or `'accountant'` can be returned)
-- [ ] Consider renaming `preferredHub` values (`OWNER` â†’ `COMPANY`) to eliminate confusion between "workspace owner" and "platform owner"
-- [ ] Clean up `WorkspaceType` enum usage â€” ensure Practice creation explicitly sets `type = PRACTICE`
-- [ ] Verify `practiceId` on `AuditLog` is populated for practice-scoped actions (field exists at `schema.prisma:9824` but may not be written consistently)
-- [ ] Include `seed-admin.ts` in the default deploy pipeline or document manual step
-
----
-
-**Known Issues to Track:**
-- ðŸ”´ No subscription capacity enforcement anywhere
-- ðŸ”´ Practice XP/tier system is dead schema (fields exist, no code)
-- ðŸŸ¡ Cross-role creation allowed (Company Admin can create Practice)
-- ðŸŸ¡ WorkspacePage shows platform admin link to any workspace owner
-
----
-
-- ðŸŸ¡ Owner-API doc error corrected â€” all 9 /api/owner/* endpoints are implemented and SUPER_ADMIN-guarded (owner.controller.ts) and consumed by the platform-admin pages via apiClient; no /api/platform/* endpoints exist.
-
-### Documentation Rule (Standing Policy)
-
-- Every implemented module or subsystem must maintain its own
-  `README.md` located at the module root.
-- Each module README records: architecture overview, key
-  components and responsibilities, important files, behavioral
-  contracts, decisions and their rationale, and usage examples.
-- A roadmap item may be marked DONE only when its behavior is
-  verified AND its module README exists and is accurate.
-- Purpose: preserve durable context for future AI agents and
-  human maintainers working on this repository.
-
-## Deferred Backend Stubs (22 Total)
-
-These modules have controller/service stubs that return placeholder data. They require full backend implementation before the frontend can be connected.
-
-### Inventory Module (6 stubs)
-- Inventory items CRUD, stock adjustments, inventory valuation, warehouse management, stock movements, inventory reports
-
-### Payroll Module (6 stubs)
-- Employee records, payroll runs, tax computations, payslip generation, statutory contributions, payslip generation
-
-### Projects Module (6 stubs)
-- Project creation, time tracking, project billing, project profitability, milestone tracking, project reports
-
-### Other (4 stubs)
-- Fixed asset insurance tracking, accounting period close sign-offs, advanced reporting, data import/export
-
-**Note:** These are low priority. Address individually when the corresponding frontend module becomes the development focus.
-
----
-
-## Technical Debt
-- [ ] Test suite exists but coverage is uneven (~87 genuine tests at cd3d30e8: 47 backend spec/test files incl. general-ledger, AP lifecycle, sub-ledger reversal, auth integration; 22 frontend component/route tests; 18 Playwright e2e specs). Still uncovered/thin: payrollâ†’GL posting, banking reconciliation matching, tenant-isolation scoping, document-numbering concurrency, financial-report correctness. No coverage thresholds enforced in CI.
-- [ ] **Backend unit-suite baseline unproven** â€” Five audit attempts could not capture a complete npm test:unit run: the log stops after the npm invocation + ts-jest deprecation warning (zero suites start), and the --json retry produced a 0-byte results file. tsc --noEmit is clean and targeted specs pass, but a green full-suite baseline has never been evidenced. Requires one machine-level successful full run before test-suite health can be claimed.
-- Resolved â€” see Completed Projects. Fix: hourly counts.clear() in metrics.ts + PM2 max_memory_restart 1G.
-- [x] **`bot-connect.js` 404 errors** â€” Resolved. No references to `bot-connect.js` found in Frontend codebase.
-- [ ] Stabilize 3 flaky tests: 2 backend (prisma seed race conditions in auth tests), 1 frontend (Sidebar permission-check timing issue).
-
