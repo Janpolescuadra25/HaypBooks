@@ -1,4 +1,5 @@
-import { Controller, Get, Query, ForbiddenException, Post, Body, Req, Inject, UnauthorizedException, NotFoundException } from '@nestjs/common'
+import { Controller, Get, Query, ForbiddenException, Post, Body, Req, Inject, UnauthorizedException, NotFoundException, UseGuards } from '@nestjs/common'
+import { Request } from 'express'
 import * as bcrypt from '../utils/bcrypt-fallback'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { PendingSignupService } from '../auth/pending-signup.service'
@@ -7,7 +8,9 @@ import { CompanyRepository } from '../companies/company.repository.prisma'
 import { OnboardingService } from '../onboarding/onboarding.service'
 import { ONBOARDING_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 import { IOnboardingRepository } from '../repositories/interfaces/onboarding.repository.interface'
+import { TestEndpointGuard } from './test.guard'
 
+@UseGuards(TestEndpointGuard)
 @Controller('api/test')
 export class TestController {
   constructor(
@@ -18,33 +21,36 @@ export class TestController {
     @Inject(ONBOARDING_REPOSITORY) private readonly onboardingRepository: IOnboardingRepository,
   ) {}
 
-  private ensureEnabled() {
+  private ensureEnabled(req?: Request) {
     const allowFlag = process.env.ALLOW_TEST_ENDPOINTS === 'true'
     const nodeEnv = process.env.NODE_ENV
     const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
-    const hasToken = !!process.env.ALLOW_TEST_ENDPOINTS_TOKEN
+    const expectedToken = process.env.ALLOW_TEST_ENDPOINTS_TOKEN
 
-    /*
-     * Permit test-only endpoints only when one of these is true:
-     *  - NODE_ENV === 'test' (explicit test run)
-     *  - ALLOW_TEST_ENDPOINTS=true AND (running in development OR running in CI OR a token is present)
-     * This prevents enabling the endpoints in production by accident when ALLOW_TEST_ENDPOINTS
-     * is set to true on a live server.
-     */
     if (nodeEnv === 'test') return
 
-    // A secret token (ALLOW_TEST_ENDPOINTS_TOKEN) will always allow access when present
-    if (hasToken) return
-
-    // ALLOW_TEST_ENDPOINTS must be true and the process should be running in development or CI
     if (allowFlag && (nodeEnv === 'development' || isCI)) return
+
+    if (expectedToken && expectedToken.trim().length > 0) {
+      const rawTokenHeader = req?.headers?.['x-test-token']
+      const headerToken = Array.isArray(rawTokenHeader) ? rawTokenHeader[0] : rawTokenHeader
+      const authHeader = req?.headers?.authorization
+      const authValue = Array.isArray(authHeader) ? authHeader[0] : authHeader
+      const bearerToken = typeof authValue === 'string' && authValue.toLowerCase().startsWith('bearer ')
+        ? authValue.slice(7).trim()
+        : undefined
+
+      if (headerToken === expectedToken || bearerToken === expectedToken) return
+
+      throw new ForbiddenException('Test endpoints disabled: Invalid or missing X-Test-Token')
+    }
 
     throw new ForbiddenException('Test endpoints disabled; enable only in development/CI or set NODE_ENV=test or provide ALLOW_TEST_ENDPOINTS_TOKEN')
   }
 
   @Get('otp/latest')
-  async latestOtp(@Query('email') email?: string, @Query('phone') phone?: string, @Query('purpose') purpose?: string) {
-    this.ensureEnabled()
+  async latestOtp(@Req() req: Request, @Query('email') email?: string, @Query('phone') phone?: string, @Query('purpose') purpose?: string) {
+    this.ensureEnabled(req)
     const where: any = {}
     if (email) where.email = email
     if (phone) where.phone = phone
@@ -68,8 +74,8 @@ export class TestController {
 
   @Post('create-otp')
   // Return 201 Created for test helper creation convenience
-  async createOtp(@Body() body: { email?: string; phone?: string; otp?: string; purpose?: string; ttlMinutes?: number }) {
-    this.ensureEnabled()
+  async createOtp(@Req() req: Request, @Body() body: { email?: string; phone?: string; otp?: string; purpose?: string; ttlMinutes?: number }) {
+    this.ensureEnabled(req)
     if (!body || (!body.email && !body.phone)) return { error: 'missing email or phone' }
     const code = body.otp || String(Math.floor(Math.random() * 1000000)).padStart(6, '0')
     const ttl = body.ttlMinutes || 5
@@ -89,8 +95,8 @@ export class TestController {
   }
 
   @Post('create-otps')
-  async createOtps(@Body() body: { phones?: string[]; otp?: string; purpose?: string; ttlMinutes?: number }) {
-    this.ensureEnabled()
+  async createOtps(@Req() req: Request, @Body() body: { phones?: string[]; otp?: string; purpose?: string; ttlMinutes?: number }) {
+    this.ensureEnabled(req)
     if (!body || !body.phones || !Array.isArray(body.phones) || body.phones.length === 0) return { error: 'missing phones' }
     const ttl = body.ttlMinutes || 5
     const expiresAt = new Date(Date.now() + ttl * 60 * 1000)
@@ -111,8 +117,8 @@ export class TestController {
   }
 
   @Post('force-complete-signup')
-  async forceCompleteSignup(@Body() body: { signupToken?: string }) {
-    this.ensureEnabled()
+  async forceCompleteSignup(@Req() req: Request, @Body() body: { signupToken?: string }) {
+    this.ensureEnabled(req)
     if (!body || !body.signupToken) return { error: 'missing signupToken' }
     const pending = await this.pendingSignupService.get(body.signupToken)
     if (!pending) return { error: 'pending signup not found' }
@@ -130,8 +136,8 @@ export class TestController {
   }
 
   @Post('force-verify-user')
-  async forceVerifyUser(@Body() body: { email?: string; phone?: string; type?: 'email'|'phone' }) {
-    this.ensureEnabled()
+  async forceVerifyUser(@Req() req: Request, @Body() body: { email?: string; phone?: string; type?: 'email'|'phone' }) {
+    this.ensureEnabled(req)
     if ((!body || !body.email) && (!body || !body.phone)) return { error: 'missing email or phone' }
 
     let user: any = null
@@ -153,8 +159,8 @@ export class TestController {
   }
 
   @Post('force-complete-onboarding')
-  async forceCompleteOnboarding(@Body() body: { email?: string; mode?: 'quick'|'full' }) {
-    this.ensureEnabled()
+  async forceCompleteOnboarding(@Req() req: Request, @Body() body: { email?: string; mode?: 'quick'|'full' }) {
+    this.ensureEnabled(req)
     if (!body || !body.email) return { error: 'missing email' }
     const user = await this.prisma.user.findUnique({ where: { email: body.email } })
     if (!user) return { error: 'user not found' }
@@ -166,8 +172,8 @@ export class TestController {
   }
 
   @Post('force-run-onboarding')
-  async forceRunOnboarding(@Body() body: { email?: string; companyName?: string; mode?: 'quick'|'full' }) {
-    this.ensureEnabled()
+  async forceRunOnboarding(@Req() req: Request, @Body() body: { email?: string; companyName?: string; mode?: 'quick'|'full' }) {
+    this.ensureEnabled(req)
     if (!body || !body.email) return { error: 'missing email' }
     const user = await this.prisma.user.findUnique({ where: { email: body.email } })
     if (!user) return { error: 'user not found' }
@@ -187,16 +193,16 @@ export class TestController {
     }
   }
   @Get('user')
-  async getUser(@Query('email') email: string) {
-    this.ensureEnabled()
+  async getUser(@Req() req: Request, @Query('email') email: string) {
+    this.ensureEnabled(req)
     const user = await this.prisma.user.findUnique({ where: { email } })
     return user || null
   }
 
   @Post('create-token')
-  async createToken(@Body() body: { email?: string }) {
+  async createToken(@Req() req: Request, @Body() body: { email?: string }) {
     try {
-      this.ensureEnabled()
+      this.ensureEnabled(req)
     } catch (err) {
       throw new UnauthorizedException('Test endpoints disabled')
     }
@@ -215,11 +221,12 @@ export class TestController {
 
   @Get('journal-entries')
   async getJournalEntries(
+    @Req() req: Request,
     @Query('companyId') companyId?: string,
     @Query('description') description?: string,
     @Query('status') status?: string,
   ) {
-    this.ensureEnabled()
+    this.ensureEnabled(req)
     const where: any = {}
     if (companyId) where.companyId = companyId
     if (description) where.description = { contains: description, mode: 'insensitive' }
@@ -233,8 +240,8 @@ export class TestController {
   }
 
   @Get('check-user-verification')
-  async checkUserVerification(@Query('email') email: string) {
-    this.ensureEnabled()
+  async checkUserVerification(@Req() req: Request, @Query('email') email: string) {
+    this.ensureEnabled(req)
     if (!email) return { error: 'email query parameter required' }
     const user = await this.prisma.user.findUnique({ where: { email } })
     if (!user) return { error: 'user not found' }
@@ -255,16 +262,16 @@ export class TestController {
   }
 
   @Get('users')
-  async listUsers() {
-    this.ensureEnabled()
+  async listUsers(@Req() req: Request) {
+    this.ensureEnabled(req)
     // return a safe, small list of user fields for test inspection
     const rows = await this.prisma.user.findMany({ select: { id: true, email: true, name: true, isEmailVerified: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 200 })
     return rows
   }
 
   @Post('create-user')
-  async createUser(@Body() body: { email: string; password: string; name?: string; phone?: string; isEmailVerified?: boolean; isAccountant?: boolean; role?: string }) {
-    this.ensureEnabled()
+  async createUser(@Req() req: Request, @Body() body: { email: string; password: string; name?: string; phone?: string; isEmailVerified?: boolean; isAccountant?: boolean; role?: string }) {
+    this.ensureEnabled(req)
     console.log('[TEST] createUser called with', { email: body.email, name: body.name, isEmailVerified: body.isEmailVerified, role: body.role })
 
     const hash = await bcrypt.hash(body.password, 12)
@@ -309,8 +316,8 @@ export class TestController {
    * need multiple distinct workspaces for a single user.
    */
   @Post('create-new-workspace')
-  async createNewWorkspace(@Body() body: { email: string; name?: string; currency?: string }) {
-    this.ensureEnabled()
+  async createNewWorkspace(@Req() req: Request, @Body() body: { email: string; name?: string; currency?: string }) {
+    this.ensureEnabled(req)
     try {
       if (!body || !body.email) return { error: 'missing email' }
       const user = await this.prisma.user.findUnique({ where: { email: body.email } })
@@ -376,8 +383,8 @@ export class TestController {
   }
 
   @Post('set-trial')
-  async setTrial(@Body() body: { email?: string; id?: string; trialEndsAt: string }) {
-    this.ensureEnabled()
+  async setTrial(@Req() req: Request, @Body() body: { email?: string; id?: string; trialEndsAt: string }) {
+    this.ensureEnabled(req)
     if (!body || !body.trialEndsAt) return { error: 'missing trialEndsAt' }
     // Prefer identifying by id, fallback to email
     let where: any = {}
@@ -390,8 +397,8 @@ export class TestController {
   }
 
   @Post('update-user')
-  async updateUser(@Body() body: { email?: string; id?: string; data: any }) {
-    this.ensureEnabled()
+  async updateUser(@Req() req: Request, @Body() body: { email?: string; id?: string; data: any }) {
+    this.ensureEnabled(req)
     if (!body || !body.data) return { error: 'missing data' }
     let where: any = {}
     if (body.id) where = { id: body.id }
@@ -408,30 +415,30 @@ export class TestController {
   }
 
   @Post('echo-headers')
-  async echoHeaders(@Body() _body: any, @Req() req: any) {
-    this.ensureEnabled()
+  async echoHeaders(@Req() req: Request, @Body() _body: any) {
+    this.ensureEnabled(req)
     return { headers: req.headers }
   }
 
   @Post('session/find-by-refresh')
-  async findSessionByRefresh(@Body() body: { token?: string }) {
-    this.ensureEnabled()
+  async findSessionByRefresh(@Req() req: Request, @Body() body: { token?: string }) {
+    this.ensureEnabled(req)
     if (!body || !body.token) return { error: 'missing token' }
     const session = await this.prisma.session.findUnique({ where: { refreshToken: body.token } })
     return session || null
   }
 
   @Post('debug/refresh')
-  async debugRefresh(@Body() body: { token?: string }) {
-    this.ensureEnabled()
+  async debugRefresh(@Req() req: Request, @Body() body: { token?: string }) {
+    this.ensureEnabled(req)
     if (!body || !body.token) return { error: 'missing token' }
     const result = await this.authService.refresh(body.token)
     return { result }
   }
 
   @Get('sessions')
-  async listSessions(@Query('email') email: string) {
-    this.ensureEnabled()
+  async listSessions(@Req() req: Request, @Query('email') email: string) {
+    this.ensureEnabled(req)
     if (!email) return []
     // join user->session and return session rows
     const user = await this.prisma.user.findUnique({ where: { email } })
@@ -441,8 +448,8 @@ export class TestController {
   }
 
   @Post('create-company')
-  async createCompany(@Body() body: { email?: string; name?: string; currency?: string; createTenant?: boolean }) {
-    this.ensureEnabled()
+  async createCompany(@Req() req: Request, @Body() body: { email?: string; name?: string; currency?: string; createTenant?: boolean }) {
+    this.ensureEnabled(req)
     if (!body || !body.email || !body.name) return { error: 'missing email or name' }
 
     const user = await this.prisma.user.findUnique({ where: { email: body.email } })
@@ -478,8 +485,8 @@ export class TestController {
   }
 
   @Post('delete-company')
-  async deleteCompany(@Body() body: { email?: string; name?: string; companyId?: string; deleteTenant?: boolean }) {
-    this.ensureEnabled()
+  async deleteCompany(@Req() req: Request, @Body() body: { email?: string; name?: string; companyId?: string; deleteTenant?: boolean }) {
+    this.ensureEnabled(req)
     if (!body || (!body.companyId && (!body.email || !body.name))) return { error: 'missing companyId or (email and name)' }
 
     // Resolve company by id OR by email+name
@@ -550,8 +557,8 @@ export class TestController {
   }
 
   @Get('companies')
-  async listCompaniesForUser(@Query('email') email: string) {
-    this.ensureEnabled()
+  async listCompaniesForUser(@Req() req: Request, @Query('email') email: string) {
+    this.ensureEnabled(req)
     if (!email) return []
 
     try {

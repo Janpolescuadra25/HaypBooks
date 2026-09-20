@@ -313,6 +313,12 @@ The following items have been fully completed, verified against the actual repos
   * Documented in: `Haypbooks/Frontend/src/components/landing/README.md`.
   * Resolution Date: 2026-09-20.
 
+- ✅ **Phase 12 E1 (Test Endpoint Security Guard & Hardening):**
+  * Fully resolved: Implemented dual-layer protections by conditionally mounting `TestModule` in `AppModule` and applying `@UseGuards(TestEndpointGuard)` to `TestController`.
+  * Verified: All test endpoints validate `X-Test-Token` against `ALLOW_TEST_ENDPOINTS_TOKEN` while production remains fail-closed; `/api/test` is not mounted in default production mode.
+  * Documented in: `Haypbooks/Backend/src/test/README.md`.
+  * Resolution Date: 2026-09-20.
+
 ## Historical completion index from the documentation roadmap
 
 The following entries were labeled complete in the August 29 document. They are retained as historical context only, not new verification of source, deployed configuration or tests. Regressions belong in the owning active phase. Checked boxes or deployment claims here do not override current release gates.

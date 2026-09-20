@@ -6,7 +6,7 @@ import { AuthModule } from './auth/auth.module'
 import { AppThrottlerGuard } from './shared/app-throttler.guard'
 import { UsersModule } from './users/users.module'
 import { OnboardingModule } from './onboarding/onboarding.module'
-import { TestController } from './test/test.controller'
+import { TestModule } from './test/test.module'
 import { PrismaRepositoriesModule } from './repositories/prisma/prisma-repositories.module'
 import { TasksModule } from './tasks/tasks.module'
 import { CurrencyModule } from './currency/currency.module'
@@ -93,8 +93,9 @@ const RepositoriesModule = PrismaRepositoriesModule
     (require('./email-templates/email-templates.module').EmailTemplatesModule),
     ZypraModule,
     HealthModule,
+    ...(process.env.NODE_ENV !== 'production' || process.env.ALLOW_TEST_ENDPOINTS === 'true' || Boolean(process.env.ALLOW_TEST_ENDPOINTS_TOKEN) ? [TestModule] : []),
   ],
-  controllers: [TestController],
+  controllers: [],
   providers: [
     // Enforce lightweight request logging for every route.
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
