@@ -132,6 +132,13 @@ Original phase IDs retained. Phase 9 is active again; no original phase is verif
 
 ### 9 â€” Build/test baseline (PARTIAL, P0 supporting gate)
 
+- ✅ **Phase 9 Milestone (Backend & Frontend TypeScript Quality Baseline):**
+  * Backend TypeScript: `npx tsc --noEmit` verified exit code 0 across all modules.
+  * Frontend TypeScript: `npx tsc --noEmit` verified exit code 0 across all pages.
+  * Build Gates: `typescript.ignoreBuildErrors` set to `false` in `next.config.js`.
+  * Section Documentation: `Haypbooks/Backend/src/inventory/README.md` created and verified.
+  * Remaining Task: ESLint warning cleanup across 19 identified pages to enable `eslint.ignoreDuringBuilds: false`.
+
 - Audit: scripts/configuration/setup; independently verify public-layout/history claims and classify current failures.
 - Deliver: separate frontend lint/typecheck/build, backend compile/unit/integration, disposable database and deterministic E2E setup. Never disable checks for green status or seed an unverified database.
 - Depends on: isolated environment. Done: versions/commands/results reproducible in CI or equivalent; critical failed/skipped checks remain blockers.

@@ -16,7 +16,7 @@ const nextConfig = {
   typescript: {
     // Warning: This allows production builds to successfully complete even if
     // your project has type errors.
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // During development, proxy API requests to the local backend so cookies are same-origin
   async rewrites() {
