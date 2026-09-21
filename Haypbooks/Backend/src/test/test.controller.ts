@@ -464,7 +464,7 @@ export class TestController {
       if (body.createTenant === false) return { error: 'user not associated with any workspace' }
 
       // Leverage the existing test helper to create a new workspace and ensure the user is an owner
-      const ws = await this.createNewWorkspace({ email: body.email, name: body.name, currency: body.currency })
+      const ws = await this.createNewWorkspace(req, { email: body.email, name: body.name, currency: body.currency })
       workspaceId = ws?.workspaceId || null
     } else {
       workspaceId = workspaceUsers[0].workspaceId
