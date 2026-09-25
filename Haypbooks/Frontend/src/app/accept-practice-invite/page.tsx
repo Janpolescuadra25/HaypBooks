@@ -204,7 +204,7 @@ export default function AcceptPracticeInvitePage() {
                 <CheckCircle2 size={24} />
               </div>
               <div>
-                <p className="text-lg font-semibold">You're now connected!</p>
+                <p className="text-lg font-semibold">You&apos;re now connected!</p>
                 <p className="text-sm text-slate-700">The engagement is active and your practice is connected.</p>
               </div>
             </div>

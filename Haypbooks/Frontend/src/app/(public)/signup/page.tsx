@@ -1,9 +1,9 @@
-"use client"
+﻿"use client"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { authService } from '@/services/auth.service'
-import AuthLayout from '@/components/auth/AuthLayout' 
+import AuthShell from '@/components/auth/AuthShell' 
 import { useForm } from 'react-hook-form'
 import { normalizePhoneOrThrow } from '@/utils/phone.util'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -147,18 +147,7 @@ export default function SignupPage() {
   }
 
   return (
-    <AuthLayout>
-        <div className="mb-10">
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">
-            {step === 'role' ? 'Join Haypbooks' : 'Create your account'}
-          </h2>
-          <p className="text-slate-500">
-            {step === 'role'
-              ? 'Which best describes your role?'
-              : `Setting up for ${role === 'accountant' ? 'My Practice' : 'My Business'}`}
-          </p>
-        </div>
-
+    <AuthShell title={step === 'role' ? 'Join HaypBooks' : 'Create your account'} subtitle={step === 'role' ? 'Which best describes your role? You can always add the other workspace later.' : `Setting up ${role === 'accountant' ? 'a practice workspace' : 'a business workspace'} — free for 30 days, no credit card required.`}>
           {/* Role selection step */}
           {step === 'role' ? (
             <div>
@@ -175,7 +164,7 @@ export default function SignupPage() {
                   </div>
                   <div>
                     <div className="font-bold text-slate-900">Business Owner</div>
-                    <div className="text-sm text-slate-500 mt-0.5">I want to manage my company's finances and ledgers.</div>
+                    <div className="text-sm text-slate-500 mt-0.5">I want to manage my company&apos;s finances and ledgers.</div>
                   </div>
                 </button>
 
@@ -423,6 +412,6 @@ export default function SignupPage() {
             Back to home
           </a>
         </div>
-      </AuthLayout>
+      </AuthShell>
   )
 }

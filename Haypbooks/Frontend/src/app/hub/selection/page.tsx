@@ -78,7 +78,7 @@ export default function HubSelectionPage() {
         <div className="text-center">
           <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">HaypBooks Hubs consolidated</h2>
-            <p className="text-sm text-slate-600 mt-2">We've consolidated the Owner Workspace and Accountant Hub into one unified Dashboard for a simpler experience. Click below to continue.</p>
+            <p className="text-sm text-slate-600 mt-2">We&apos;ve consolidated the Owner Workspace and Accountant Hub into one unified Dashboard for a simpler experience. Click below to continue.</p>
 
             <div className="mt-6">
               <a href="/dashboard" className="inline-block bg-emerald-600 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-emerald-700">Continue to Dashboard</a>

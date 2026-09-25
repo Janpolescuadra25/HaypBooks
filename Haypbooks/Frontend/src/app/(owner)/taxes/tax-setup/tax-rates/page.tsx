@@ -175,7 +175,7 @@ export default function TaxRatesPage() {
             <div className="flex flex-col items-center justify-center py-24 text-slate-400">
               <Percent className="h-8 w-8 mb-2 text-slate-300" />
               <p className="text-sm">No tax rates configured</p>
-              <p className="text-xs mt-1">Click "Add Tax Rate" to create your first tax rate</p>
+              <p className="text-xs mt-1">Click &quot;Add Tax Rate&quot; to create your first tax rate</p>
             </div>
           ) : (
             <table className="w-full">
@@ -222,7 +222,7 @@ export default function TaxRatesPage() {
             <div className="flex flex-col items-center justify-center py-24 text-slate-400">
               <Tag className="h-8 w-8 mb-2 text-slate-300" />
               <p className="text-sm">No tax codes configured</p>
-              <p className="text-xs mt-1">Click "Add Tax Code" to create your first tax code</p>
+              <p className="text-xs mt-1">Click &quot;Add Tax Code&quot; to create your first tax code</p>
             </div>
           ) : (
             <table className="w-full">

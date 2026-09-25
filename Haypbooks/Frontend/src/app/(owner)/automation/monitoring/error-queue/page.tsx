@@ -1,10 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AlertCircle, RefreshCw, Loader2, Check } from 'lucide-react'
 import { automationService } from '@/services/automation.service'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import HaypModal from '@/components/shared/HaypModal'
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
 
 const ERROR_TYPE_BADGE: Record<string, string> = {
   Validation: 'bg-amber-50 text-amber-700',
@@ -151,7 +161,7 @@ export default function ErrorQueuePage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-700">{item.message || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{item.occurred ? new Date(item.occurred).toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{formatDateTime(item.occurred)}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[item.status] || 'bg-slate-100 text-slate-600'}`}>
                       {item.status || 'Open'}
@@ -217,7 +227,7 @@ export default function ErrorQueuePage() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Occurred</label>
               <input
                 type="text"
-                value={selectedItem?.occurred ? new Date(selectedItem.occurred).toLocaleString() : ''}
+                value={selectedItem?.occurred ? formatDateTime(selectedItem.occurred) : ''}
                 disabled
                 className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700"
               />

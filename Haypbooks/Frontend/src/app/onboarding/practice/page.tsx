@@ -105,7 +105,7 @@ export default function PracticeOnboardingPage() {
             </div>
             <h1 className="text-3xl font-bold text-white mb-4">Practice Setup</h1>
             <p className="text-slate-400 leading-relaxed">
-              We're tailoring your Haypbooks experience to fit your professional practice perfectly.
+              We&apos;re tailoring your Haypbooks experience to fit your professional practice perfectly.
             </p>
           </div>
 
@@ -142,7 +142,7 @@ export default function PracticeOnboardingPage() {
                   <div className="space-y-8">
                     <div>
                       <h2 className="text-4xl font-bold text-slate-900 mb-2">Practice Identity</h2>
-                      <p className="text-slate-500">Let's set up your professional workspace.</p>
+                      <p className="text-slate-500">Let&apos;s set up your professional workspace.</p>
                     </div>
                     <PracticeProfile currentStep={1} onNext={handleStep1Next} />
                   </div>
@@ -237,7 +237,7 @@ function PracticeDoneStep({ practiceName, onGoToHub }: { practiceName?: string; 
       </div>
 
       <div className="max-w-md mx-auto bg-white border border-slate-100 rounded-[32px] p-8 text-left space-y-6 shadow-sm">
-        <h4 className="font-bold text-slate-900 uppercase text-xs tracking-widest">What's next?</h4>
+        <h4 className="font-bold text-slate-900 uppercase text-xs tracking-widest">What&apos;s next?</h4>
         <div className="space-y-4">
           {[
             'Invite your first team member',

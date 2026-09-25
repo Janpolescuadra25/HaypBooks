@@ -52,6 +52,8 @@ const typeColors: Record<string, string> = {
 /* ─── main ─── */
 export default function ChartOfAccountsPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
+  const { currency } = useCompanyCurrency()
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -153,9 +155,6 @@ export default function ChartOfAccountsPage() {
   if (cidError) {
     return <div className="p-6 text-center text-red-600">{cidError}</div>
   }
-
-  const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">

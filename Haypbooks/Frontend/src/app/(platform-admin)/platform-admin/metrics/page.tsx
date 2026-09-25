@@ -283,7 +283,7 @@ export default function OwnerMetricsPage() {
             ) : (
               <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
                 <p className="text-sm font-semibold">No snapshots recorded yet.</p>
-                <p className="mt-2">Click "Record Snapshot" to start tracking storage growth over time.</p>
+                <p className="mt-2">Click &quot;Record Snapshot&quot; to start tracking storage growth over time.</p>
               </div>
             )}
           </div>

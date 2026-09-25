@@ -138,7 +138,7 @@ export default function PracticeHubPage() {
               <h1 className="mt-3 text-4xl font-bold text-slate-950">
                 Welcome back{dashboard?.practiceName ? `, ${dashboard.practiceName}` : ''}
               </h1>
-              <p className="mt-3 text-sm text-slate-500">Here's your practice overview with tasks, deadlines, and client activity.</p>
+              <p className="mt-3 text-sm text-slate-500">Here&apos;s your practice overview with tasks, deadlines, and client activity.</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -299,7 +299,7 @@ export default function PracticeHubPage() {
               ) : deadlines.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
                   <p className="text-sm font-semibold">No upcoming deadlines</p>
-                  <p className="mt-2 text-xs">You're clear for now. Keep tracking progress from the dashboard.</p>
+                  <p className="mt-2 text-xs">You&apos;re clear for now. Keep tracking progress from the dashboard.</p>
                 </div>
               ) : (
                 deadlines.map((deadline) => (

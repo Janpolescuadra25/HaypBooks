@@ -325,7 +325,7 @@ export default function BusinessOnboardingPage() {
               {formData.businessName || formData.legalName || 'Your company'} was created
             </h2>
             <p className="text-slate-500 leading-relaxed">
-              Your business profile has been set up. We're now preparing your personalized ledger and dashboard.
+              Your business profile has been set up. We&apos;re now preparing your personalized ledger and dashboard.
             </p>
           </div>
           <button
@@ -365,7 +365,7 @@ export default function BusinessOnboardingPage() {
             </div>
             <h1 className="text-3xl font-bold text-white mb-4">Business Setup</h1>
             <p className="text-slate-400 leading-relaxed">
-              Let's get your company profile ready for professional bookkeeping and automated ledgers.
+              Let&apos;s get your company profile ready for professional bookkeeping and automated ledgers.
             </p>
           </div>
 
@@ -581,7 +581,7 @@ export default function BusinessOnboardingPage() {
                             <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex gap-3">
                               <div className="text-amber-600"><Sparkles size={18} /></div>
                               <p className="text-xs text-amber-800 leading-relaxed">
-                                <strong>USA exception:</strong> Sales tax varies by state. Check your state's rate before invoicing.
+                                <strong>USA exception:</strong> Sales tax varies by state. Check your state&apos;s rate before invoicing.
                               </p>
                             </div>
                           )}

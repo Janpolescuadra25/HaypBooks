@@ -143,7 +143,7 @@ export default function CompanyDetailsPage() {
           <Building2 className="w-6 h-6 text-emerald-600" />
           <h2 className="text-lg font-semibold text-slate-800">Company Details</h2>
         </div>
-        <p className="mt-2 text-sm text-slate-500">Manage your company's core information and legal details</p>
+        <p className="mt-2 text-sm text-slate-500">Manage your company&apos;s core information and legal details</p>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6">

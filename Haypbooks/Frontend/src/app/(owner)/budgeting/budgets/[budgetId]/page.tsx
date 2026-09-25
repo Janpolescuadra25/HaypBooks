@@ -509,7 +509,7 @@ export default function BudgetDetailPage() {
                       <td colSpan={4} className="text-center py-12 text-slate-400">
                         <FileText className="mx-auto h-8 w-8 mb-2 text-slate-300" />
                         <p className="text-sm">No budget lines yet</p>
-                        <p className="text-xs mt-1">Click "Add Line" to create your first budget entry</p>
+                        <p className="text-xs mt-1">Click &quot;Add Line&quot; to create your first budget entry</p>
                       </td>
                     </tr>
                   )}

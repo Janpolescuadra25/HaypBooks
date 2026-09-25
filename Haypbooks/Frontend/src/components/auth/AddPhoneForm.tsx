@@ -56,7 +56,7 @@ export default function AddPhoneForm({ onSaved, onCancel }: { onSaved: (phone: s
 
         <button data-testid="add-phone-save" onClick={async () => await handleSaveAndSend()} disabled={loading} className="w-full inline-flex justify-center items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md font-semibold hover:from-emerald-700 hover:to-teal-700 disabled:opacity-60">{loading ? 'Saving…' : 'Save & Send'}</button>
 
-        <div className="text-xs text-gray-500 mt-1">We'll send a 6-digit code to this number to verify it.</div>
+        <div className="text-xs text-gray-500 mt-1">We&apos;ll send a 6-digit code to this number to verify it.</div>
       </div>
     </div>
   )

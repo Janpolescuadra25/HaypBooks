@@ -157,7 +157,7 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
           </div>
 
           <h2 className="text-2xl font-semibold mb-2">Confirm your account</h2>
-          <p className="text-sm text-slate-600 mb-4">Almost there! Enter the 6-digit code we sent to confirm it's you and finish setting up your account.</p>
+          <p className="text-sm text-slate-600 mb-4">Almost there! Enter the 6-digit code we sent to confirm it&apos;s you and finish setting up your account.</p>
         </>
       )}
 

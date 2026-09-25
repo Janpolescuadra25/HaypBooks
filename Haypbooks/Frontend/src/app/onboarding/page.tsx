@@ -435,7 +435,7 @@ export default function OnboardingPage() {
             </div>
             <h1 className="text-3xl font-bold text-white mb-4">Business Setup</h1>
             <p className="text-slate-400 leading-relaxed">
-              Let's get your company profile ready for professional bookkeeping and automated ledgers.
+              Let&apos;s get your company profile ready for professional bookkeeping and automated ledgers.
             </p>
           </div>
 
@@ -612,7 +612,7 @@ export default function OnboardingPage() {
                         </div>
                         {formData.country === 'United States' && (
                           <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-800">
-                            <strong>Note:</strong> In the United States, sales tax varies by state — there is no federal rate. Check your state's rate and enter it below if applicable.
+                            <strong>Note:</strong> In the United States, sales tax varies by state — there is no federal rate. Check your state&apos;s rate and enter it below if applicable.
                           </div>
                         )}
                         {formData.collectVat && (
