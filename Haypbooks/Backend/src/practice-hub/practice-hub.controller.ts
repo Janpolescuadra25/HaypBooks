@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req, UnauthorizedException, NotFoundException, UseGuards, Post, Body, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common'
+﻿import { Controller, Get, Param, Req, UnauthorizedException, NotFoundException, UseGuards, Post, Body, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
 import { WorkspaceTypeGuard } from '../auth/guards/workspace-type.guard'
@@ -6,7 +6,7 @@ import { PracticeHubService } from './practice-hub.service'
 import { CreatePracticeInviteDto } from './dto/create-practice-invite.dto'
 import { AcceptPracticeInviteDto } from './dto/accept-practice-invite.dto'
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
 @Controller('api/practice-hub')
 export class PracticeHubController {
   constructor(private readonly service: PracticeHubService) {}

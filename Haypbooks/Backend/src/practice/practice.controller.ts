@@ -1,10 +1,10 @@
-import { Controller, Get, Req, UseGuards, Post, Body, BadRequestException } from '@nestjs/common'
+﻿import { Controller, Get, Req, UseGuards, Post, Body, BadRequestException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
 import { WorkspaceTypeGuard } from '../auth/guards/workspace-type.guard'
 import { PracticeService } from './practice.service'
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
 @Controller('api/practices')
 export class PracticeController {
   constructor(private readonly service: PracticeService) {}
