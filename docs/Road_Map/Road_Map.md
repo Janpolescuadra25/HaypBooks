@@ -134,10 +134,9 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ### 12 â€” Security and tenant isolation (AUDIT REQUIRED, P0)
 
-> **Status:** ACTIVE (Phase 12 E1 complete & verified; active focus: workspace-scoped tenant isolation boundary enforcement).
+> **Status:** PARTIAL (Phase 12 E1 test security & E2 workspace tenant isolation complete & verified, commit aee9a7c7; remaining: general audit scope).
 
 - Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
-- Deliver: implement `WorkspaceAccessGuard` to validate active `WorkspaceUser` membership server-side; bind it to workspace-scoped routes in `PracticeHubController` and `PracticeController`; preserve fail-closed cross-tenant denial for remaining company/practice access edge cases.
 - Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
 - Depends on: existing Phase 12 E1 enforcement and negative-test harness. Remaining scope excludes completed production test endpoint hardening.
 
@@ -354,3 +353,15 @@ H-0 addendum: The duplicate H-0 completion entry dated 2026-09-12 (which cited s
 ---
 
 ---
+
+### Phase 12 E2 — Workspace-Scoped Tenant Isolation
+- **Completion Date:** 2026-09-26
+- **Status:** COMPLETE & VERIFIED
+- **Commit Hash:** aee9a7c7
+- **Deliverables & Verified Artifacts:**
+  - Implemented WorkspaceAccessGuard at Haypbooks/Backend/src/auth/guards/workspace-access.guard.ts enforcing real-time Prisma WorkspaceUser active membership (status: 'ACTIVE', deletedAt: null).
+  - Attached @UseGuards(JwtAuthGuard, WorkspaceAccessGuard) across all workspace-scoped routes in both PracticeHubController (src/practice-hub/practice-hub.controller.ts) and PracticeController (src/practice/practice.controller.ts).
+  - Propagated asynchronous request context via setRequestContext({ workspaceId, userId }).
+  - Added unit test suite workspace-access.guard.spec.ts.
+  - Authored implementation README at Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md.
+  - Verified by HYDRA on-disk audit (Task 389).
