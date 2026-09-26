@@ -219,6 +219,11 @@ For each row: success, invalid input, permission denial, network/server failure,
 - **Scope:** Enforced strict build gates in `next.config.js` (`ignoreDuringBuilds: false`). Resolved 24 `react/no-unescaped-entities` errors in `error-queue/page.tsx`, fixed unescaped apostrophes across 15+ frontend files, and corrected hook-order violation in `ChartOfAccountsPage.tsx`.
 - **Quality Gates:** `npm run lint -- --quiet` exit code 0; `npm run typecheck` exit code 0; Backend `tsc --noEmit` exit code 0.
 - **Documentation:** `Haypbooks/Frontend/docs/implementations/lint-baseline-enforcement/README.md`.
+- **Active Workstream — Test Harness & Database Isolation (IN PROGRESS, P0):**
+  - Isolating test databases per worker to eliminate shared-state leakage during Jest `test:e2e` and `test:serial` runs.
+  - Adding transactional rollbacks and automated disposable schema teardown.
+  - Dynamic `DATABASE_URL` injection is required at runner startup to ensure reproducible per-worker isolation.
+  - Architecture specification: `Haypbooks/Backend/docs/implementations/test-harness-isolation/README.md`.
 
 - ✅ **Finding E3: Backend Accounting Engine Journal Entry Numbering Gap (COMPLETED, P0)**
   - *Location:* `Haypbooks/Backend/src/shared/gl-integration.ts`
