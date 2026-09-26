@@ -149,7 +149,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ### 12 â€” Security and tenant isolation (AUDIT REQUIRED, P0)
 
-> **Status:** DONE (Audited and verified by Hydra, Task 400: test guards, tenant access guards, single-use OTPs, session revocation, global ValidationPipe, and zero secret logging verified clean).
+> **Status:** PARTIAL (Task 400 E1/E2 security items complete & verified; remaining: audit test/admin routes, enforce attachment object ownership, resolve guard/controller workspace context agreement).
 
 - Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
 - Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
