@@ -21,7 +21,7 @@ export class WorkspaceAccessGuard implements CanActivate {
       throw new UnauthorizedException('Authentication required');
     }
 
-    const rawWorkspaceId =
+    let workspaceId =
       request.params?.workspaceId ??
       request.params?.tenantId ??
       request.query?.workspaceId ??
@@ -31,15 +31,28 @@ export class WorkspaceAccessGuard implements CanActivate {
       user.workspaceId ??
       user.tenantId;
 
-    const workspaceId = Array.isArray(rawWorkspaceId) ? rawWorkspaceId[0] : rawWorkspaceId;
+    if (!workspaceId && request.params?.companyId) {
+      const company = await this.prisma.company.findUnique({
+        where: { id: request.params.companyId },
+        select: { workspaceId: true },
+      });
 
-    if (!workspaceId || typeof workspaceId !== 'string') {
+      if (!company) {
+        throw new ForbiddenException('Company context is invalid');
+      }
+
+      workspaceId = company.workspaceId;
+    }
+
+    const normalizedWorkspaceId = Array.isArray(workspaceId) ? workspaceId[0] : workspaceId;
+
+    if (!normalizedWorkspaceId || typeof normalizedWorkspaceId !== 'string') {
       throw new ForbiddenException('Workspace context is required');
     }
 
     const membership = await this.prisma.workspaceUser.findFirst({
       where: {
-        workspaceId,
+        workspaceId: normalizedWorkspaceId,
         userId,
         status: 'ACTIVE',
         deletedAt: null,
@@ -50,9 +63,9 @@ export class WorkspaceAccessGuard implements CanActivate {
       throw new ForbiddenException('Access denied: You do not have active membership in this workspace');
     }
 
-    request.workspaceId = workspaceId;
+    request.workspaceId = normalizedWorkspaceId;
     request.workspaceUser = membership;
-    setRequestContext({ workspaceId, userId });
+    setRequestContext({ workspaceId: normalizedWorkspaceId, userId });
 
     return true;
   }

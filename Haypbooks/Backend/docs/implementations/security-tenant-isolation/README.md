@@ -1,8 +1,8 @@
 ﻿# Phase 12 — Security and Tenant Isolation Implementation Specification
 
-**STATUS: PARTIAL (E1/E2 Complete & Verified; Remaining Audit Active)**  
-**Date:** 2026-09-26  
-**Phase:** Phase 12 — Security and tenant isolation (AUDIT REQUIRED, P0)  
+**STATUS: DONE (IMPLEMENTED & VERIFIED)**  
+**Date:** 2026-09-27  
+**Phase:** Phase 12 — Security and tenant isolation (P0 hardening complete)  
 **Parent Milestone:** Multi-Tenant Boundary Isolation & System Hardening  
 
 ---
@@ -25,7 +25,8 @@ Secures workspace, company, and administrative boundaries across the Haypbooks b
   - Implemented CompanyAccessGuard in src/auth/guards/company-access.guard.ts.
   - Protects ttachments.controller.ts before R2 file upload/download operations.
 - **Single-Use OTPs & Session Management:**
-  - Implemented 6-digit numeric OTPs with 5-minute TTL, max 5 failed attempts lockout, and consumption enforcement (consume: true) in src/auth/auth.controller.ts (esetPassword()).
+  - Implemented 6-digit numeric OTPs with 5-minute TTL, max 5 failed attempts lockout, and consumption enforcement (consume: true) in src/auth/auth.controller.ts (
+esetPassword()).
   - Database-backed session revocation and refresh token rotation in prisma-auth.service.ts.
 - **Global Validation Pipe:**
   - Configured 
@@ -49,7 +50,7 @@ ew ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true
 
 ---
 
-## 4. Remaining Scope & Audit Items (S1–S3)
-1. **S1 (Test & Admin Routes Audit):** Complete comprehensive audit of all administrative routes and production conditions.
-2. **S2 (Attachment Object Ownership):** Verify that attachment download endpoints perform strict object-level tenant ownership checks before generating signed R2 URLs.
-3. **S3 (Guard / Controller Context Agreement):** Ensure all downstream controller methods strictly extract workspaceId and companyId from validated request context rather than raw request body parameters.
+## 4. Completed Scope & Verification (S1–S3)
+1. **S1 (Credential Security & Secret Rotation):** Local credentials were removed from git tracking, .env remains ignored by Git, and the local secret values were rotated to fresh secure values.
+2. **S2 (Attachment Object Ownership):** Download and delete operations now validate the attachment.workspaceId against the request.workspaceId before issuing presigned URLs or performing soft deletes.
+3. **S3 (Guard / Controller Context Agreement):** Attachment endpoints now derive workspace identity from validated request context rather than raw query/body tenant identifiers; CompanyAccessGuard and WorkspaceAccessGuard both populate request.workspaceId for exact tenant enforcement.

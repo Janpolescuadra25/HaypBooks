@@ -30,7 +30,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 | E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237â€“278` | DRAFT transaction creation changes stock without a GL call inside that transaction. | P0 inventory / 5 |
 | E6: `Haypbooks/Backend/src/banking/banking.service.ts:611â€“636`; `banking.repository.ts:237â€“255` | Auto-match selects by date, supplies no journal line, and repository permits matched=true with null journal reference. | P0 banking / 6 |
 | E7: `Haypbooks/Backend/src/accounting/accounting.service.ts:1092â€“1110` | Revaluation is a journal-entry proxy; upper date filter overwrites lower filter; query failure becomes empty data. | P1 / 7 |
-| E8: `Haypbooks/Frontend/next.config.js:14,19`; backend package scripts | Build skips lint/type errors; backend E2E script runs migrations and seed. | P0 validation / 9 |
 | E9: `Haypbooks/Backend/src/companies/company.repository.prisma.ts:97,678`; frontend public signup line 150 | FREE/TRIAL bootstrap and 14-day copy conflict with four paid plans/30-day direction. | P0 billing / 13 |
 | E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
 | E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |
@@ -103,23 +102,26 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Deliver: update/create each implemented section's README in its existing documentation location; link frontend/backend, architecture, files, APIs, decisions, permissions, behavior, validation results and limits.
 - Depends on: verified phase results. Done: each completed section has reproducible evidence and matching roadmap status. Only then mark DONE, preserve durable README and remove completed active-phase detail. Documentation-only within this phase.
 
-### 4 â€” Reports and current-year earnings (NOT STARTED, P0 reports)
+### 4 â€” Reports and current-year earnings (IN PROGRESS, P0 reports)
 
 - Audit: posted-only balances, fiscal dates, retained earnings, closing journals, currency/sign/rounding and alternative earnings paths.
 - Deliver: correct earnings without double-counting closed years; verify balance sheet/P&L/trial balance/cash flow/aging/drill-down/export. No report mutation of closed periods; query error distinct from empty result.
 - Depends on: 2/14 and 5/6/7 effects. Done: accountant-reviewed opening/year-close/profit-loss/reversal/partial-payment/FX fixtures reconcile; assets equal liabilities plus equity; screen/export agree.
+- Current audit defect tracking: E4 remains active because the reporting service still classifies current-year earnings without an explicit current-year earnings presentation model; any release claim for this phase remains provisional until the service behavior and export snapshots match the signed financial statements.
 
-### 5 â€” Inventory lifecycle and GL (NOT STARTED, P0 inventory)
+### 5 â€” Inventory lifecycle and GL (IN PROGRESS, P0 inventory)
 
 - Audit: receipt/shipment/return/adjustment/transfer, draft/post rules, valuation, accounts and negative stock.
 - Deliver: atomic stock/valuation/financially applicable GL with linked reversals and no duplicate posting; reuse subledger. No invented cost or silent retrospective correction.
 - Depends on: 2/14 and approved costing policy. Done: concurrency, insufficient stock, retry, rollback, returns/transfers pass; valuation reconciles to GL; company/item/location references validated.
+- Current audit defect tracking: E5 remains active because draft stock mutations can still change quantity before the GL call is finalized; this phase remains in progress until the inventory transaction flow is atomic, ledger-linked, and reversible.
 
-### 6 â€” Banking (NOT STARTED, P0 banking)
+### 6 â€” Banking (IN PROGRESS, P0 banking)
 
 - Audit: imports, deduplication, ownership, matching/unmatch and completion; distinguish clearing from ledger matching.
 - Deliver: company/account/currency/amount/date-aware candidates; ambiguous results reviewed; no unsupported matched flag. Prevent duplicate reuse except explicit split/group rules.
 - Depends on: 2/14. Done: duplicate imports, ambiguity, supported splits, unmatch and concurrent completion pass; statement differences explained and audit history retained.
+- Current audit defect tracking: E6 remains active because auto-match logic still permits a matched bank transaction to exist without a valid journal reference and the repository is still not enforcing a complete ledger-backed match; this phase remains in progress, not complete.
 
 ### 7 â€” FX (AUDIT REQUIRED, P1; gate if offered)
 
@@ -165,13 +167,14 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Depends on: 9/12, owner economics, 11 bonuses.
 - Current state: Hydra audit found zero Stripe code on disk. This phase is intentionally NOT STARTED until a real billing integration, checkout/session state machine and approved subscription contract exist in source.
 
-### 14 â€” Accounting lifecycle controls (AUDIT REQUIRED, P0)
+### 14 â€” Accounting lifecycle controls (IN PROGRESS, P0)
 
-> **Status:** NOT STARTED (architecture and controls specification in progress; implementation work remains pending after the current source audit).
+> **Status:** IN PROGRESS (posting foundations are present at src/shared/gl-integration.ts, but lifecycle enforcement, reversing JEs, and period-lock invariants remain incomplete and must be audited before any completion claim).
 
 - Audit: JE, AR invoice/payment/credit/refund, AP bill/payment/credit, expenses/transfers and offered payroll/assets. Trace callers before judging repository helpers in isolation.
 - Deliver: explicit states, uniform company/account/period/balance/precision checks, atomic source+GL, idempotency, stale-edit protection, source/actor/reason audit history and linked reversals; reuse services.
 - Depends on: 2/9/12. Done: applicable draft/submit/post/pay/partial/void/reverse cases for each producer; duplicate/concurrent/forced failures leave no partial writes; subledger/GL reconcile; no silent lost updates.
+- Current audit defect tracking: E12 remains the active lifecycle control defect because uniform posting, reversal, and period-close enforcement are not yet validated across all producer modules; the phase stays IN PROGRESS until that service-level audit passes.
 
 ### 15 â€” Every shipped route/action (AUDIT REQUIRED, P1)
 

@@ -35,3 +35,7 @@ UNUSED_EXPORTS.md
 coverage/
 .idea/
 .vscode/
+
+.env
+.env
+.env

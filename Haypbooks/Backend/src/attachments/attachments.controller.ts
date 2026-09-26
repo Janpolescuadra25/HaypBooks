@@ -1,13 +1,30 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Patch, BadRequestException, NotFoundException, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Patch,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { memoryStorage } from 'multer'
 import { AttachmentsService } from './attachments.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { R2Service } from '../common/r2/r2.service'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
 @Controller('/api')
 export class AttachmentsController {
   constructor(
@@ -17,7 +34,12 @@ export class AttachmentsController {
   ) {}
 
   @Get('attachments')
-  async list(@Query('tenantId') workspaceId: string, @Query('entityType') entityType: string, @Query('entityId') entityId: string) {
+  async list(@Req() req: any, @Query('entityType') entityType: string, @Query('entityId') entityId: string) {
+    const workspaceId = req.workspaceId
+    if (!workspaceId) {
+      throw new BadRequestException('Workspace context is required')
+    }
+
     const attachments = await this.svc.list(workspaceId, entityType, entityId)
 
     return Promise.all(
@@ -29,12 +51,20 @@ export class AttachmentsController {
   }
 
   @Post('attachments')
-  async create(@Body() body: any) {
-    // body expected to include tenantId, entityType, entityId, fileUrl, optional metadata
-    return this.svc.create(body)
+  async create(@Req() req: any, @Body() body: any) {
+    const workspaceId = req.workspaceId
+    if (!workspaceId) {
+      throw new BadRequestException('Workspace context is required')
+    }
+
+    return this.svc.create({
+      ...body,
+      workspaceId,
+    })
   }
 
   @Post('companies/:companyId/attachments/upload')
+  @UseGuards(CompanyAccessGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -47,6 +77,11 @@ export class AttachmentsController {
     }
     if (!body?.entityType || !body?.entityId) {
       throw new BadRequestException('entityType and entityId are required')
+    }
+
+    const workspaceId = req.workspaceId ?? req.companyWorkspaceId
+    if (!workspaceId) {
+      throw new BadRequestException('Workspace context is required')
     }
 
     const sanitizedName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '')
@@ -64,7 +99,7 @@ export class AttachmentsController {
     const signedUrl = await this.r2Service.getPresignedUrl(key)
 
     const attachment = await this.svc.create({
-      workspaceId: company.workspaceId,
+      workspaceId,
       entityType: body.entityType,
       entityId: String(body.entityId),
       fileUrl: key,
@@ -82,10 +117,19 @@ export class AttachmentsController {
   }
 
   @Get('attachments/:id/url')
-  async getAttachmentUrl(@Param('id') id: string) {
+  async getAttachmentUrl(@Param('id') id: string, @Req() req: any) {
+    const workspaceId = req.workspaceId
+    if (!workspaceId) {
+      throw new BadRequestException('Workspace context is required')
+    }
+
     const attachment = await this.svc.findById(id)
     if (!attachment || attachment.deletedAt) {
       throw new NotFoundException('Attachment not found')
+    }
+
+    if (attachment.workspaceId !== workspaceId) {
+      throw new ForbiddenException('Access denied: attachment does not belong to the current workspace')
     }
 
     const url = await this.r2Service.getPresignedUrl(attachment.fileUrl)
@@ -93,6 +137,7 @@ export class AttachmentsController {
   }
 
   @Post('companies/:companyId/ap/receipts/upload')
+  @UseGuards(CompanyAccessGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -124,7 +169,21 @@ export class AttachmentsController {
   }
 
   @Delete('attachments/:id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const workspaceId = req.workspaceId
+    if (!workspaceId) {
+      throw new BadRequestException('Workspace context is required')
+    }
+
+    const attachment = await this.svc.findById(id)
+    if (!attachment || attachment.deletedAt) {
+      throw new NotFoundException('Attachment not found')
+    }
+
+    if (attachment.workspaceId !== workspaceId) {
+      throw new ForbiddenException('Access denied: attachment does not belong to the current workspace')
+    }
+
     return this.svc.softDelete(id)
   }
 

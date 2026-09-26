@@ -51,6 +51,7 @@ export class CompanyAccessGuard implements CanActivate {
 
     // Attach the resolved workspaceId onto the request for downstream use
     request.companyWorkspaceId = company.workspaceId
+    request.workspaceId = company.workspaceId
 
     // Ensure async request context is populated for downstream DB session variable setting
     setRequestContext({ companyId, workspaceId: company.workspaceId, userId })
