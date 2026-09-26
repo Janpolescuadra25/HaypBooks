@@ -1,4 +1,4 @@
-﻿# Phase 9 — Test Harness & Database Isolation Specification
+# Phase 9 — Test Harness & Database Isolation Specification
 
 **STATUS: DONE (IMPLEMENTED & VERIFIED)**  
 **Date:** 2026-09-26  
@@ -41,7 +41,8 @@ Establishes a 100% reproducible, isolated automated testing environment for the 
 ---
 
 ## 5. Acceptance Criteria
-- [ ] Running `npm run test:unit` and `npm run test:e2e` completes without cross-test state contamination.
+- [x] Running `npm run test:unit` and `npm run test:e2e` completes without cross-test state contamination.
 - [x] Running tests concurrently produces zero database locking or duplicate key errors.
 - [x] All temporary test schemas/databases are cleanly purged post-run.
-- [ ] Quality gates (`tsc --noEmit`, `next lint`, `typecheck`) continue to exit with code 0.
+- [x] Quality gates (`tsc --noEmit`, `next lint`, `typecheck`) continue to exit with code 0.
+

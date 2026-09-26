@@ -1,4 +1,4 @@
-﻿import { execSync } from 'child_process'
+import { execSync } from 'child_process'
 import path from 'path'
 
 export default async function globalTeardown() {
@@ -7,6 +7,6 @@ export default async function globalTeardown() {
   try {
     execSync('node ./scripts/test/teardown-test-db.js', { cwd, stdio: 'inherit' })
   } catch (err) {
-    console.warn('[Jest globalTeardown] Teardown warning:', err.message)
+    console.warn('[Jest globalTeardown] Teardown warning:', err instanceof Error ? err.message : String(err))
   }
 }

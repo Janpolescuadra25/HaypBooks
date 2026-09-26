@@ -1,4 +1,4 @@
-﻿import { execSync } from 'child_process'
+import { execSync } from 'child_process'
 import path from 'path'
 
 export default async function globalSetup() {
@@ -7,6 +7,6 @@ export default async function globalSetup() {
   try {
     execSync('node ./scripts/test/setup-test-db.js', { cwd, stdio: 'inherit' })
   } catch (err) {
-    console.warn('[Jest globalSetup] Setup completed with warning:', err.message)
+    console.warn('[Jest globalSetup] Setup completed with warning:', err instanceof Error ? err.message : String(err))
   }
 }

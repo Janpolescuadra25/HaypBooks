@@ -1,9 +1,9 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 const { Client } = require('pg')
 
 const args = process.argv.slice(2)
 const schemaArg = args.find(a => a.startsWith('--schema='))
-const workerId = process.env.JEST_WORKER_ID
+const workerId = process.env.JEST_WORKER_ID || process.env.TEST_WORKER_ID
 let targetSchema = null
 
 if (schemaArg) {
@@ -11,7 +11,7 @@ if (schemaArg) {
 } else if (process.env.TEST_SCHEMA) {
   targetSchema = process.env.TEST_SCHEMA
 } else if (workerId) {
-  targetSchema = 	est_worker_
+  targetSchema = `test_worker_${workerId}`
 }
 
 if (!targetSchema || targetSchema === 'public') {
@@ -19,23 +19,26 @@ if (!targetSchema || targetSchema === 'public') {
   process.exit(0)
 }
 
-const RAW_URL = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const RAW_URL = process.env.DATABASE_URL || process.env.DEFAULT_DB || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 const urlObj = new URL(RAW_URL)
 urlObj.searchParams.delete('schema')
 const BASE_DATABASE_URL = urlObj.toString()
 
 async function teardown() {
-  console.log([teardown-test-db] Dropping disposable schema: ...)
+  console.log(`[teardown-test-db] Dropping disposable schema: ${targetSchema}...`)
   const client = new Client({ connectionString: BASE_DATABASE_URL })
   try {
     await client.connect()
-    await client.query(DROP SCHEMA IF EXISTS "" CASCADE;)
-    console.log([teardown-test-db] Successfully dropped schema ''. Cleanup complete.)
+    await client.query(`DROP SCHEMA IF EXISTS "${targetSchema}" CASCADE;`)
+    console.log(`[teardown-test-db] Successfully dropped schema '${targetSchema}'. Cleanup complete.`)
   } catch (err) {
-    console.warn([teardown-test-db] Warning during schema cleanup: )
+    console.warn(`[teardown-test-db] Warning during schema cleanup: ${err.message}`)
   } finally {
     await client.end()
   }
 }
 
-teardown()
+teardown().catch((err) => {
+  console.warn(`[teardown-test-db] Teardown failed: ${err && err.message ? err.message : err}`)
+  process.exit(1)
+})
