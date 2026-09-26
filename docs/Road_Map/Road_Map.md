@@ -11,7 +11,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 | Evidence | Confirmed source behavior | Priority / phase |
 |---|---|---|
 | E2: `Haypbooks/Frontend/src/app/get-started/subscribe/page.tsx:60â€“67`; practice equivalent `get-started/practice/subscribe/page.tsx:40â€“46` | Company errors swallowed and timer sets success independently; practice uses simulated success. | P0 / 13 |
-| E3: `Haypbooks/Backend/src/shared/gl-integration.ts:99â€“155` | createAndPostJE accepts entryNumber but omits it from create data; subsequently updates balances and posts. Schema/default/caller impact needs reproduction. | P0 affected posting / 2 |
 | E4: `Haypbooks/Backend/src/reporting/reporting.service.ts:514â€“546` | Balance sheet classifies asset/liability/equity without explicit current-year income/expense earnings presentation. | P0 reports / 4 |
 | E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237â€“278` | DRAFT transaction creation changes stock without a GL call inside that transaction. | P0 inventory / 5 |
 | E6: `Haypbooks/Backend/src/banking/banking.service.ts:611â€“636`; `banking.repository.ts:237â€“255` | Auto-match selects by date, supplies no journal line, and repository permits matched=true with null journal reference. | P0 banking / 6 |
@@ -135,12 +134,12 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ### 12 â€” Security and tenant isolation (AUDIT REQUIRED, P0)
 
-> **Status:** ACTIVE (E1 test endpoint security complete; next: workspace-scoped tenant isolation boundary enforcement)
+> **Status:** ACTIVE (Phase 12 E1 complete & verified; active focus: workspace-scoped tenant isolation boundary enforcement).
 
 - Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
-- Deliver: test helpers disabled in production by default; approved test use authenticates actual caller in isolated configuration. Repair demonstrated authorization/validation/file gaps.
+- Deliver: implement `WorkspaceAccessGuard` to validate active `WorkspaceUser` membership server-side; bind it to workspace-scoped routes in `PracticeHubController` and `PracticeController`; preserve fail-closed cross-tenant denial for remaining company/practice access edge cases.
 - Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
-- Depends on: 9 negative-test harness. Done: helpers denied in production even with token variable set; anonymous/wrong-role/cross-tenant requests denied, valid flows preserved; uploads/logs reviewed. One fix is not a full security certificate.
+- Depends on: existing Phase 12 E1 enforcement and negative-test harness. Remaining scope excludes completed production test endpoint hardening.
 
 ### 13 â€” Paid plans, trials and Stripe (PARTIAL, P0 - scoped pricing fixed, legacy copy cleanup complete; remaining: Stripe webhooks, checkout sessions, plan capacity matrix)
 
