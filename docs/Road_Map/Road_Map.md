@@ -73,8 +73,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 
 Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, DONE. P0 means release-blocking for affected scope, not proof of a live incident. VERIFIED means inspected source; UNKNOWN must not be silently promoted to passing behavior.
 
-- **Phase 9**: Fully verified and completed (strict build gates + zero lint errors). See Appendix.
-
 ### 1 â€” Landing, intro and auth (PARTIAL, P1 - only L4-L6 remaining)
 
 - Audit first: map every reference page/state in `docs/HB_new_(landingpage, intro, & login)/HB_clone` to production; compare desktop/mobile screenshots and interactions. Record intentional differences for real auth and approved pricing.
@@ -137,6 +135,8 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ### 12 â€” Security and tenant isolation (AUDIT REQUIRED, P0)
 
+> **Status:** ACTIVE (Phase 9 validation baseline complete; test endpoint containment and tenant isolation active).
+
 - Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
 - Deliver: test helpers disabled in production by default; approved test use authenticates actual caller in isolated configuration. Repair demonstrated authorization/validation/file gaps.
 - Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
@@ -195,7 +195,8 @@ For each row: success, invalid input, permission denial, network/server failure,
 | Tax/payroll/assets/other released modules | Approved business rules and downstream effects |
 | Backup â†’ restore â†’ deploy â†’ health â†’ rollback | Recoverable data and exact monitored revision |
 
-## Appendix: Completed Tasks
+## Appendix: Completed Tasks
+
 
 ### Phase 9 — Lint & Type Baseline Enforcement (DONE, 2026-09-26)
 - **Status:** COMPLETED & VERIFIED (Commit `e6dad610`).
@@ -302,28 +303,7 @@ Conflicts resolved:
 
 ---
 
-## Appendix: Completed Resolutions & Historical Verifications
-
-### Phase 9 — Lint & Type Baseline Enforcement (DONE, 2026-09-26)
-- **Status:** COMPLETED & VERIFIED (Commit `e6dad610`).
-- **Scope:** Enforced strict build gates in `next.config.js` (`ignoreDuringBuilds: false`). Resolved 24 `react/no-unescaped-entities` errors in `error-queue/page.tsx`, fixed unescaped apostrophes across 15+ frontend files, and corrected hook-order violation in `ChartOfAccountsPage.tsx`.
-- **Quality Gates:** `npm run lint -- --quiet` exit code 0; `npm run typecheck` exit code 0; Backend `tsc --noEmit` exit code 0.
-- **Documentation:** `Haypbooks/Frontend/docs/implementations/lint-baseline-enforcement/README.md`.
-The following items have been fully completed, verified against the actual repository, and pruned from active roadmap tracking:
-
-- âœ… **Finding E11 (AuthShell Migration & Layout Retirement):**
-  * E11 migration complete: 7 auth pages import AuthShell; deprecated AuthLayout.tsx was fully removed from the repository.
-  * Verified: Exactly 7 public auth and onboarding pages import and utilize `AuthShell.tsx` (`login`, `signup`, `forgot-password`, `reset-password`, `verify-otp`, `verification`, `onboarding/welcome`). Dashboard pages do not import `AuthShell`.
-  * Documented in: `Haypbooks/Frontend/src/components/auth/README.md`.
-  * Resolution Date: 2026-09-20.
-
-4. **✅ Phase 1 L3 (IntroSequence Overlay Parity):** `SlideTwo` in `IntroSequence.tsx` includes `bg-navy-950` to eliminate visual bleed-through during onboarding carousel transitions.
-
-- âœ… **Phase 12 E1 (Test Endpoint Security Guard & Hardening):**
-  * Fully resolved: Implemented dual-layer protections by conditionally mounting `TestModule` in `AppModule` and applying `@UseGuards(TestEndpointGuard)` to `TestController`.
-  * Verified: All test endpoints validate `X-Test-Token` against `ALLOW_TEST_ENDPOINTS_TOKEN` while production remains fail-closed; `/api/test` is not mounted in default production mode.
-  * Documented in: `Haypbooks/Backend/src/test/README.md`.
-  * Resolution Date: 2026-09-20.
+## Appendix: Completed Resolutions & Historical Verifications
 
 ## Historical completion index from the documentation roadmap
 
