@@ -1,5 +1,6 @@
 ﻿import { Controller, Get, Req, UseGuards, Post, Body, BadRequestException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
 import { WorkspaceTypeGuard } from '../auth/guards/workspace-type.guard'
 import { PracticeService } from './practice.service'

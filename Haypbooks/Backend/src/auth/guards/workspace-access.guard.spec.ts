@@ -1,7 +1,7 @@
 ﻿import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkspaceAccessGuard } from './workspace-access.guard';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../repositories/prisma/prisma.service';
 
 describe('WorkspaceAccessGuard', () => {
   let guard: WorkspaceAccessGuard;
@@ -53,14 +53,14 @@ describe('WorkspaceAccessGuard', () => {
   });
 
   it('should throw ForbiddenException if workspaceId cannot be resolved', async () => {
-    const context = createMockContext({ user: { id: 'user-1' } });
+    const context = createMockContext({ user: { userId: 'user-1' } });
     await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
   });
 
   it('should throw ForbiddenException if user is not an active workspace member', async () => {
     prisma.workspaceUser.findFirst.mockResolvedValue(null);
     const context = createMockContext({
-      user: { id: 'user-1', workspaceId: 'ws-1' },
+      user: { userId: 'user-1', workspaceId: 'ws-1' },
     });
 
     await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
@@ -85,7 +85,7 @@ describe('WorkspaceAccessGuard', () => {
     prisma.workspaceUser.findFirst.mockResolvedValue(mockMembership);
 
     const req = {
-      user: { id: 'user-1', workspaceId: 'ws-1' },
+      user: { userId: 'user-1', workspaceId: 'ws-1' },
       params: {},
       query: {},
       headers: {},
@@ -108,7 +108,7 @@ describe('WorkspaceAccessGuard', () => {
     prisma.workspaceUser.findFirst.mockResolvedValue(mockMembership);
 
     const req = {
-      user: { id: 'user-1', workspaceId: 'ws-default' },
+      user: { userId: 'user-1', workspaceId: 'ws-default' },
       params: { workspaceId: 'ws-custom' },
       query: {},
       headers: {},
@@ -138,7 +138,7 @@ describe('WorkspaceAccessGuard', () => {
     prisma.workspaceUser.findFirst.mockResolvedValue(mockMembership);
 
     const req = {
-      user: { id: 'user-1' },
+      user: { userId: 'user-1' },
       params: {},
       query: {},
       headers: { 'x-workspace-id': 'ws-header' },

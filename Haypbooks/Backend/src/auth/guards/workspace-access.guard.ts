@@ -5,7 +5,8 @@
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../repositories/prisma/prisma.service';
+import { setRequestContext } from '../../shared/async-context';
 
 @Injectable()
 export class WorkspaceAccessGuard implements CanActivate {
@@ -14,17 +15,23 @@ export class WorkspaceAccessGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
+    const userId = user?.userId ?? user?.id;
 
-    if (!user || !user.id) {
+    if (!user || !userId) {
       throw new UnauthorizedException('Authentication required');
     }
 
-    const workspaceId =
-      request.params?.workspaceId ||
-      request.query?.workspaceId ||
-      request.headers?.['x-workspace-id'] ||
-      user.workspaceId ||
+    const rawWorkspaceId =
+      request.params?.workspaceId ??
+      request.params?.tenantId ??
+      request.query?.workspaceId ??
+      request.query?.tenantId ??
+      request.headers?.['x-workspace-id'] ??
+      request.headers?.['x-tenant-id'] ??
+      user.workspaceId ??
       user.tenantId;
+
+    const workspaceId = Array.isArray(rawWorkspaceId) ? rawWorkspaceId[0] : rawWorkspaceId;
 
     if (!workspaceId || typeof workspaceId !== 'string') {
       throw new ForbiddenException('Workspace context is required');
@@ -33,7 +40,7 @@ export class WorkspaceAccessGuard implements CanActivate {
     const membership = await this.prisma.workspaceUser.findFirst({
       where: {
         workspaceId,
-        userId: user.id,
+        userId,
         status: 'ACTIVE',
         deletedAt: null,
       },
@@ -45,15 +52,7 @@ export class WorkspaceAccessGuard implements CanActivate {
 
     request.workspaceId = workspaceId;
     request.workspaceUser = membership;
-
-    try {
-      const contextModule = require('../../common/context');
-      if (contextModule && typeof contextModule.setRequestContext === 'function') {
-        contextModule.setRequestContext({ workspaceId, userId: user.id });
-      }
-    } catch (error) {
-      // Graceful fallback if async context store is not initialized
-    }
+    setRequestContext({ workspaceId, userId });
 
     return true;
   }
