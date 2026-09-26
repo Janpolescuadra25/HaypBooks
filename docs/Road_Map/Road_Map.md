@@ -135,7 +135,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ### 12 â€” Security and tenant isolation (AUDIT REQUIRED, P0)
 
-> **Status:** ACTIVE (Phase 9 validation baseline complete; test endpoint containment and tenant isolation active).
+> **Status:** ACTIVE (E1 test endpoint security complete; next: workspace-scoped tenant isolation boundary enforcement)
 
 - Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
 - Deliver: test helpers disabled in production by default; approved test use authenticates actual caller in isolated configuration. Repair demonstrated authorization/validation/file gaps.
@@ -215,6 +215,12 @@ For each row: success, invalid input, permission denial, network/server failure,
 - ✅ **Phase 9 Quality Baseline Finalized (Task 318):** 26 react/no-unescaped-entities fixed, strict build gates documented.
 - ✅ **Phase 9 Client requests hook memoization (Task 333):** useCallback memoization implemented in client-requests/page.tsx, section README verified.
 - ✅ **Intro sequence background & pricing alignment (Task 342):** SlideTwo background set to bg-white, root occlusion enforced with fixed inset-0 z-[100] bg-white, all scoped pricing tiers aligned to 15-day trials with zero free-forever tiers. Section README verified at `Haypbooks/Frontend/docs/implementations/landing-fixes/README.md`.
+
+### Phase 12 E1 — Test Endpoint Security Guard & Hardening (DONE, 2026-09-26)
+- **Status:** COMPLETED & VERIFIED (Commit `4a1a3625`).
+- **Scope:** Conditional `TestModule` mounting in `src/app.module.ts`; `@UseGuards(TestEndpointGuard)` applied to `TestController`; fail-closed production containment (throws `403 Forbidden` without matching `X-Test-Token` or Bearer token); full 8-test Jest unit test suite in `src/test/test.guard.spec.ts`.
+- **Quality Gates:** Jest unit tests 8/8 passed; Backend `tsc --noEmit` exit code 0; Frontend `npm run lint` and `typecheck` exit code 0.
+- **Documentation:** `Haypbooks/Backend/src/test/README.md`.
 
 ## Definition of finished
 
