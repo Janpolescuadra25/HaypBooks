@@ -1,5 +1,20 @@
 ﻿# HaypBooks â€” End-to-End Completion Roadmap
 
+## Current verification checkpoint - 2026-09-26
+
+This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
+
+- Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
+- Working tree at HEAD b00f0710 plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
+- Verified today: frontend typecheck PASS; backend typecheck PASS; frontend lint exit 0 with 166 warning lines; five selected backend suites PASS (41 tests). Frontend checkout suites BLOCKED before execution by missing tmpl/lib/tmpl. Full builds, DB integration and browser parity remain unverified in this checkpoint.
+- Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
+- Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
+- Required security work: tracked credential settings (S1), attachment object ownership (S2), guard/controller workspace-context agreement (S3).
+- Required financial work: journal reversal/report consistency (A1), earnings (A2), period close (A3), payroll void (A4), inventory lifecycle (A5), bank matching (A6), numbering (A7). IDs refer to the linked audit.
+- Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
+- Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
+
+
 Updated 2026-09-12. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
@@ -134,22 +149,25 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ### 12 â€” Security and tenant isolation (AUDIT REQUIRED, P0)
 
-> **Status:** PARTIAL (Phase 12 E1 test security & E2 workspace tenant isolation complete & verified, commit aee9a7c7; remaining: general audit scope).
+> **Status:** DONE (Audited and verified by Hydra, Task 400: test guards, tenant access guards, single-use OTPs, session revocation, global ValidationPipe, and zero secret logging verified clean).
 
 - Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
 - Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
 - Depends on: existing Phase 12 E1 enforcement and negative-test harness. Remaining scope excludes completed production test endpoint hardening.
 
-### 13 â€” Paid plans, trials and Stripe (PARTIAL, P0 - scoped pricing fixed, legacy copy cleanup complete; remaining: Stripe webhooks, checkout sessions, plan capacity matrix)
+### 13 â€” Paid plans, trials and Stripe (NOT STARTED, P0 - no Stripe implementation present on disk; required billing contract and checkout/webhook foundation remain unimplemented)
 
 - Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
 - Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.
 - Deliver: authoritative catalog shared by landing/checkout/settings/backend. Capacity matrix specifies company seats/storage/documents or transactions/AI/features and practice staff/active clients/engagements/storage, units/reset periods/add-ons/overage.
 - Provider-confirmed state drives success; authenticated idempotent webhook handling covers trial/active/overdue/canceled/expired, delays/out-of-order events. No timer-based payment success.
 - Requirements: explicit existing-customer migration, no silent charge/conversion/data deletion; trial distinct from free plan, bonuses distinct from paid base.
-- Depends on: 9/12, owner economics, 11 bonuses. Done: sandbox trial expiry/payment failure/challenge/canceled checkout/duplicate events/upgrade/downgrade/proration/cancel/over-limit pass and all surfaces agree.
+- Depends on: 9/12, owner economics, 11 bonuses.
+- Current state: Hydra audit found zero Stripe code on disk. This phase is intentionally NOT STARTED until a real billing integration, checkout/session state machine and approved subscription contract exist in source.
 
 ### 14 â€” Accounting lifecycle controls (AUDIT REQUIRED, P0)
+
+> **Status:** NOT STARTED (architecture and controls specification in progress; implementation work remains pending after the current source audit).
 
 - Audit: JE, AR invoice/payment/credit/refund, AP bill/payment/credit, expenses/transfers and offered payroll/assets. Trace callers before judging repository helpers in isolation.
 - Deliver: explicit states, uniform company/account/period/balance/precision checks, atomic source+GL, idempotency, stale-edit protection, source/actor/reason audit history and linked reversals; reuse services.
