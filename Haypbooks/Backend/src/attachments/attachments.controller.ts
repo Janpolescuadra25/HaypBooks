@@ -188,7 +188,25 @@ export class AttachmentsController {
   }
 
   @Patch('attachments/:id/public')
-  async setPublic(@Param('id') id: string, @Body() body: { isPublic: boolean }) {
+  async setPublic(
+    @Param('id') id: string,
+    @Body() body: { isPublic: boolean },
+    @Req() req: any,
+  ) {
+    const workspaceId = req.workspaceId ?? req.headers?.['x-workspace-id']
+    if (!workspaceId) {
+      throw new BadRequestException('Workspace context is required')
+    }
+
+    const attachment = await this.svc.findById(id)
+    if (!attachment || attachment.deletedAt) {
+      throw new NotFoundException('Attachment not found')
+    }
+
+    if (attachment.workspaceId !== workspaceId) {
+      throw new ForbiddenException('Access denied: attachment does not belong to the current workspace')
+    }
+
     return this.svc.setPublic(id, !!body.isPublic)
   }
 }
