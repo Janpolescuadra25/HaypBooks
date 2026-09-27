@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, HttpCode, HttpStatus, Query } from '@nestjs/common'
 import { CreateInviteDto } from './dto/create-invite.dto'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { TenantsService } from './tenants.service'
 
 @Controller('api/tenants')
@@ -49,7 +50,7 @@ export class TenantsController {
    * Owner invites accountant to access their tenant
    */
   @Post(':tenantId/invites')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
   async createInvite(
     @Req() req: any,
     @Param('tenantId') workspaceId: string,
@@ -81,7 +82,7 @@ export class TenantsController {
   }
 
   @Post(':tenantId/invites/:inviteId/cancel')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
   async cancelInvite(@Req() req: any, @Param('tenantId') tenantId: string, @Param('inviteId') inviteId: string) {
     const userId = req.user?.userId
     return this.tenantsService.cancelInviteByOwner(tenantId, userId, inviteId)
