@@ -628,8 +628,32 @@ export class BankingService {
 
         let matched = 0
         for (const txn of matchCandidates) {
+            const txnDate = new Date(txn.date)
+            const minDate = new Date(txnDate.getTime() - 3 * 24 * 60 * 60 * 1000)
+            const maxDate = new Date(txnDate.getTime() + 3 * 24 * 60 * 60 * 1000)
+            const absAmount = Math.abs(Number(txn.amount))
+
+            const candidateLine = await this.prisma.journalEntryLine.findFirst({
+                where: {
+                    workspaceId: wid,
+                    journal: {
+                        workspaceId: wid,
+                        date: { gte: minDate, lte: maxDate },
+                    },
+                    OR: [
+                        { debit: { equals: absAmount } },
+                        { credit: { equals: absAmount } },
+                    ],
+                },
+                select: { id: true },
+            })
+
+            if (!candidateLine) continue
+
             await this.repo.matchTransactionToJournalLine(wid, reconId, {
-                bankTransactionId: txn.id, matchType: 'AUTO',
+                bankTransactionId: txn.id,
+                journalEntryLineId: candidateLine.id,
+                matchType: 'AUTO',
             })
             matched++
         }

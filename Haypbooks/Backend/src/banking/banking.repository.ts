@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { createReversingJE } from '../shared/gl-integration'
@@ -237,21 +237,25 @@ export class BankingRepository {
     async matchTransactionToJournalLine(workspaceId: string, reconId: string, data: {
         bankTransactionId: string; journalEntryLineId?: string; matchType?: string
     }) {
-        // Check if a line already exists for this transaction in this reconciliation
+        // Defect E6 Fix: fail closed when the match is marked as matched but the GL line is missing.
+        if (!data.journalEntryLineId || data.journalEntryLineId.trim() === '') {
+            throw new BadRequestException('Cannot mark a bank transaction as matched without a valid journalEntryLineId')
+        }
+
         const existing = await this.prisma.bankReconciliationLine.findFirst({
             where: { bankReconciliationId: reconId, bankTransactionId: data.bankTransactionId },
         })
         if (existing) {
             return this.prisma.bankReconciliationLine.update({
                 where: { id: existing.id },
-                data: { matched: true, journalEntryLineId: data.journalEntryLineId ?? null, matchType: data.matchType ?? 'MANUAL' },
+                data: { matched: true, journalEntryLineId: data.journalEntryLineId, matchType: data.matchType ?? 'MANUAL' },
             })
         }
         return this.prisma.bankReconciliationLine.create({
             data: {
                 workspaceId, bankReconciliationId: reconId,
                 bankTransactionId: data.bankTransactionId,
-                journalEntryLineId: data.journalEntryLineId ?? null,
+                journalEntryLineId: data.journalEntryLineId,
                 matched: true, matchType: data.matchType ?? 'MANUAL',
             },
         })
