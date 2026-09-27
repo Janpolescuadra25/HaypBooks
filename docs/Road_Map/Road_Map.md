@@ -102,26 +102,19 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Deliver: update/create each implemented section's README in its existing documentation location; link frontend/backend, architecture, files, APIs, decisions, permissions, behavior, validation results and limits.
 - Depends on: verified phase results. Done: each completed section has reproducible evidence and matching roadmap status. Only then mark DONE, preserve durable README and remove completed active-phase detail. Documentation-only within this phase.
 
-### 4 â€” Reports and current-year earnings (DONE, P0 reports)
+## Completed & Verified Implementation Phases (Archived)
 
-- Audit: posted-only balances, fiscal dates, retained earnings, closing journals, currency/sign/rounding and alternative earnings paths.
-- Deliver: correct earnings without double-counting closed years; verify balance sheet/P&L/trial balance/cash flow/aging/drill-down/export. No report mutation of closed periods; query error distinct from empty result.
-- Depends on: 2/14 and 5/6/7 effects. Done: accountant-reviewed opening/year-close/profit-loss/reversal/partial-payment/FX fixtures reconcile; assets equal liabilities plus equity; screen/export agree.
-- Current audit defect tracking: resolved by adding an explicit current-year earnings line to the equity section and recomputing total equity before the balance-sheet balance check. The service now balances interim statements without double-counting retained earnings.
+The following core accounting modules and defects have been fully resolved, tested, verified by Hydra audit, and documented in dedicated implementation records:
 
-### 5 â€” Inventory lifecycle and GL (DONE, P0 inventory)
+| Phase | Module & Scope | Resolution Summary | Authoritative Implementation Documentation |
+|---|---|---|---|
+| **Phase 4** | Reports & Current-Year Earnings | Defect E4 resolved: Unposted draft exclusion and single-source earnings calculation | [Reporting README](Haypbooks/Backend/docs/implementations/reporting-current-year-earnings/README.md) |
+| **Phase 5** | Inventory Lifecycle & GL | Defect E5 resolved: Draft stock mutation isolation and atomic GL double-entry posting | [Inventory GL README](Haypbooks/Backend/docs/implementations/inventory-gl-integration/README.md) |
+| **Phase 6** | Banking & Auto-Match | Defect E6 resolved: Journal reference validation and candidate GL line matching | [Banking Auto-Match README](Haypbooks/Backend/docs/implementations/banking-auto-match/README.md) |
 
-- Audit: receipt/shipment/return/adjustment/transfer, draft/post rules, valuation, accounts and negative stock.
-- Deliver: atomic stock/valuation/financially applicable GL with linked reversals and no duplicate posting; reuse subledger. No invented cost or silent retrospective correction.
-- Depends on: 2/14 and approved costing policy. Done: concurrency, insufficient stock, retry, rollback, returns/transfers pass; valuation reconciles to GL; company/item/location references validated.
-- Current audit defect tracking: resolved by isolating DRAFT stock mutation, enforcing DRAFT → POSTED state transitions, and posting inventory journal entries with fail-closed period validation and reversal handling. The implementation is now complete and verified in the inventory unit coverage and backend typecheck.
+---
 
-### 6 â€” Banking (DONE, P0 banking)
-
-- Audit: imports, deduplication, ownership, matching/unmatch and completion; distinguish clearing from ledger matching.
-- Deliver: company/account/currency/amount/date-aware candidates; ambiguous results reviewed; no unsupported matched flag. Prevent duplicate reuse except explicit split/group rules.
-- Depends on: 2/14. Done: duplicate imports, ambiguity, supported splits, unmatch and concurrent completion pass; statement differences explained and audit history retained.
-- Current audit defect tracking: resolved by fail-closing the `journalEntryLineId` requirement when a bank transaction is marked matched and by auto-matching only against valid journal-entry lines in the amount/date window. This phase is now complete and verified.
+## Active & Remaining Implementation Phases
 
 ### 7 â€” FX (AUDIT REQUIRED, P1; gate if offered)
 
