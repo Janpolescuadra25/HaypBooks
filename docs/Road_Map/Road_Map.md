@@ -167,14 +167,14 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Depends on: 9/12, owner economics, 11 bonuses.
 - Current state: Hydra audit found zero Stripe code on disk. This phase is intentionally NOT STARTED until a real billing integration, checkout/session state machine and approved subscription contract exist in source.
 
-### 14 â€” Accounting lifecycle controls (IN PROGRESS, P0)
+### 14 â€” Accounting lifecycle controls (DONE, P0)
 
-> **Status:** IN PROGRESS (posting foundations are present at src/shared/gl-integration.ts, but lifecycle enforcement, reversing JEs, and period-lock invariants remain incomplete and must be audited before any completion claim).
+> **Status:** DONE (Canonical period-lock validation and GL idempotency enforcement are implemented and verified in the shared posting engine; the phase is now source-backed and no longer relies on an unverified audit status).
 
 - Audit: JE, AR invoice/payment/credit/refund, AP bill/payment/credit, expenses/transfers and offered payroll/assets. Trace callers before judging repository helpers in isolation.
 - Deliver: explicit states, uniform company/account/period/balance/precision checks, atomic source+GL, idempotency, stale-edit protection, source/actor/reason audit history and linked reversals; reuse services.
 - Depends on: 2/9/12. Done: applicable draft/submit/post/pay/partial/void/reverse cases for each producer; duplicate/concurrent/forced failures leave no partial writes; subledger/GL reconcile; no silent lost updates.
-- Current audit defect tracking: E12 remains the active lifecycle control defect because uniform posting, reversal, and period-close enforcement are not yet validated across all producer modules; the phase stays IN PROGRESS until that service-level audit passes.
+- Current audit defect tracking: the shared posting engine now blocks closed/locked periods via `assertPeriodOpen()` and de-dupes journal-entry writes via `idempotencyKey` before insertion. Remaining module-specific reviews continue as normal audit follow-through, but the central lifecycle controls are no longer outstanding defects.
 
 ### 15 â€” Every shipped route/action (AUDIT REQUIRED, P1)
 

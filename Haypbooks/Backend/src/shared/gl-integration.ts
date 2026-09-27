@@ -7,6 +7,7 @@
  */
 
 import { BadRequestException } from '@nestjs/common'
+import { assertPeriodOpen } from './period-validation'
 
 /** Normal side by AccountType ID (matches seed.ts) */
 const NORMAL_SIDE_BY_TYPE: Record<number, 'DEBIT' | 'CREDIT'> = {
@@ -105,6 +106,7 @@ export async function createAndPostJE(
         description: string
         createdById?: string
         entryNumber?: string
+        idempotencyKey?: string
         currency?: string
         postingStatus?: 'DRAFT' | 'POSTED' | 'VOIDED'
         transactionSource?: string
@@ -112,6 +114,24 @@ export async function createAndPostJE(
         lines: Array<{ accountId: string; debit: number; credit: number; description?: string }>
     },
 ): Promise<string> {
+    await assertPeriodOpen(tx, { companyId: data.companyId, workspaceId: data.workspaceId }, data.date)
+
+    if (data.idempotencyKey) {
+        const existing = await tx.journalEntry.findFirst({
+            where: {
+                companyId: data.companyId,
+                OR: [
+                    { entryNumber: data.idempotencyKey },
+                    { sourceReferenceId: data.idempotencyKey },
+                ],
+            },
+            select: { id: true, lines: { select: { accountId: true, debit: true, credit: true } } },
+        })
+        if (existing) {
+            return existing.id
+        }
+    }
+
     // Double-entry validation
     const totalDebits  = data.lines.reduce((s, l) => s + (l.debit ?? 0), 0)
     const totalCredits = data.lines.reduce((s, l) => s + (l.credit ?? 0), 0)
@@ -124,6 +144,7 @@ export async function createAndPostJE(
         data: {
             workspaceId: data.workspaceId,
             companyId: data.companyId,
+            entryNumber: data.entryNumber,
             date: data.date,
             description: data.description,
             currency: data.currency ?? await resolveCompanyCurrency(tx, data.companyId),
@@ -218,6 +239,9 @@ export async function createReversingJE(
     if (origJe.postingStatus === 'VOIDED') {
         throw new BadRequestException('Journal entry is already voided')
     }
+
+    const reversalDate = date ?? origJe.date
+    await assertPeriodOpen(tx, { companyId, workspaceId: origJe.workspaceId }, reversalDate)
 
     const reversedLines = origJe.lines.map((l: any) => ({
         accountId: l.accountId,

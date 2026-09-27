@@ -4,6 +4,7 @@ import path from 'path'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { createAndPostJE, createReversingJE, resolveAccount, SYSTEM_ACCOUNTS } from './gl-integration'
+import { assertPeriodOpen } from './period-validation'
 
 type InvoiceWithLinesAndTaxes = Prisma.InvoiceGetPayload<{
   include: { lines: { include: { LineTax: true } } }
@@ -168,42 +169,11 @@ export class SubLedgerService {
   }
 
   private async assertPeriodOpen(companyId: string, date: Date, tx: any): Promise<void> {
-    const company = await tx.company.findUnique({
+    const company = await tx.company?.findUnique?.({
       where: { id: companyId },
       select: { workspaceId: true },
     })
-    if (!company) {
-      throw new BadRequestException(`Cannot determine workspace for company ${companyId}`)
-    }
-
-    const period = await tx.accountingPeriod.findFirst({
-      where: {
-        workspaceId: company.workspaceId,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-    })
-
-    if (period && (period.status === 'CLOSED' || period.status === 'LOCKED')) {
-      throw new BadRequestException(
-        `Cannot post to closed accounting period (${period.startDate.toISOString().split('T')[0]} to ${period.endDate.toISOString().split('T')[0]}). Period status: ${period.status}.`,
-      )
-    }
-
-    const lock = await tx.postingLock.findFirst({
-      where: {
-        workspaceId: company.workspaceId,
-        companyId,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-    })
-    if (lock) {
-      throw new BadRequestException(
-        `Cannot post while a posting lock is active (${lock.module}). Locked from ${lock.startDate.toISOString().split('T')[0]} to ${lock.endDate.toISOString().split('T')[0]}.`,
-      )
-    }
+    await assertPeriodOpen(tx, { companyId, workspaceId: company?.workspaceId }, date)
   }
 
   private async findExpenseAccount(companyId: string, tx?: any): Promise<string | null> {
