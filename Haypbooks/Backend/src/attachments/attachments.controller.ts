@@ -132,10 +132,6 @@ export class AttachmentsController {
       throw new ForbiddenException('Access denied: attachment does not belong to the current workspace')
     }
 
-    if (attachment.uploadedById && req.user?.userId && attachment.uploadedById !== req.user.userId) {
-      throw new ForbiddenException('Access denied: only the uploader may modify public visibility')
-    }
-
     const url = await this.r2Service.getPresignedUrl(attachment.fileUrl)
     return { url, fileName: attachment.fileName }
   }
@@ -188,11 +184,6 @@ export class AttachmentsController {
       throw new ForbiddenException('Access denied: attachment does not belong to the current workspace')
     }
 
-    if (attachment.uploadedById && req.user?.userId && attachment.uploadedById !== req.user.userId) {
-      throw new ForbiddenException('Access denied: only the uploader may modify public visibility')
-    }
-
-    
     if (attachment.uploadedById && req.user?.userId && attachment.uploadedById !== req.user.userId) {
       throw new ForbiddenException('Access denied: only the uploader may delete this attachment')
     }
