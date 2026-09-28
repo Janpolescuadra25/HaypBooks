@@ -13,7 +13,7 @@ export class PracticeHubController {
   constructor(private readonly service: PracticeHubService) {}
 
   private extractWorkspaceId(req: any): string {
-    const wsId = req.user?.workspaceId || req.user?.tenantId
+    const wsId = req.workspaceId ?? (req.user?.workspaceId || req.user?.tenantId)
     if (!wsId) throw new UnauthorizedException('No workspace context')
     return wsId
   }
