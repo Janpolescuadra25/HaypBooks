@@ -5544,6 +5544,8 @@ model JournalEntry {
   transactionSource String?
   /// ID of the source record (BankTransaction.id, Invoice.id, etc.)
   sourceReferenceId String?
+  /// Stable dedupe key to prevent duplicate journal postings across retries and callbacks
+  idempotencyKey    String?       @unique
 
   // Approval / review workflow (tightly scoped; optional)
   reviewedById  String?
@@ -5600,6 +5602,7 @@ model JournalEntry {
 
   @@index([workspaceId, date])
   @@index([companyId, date])
+  @@index([idempotencyKey])
   @@index([companyId, postingStatus])
   @@index([companyId, postingStatus, date])
   @@index([deletedAt])

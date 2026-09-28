@@ -168,7 +168,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Audit: JE, AR invoice/payment/credit/refund, AP bill/payment/credit, expenses/transfers and offered payroll/assets. Trace callers before judging repository helpers in isolation.
 - Deliver: explicit states, uniform company/account/period/balance/precision checks, atomic source+GL, idempotency, stale-edit protection, source/actor/reason audit history and linked reversals; reuse services.
 - Depends on: 2/9/12. Done: applicable draft/submit/post/pay/partial/void/reverse cases for each producer; duplicate/concurrent/forced failures leave no partial writes; subledger/GL reconcile; no silent lost updates.
-- Current audit defect tracking: the shared posting engine now blocks closed/locked periods via `assertPeriodOpen()` and de-dupes journal-entry writes via `idempotencyKey` before insertion. Remaining module-specific reviews continue as normal audit follow-through, but the central lifecycle controls are no longer outstanding defects.
+- Current audit defect tracking: Finding A01 (GL Idempotency Persistence) is resolved — the shared posting engine now blocks closed/locked periods via `assertPeriodOpen()` and de-dupes journal-entry writes via a dedicated `idempotencyKey` before insertion. Remaining module-specific reviews continue as normal audit follow-through, but the central lifecycle controls are no longer outstanding defects.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 

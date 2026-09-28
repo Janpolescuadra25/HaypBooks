@@ -120,10 +120,7 @@ export async function createAndPostJE(
         const existing = await tx.journalEntry.findFirst({
             where: {
                 companyId: data.companyId,
-                OR: [
-                    { entryNumber: data.idempotencyKey },
-                    { sourceReferenceId: data.idempotencyKey },
-                ],
+                idempotencyKey: data.idempotencyKey,
             },
             select: { id: true, lines: { select: { accountId: true, debit: true, credit: true } } },
         })
@@ -151,6 +148,7 @@ export async function createAndPostJE(
             postingStatus: data.postingStatus ?? 'DRAFT',
             transactionSource: data.transactionSource,
             sourceReferenceId: data.sourceReferenceId,
+            idempotencyKey: data.idempotencyKey ?? null,
             createdById: data.createdById,
             lines: {
                 create: data.lines.map(l => ({
