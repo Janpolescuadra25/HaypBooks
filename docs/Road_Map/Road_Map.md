@@ -1,4 +1,4 @@
-# HaypBooks  End-to-End Completion Roadmap
+﻿# HaypBooks  End-to-End Completion Roadmap
 
 ## Current verification checkpoint - 2026-09-26
 
@@ -111,11 +111,6 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 14** | Accounting lifecycle controls | Period-lock validation (`assertPeriodOpen`), GL idempotency deduplication, exact payload-conflict validation, and deterministic caller wiring for bill/inventory/bank categorization flows | [Accounting Lifecycle README](Haypbooks/Backend/docs/implementations/accounting-lifecycle-controls/README.md) |
 | **Phase H-0** | SUPER_ADMIN provisioning | JWT `systemRole` and `isOwner` claims, strategy validation, verified seed script | [Auth Module](Haypbooks/Backend/src/auth/prisma-auth.service.ts) |
 | **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across controllers, request context propagation, unit tests | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
-| **Phase 9** | Lint/Type Baseline | Backend/frontend strict typecheck and lint enforcement pass on the current implementation baseline | [Backend tsconfig](Haypbooks/Backend/tsconfig.json) |
-| **Phase 12** | Admin Route Audit | Verified workspace and role boundaries for the remaining owner/admin route surface, with blocked or audited gaps recorded separately | [Owner Controller](Haypbooks/Backend/src/owner/owner.controller.ts) |
-| **Phase 4** | Reports & Current-Year Earnings | Defect E4 resolved: unposted draft exclusion and single-source earnings calculation | [Reporting README](Haypbooks/Backend/docs/implementations/reporting-current-year-earnings/README.md) |
-| **Phase 5** | Inventory Lifecycle & GL | Defect E5 resolved: draft stock mutation isolation and atomic GL double-entry posting | [Inventory GL README](Haypbooks/Backend/docs/implementations/inventory-gl-integration/README.md) |
-| **Phase 6** | Banking & Auto-Match | Defect E6 resolved: journal reference validation and candidate GL line matching | [Banking Auto-Match README](Haypbooks/Backend/docs/implementations/banking-auto-match/README.md) |
 
 ---
 
@@ -136,7 +131,7 @@ The following core accounting modules and defects have been fully resolved, test
 ### 10  VPS release (BLOCKED, P1 final gate)
 
 - Audit: read-only local/remote revisions, server checkout, PM2, TLS/proxy, environment/migration state. Historical drift claims are not fresh facts.
-- Deliver: reviewed revision  owner push  controlled pull/install/build/migration if approved  restart/health check, with rollback. No blind overwrite of server changes.
+- Deliver: reviewed revision -> owner push -> controlled pull/install/build/migration if approved -> restart/health check, with rollback. No blind overwrite of server changes.
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
 - Depends on: 9/12/13/16/17 and released accounting phases. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
 
