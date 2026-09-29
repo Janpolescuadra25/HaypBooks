@@ -108,9 +108,11 @@ The following core accounting modules and defects have been fully resolved, test
 
 | Phase | Module & Scope | Resolution Summary | Authoritative Implementation Documentation |
 |---|---|---|---|
-| **Phase 14** | Accounting lifecycle controls | Period-lock validation (`assertPeriodOpen`), sub-ledger posting enforcement, GL idempotency deduplication | [Accounting Lifecycle README](Haypbooks/Backend/docs/implementations/accounting-lifecycle-controls/README.md) |
+| **Phase 14** | Accounting lifecycle controls | Period-lock validation (`assertPeriodOpen`), GL idempotency deduplication, exact payload-conflict validation, and deterministic caller wiring for bill/inventory/bank categorization flows | [Accounting Lifecycle README](Haypbooks/Backend/docs/implementations/accounting-lifecycle-controls/README.md) |
 | **Phase H-0** | SUPER_ADMIN provisioning | JWT `systemRole` and `isOwner` claims, strategy validation, verified seed script | [Auth Module](Haypbooks/Backend/src/auth/prisma-auth.service.ts) |
 | **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across controllers, request context propagation, unit tests | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
+| **Phase 9** | Lint/Type Baseline | Backend/frontend strict typecheck and lint enforcement pass on the current implementation baseline | [Backend tsconfig](Haypbooks/Backend/tsconfig.json) |
+| **Phase 12** | Admin Route Audit | Verified workspace and role boundaries for the remaining owner/admin route surface, with blocked or audited gaps recorded separately | [Owner Controller](Haypbooks/Backend/src/owner/owner.controller.ts) |
 | **Phase 4** | Reports & Current-Year Earnings | Defect E4 resolved: unposted draft exclusion and single-source earnings calculation | [Reporting README](Haypbooks/Backend/docs/implementations/reporting-current-year-earnings/README.md) |
 | **Phase 5** | Inventory Lifecycle & GL | Defect E5 resolved: draft stock mutation isolation and atomic GL double-entry posting | [Inventory GL README](Haypbooks/Backend/docs/implementations/inventory-gl-integration/README.md) |
 | **Phase 6** | Banking & Auto-Match | Defect E6 resolved: journal reference validation and candidate GL line matching | [Banking Auto-Match README](Haypbooks/Backend/docs/implementations/banking-auto-match/README.md) |
@@ -160,15 +162,6 @@ The following core accounting modules and defects have been fully resolved, test
 - Requirements: explicit existing-customer migration, no silent charge/conversion/data deletion; trial distinct from free plan, bonuses distinct from paid base.
 - Depends on: 9/12, owner economics, 11 bonuses.
 - Current state: Hydra audit found zero Stripe code on disk. This phase is intentionally NOT STARTED until a real billing integration, checkout/session state machine and approved subscription contract exist in source.
-
-### 14  Accounting lifecycle controls (DONE, P0)
-
-> **Status:** DONE (Canonical period-lock validation and GL idempotency enforcement are implemented and verified in the shared posting engine; the phase is now source-backed and no longer relies on an unverified audit status).
-
-- Audit: JE, AR invoice/payment/credit/refund, AP bill/payment/credit, expenses/transfers and offered payroll/assets. Trace callers before judging repository helpers in isolation.
-- Deliver: explicit states, uniform company/account/period/balance/precision checks, atomic source+GL, idempotency, stale-edit protection, source/actor/reason audit history and linked reversals; reuse services.
-- Depends on: 2/9/12. Done: applicable draft/submit/post/pay/partial/void/reverse cases for each producer; duplicate/concurrent/forced failures leave no partial writes; subledger/GL reconcile; no silent lost updates.
-- Current audit defect tracking: Finding A01 (GL Idempotency Persistence) is resolved — the shared posting engine now blocks closed/locked periods via `assertPeriodOpen()` and de-dupes journal-entry writes via a dedicated `idempotencyKey` before insertion. Remaining module-specific reviews continue as normal audit follow-through, but the central lifecycle controls are no longer outstanding defects.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 

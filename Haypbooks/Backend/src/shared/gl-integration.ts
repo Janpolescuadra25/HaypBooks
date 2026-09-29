@@ -117,14 +117,56 @@ export async function createAndPostJE(
     await assertPeriodOpen(tx, { companyId: data.companyId, workspaceId: data.workspaceId }, data.date)
 
     if (data.idempotencyKey) {
-        const existing = await tx.journalEntry.findFirst({
+        const existing = await tx.journalEntry.findUnique({
             where: {
-                companyId: data.companyId,
                 idempotencyKey: data.idempotencyKey,
             },
-            select: { id: true, lines: { select: { accountId: true, debit: true, credit: true } } },
+            select: {
+                id: true,
+                companyId: true,
+                lines: { select: { accountId: true, debit: true, credit: true } },
+            },
         })
         if (existing) {
+            if (existing.companyId !== data.companyId) {
+                throw new Error(`Idempotency key collision across company boundaries: ${data.idempotencyKey}`)
+            }
+
+            const payloadMismatchError = `Idempotency key '${data.idempotencyKey}' reused with mismatched transaction payload.`
+            const existingLines = [...existing.lines]
+                .map(line => ({
+                    accountId: line.accountId,
+                    debit: Number(line.debit ?? 0),
+                    credit: Number(line.credit ?? 0),
+                }))
+                .sort((a, b) => a.accountId.localeCompare(b.accountId))
+            const incomingLines = [...data.lines]
+                .map(line => ({
+                    accountId: line.accountId,
+                    debit: Number(line.debit ?? 0),
+                    credit: Number(line.credit ?? 0),
+                }))
+                .sort((a, b) => a.accountId.localeCompare(b.accountId))
+
+            if (existingLines.length !== incomingLines.length) {
+                throw new Error(payloadMismatchError)
+            }
+
+            for (let i = 0; i < existingLines.length; i += 1) {
+                const existingLine = existingLines[i]
+                const incomingLine = incomingLines[i]
+
+                if (existingLine.accountId !== incomingLine.accountId) {
+                    throw new Error(payloadMismatchError)
+                }
+
+                const debitDiff = Math.abs(existingLine.debit - incomingLine.debit)
+                const creditDiff = Math.abs(existingLine.credit - incomingLine.credit)
+                if (debitDiff > 0.001 || creditDiff > 0.001) {
+                    throw new Error(payloadMismatchError)
+                }
+            }
+
             return existing.id
         }
     }

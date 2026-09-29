@@ -176,6 +176,125 @@ export class SubLedgerService {
     await assertPeriodOpen(tx, { companyId, workspaceId: company?.workspaceId }, date)
   }
 
+  async postInventoryTransactionToGL(
+    companyId: string,
+    trx: {
+      id: string
+      date?: Date | string
+      type: string
+      lines: Array<{ productId?: string; itemId?: string; qty: number; unitCost?: number }>
+    },
+    tx?: any,
+  ): Promise<string | null> {
+    const client = tx ?? this.prisma
+    const company = await client.company.findUnique({
+      where: { id: companyId },
+      select: { workspaceId: true },
+    })
+    if (!company?.workspaceId) {
+      throw new BadRequestException(`Company ${companyId} not found for inventory GL posting`)
+    }
+
+    const trxDate = trx.date ? new Date(trx.date) : new Date()
+    await this.assertPeriodOpen(companyId, trxDate, client)
+
+    const totalValuation = trx.lines.reduce((sum, line) => {
+      const qty = Number(line.qty ?? 0)
+      const unitCost = Number(line.unitCost ?? 0)
+      return sum + Math.abs(qty * unitCost)
+    }, 0)
+
+    if (totalValuation <= 0.005) {
+      return null
+    }
+
+    const inventoryAssetAcc = await resolveAccount(client, companyId, { code: '1400', name: 'Inventory Asset', typeId: 1 })
+    const cogsAcc = await resolveAccount(client, companyId, { code: '5000', name: 'Cost of Goods Sold', typeId: 2 })
+    const clearingAcc = await resolveAccount(client, companyId, { code: '2050', name: 'Inventory Clearing', typeId: 4 })
+
+    const lines: Array<{ accountId: string; debit: number; credit: number; description?: string }> = []
+    const baseDescription = `Inventory ${String(trx.type).toUpperCase()} ${trx.id}`
+
+    if (trx.type === 'RECEIPT') {
+      lines.push({ accountId: inventoryAssetAcc.id, debit: totalValuation, credit: 0, description: `Inventory receipt ${trx.id}` })
+      lines.push({ accountId: clearingAcc.id, debit: 0, credit: totalValuation, description: `Inventory clearing ${trx.id}` })
+    } else if (trx.type === 'SHIPMENT') {
+      lines.push({ accountId: cogsAcc.id, debit: totalValuation, credit: 0, description: `Inventory shipment COGS ${trx.id}` })
+      lines.push({ accountId: inventoryAssetAcc.id, debit: 0, credit: totalValuation, description: `Inventory shipment reduction ${trx.id}` })
+    } else {
+      lines.push({ accountId: cogsAcc.id, debit: totalValuation, credit: 0, description: `Inventory adjustment ${trx.id}` })
+      lines.push({ accountId: inventoryAssetAcc.id, debit: 0, credit: totalValuation, description: `Inventory adjustment asset ${trx.id}` })
+    }
+
+    const entryNumber = await this.nextEntryNumber(companyId, 'INV', client)
+    const jeId = await createAndPostJE(client, {
+      workspaceId: company.workspaceId,
+      companyId,
+      date: trxDate,
+      description: baseDescription,
+      entryNumber,
+      idempotencyKey: `inventory:${trx.id}:post`,
+      transactionSource: 'Inventory Transaction',
+      sourceReferenceId: trx.id,
+      lines,
+    })
+
+    await client.auditLog.create({
+      data: {
+        workspaceId: company.workspaceId,
+        companyId,
+        action: 'POST_TO_GL',
+        tableName: 'InventoryTransaction',
+        recordId: trx.id,
+        changes: {
+          journalEntryId: jeId,
+          entryNumber,
+          type: trx.type,
+          valuation: totalValuation,
+        },
+      },
+    })
+
+    return jeId
+  }
+
+  async reverseInventoryTransactionGL(
+    companyId: string,
+    transactionId: string,
+    reason?: string,
+    tx?: any,
+  ): Promise<string | null> {
+    const client = tx ?? this.prisma
+    const existingJe = await client.journalEntry.findFirst({
+      where: {
+        companyId,
+        sourceReferenceId: transactionId,
+        transactionSource: 'Inventory Transaction',
+      },
+      include: { lines: true },
+    })
+
+    if (!existingJe) {
+      return null
+    }
+
+    await this.assertPeriodOpen(companyId, new Date(existingJe.date), client)
+    const reversedId = await createReversingJE(
+      client,
+      companyId,
+      existingJe.id,
+      reason ?? `Void inventory transaction ${transactionId}`,
+      undefined,
+    )
+
+    await client.inventoryTransaction?.update?.({
+      where: { id: transactionId },
+      data: { postingStatus: 'VOIDED' },
+    })
+
+    return reversedId
+  }
+
   private async findExpenseAccount(companyId: string, tx?: any): Promise<string | null> {
     const db = tx ?? this.prisma
     const account = await db.account.findFirst({
@@ -579,6 +698,7 @@ const lines = (invoice as any).lines ?? []
           currency: bill.currency ?? undefined,
           createdById: postedById,
           entryNumber,
+          idempotencyKey: `bill:${billId}:post`,
           transactionSource: 'Bill',
           sourceReferenceId: billId,
           lines: finalLines,
@@ -599,6 +719,7 @@ const lines = (invoice as any).lines ?? []
             currency: bill.currency ?? undefined,
             createdById: postedById,
             entryNumber,
+            idempotencyKey: `bill:${billId}:post`,
             transactionSource: 'Bill',
             sourceReferenceId: billId,
             lines: finalLines,
@@ -668,6 +789,7 @@ const lines = (invoice as any).lines ?? []
           currency: bill.currency ?? undefined,
           createdById: postedById,
           entryNumber,
+          idempotencyKey: `bill:${billId}:void`,
           transactionSource: 'Bill Reversal',
           sourceReferenceId: billId,
           lines: reversalLines,

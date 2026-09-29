@@ -5602,7 +5602,6 @@ model JournalEntry {
 
   @@index([workspaceId, date])
   @@index([companyId, date])
-  @@index([idempotencyKey])
   @@index([companyId, postingStatus])
   @@index([companyId, postingStatus, date])
   @@index([deletedAt])

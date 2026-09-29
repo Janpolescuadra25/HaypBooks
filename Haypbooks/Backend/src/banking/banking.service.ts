@@ -261,6 +261,7 @@ export class BankingService {
                             description: `Bank Transaction — ${txn.description}`,
                             currency: await this.resolveCurrency(companyId),
                             createdById: userId,
+                            idempotencyKey: `banking:${bankTransactionId}:categorize`,
                             transactionSource: 'Bank Transaction',
                             sourceReferenceId: bankTransactionId,
                             lines: lines.map(l => ({ accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description })),
