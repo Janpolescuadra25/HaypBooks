@@ -199,35 +199,6 @@ For each row: success, invalid input, permission denial, network/server failure,
 ## Appendix: Completed Tasks
 
 
-### Phase 9  Lint & Type Baseline Enforcement (DONE, 2026-09-26)
-- **Status:** COMPLETED & VERIFIED (Commit `e6dad610`).
-- **Scope:** Enforced strict build gates in `next.config.js` (`ignoreDuringBuilds: false`). Resolved 24 `react/no-unescaped-entities` errors in `error-queue/page.tsx`, fixed unescaped apostrophes across 15+ frontend files, and corrected hook-order violation in `ChartOfAccountsPage.tsx`.
-- **Quality Gates:** `npm run lint -- --quiet` exit code 0; `npm run typecheck` exit code 0; Backend `tsc --noEmit` exit code 0.
-- **Documentation:** `Haypbooks/Frontend/docs/implementations/lint-baseline-enforcement/README.md`.
-- **Active Workstream  Test Harness & Database Isolation (IN PROGRESS, P0):**
-  - Isolating test databases per worker to eliminate shared-state leakage during Jest `test:e2e` and `test:serial` runs.
-  - Adding transactional rollbacks and automated disposable schema teardown.
-  - Dynamic `DATABASE_URL` injection is required at runner startup to ensure reproducible per-worker isolation.
-  - Architecture specification: `Haypbooks/Backend/docs/implementations/test-harness-isolation/README.md`.
-
--  **Finding E3: Backend Accounting Engine Journal Entry Numbering Gap (COMPLETED, P0)**
-  - *Location:* `Haypbooks/Backend/src/shared/gl-integration.ts`
-  - *Fix:* Added `entryNumber: data.entryNumber` persistence to `tx.journalEntry.create()` payload.
-  - *Documentation:* Section README created and marked DONE at `Haypbooks/Backend/docs/implementations/journal-entry-numbering/README.md`.
-  - *Verification:* Verified callers pass `entryNumber`; backend and frontend TypeScript verification gates passed.
--  **Landing Page scroll freeze resolution (Task 266):** Resolved scroll locking and phase activation boundaries in LandingExperience.tsx, BossFight.tsx, and Classes.tsx.
--  **L1 AccountantsHub subtask (Completed 2026-09-13):** Route and component verified active and functional.
--  **L2 LearnSupport subtask (Completed 2026-09-14):** Route and component verified active and functional.
--  **Phase 9 Quality Baseline Finalized (Task 318):** 26 react/no-unescaped-entities fixed, strict build gates documented.
--  **Phase 9 Client requests hook memoization (Task 333):** useCallback memoization implemented in client-requests/page.tsx, section README verified.
--  **Intro sequence background & pricing alignment (Task 342):** SlideTwo background set to bg-white, root occlusion enforced with fixed inset-0 z-[100] bg-white, all scoped pricing tiers aligned to 15-day trials with zero free-forever tiers. Section README verified at `Haypbooks/Frontend/docs/implementations/landing-fixes/README.md`.
-
-### Phase 12 E1  Test Endpoint Security Guard & Hardening (DONE, 2026-09-26)
-- **Status:** COMPLETED & VERIFIED (Commit `4a1a3625`).
-- **Scope:** Conditional `TestModule` mounting in `src/app.module.ts`; `@UseGuards(TestEndpointGuard)` applied to `TestController`; fail-closed production containment (throws `403 Forbidden` without matching `X-Test-Token` or Bearer token); full 8-test Jest unit test suite in `src/test/test.guard.spec.ts`.
-- **Quality Gates:** Jest unit tests 8/8 passed; Backend `tsc --noEmit` exit code 0; Frontend `npm run lint` and `typecheck` exit code 0.
-- **Documentation:** `Haypbooks/Backend/src/test/README.md`.
-
 ## Definition of finished
 
 Declared release scope has verified functionality, accounting integrity, permissions, usable failures, concurrency safety, tests, READMEs and operational recovery. Optional features may remain deferred. Unsupported features must not be advertised as working. Do not claim 100% functional or production-ready without scope-specific evidence.
