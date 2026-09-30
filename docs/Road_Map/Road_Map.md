@@ -1,4 +1,4 @@
-﻿# HaypBooks  End-to-End Completion Roadmap
+# HaypBooks  End-to-End Completion Roadmap
 
 ## Current verification checkpoint - 2026-09-26
 
@@ -109,6 +109,8 @@ The following core accounting modules and defects have been fully resolved, test
 | Phase | Module & Scope | Resolution Summary | Authoritative Implementation Documentation |
 |---|---|---|---|
 | **Phase 14** | Accounting lifecycle controls | Period-lock validation (`assertPeriodOpen`), GL idempotency deduplication, exact payload-conflict validation, and deterministic caller wiring for bill/inventory/bank categorization flows | [Accounting Lifecycle README](Haypbooks/Backend/docs/implementations/accounting-lifecycle-controls/README.md) |
+| **Phase 9** | Lint & Type Baseline Enforcement | Full codebase ESLint and TypeScript baseline restored with clean exit code 0 | [Lint Baseline README](Haypbooks/Frontend/docs/implementations/lint-baseline-enforcement/README.md) |
+| **Phase 12 E1** | Test Endpoint Security Guard & Hardening | ensureEnabled() environment guard, test tokens, 8/8 tests green | [Test Security README](Haypbooks/Backend/src/test/README.md) |
 | **Phase H-0** | SUPER_ADMIN provisioning | JWT `systemRole` and `isOwner` claims, strategy validation, verified seed script | [Auth Module](Haypbooks/Backend/src/auth/prisma-auth.service.ts) |
 | **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across controllers, request context propagation, unit tests | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
 
@@ -148,7 +150,7 @@ The following core accounting modules and defects have been fully resolved, test
 
 - Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
 - Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
-- Depends on: existing Phase 12 E1 enforcement and negative-test harness. Remaining scope excludes completed production test endpoint hardening and the attachment object ownership fix already completed in commit `e8bb579e`.### 13  Paid plans, trials and Stripe (NOT STARTED, P0 - no Stripe implementation present on disk; required billing contract and checkout/webhook foundation remain unimplemented)
+- Depends on: negative-test harness. Remaining scope excludes completed production test endpoint hardening and the attachment object ownership fix already completed in commit `e8bb579e`.### 13  Paid plans, trials and Stripe (NOT STARTED, P0 - no Stripe implementation present on disk; required billing contract and checkout/webhook foundation remain unimplemented)
 
 - Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
 - Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.
@@ -278,7 +280,7 @@ Conflicts resolved:
 ### Existing-phase supplements retained from the older roadmap
 
 - Phase 8: specifically scope persistent company/user-bound chat history, document Q&A, anomaly insights and context-aware responses; any quick-action execution requires review and existing financial controls. These are inherited goals, not evidence they already work.
-- Phase 9: capture a full backend unit-suite run, not a log that stops before suites start; re-evaluate historical empty JSON output and claimed seed-race/sidebar timing flakes. Record current inventory/coverage and risk-based CI thresholds; do not reuse the old approximate 87-test count.
+
 - Phase 10/16: verify metrics accumulation and currency cache behavior, observe memory for 2448 hours, inspect connection pooling and deployment cache handling. Reconfirm registrar/DNS ownership before documenting Porkbun/Cloudflare as current operational facts.
 - Phase 12/15: unify API authentication/error handling using existing apiClient or a justified shared wrapper after inventory; avoid indiscriminate fetch replacement. Test login/logout/refresh through the actual production routing arrangement.
 - Phase 3: retain module-root README policy and link the canonical roadmap from future documentation. Read historical completion claims before rebuilding any functionality, but require current evidence before re-certifying it.
