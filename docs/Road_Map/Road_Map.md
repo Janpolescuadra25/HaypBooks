@@ -310,7 +310,6 @@ Conflicts resolved:
 - Phase 9: capture a full backend unit-suite run, not a log that stops before suites start; re-evaluate historical empty JSON output and claimed seed-race/sidebar timing flakes. Record current inventory/coverage and risk-based CI thresholds; do not reuse the old approximate 87-test count.
 - Phase 10/16: verify metrics accumulation and currency cache behavior, observe memory for 2448 hours, inspect connection pooling and deployment cache handling. Reconfirm registrar/DNS ownership before documenting Porkbun/Cloudflare as current operational facts.
 - Phase 12/15: unify API authentication/error handling using existing apiClient or a justified shared wrapper after inventory; avoid indiscriminate fetch replacement. Test login/logout/refresh through the actual production routing arrangement.
-- Phase 14: carry forward invoice/payment/deposit atomicity, credit-note/document-number concurrency and banking account-to-GL mapping audits; older allegations remain audit inputs until current paths are traced.
 - Phase 3: retain module-root README policy and link the canonical roadmap from future documentation. Read historical completion claims before rebuilding any functionality, but require current evidence before re-certifying it.
 
 ---
@@ -355,9 +354,6 @@ The following entries were labeled complete in the August 29 document. They are 
 -  **Fix `mapRoleForFrontend` Inconsistency**  Completed August 24, 2026: Confirmed NOT a bug. Three orthogonal role layers exist: hub role (JWT `role`), RBAC role (cookie `role`), platform role (JWT `systemRole`). The `mapRoleForFrontend` function correctly maps workspace owners to `'admin'` RBAC permissions. Documented in `docs/architecture/ROLE_SYSTEM.md`.
 -  **Deploy.sh Stale Cache Fix**  Completed August 26, 2026: Added `rm -rf .next` to deploy.sh before `npm run build` to prevent corrupted Next.js incremental builds from causing 400 errors on static assets.
 -  **Onboarding Page Syntax Fix**  Completed August 26, 2026: Fixed malformed `saveCurrentStep()` function in `onboarding/page.tsx` that was causing build failures on the VPS.
--  **Phase H-0 Three-Role Foundation (SUPER_ADMIN Provisioning)**  Completed August 27, 2026: All code changes previously verified (systemRole + isOwner in JWT at all sign locations in prisma-auth.service.ts, jwt.strategy validate(), RolesGuard SUPER_ADMIN check). VPS tasks executed: ADMIN_EMAIL and ADMIN_DEFAULT_PASSWORD added to Backend .env, seed-admin run via `npm run db:seed:admin` (required transient NODE_OPTIONS=--max-old-space-size=8192 after OOM), SUPER_ADMIN login verified  decoded JWT contains systemRole: 'SUPER_ADMIN' and isOwner: true. All three H-0 boxes now closed.
-H-0 addendum: The duplicate H-0 completion entry dated 2026-09-12 (which cited stale anchors prisma-auth.service.ts:45-62 and jwt.strategy.ts:31-47) was identified by the Hydra repository audit and removed as erroneous. The retained H-0 entry above remains the authoritative record.
-
 ---
 
 ---
