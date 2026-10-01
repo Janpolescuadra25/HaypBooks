@@ -1,55 +1,41 @@
-﻿# Phase 12 — Workspace-Scoped Tenant Isolation (`WorkspaceAccessGuard`)
+﻿# WorkspaceAccessGuard Implementation
 
-**STATUS: DONE & VERIFIED**  
-**Date:** 2026-09-26  
-**Phase:** Phase 12 — Security & Tenant Isolation  
-**Task ID:** Task 384  
-**Base Commit:** 35c21160  
+## Status
+**DONE & VERIFIED** (Task 510 Batch 1 Rollout & Hardening, Commit `b1b3fb46`)
 
----
+## Overview
+`WorkspaceAccessGuard` provides centralized tenant-isolation security across backend controllers. It verifies that an authenticated user possesses active, non-deleted membership in the requested workspace before allowing execution of workspace-scoped routes.
 
-## 1. Overview & Objective
-Enforces strict multi-tenant boundary isolation across all workspace-scoped backend endpoints. Completely prevents unauthorized cross-tenant data access, stale JWT exploitation, and unvalidated workspace parameter tampering by enforcing server-side `WorkspaceUser` active membership validation.
+## Architecture & Core Security Controls
+1. **Multi-Source Workspace Identification**:
+   - Route parameters (`:workspaceId`, `:tenantId`)
+   - Request headers (`x-workspace-id`, `x-tenant-id`)
+   - User JWT claims (`user.workspaceId`, `user.tenantId`)
+   - Company lookup fallback: when `:companyId` is supplied, it resolves the associated `workspaceId` via Prisma.
+2. **Fail-Closed Type & Membership Assertion**:
+   - Rejects array `workspaceId` payloads with `ForbiddenException('Workspace context is required')`.
+   - Requires explicit active status: `status: 'ACTIVE'` and `deletedAt: null`.
+3. **Request Context Propagation**:
+   - Attaches `workspaceId` and `workspaceUser` directly to the request object.
+   - Synchronizes `setRequestContext({ workspaceId })` for downstream sub-ledger and service calls.
 
----
+## Batch 1 Rollout Scope (10 Core Controllers)
+The guard is active and chained at the class level via `@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)` or `@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)` across:
+1. `src/banking/banking.controller.ts`
+2. `src/inventory/inventory.controller.ts`
+3. `src/reporting/reporting.controller.ts`
+4. `src/accounting/accounting.controller.ts`
+5. `src/audit/audit.controller.ts`
+6. `src/general-ledger/general-ledger.controller.ts`
+7. `src/expenses/expenses.controller.ts`
+8. `src/sales/sales.controller.ts`
+9. `src/practice/practice.controller.ts`
+10. `src/practice-hub/practice-hub.controller.ts`
 
-## 2. Core Architecture & Files Modified
-1. **WorkspaceAccessGuard (`src/auth/guards/workspace-access.guard.ts`):**
-   - Extracts target `workspaceId` from:
-     - `request.params.workspaceId`
-     - `request.query.workspaceId`
-     - Header `x-workspace-id`
-     - Authenticated JWT payload (`user.workspaceId` or `user.tenantId`)
-   - Queries Prisma model `WorkspaceUser` for active membership:
-     - `workspaceId`: Target workspace ID
-     - `userId`: Authenticated user ID
-     - `status`: Must be `'ACTIVE'`
-     - `deletedAt`: Must be `null`
-   - Injects verified context into request:
-     - `request.workspaceId = workspaceId`
-     - `request.workspaceUser = membership`
-   - Updates asynchronous request context via `setRequestContext({ workspaceId, userId })`.
-   - Throws fail-closed `403 Forbidden` on any membership absence, status mismatch, or soft-deleted record.
-   - Throws `401 Unauthorized` if no authenticated user is present.
-2. **PracticeHubController (`src/practice-hub/practice-hub.controller.ts`):**
-   - Bound with `@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)` across all workspace-scoped routes.
-3. **PracticeController (`src/practice/practice.controller.ts`):**
-   - Bound with `@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)` across all workspace practice routes.
-4. **Comprehensive Unit Test Suite (`src/auth/guards/workspace-access.guard.spec.ts`):**
-   - 6 passing unit tests covering active membership, cross-tenant denial, inactive status, parameter resolution, header resolution, and missing authentication.
+## Dependency Injection
+- Wired `PrismaService` from `../repositories/prisma/prisma.service` into `src/sales/sales.module.ts` providers array.
 
----
-
-## 3. Preserved Boundary Invariants
-- **Database Schema:** Prisma schema remains untouched; utilizes existing `Workspace` and `WorkspaceUser` tables.
-- **Fail-Closed Default:** Unauthenticated or cross-tenant requests are immediately denied with `401` or `403`.
-- **Company & Test Endpoints:** Existing `CompanyAccessGuard` and `TestEndpointGuard` invariants preserved.
-
----
-
-## 4. Verification & Quality Gates
-- Guard Jest Suite: `npx jest src/auth/guards/workspace-access.guard.spec.ts --runInBand --verbose` → 6/6 Tests Passed (Exit code 0).
-- Test Module Suite: `npx jest src/test/test.guard.spec.ts --runInBand --verbose` → 8/8 Tests Passed (Exit code 0).
-- Backend TypeScript: `npx tsc --noEmit` → Exit code 0.
-- Frontend Lint: `npm run lint -- --quiet` → Exit code 0 (`✔ No ESLint warnings or errors`).
-- Frontend TypeScript: `npm run typecheck` → Exit code 0.
+## Test Harness Verification
+- Unit test suite: `src/auth/guards/workspace-access.guard.spec.ts`
+- Test status: **10/10 unit tests passing**
+- Coverage includes negative assertions for missing users, array workspace IDs, non-existent company IDs, inactive memberships, and cross-tenant access attempts.

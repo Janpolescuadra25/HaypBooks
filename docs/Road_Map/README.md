@@ -12,10 +12,10 @@ Open findings E1-E12 track known gaps; several are source-confirmed, including t
 
 ## Current fingerprint of `Road_Map.md`
 
-Recorded 2026-10-01 after Task 507 archival finalization and README fingerprint sync:
+Recorded 2026-10-02 after Task 512 Phase 12 E2 archival and WorkspaceAccessGuard README synchronization:
 
-- Size: 40946 bytes
-- SHA-256: AA7EE5385346995DA0396FFDD2B34ED359181E01502D56EEB3FAA3E67D5D5812
+- Size: 41137 bytes
+- SHA-256: 265306D1999801A04FE876CB5A74D587A90CA901834EAF1C769996D9BD33E0E7
 - Lines: 344
 - Encoding: UTF-8 without BOM; LF-only line endings; trailing newline consistent with current source state
 
@@ -42,6 +42,7 @@ Whenever `Road_Map.md` is validly edited, replace the values above with the new 
 - 2026-09-14 (R3): L2 LearnSupport round completed; its L2 completion record now stands at Road_Map.md line 87 (swapped in by R4, see next entry).
 - 2026-09-14 (R4): Road_Map.md line 87 swapped from the L2 (NEXT) line (206 bytes) to the L2 LearnSupport completion record (1015 bytes); profile preserved (346 lines; LF 345; CR 0; no BOM; no trailing newline); fingerprint 44663/3D03A3EA -> 45472/43384B8C; Hydra post-run disk audit: R4 CLOSES CLEAN.
 - 2026-10-01 (Task 507): finalized archival cleanup for Phase 9 and Phase 12 E1, removed the residual appendix references, and synchronized this README fingerprint block to the live Road_Map.md state.
+- 2026-10-02 (Task 512): archived Phase 12 E2 for the Batch 1 WorkspaceAccessGuard rollout, recorded the array workspace ID rejection bug fix and request-context propagation, and synchronized this README fingerprint block to the live Road_Map.md state.
 
 ## Edit protocol for `Road_Map.md`
 

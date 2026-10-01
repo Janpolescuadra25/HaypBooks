@@ -112,7 +112,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 9** | Lint & Type Baseline Enforcement | Full codebase ESLint and TypeScript baseline restored with clean exit code 0 | [Lint Baseline README](Haypbooks/Frontend/docs/implementations/lint-baseline-enforcement/README.md) |
 | **Phase 12 E1** | Test Endpoint Security Guard & Hardening | ensureEnabled() environment guard, test tokens, 8/8 tests green | [Test Security README](Haypbooks/Backend/src/test/README.md) |
 | **Phase H-0** | SUPER_ADMIN provisioning | JWT `systemRole` and `isOwner` claims, strategy validation, verified seed script | [Auth Module](Haypbooks/Backend/src/auth/prisma-auth.service.ts) |
-| **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across controllers, request context propagation, unit tests | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
+| **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across 10 core controllers, Batch 1 rollout completed 2026-10-02, array workspace ID rejection bug fix, request context propagation, 10/10 unit tests passing | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
 
 ---
 
@@ -148,7 +148,7 @@ The following core accounting modules and defects have been fully resolved, test
 
 > **Status:** PARTIAL (Task 400 E1/E2 security items complete & verified; remaining: audit test/admin routes. Guard/controller workspace-context agreement is complete via commit `64fd2397`. Attachment object ownership is complete via commit `e8bb579e`.)
 
-- Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation.
+> Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation. **WorkspaceAccessGuard Batch 1 rollout and array bug fix complete via commit ``b1b3fb46``.**
 - Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
 - Depends on: negative-test harness. Remaining scope excludes completed production test endpoint hardening and the attachment object ownership fix already completed in commit `e8bb579e`.### 13  Paid plans, trials and Stripe (NOT STARTED, P0 - no Stripe implementation present on disk; required billing contract and checkout/webhook foundation remain unimplemented)
 
