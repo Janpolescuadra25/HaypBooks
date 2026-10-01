@@ -31,6 +31,10 @@ export class WorkspaceAccessGuard implements CanActivate {
       user.workspaceId ??
       user.tenantId;
 
+    if (Array.isArray(workspaceId)) {
+      throw new ForbiddenException('Workspace context is required');
+    }
+
     if (!workspaceId && request.params?.companyId) {
       const company = await this.prisma.company.findUnique({
         where: { id: request.params.companyId },
@@ -59,7 +63,7 @@ export class WorkspaceAccessGuard implements CanActivate {
       },
     });
 
-    if (!membership) {
+    if (!membership || membership.status !== 'ACTIVE' || membership.deletedAt) {
       throw new ForbiddenException('Access denied: You do not have active membership in this workspace');
     }
 

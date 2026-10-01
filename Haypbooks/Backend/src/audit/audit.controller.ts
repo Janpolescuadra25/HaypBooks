@@ -3,9 +3,10 @@ import { Response } from 'express'
 import { AuditService } from './audit.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 
 @Controller('api/companies/:companyId')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 

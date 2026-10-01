@@ -7,10 +7,11 @@ import { ReportingService } from './reporting.service'
 import { LedgerHealthService } from './ledger-health.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { CreateBudgetDto, UpdateBudgetDto } from './dto/create-budget.dto'
 
 @Controller(['api/reporting', 'api/companies/:companyId/reporting'])
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
 export class ReportingController {
     constructor(
         private readonly svc: ReportingService,

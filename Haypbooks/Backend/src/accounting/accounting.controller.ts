@@ -6,9 +6,10 @@ import { SkipThrottle } from '@nestjs/throttler'
 import { AccountingService } from './accounting.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 
 @Controller('api/companies/:companyId/accounting')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class AccountingController {
     constructor(private readonly svc: AccountingService) { }
 

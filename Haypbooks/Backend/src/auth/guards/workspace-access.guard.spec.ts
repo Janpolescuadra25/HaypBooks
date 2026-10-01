@@ -6,6 +6,9 @@ import { PrismaService } from '../../repositories/prisma/prisma.service';
 describe('WorkspaceAccessGuard', () => {
   let guard: WorkspaceAccessGuard;
   let prisma: {
+    company: {
+      findUnique: jest.Mock;
+    };
     workspaceUser: {
       findFirst: jest.Mock;
     };
@@ -14,20 +17,23 @@ describe('WorkspaceAccessGuard', () => {
   const createMockContext = (req: any): ExecutionContext => ({
     switchToHttp: () => ({
       getRequest: () => req,
-      getResponse: () => ({}),
-      getNext: () => ({}),
-    }),
+      getResponse: () => ({}) as any,
+      getNext: () => ({}) as any,
+    }) as any,
     getClass: () => ({} as any),
     getHandler: () => ({} as any),
     getArgs: () => [] as any,
     getArgByIndex: () => ({}) as any,
     switchToRpc: () => ({}) as any,
     switchToWs: () => ({}) as any,
-    getType: () => 'http',
-  });
+    getType: () => 'http' as any,
+  }) as any;
 
   beforeEach(async () => {
     prisma = {
+      company: {
+        findUnique: jest.fn(),
+      },
       workspaceUser: {
         findFirst: jest.fn(),
       },
@@ -155,5 +161,43 @@ describe('WorkspaceAccessGuard', () => {
         deletedAt: null,
       },
     });
+  });
+
+  it('should throw ForbiddenException if workspaceId is an array', async () => {
+    const context = createMockContext({
+      user: { userId: 'user-1' },
+      headers: { 'x-workspace-id': ['ws-1', 'ws-2'] },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should throw ForbiddenException if companyId lookup returns null', async () => {
+    prisma.company.findUnique.mockResolvedValue(null);
+    const context = createMockContext({
+      user: { userId: 'user-1' },
+      params: { companyId: 'invalid-company-id' },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
+    expect(prisma.company.findUnique).toHaveBeenCalledWith({
+      where: { id: 'invalid-company-id' },
+      select: { workspaceId: true },
+    });
+  });
+
+  it('should throw ForbiddenException if workspace membership is inactive', async () => {
+    prisma.workspaceUser.findFirst.mockResolvedValue({
+      workspaceId: 'ws-1',
+      userId: 'user-1',
+      status: 'SUSPENDED',
+      deletedAt: null,
+    });
+
+    const context = createMockContext({
+      user: { userId: 'user-1', workspaceId: 'ws-1' },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
   });
 });

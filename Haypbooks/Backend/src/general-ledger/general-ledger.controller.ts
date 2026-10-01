@@ -3,9 +3,10 @@ import { GeneralLedgerService } from './general-ledger.service'
 import { GlQueryDto } from './dto/gl-query.dto'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 
 @Controller('api/companies/:companyId/general-ledger')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class GeneralLedgerController {
     constructor(private readonly svc: GeneralLedgerService) { }
 

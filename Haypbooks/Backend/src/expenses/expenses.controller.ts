@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { ExpensesService } from './expenses.service'
 import { ApService } from '../ap/ap.service'
 
 @Controller('api/companies/:companyId')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService, private readonly apService: ApService) {}
 
