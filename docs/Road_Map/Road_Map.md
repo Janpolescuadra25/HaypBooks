@@ -113,6 +113,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 12 E1** | Test Endpoint Security Guard & Hardening | ensureEnabled() environment guard, test tokens, 8/8 tests green | [Test Security README](Haypbooks/Backend/src/test/README.md) |
 | **Phase H-0** | SUPER_ADMIN provisioning | JWT `systemRole` and `isOwner` claims, strategy validation, verified seed script | [Auth Module](Haypbooks/Backend/src/auth/prisma-auth.service.ts) |
 | **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across 10 core controllers, Batch 1 rollout completed 2026-10-02, array workspace ID rejection bug fix, request context propagation, 10/10 unit tests passing | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
+| **Phase 16D** | Explicit remaining-module inventory and retention | Comprehensive backend module inventory created 2026-10-02, 39 controllers documented, Batch 1/Batch 2 mapped | [Module Inventory README](Haypbooks/Backend/docs/implementations/module-inventory/README.md) |
 
 ---
 
@@ -268,14 +269,6 @@ Conflicts resolved:
 - Audit existing asset/category/schedule/depreciation models and GL integration. Complete register/filter/summary, acquisition, straight-line/declining-balance methods where supported, scheduled depreciation, disposal proceeds/gain-loss and approved revaluation/impairment scope.
 - Requirements: accountant-approved useful life/salvage/rounding/proration and revaluation policy; no duplicate asset schema or postings. Dependencies: 2/4/14 core accounting verification.
 - Acceptance: schedule totals, partial periods, disposal, retry, reversal, closed periods and asset-to-GL reconciliation; unsupported methods clearly excluded from released scope.
-
-### 16D  Explicit remaining-module inventory and retention
-
-- Recheck each old stub claim: inventory CRUD/adjustments/valuation/warehouses/movements/reports (5); employees/payroll/tax/payslips/contributions (14/16); projects/time/billing/profitability/milestones/reports (16); asset insurance, period-close sign-offs, advanced reports and import/export (14/16).
-- Output: one item per real capability with route, controller, service, repository/model, current behavior, tests, owning phase and release/defer decision. The old payroll list repeats payslip generation; do not count it twice.
-- Audit role-interface versus preferredHub/systemRole/RBAC mappings, WorkspaceType PRACTICE assignment and practiceId in audit records. Renaming values needs migration/compatibility proof, not cosmetic cleanup.
-- Account deletion: define requester authority, shared versus personal ownership, retention holds, export/grace/recovery and idempotent cleanup before implementation. Do not cascade-delete company evidence because one user leaves. Subscription expiry is not deletion consent.
-- Done when every advertised capability has verified implementation or explicit exclusion; schema/data/retention changes have isolated migration and negative-permission tests.
 
 ### Existing-phase supplements retained from the older roadmap
 

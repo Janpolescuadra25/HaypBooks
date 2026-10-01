@@ -14,9 +14,9 @@ Open findings E1-E12 track known gaps; several are source-confirmed, including t
 
 Recorded 2026-10-02 after Task 512 Phase 12 E2 archival and WorkspaceAccessGuard README synchronization:
 
-- Size: 41137 bytes
-- SHA-256: 265306D1999801A04FE876CB5A74D587A90CA901834EAF1C769996D9BD33E0E7
-- Lines: 344
+- Size: 40159 bytes
+- SHA-256: 057FD6C00B59E115744168E9E919ECC33616F3F581CFFC700BA9685C12390F2E
+- Lines: 337
 - Encoding: UTF-8 without BOM; LF-only line endings; trailing newline consistent with current source state
 
 Whenever `Road_Map.md` is validly edited, replace the values above with the new fingerprint. If the live file does not match this fingerprint, the file has drifted and must be re-audited before any further edit.
@@ -32,6 +32,10 @@ Whenever `Road_Map.md` is validly edited, replace the values above with the new 
 - Never treat a phase as complete merely because the roadmap mentions it. Written statuses include PARTIAL, NOT STARTED, AUDIT REQUIRED, and BLOCKED.
 - Completion claims require a verified repository audit. Do not edit status columns without one.
 - Do not remove any phase unless a repository audit verifies that phase as fully complete.
+
+## History
+
+- 2026-10-02 (Task 516): Archived Phase 16D after the module inventory review, removed the active Phase 16D section from the live roadmap, and synchronized the Road_Map.md fingerprint block to the current source state.
 
 ## Verified repair history (summary)
 
