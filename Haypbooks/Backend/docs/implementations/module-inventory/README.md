@@ -14,8 +14,8 @@ The inventory is scoped to the verified repository state at HEAD `5fc85212` and 
 - `Total controller files`: 39
 - `Public / exempt controllers`: 2 (`auth.controller.ts`, `health.controller.ts`)
 - `Admin / system controllers`: 1 (`owner.controller.ts` protected by `SystemRoleGuard`)
-- `Tenant-guarded controllers (Batch 1 + practice hub)`: 10 (`WorkspaceAccessGuard` active)
-- `Batch 2 candidate controllers`: 9 (currently `JwtAuthGuard` + `CompanyAccessGuard` only)
+- `Tenant-guarded controllers (Batch 1 + Batch 2 + Practice Hub)`: 19 (`WorkspaceAccessGuard` active)
+- `Batch 2 candidate controllers`: 0 (Completed in Task 519)
 - `Remaining utility / tenant sub-controllers`: 17
 
 ---
@@ -68,21 +68,20 @@ This was hardened in commit `b1b3fb46` and is validated by the WorkspaceAccessGu
 
 ---
 
-## 4. Batch 2 Tenant-Isolation Candidates
-These controllers still rely on `JwtAuthGuard` and `CompanyAccessGuard` without the workspace membership gate, and they are the next high-priority candidates for the same fail-closed tenant isolation pattern.
+## 4. Batch 2 Tenant-Isolation Controllers (Completed in Task 519)
+The following 9 workspace-scoped controllers now enforce active workspace membership via `WorkspaceAccessGuard` (Completed in Task 519):
 
-| Controller Path | Route Prefix | Current Guard Chain | Status | Planned Action |
+| Controller Path | Route Prefix | Guard Chain | Status | Notes |
 |---|---|---|---|---|
-| `src/ap/ap.controller.ts` | `/api/companies/:companyId/ap` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/ar/ar.controller.ts` | `/api/companies/:companyId/ar` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/company-bank-accounts/company-bank-accounts.controller.ts` | `/api/companies/:companyId/bank-accounts` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/contacts/contacts.controller.ts` | `/api/companies/:companyId/contacts` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/email-templates/email-templates.controller.ts` | `/api/companies/:companyId/email-templates` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/financial-services/financial-services.controller.ts` | `/api/companies/:companyId/financial-services` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/integrations/integrations.controller.ts` | `/api/companies/:companyId/integrations` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/organization/organization.controller.ts` | `/api/companies/:companyId/organization` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/time/time.controller.ts` | `/api/companies/:companyId/time` and time-entry subroutes | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
-| `src/zypra/zypra.controller.ts` | `/api/companies/:companyId/zypra` | `JwtAuthGuard, CompanyAccessGuard` | `PARTIAL` | Add `WorkspaceAccessGuard` |
+| `src/ap/ap.controller.ts` | `/api/companies/:companyId/ap` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Workspace membership is enforced before AP access. |
+| `src/ar/ar.controller.ts` | `/api/companies/:companyId/ar` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | AR routes are tenant-bound and workspace-aware. |
+| `src/banking/company-bank-accounts.controller.ts` | `/api/companies/:companyId/bank-accounts` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Bank-account access is now scoped to active workspace membership. |
+| `src/contacts/contacts.controller.ts` | `/api/companies/:companyId/contacts` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Customer/vendor contact actions are workspace-aware. |
+| `src/email-templates/email-templates.controller.ts` | `/api/companies/:companyId/email-templates` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Template APIs are guarded by workspace membership context. |
+| `src/financial-services/financial-services.controller.ts` | `/api/companies/:companyId/financial-services` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Financial service endpoints now enforce workspace validation. |
+| `src/organization/organization.controller.ts` | `/api/companies/:companyId/organization` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Organization and settings flows are now workspace-bound. |
+| `src/time/time.controller.ts` | `/api/companies/:companyId/time` and time-entry subroutes | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Time entry and timesheet actions enforce the workspace boundary. |
+| `src/zypra/zypra.controller.ts` | `/api/companies/:companyId/zypra` | `JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard` | `PROD READY` | Chat routes are now tenant-bound and workspace-aware. |
 
 ---
 

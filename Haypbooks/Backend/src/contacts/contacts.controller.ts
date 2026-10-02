@@ -3,11 +3,12 @@ import { SkipThrottle } from '@nestjs/throttler'
 import { ContactsService } from './contacts.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { CreateCustomerDto } from './dto/create-customer.dto'
 import { UpdateCustomerDto } from './dto/update-customer.dto'
 
 @Controller('api/companies/:companyId/contacts')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 @UsePipes(new ValidationPipe({ transform: true }))
 export class ContactsController {
   constructor(private readonly svc: ContactsService) {}

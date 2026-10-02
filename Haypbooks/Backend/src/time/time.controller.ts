@@ -5,9 +5,10 @@ import {
 import { TimeService } from './time.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 
 @Controller('api/companies/:companyId/time')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class TimeController {
     constructor(private readonly svc: TimeService) { }
 
@@ -116,7 +117,7 @@ export class TimeController {
 // ─── Flat routes: /api/companies/:companyId/time-entries ──────────────────────
 
 @Controller('api/companies/:companyId/time-entries')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class TimeEntriesController {
     constructor(private readonly svc: TimeService) { }
 
@@ -147,7 +148,7 @@ export class TimeEntriesController {
 // ─── Flat routes: /api/companies/:companyId/timesheets ────────────────────────
 
 @Controller('api/companies/:companyId/timesheets')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class TimesheetsController {
     constructor(private readonly svc: TimeService) { }
 

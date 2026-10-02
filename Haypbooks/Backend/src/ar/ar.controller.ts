@@ -5,10 +5,11 @@ import {
 import { ArService } from './ar.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { UpsertStatementScheduleDto, UpdateStatementEmailSettingsDto } from './dto/statement-schedule.dto'
 
 @Controller('api/companies/:companyId/ar')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class ArController {
     constructor(private readonly svc: ArService) { }
 

@@ -1,11 +1,12 @@
 import { Controller, Post, Body, Param, Req, UseGuards, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { ZypraService } from './zypra.service'
 import { ZypraChatRequestDto } from './zypra.dto'
 
 @Controller('api/companies/:companyId/zypra')
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 export class ZypraController {
   constructor(private readonly zypraService: ZypraService) {}
 

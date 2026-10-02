@@ -1,9 +1,10 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
+import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { FinancialServicesService } from './financial-services.service'
 
-@UseGuards(JwtAuthGuard, CompanyAccessGuard)
+@UseGuards(JwtAuthGuard, CompanyAccessGuard, WorkspaceAccessGuard)
 @Controller('api/companies/:companyId/financial-services')
 export class FinancialServicesController {
     constructor(private readonly svc: FinancialServicesService) { }
