@@ -64,7 +64,37 @@ export class WorkspaceAccessGuard implements CanActivate {
     });
 
     if (!membership || membership.status !== 'ACTIVE' || membership.deletedAt) {
-      throw new ForbiddenException('Access denied: You do not have active membership in this workspace');
+      const practiceAccess = await this.prisma.engagement.findFirst({
+        where: {
+          company: {
+            workspaceId: normalizedWorkspaceId,
+          },
+          status: 'ACTIVE',
+          practice: {
+            isActive: true,
+            practiceUsers: {
+              some: {
+                userId,
+              },
+            },
+          },
+        },
+        include: {
+          company: true,
+          practice: true,
+        },
+      });
+
+      if (practiceAccess) {
+        request.workspaceId = normalizedWorkspaceId;
+        request.practiceAccess = practiceAccess;
+        setRequestContext({ workspaceId: normalizedWorkspaceId, userId });
+        return true;
+      }
+
+      throw new ForbiddenException(
+        'Access denied: You do not have active membership or practice access in this workspace',
+      );
     }
 
     request.workspaceId = normalizedWorkspaceId;

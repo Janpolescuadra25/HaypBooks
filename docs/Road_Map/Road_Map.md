@@ -145,8 +145,9 @@ The following core accounting modules and defects have been fully resolved, test
 - Deliver: reliable client work and server-enforced capacities. Proposed XP needs approved qualifying activities, thresholds, event ledger and anti-abuse rules before implementation.
 - Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
+- Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is now active for active `Engagement` relationships between a practice and a client workspace.
 
-### 13  Paid plans, trials and Stripe (DONE & VERIFIED, P0 - Phase 13 complete: Stripe SDK, Plan schema fields, StripeWebhookEvent model, BillingModule, StripeService, checkout session creation, customer portal creation, subscription lifecycle state synchronization, and webhook ingestion endpoint are all in place; remaining billing contract state-machine and customer portal UX follow-up remains next)
+### 13  Paid plans, trials and Stripe (DONE & VERIFIED, P0 - Phase 13 archived: Stripe SDK, Plan schema fields, StripeWebhookEvent model, BillingModule, StripeService, webhook ingestion, checkout session creation, customer portal creation, and subscription lifecycle state synchronization are all complete and verified.)
 
 - Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
 - Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.
@@ -154,7 +155,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Provider-confirmed state drives success; authenticated idempotent webhook handling covers trial/active/overdue/canceled/expired, delays/out-of-order events. No timer-based payment success.
 - Requirements: explicit existing-customer migration, no silent charge/conversion/data deletion; trial distinct from free plan, bonuses distinct from paid base.
 - Depends on: 9/12, owner economics, 11 bonuses.
-- Current state: Steps 1, 2A, 2B and 3 are complete. The Stripe dependency is installed, the Plan schema includes Stripe product/price fields, the billing module is registered, `StripeService.createCheckoutSession()` now creates checkout sessions, and the webhook endpoint verifies signatures and deduplicates processed events. The remaining work is the billing contract, customer portal, and post-checkout subscription lifecycle state-machine foundation.
+- Current state: archived. The Stripe dependency is installed, the Plan schema includes Stripe product/price fields, the billing module is registered, `StripeService.createCheckoutSession()` creates checkout sessions, `createCustomerPortalSession()` exists, and the webhook endpoint verifies signatures, deduplicates processed events, and synchronizes subscription lifecycle metadata. The Phase 13 implementation is complete and verified.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
