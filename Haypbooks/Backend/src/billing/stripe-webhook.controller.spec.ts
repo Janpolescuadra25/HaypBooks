@@ -75,11 +75,20 @@ describe('StripeWebhookController', () => {
     expect(prismaService.subscription.updateMany).not.toHaveBeenCalled();
   });
 
-  it('should update subscription and record webhook when event is valid', async () => {
+  it('should update subscription lifecycle metadata and record webhook when event is valid', async () => {
     stripeService.constructEvent.mockReturnValue({
       id: 'evt_new',
       type: 'customer.subscription.updated',
-      data: { object: { id: 'sub_123', status: 'active' } },
+      data: {
+        object: {
+          id: 'sub_123',
+          customer: 'cus_test_123',
+          status: 'active',
+          current_period_start: 1700000000,
+          current_period_end: 1702600000,
+          cancel_at_period_end: true,
+        },
+      },
     });
 
     prismaService.stripeWebhookEvent.findUnique.mockResolvedValue(null);
@@ -91,7 +100,13 @@ describe('StripeWebhookController', () => {
     expect(result).toEqual({ received: true });
     expect(prismaService.subscription.updateMany).toHaveBeenCalledWith({
       where: { stripeSubscriptionId: 'sub_123' },
-      data: { status: 'ACTIVE' },
+      data: {
+        status: 'ACTIVE',
+        stripeCustomerId: 'cus_test_123',
+        currentPeriodStart: new Date(1700000000 * 1000),
+        currentPeriodEnd: new Date(1702600000 * 1000),
+        cancelAtPeriodEnd: true,
+      },
     });
     expect(prismaService.stripeWebhookEvent.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: { stripeEventId: 'evt_new' },

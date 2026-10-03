@@ -6,17 +6,27 @@ import { CheckoutController } from './checkout.controller';
 
 describe('CheckoutController', () => {
   let controller: CheckoutController;
-  let stripeService: { createCheckoutSession: jest.Mock };
-  let prismaService: { plan: { findUnique: jest.Mock } };
+  let stripeService: {
+    createCheckoutSession: jest.Mock;
+    createCustomerPortalSession: jest.Mock;
+  };
+  let prismaService: {
+    plan: { findUnique: jest.Mock };
+    subscription: { findFirst: jest.Mock };
+  };
 
   beforeEach(async () => {
     stripeService = {
       createCheckoutSession: jest.fn(),
+      createCustomerPortalSession: jest.fn(),
     };
 
     prismaService = {
       plan: {
         findUnique: jest.fn(),
+      },
+      subscription: {
+        findFirst: jest.fn(),
       },
     };
 
@@ -84,6 +94,41 @@ describe('CheckoutController', () => {
       controller.createCheckoutSession('ws_123', { planId: 'plan_123', interval: 'annual' }, {
         user: { email: 'owner@example.com' },
       } as any),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should create a customer portal session and return the portal URL', async () => {
+    prismaService.subscription.findFirst.mockResolvedValue({
+      id: 'sub_123',
+      stripeCustomerId: 'cus_123',
+    });
+
+    stripeService.createCustomerPortalSession.mockResolvedValue({
+      id: 'bps_123',
+      url: 'https://billing.stripe.com/p/session/bps_123',
+    });
+
+    const result = await controller.createCustomerPortalSession('ws_123', {
+      returnUrl: 'http://localhost:3000/settings/billing',
+    });
+
+    expect(result).toEqual({
+      url: 'https://billing.stripe.com/p/session/bps_123',
+    });
+    expect(stripeService.createCustomerPortalSession).toHaveBeenCalledWith({
+      stripeCustomerId: 'cus_123',
+      returnUrl: 'http://localhost:3000/settings/billing',
+    });
+  });
+
+  it('should throw BadRequestException when the workspace has no Stripe customer id', async () => {
+    prismaService.subscription.findFirst.mockResolvedValue({
+      id: 'sub_123',
+      stripeCustomerId: null,
+    });
+
+    await expect(
+      controller.createCustomerPortalSession('ws_123', { returnUrl: undefined }),
     ).rejects.toThrow(BadRequestException);
   });
 });

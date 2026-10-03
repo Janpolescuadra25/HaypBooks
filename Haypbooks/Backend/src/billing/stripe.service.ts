@@ -53,4 +53,17 @@ export class StripeService {
       cancel_url: cancelUrl,
     });
   }
+
+  async createCustomerPortalSession(params: {
+    stripeCustomerId: string;
+    returnUrl?: string;
+  }): Promise<Stripe.BillingPortal.Session> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const returnUrl = params.returnUrl || `${frontendUrl}/settings/billing`;
+
+    return this.stripeClient.billingPortal.sessions.create({
+      customer: params.stripeCustomerId,
+      return_url: returnUrl,
+    });
+  }
 }

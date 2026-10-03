@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard';
 import { PrismaService } from '../repositories/prisma/prisma.service';
+import { CreateCustomerPortalDto } from './dtos/create-customer-portal.dto';
 import { CreateCheckoutSessionDto } from './dtos/create-checkout-session.dto';
 import { StripeService } from './stripe.service';
 
@@ -65,6 +66,33 @@ export class CheckoutController {
 
     return {
       sessionId: session.id,
+      url: session.url,
+    };
+  }
+
+  @Post('workspaces/:workspaceId/customer-portal')
+  @UseGuards(JwtAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @Roles('OWNER')
+  async createCustomerPortalSession(
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: CreateCustomerPortalDto = {} as CreateCustomerPortalDto,
+  ) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        OR: [{ companyId: workspaceId }, { practiceId: workspaceId }],
+      },
+    });
+
+    if (!subscription || !subscription.stripeCustomerId) {
+      throw new BadRequestException('Workspace does not have an active Stripe customer account');
+    }
+
+    const session = await this.stripeService.createCustomerPortalSession({
+      stripeCustomerId: subscription.stripeCustomerId,
+      returnUrl: dto?.returnUrl,
+    });
+
+    return {
       url: session.url,
     };
   }

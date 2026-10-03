@@ -59,13 +59,23 @@ export class StripeWebhookController {
       switch (event.type) {
         case 'customer.subscription.created':
         case 'customer.subscription.updated': {
-          const subscription = event.data.object as Stripe.Subscription;
-          await this.updateSubscriptionStatus(subscription.id, subscription.status);
+          const subscription = event.data.object as Stripe.Subscription & {
+            current_period_start?: number;
+            current_period_end?: number;
+            cancel_at_period_end?: boolean;
+            customer?: string | { id?: string };
+          };
+          await this.updateSubscriptionStatus(subscription.id, subscription.status, subscription);
           break;
         }
         case 'customer.subscription.deleted': {
-          const subscription = event.data.object as Stripe.Subscription;
-          await this.updateSubscriptionStatus(subscription.id, 'CANCELED');
+          const subscription = event.data.object as Stripe.Subscription & {
+            current_period_start?: number;
+            current_period_end?: number;
+            cancel_at_period_end?: boolean;
+            customer?: string | { id?: string };
+          };
+          await this.updateSubscriptionStatus(subscription.id, 'CANCELED', { ...subscription, cancel_at_period_end: false });
           break;
         }
         case 'invoice.payment_succeeded': {
@@ -123,7 +133,16 @@ export class StripeWebhookController {
     }
   }
 
-  private async updateSubscriptionStatus(subscriptionId: string | null, status: string) {
+  private async updateSubscriptionStatus(
+    subscriptionId: string | null,
+    status: string,
+    subscription?: Stripe.Subscription & {
+      current_period_start?: number;
+      current_period_end?: number;
+      cancel_at_period_end?: boolean;
+      customer?: string | { id?: string };
+    },
+  ) {
     if (!subscriptionId) {
       return;
     }
@@ -133,9 +152,33 @@ export class StripeWebhookController {
       return;
     }
 
+    const data: Record<string, unknown> = { status: mappedStatus };
+
+    if (subscription) {
+      const customerId = typeof subscription.customer === 'string'
+        ? subscription.customer
+        : subscription.customer?.id;
+
+      if (customerId) {
+        data.stripeCustomerId = customerId;
+      }
+
+      if (typeof subscription.current_period_start === 'number') {
+        data.currentPeriodStart = new Date(subscription.current_period_start * 1000);
+      }
+
+      if (typeof subscription.current_period_end === 'number') {
+        data.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+      }
+
+      if (typeof subscription.cancel_at_period_end === 'boolean') {
+        data.cancelAtPeriodEnd = subscription.cancel_at_period_end;
+      }
+    }
+
     await this.prisma.subscription.updateMany({
       where: { stripeSubscriptionId: subscriptionId },
-      data: { status: mappedStatus },
+      data,
     });
   }
 

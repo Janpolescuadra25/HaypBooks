@@ -1,16 +1,18 @@
-# Stripe Foundation, Checkout & Webhook Integration (Phase 13 Steps 1, 2A, 2B & 3)
+# Stripe Foundation, Checkout, Customer Portal & Webhook Integration (Phase 13 Steps 1, 2A, 2B, 3 & 4)
 
 ## Status
 **DONE & VERIFIED** (2026-10-03)
 
 ## Overview
-Phase 13 establishes the end-to-end payment gateway, checkout flow, and webhook ingestion infrastructure:
+Phase 13 establishes the end-to-end payment gateway, checkout flow, customer portal, and webhook ingestion infrastructure:
 1. Core SDK readiness through the installed Stripe dependency and typing support.
 2. Plan catalog enrichment for Stripe product and price identifiers.
 3. Billing module infrastructure for service registration and dependency injection.
 4. Webhook persistence in the database for event idempotency and replay safety.
 5. Scoped raw-body parsing and signature verification for Stripe delivery.
 6. Checkout session creation for workspace-owned plan upgrades.
+7. Customer portal session creation for workspace-owned billing management and subscription self-service.
+8. Subscription lifecycle state synchronization for billing period dates, active status, and cancellation intent.
 
 ## Architecture
 
@@ -26,8 +28,11 @@ The billing domain is intentionally small and focused. `src/billing/billing.modu
 ### Checkout endpoint
 The checkout session endpoint is mounted at `/billing/workspaces/:workspaceId/checkout` and is protected by `JwtAuthGuard`, `WorkspaceAccessGuard`, and `RolesGuard`. Only workspace owners may initiate checkout. The controller resolves the `Plan` by `planId`, picks the correct Stripe price by interval (`monthly` vs `annual`), and calls `StripeService.createCheckoutSession()`.
 
+### Customer portal endpoint
+The customer portal endpoint is mounted at `/billing/workspaces/:workspaceId/customer-portal`. It is also owner-only and resolves the workspace’s active `Subscription` record by `companyId` or `practiceId` before requesting a Stripe billing portal session. This allows the workspace owner to manage payment methods and billing settings without exposing direct provider access.
+
 ### Webhook endpoint
-The webhook listener is mounted at `/billing/webhooks/stripe` and intentionally skips JWT auth so Stripe can POST directly. It verifies request signatures, rejects invalid payloads with a `BadRequestException`, and stores processed results in `StripeWebhookEvent` for idempotency.
+The webhook listener is mounted at `/billing/webhooks/stripe` and intentionally skips JWT auth so Stripe can POST directly. It verifies request signatures, rejects invalid payloads with a `BadRequestException`, and stores processed results in `StripeWebhookEvent` for idempotency. It also syncs lifecycle metadata such as `stripeCustomerId`, `currentPeriodStart`, `currentPeriodEnd`, and `cancelAtPeriodEnd` from Stripe subscription events.
 
 ### Raw-body requirement
 `main.ts` mounts a scoped raw body parser before the global JSON parser:

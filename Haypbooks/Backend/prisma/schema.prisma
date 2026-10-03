@@ -1324,6 +1324,7 @@ model Subscription {
   currentPeriodEnd     DateTime?
   stripeCustomerId     String?
   stripeSubscriptionId String?            @unique
+  cancelAtPeriodEnd    Boolean?           @default(false)
   createdAt            DateTime           @default(now())
 
   // Enforce XOR ownership with a DB check constraint (see docs/db_constraints.sql)
