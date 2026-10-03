@@ -146,7 +146,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
 
-### 13  Paid plans, trials and Stripe (NOT STARTED, P0 - no Stripe implementation present on disk; required billing contract and checkout/webhook foundation remain unimplemented)
+### 13  Paid plans, trials and Stripe (PARTIAL, P0 - Step 1 complete: Stripe SDK, Plan schema fields, and .env templates are in place; remaining billing contract, checkout, and webhook foundation still require implementation)
 
 - Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
 - Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.
@@ -154,7 +154,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Provider-confirmed state drives success; authenticated idempotent webhook handling covers trial/active/overdue/canceled/expired, delays/out-of-order events. No timer-based payment success.
 - Requirements: explicit existing-customer migration, no silent charge/conversion/data deletion; trial distinct from free plan, bonuses distinct from paid base.
 - Depends on: 9/12, owner economics, 11 bonuses.
-- Current state: Hydra audit found zero Stripe code on disk. This phase is intentionally NOT STARTED until a real billing integration, checkout/session state machine and approved subscription contract exist in source.
+- Current state: Step 1 is complete: the Stripe dependency is installed, the Plan schema includes Stripe product/price fields, and the environment template includes the required Stripe secrets. The remaining work is the billing contract, checkout/session state machine, and webhook foundation.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 

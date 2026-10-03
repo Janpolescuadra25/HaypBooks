@@ -1426,6 +1426,10 @@ model Plan {
   isActive  Boolean @default(true)
   sortOrder Int?
 
+  stripeProductId      String?   @unique
+  stripeMonthlyPriceId String?
+  stripeAnnualPriceId  String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1436,6 +1440,7 @@ model Plan {
 
   @@index([isActive])
   @@index([sortOrder])
+  @@index([stripeProductId])
 }
 
 model Feature {
