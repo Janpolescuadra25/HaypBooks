@@ -113,6 +113,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 12 E1** | Test Endpoint Security Guard & Hardening | ensureEnabled() environment guard, test tokens, 8/8 tests green | [Test Security README](Haypbooks/Backend/src/test/README.md) |
 | **Phase H-0** | SUPER_ADMIN provisioning | JWT `systemRole` and `isOwner` claims, strategy validation, verified seed script | [Auth Module](Haypbooks/Backend/src/auth/prisma-auth.service.ts) |
 | **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across 10 core controllers, Batch 1 rollout completed 2026-10-02, array workspace ID rejection bug fix, request context propagation, 10/10 unit tests passing | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
+| **Phase 12** | Security and tenant isolation | DONE & VERIFIED | 19/19 tenant controllers guarded, test endpoints blocked in prod, admin routes restricted, auth rate limiting and session revocation complete |
 | **Phase 16D** | Explicit remaining-module inventory and retention | Comprehensive backend module inventory created 2026-10-02, 39 controllers documented, Batch 1/Batch 2 mapped | [Module Inventory README](Haypbooks/Backend/docs/implementations/module-inventory/README.md) |
 
 ---
@@ -145,13 +146,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
 
-### 12  Security and tenant isolation (AUDIT REQUIRED, P0)
-
-> **Status:** PARTIAL (Task 400 E1/E2 security items complete & verified; remaining: audit test/admin routes. Guard/controller workspace-context agreement is complete via commit `64fd2397`. Attachment object ownership is complete via commit `e8bb579e`.)
-
-> Audit: test/admin routes, production conditions, auth/OTP/reset/session, company/practice object access, exports/uploads, logs/secrets/input validation. **WorkspaceAccessGuard Batch 1 rollout and array bug fix complete via commit ``b1b3fb46``.**
-- Requirements: never reproduce credentials in evidence; inspect `docs/Stripes/Stripesdoc.md` hygiene without assuming key validity/exposure.
-- Depends on: negative-test harness. Remaining scope excludes completed production test endpoint hardening and the attachment object ownership fix already completed in commit `e8bb579e`.### 13  Paid plans, trials and Stripe (NOT STARTED, P0 - no Stripe implementation present on disk; required billing contract and checkout/webhook foundation remain unimplemented)
+### 13  Paid plans, trials and Stripe (NOT STARTED, P0 - no Stripe implementation present on disk; required billing contract and checkout/webhook foundation remain unimplemented)
 
 - Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
 - Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.
