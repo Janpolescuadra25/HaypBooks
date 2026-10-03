@@ -106,4 +106,44 @@ describe('Banking E6 auto-match validation', () => {
       }),
     )
   })
+
+  it('prevents matching multiple bank transactions to the same journalEntryLineId during auto-match', async () => {
+    const repo = {
+      matchTransactionToJournalLine: jest.fn(),
+      findReconciliationById: jest.fn().mockResolvedValue({
+        id: 'recon-1',
+        status: 'OPEN',
+        bankAccountId: 'ba-1',
+        statementDate: new Date('2026-03-31'),
+        BankReconciliationLine: [],
+      }),
+    }
+    prisma.company.findUnique.mockResolvedValue({ workspaceId: 'ws-1' })
+    prisma.workspaceUser.findFirst.mockResolvedValue({ id: 'wu-1' })
+    prisma.bankTransaction.findMany.mockResolvedValue([
+      { id: 'txn-1', amount: 150, date: new Date('2026-03-30T00:00:00.000Z') },
+      { id: 'txn-2', amount: 150, date: new Date('2026-03-30T00:00:00.000Z') },
+    ])
+    prisma.bankAccount.findUnique.mockResolvedValue({ glAccountId: 'acct-1010' })
+    prisma.journalEntryLine.findFirst
+      .mockResolvedValueOnce({ id: 'jel-1' })
+      .mockResolvedValueOnce(null)
+
+    const service = new BankingService(
+      repo as any,
+      prisma,
+      {} as any,
+      {} as any,
+    )
+
+    const result = await service.autoMatchReconciliation('user-1', 'company-1', 'recon-1')
+
+    expect(result.matched).toBe(1)
+    expect(prisma.journalEntryLine.findFirst).toHaveBeenCalledTimes(2)
+    expect(prisma.journalEntryLine.findFirst.mock.calls[1][0].where).toEqual(
+      expect.objectContaining({
+        id: { notIn: ['jel-1'] },
+      }),
+    )
+  })
 })

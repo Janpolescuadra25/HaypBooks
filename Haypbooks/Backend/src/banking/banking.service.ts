@@ -628,6 +628,7 @@ export class BankingService {
         const matchCandidates = unmatched.filter((t: any) => new Date(t.date) <= statementDate)
 
         let matched = 0
+        const usedJournalLineIds = new Set<string>()
         for (const txn of matchCandidates) {
             const txnDate = new Date(txn.date)
             const minDate = new Date(txnDate.getTime() - 3 * 24 * 60 * 60 * 1000)
@@ -637,6 +638,7 @@ export class BankingService {
             const candidateLine = await this.prisma.journalEntryLine.findFirst({
                 where: {
                     workspaceId: wid,
+                    ...(usedJournalLineIds.size > 0 ? { id: { notIn: Array.from(usedJournalLineIds) } } : {}),
                     journal: {
                         workspaceId: wid,
                         date: { gte: minDate, lte: maxDate },
@@ -656,6 +658,7 @@ export class BankingService {
                 journalEntryLineId: candidateLine.id,
                 matchType: 'AUTO',
             })
+            usedJournalLineIds.add(candidateLine.id)
             matched++
         }
         return { matched, total: unmatched.length }
