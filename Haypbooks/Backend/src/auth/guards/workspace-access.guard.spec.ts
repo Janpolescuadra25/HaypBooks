@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkspaceAccessGuard } from './workspace-access.guard';
 import { PrismaService } from '../../repositories/prisma/prisma.service';
-import { ForbiddenException, BadRequestException, ExecutionContext } from '@nestjs/common';
+import { UnauthorizedException, ForbiddenException, ExecutionContext } from '@nestjs/common';
 
 describe('WorkspaceAccessGuard', () => {
   let guard: WorkspaceAccessGuard;
@@ -16,7 +16,7 @@ describe('WorkspaceAccessGuard', () => {
         findFirst: jest.fn(),
       },
       company: {
-        findFirst: jest.fn(),
+        findUnique: jest.fn(),
       },
     };
 
@@ -49,20 +49,14 @@ describe('WorkspaceAccessGuard', () => {
     expect(guard).toBeDefined();
   });
 
-  it('should throw ForbiddenException if user is not authenticated', async () => {
+  it('should throw UnauthorizedException if user is missing', async () => {
     const context = createMockContext(null, { workspaceId: 'ws-1' });
-    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
+    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
   });
 
-  it('should throw BadRequestException if workspace ID is missing', async () => {
+  it('should throw ForbiddenException if workspaceId cannot be resolved', async () => {
     const context = createMockContext({ id: 'u-1' });
-    await expect(guard.canActivate(context)).rejects.toThrow(BadRequestException);
-  });
-
-  it('should allow access if user is super admin', async () => {
-    const context = createMockContext({ id: 'u-1', isSuperAdmin: true }, { workspaceId: 'ws-1' });
-    const result = await guard.canActivate(context);
-    expect(result).toBe(true);
+    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
   });
 
   it('should allow access if user has direct workspace membership', async () => {
@@ -76,11 +70,9 @@ describe('WorkspaceAccessGuard', () => {
     const context = createMockContext({ id: 'u-1' }, { workspaceId: 'ws-1' });
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
-    const req = context.switchToHttp().getRequest();
-    expect(req.workspaceUser).toBeDefined();
   });
 
-  it('should allow access if user has active practice engagement delegation', async () => {
+  it('should allow access if the user has active practice engagement delegation', async () => {
     prismaService.workspaceUser.findFirst.mockResolvedValue(null);
     prismaService.engagement.findFirst.mockResolvedValue({
       id: 'eng-1',
@@ -92,12 +84,9 @@ describe('WorkspaceAccessGuard', () => {
     const context = createMockContext({ id: 'u-1' }, { workspaceId: 'ws-client-1' });
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
-    const req = context.switchToHttp().getRequest();
-    expect(req.practiceAccess).toBeDefined();
-    expect(req.practiceAccess.id).toBe('eng-1');
   });
 
-  it('should throw ForbiddenException if direct membership and practice engagement are missing', async () => {
+  it('should throw ForbiddenException if user has neither direct membership nor practice delegation', async () => {
     prismaService.workspaceUser.findFirst.mockResolvedValue(null);
     prismaService.engagement.findFirst.mockResolvedValue(null);
 

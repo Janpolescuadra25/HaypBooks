@@ -110,12 +110,24 @@ export class PracticeHubService {
   private async findPracticeForUser(userId: string) {
     const practiceUser = await this.prisma.practiceUser.findFirst({ where: { userId } })
     if (!practiceUser) return null
-    return this.prisma.practice.findUnique({ where: { id: practiceUser.practiceId } })
+    return this.prisma.practice.findUnique({
+      where: { id: practiceUser.practiceId },
+      include: { subscription: { include: { plan: true } } },
+    })
   }
 
   async createInvite(userId: string, dto: { email: string; companyName?: string; engagementName: string; engagementType: string; startDate: string }) {
     const practice = await this.findPracticeForUser(userId)
     if (!practice) throw new NotFoundException('Practice not found for user')
+
+    if (practice.subscription?.plan?.maxClients) {
+      const activeCount = await this.prisma.engagement.count({
+        where: { practiceId: practice.id, status: 'ACTIVE' },
+      })
+      if (activeCount >= practice.subscription.plan.maxClients) {
+        throw new BadRequestException('Client limit reached for your subscription plan')
+      }
+    }
 
     const normalizedEmail = dto.email.trim().toLowerCase()
     if (!normalizedEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {

@@ -145,7 +145,8 @@ The following core accounting modules and defects have been fully resolved, test
 - Deliver: reliable client work and server-enforced capacities. Proposed XP needs approved qualifying activities, thresholds, event ledger and anti-abuse rules before implementation.
 - Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
-- Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is now active for active `Engagement` relationships between a practice and a client workspace.
+- Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
+- Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
 
 ### 13  Paid plans, trials and Stripe (DONE & VERIFIED, P0 - Phase 13 archived: Stripe SDK, Plan schema fields, StripeWebhookEvent model, BillingModule, StripeService, webhook ingestion, checkout session creation, customer portal creation, and subscription lifecycle state synchronization are all complete and verified.)
 
