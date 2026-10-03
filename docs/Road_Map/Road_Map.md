@@ -29,7 +29,7 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 | E4: `Haypbooks/Backend/src/reporting/reporting.service.ts:514546` | Balance sheet classifies asset/liability/equity without explicit current-year income/expense earnings presentation. | P0 reports / 4 |
 | E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237278` | DRAFT transaction creation changes stock without a GL call inside that transaction. | P0 inventory / 5 |
 | E6: `Haypbooks/Backend/src/banking/banking.service.ts:611636`; `banking.repository.ts:237255` | Auto-match selects by date, supplies no journal line, and repository permits matched=true with null journal reference. | P0 banking / 6 |
-| E7: `Haypbooks/Backend/src/accounting/accounting.service.ts:10921110` | Revaluation is a journal-entry proxy; upper date filter overwrites lower filter; query failure becomes empty data. | P1 / 7 |
+| E7: `Haypbooks/Backend/src/accounting/accounting.service.ts:1092-1110` | Revaluation was a journal-entry proxy; date bounds could overwrite one another; query errors were silent. | RESOLVED / 7 |
 | E9: `Haypbooks/Backend/src/companies/company.repository.prisma.ts:97,678`; frontend public signup line 150 | FREE/TRIAL bootstrap and 14-day copy conflict with four paid plans/30-day direction. | P0 billing / 13 |
 | E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
 | E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |
@@ -124,7 +124,7 @@ The following core accounting modules and defects have been fully resolved, test
 
 - Audit: rates, monetary scope, existing engines and realized/unrealized policy; reproduce E7.
 - Deliver: correct filters/errors, dated-rate preview, approval, gain/loss posting and policy-defined reversal; explicit precision/missing-rate behavior and idempotency.
-- Depends on: 2/4/14 and accountant policy. Done: date bounds/rate changes/rounding/missing rate/closed period/retry/reversal pass. If deferred, do not advertise proxy results as functioning revaluation.
+- Depends on: 2/4/14 and accountant policy. Done: E7 is remediated and verified; dedicated `CurrencyRevaluation` queries use a single `createdAt` filter object, preserve both `gte` and `lte` bounds, and rethrow DB failures instead of returning empty data silently. If deferred, do not advertise proxy results as functioning revaluation.
 
 ### 8  AI Phase 2 (AUDIT REQUIRED, P3 optional)
 

@@ -107,6 +107,68 @@ describe('AccountingService - COA validation rules', () => {
   })
 })
 
+describe('AccountingService - Defect E7 revaluation remediation', () => {
+  let service: AccountingService
+  let mockRepo: any
+  let mockPrisma: any
+
+  beforeEach(() => {
+    mockRepo = { findAccountById: jest.fn(), updateAccount: jest.fn(), softDeleteAccount: jest.fn(), createAccount: jest.fn() }
+    mockPrisma = {
+      workspaceUser: { findFirst: jest.fn().mockResolvedValue({ id: 'u1' }) },
+      company: { findUnique: jest.fn() },
+      currencyRevaluation: { findMany: jest.fn() },
+      journalEntry: { findMany: jest.fn() },
+    }
+    service = new AccountingService(mockRepo, mockPrisma)
+  })
+
+  it('queries the dedicated currencyRevaluation model with a safe createdAt range when both dates are provided', async () => {
+    const revaluations = [{ id: 'rev-1', companyId: 'c1', createdAt: new Date('2026-10-01'), lines: [] }]
+    ;(service as any).assertCompanyAccess = jest.fn().mockResolvedValue(true)
+    mockPrisma.currencyRevaluation.findMany.mockResolvedValue(revaluations)
+
+    const result = await service.getMultiCurrencyRevaluation('u1', 'c1', {
+      from: '2026-10-01',
+      to: '2026-10-31',
+    })
+
+    expect(result.revaluations).toEqual(revaluations)
+    expect(result.entries).toEqual(revaluations)
+    expect(mockPrisma.currencyRevaluation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          companyId: 'c1',
+          createdAt: {
+            gte: expect.any(Date),
+            lte: expect.any(Date),
+          },
+        }),
+      }),
+    )
+  })
+
+  it('falls back to legacy journal entries when no dedicated revaluation records exist', async () => {
+    const legacyEntries = [{ id: 'je-1', companyId: 'c1', date: new Date('2026-10-01'), lines: [] }]
+    ;(service as any).assertCompanyAccess = jest.fn().mockResolvedValue(true)
+    mockPrisma.currencyRevaluation.findMany.mockResolvedValue([])
+    mockPrisma.journalEntry.findMany.mockResolvedValue(legacyEntries)
+
+    const result = await service.getMultiCurrencyRevaluation('u1', 'c1', { from: '2026-10-01' })
+
+    expect(result.revaluations).toEqual([])
+    expect(result.entries).toEqual(legacyEntries)
+    expect(mockPrisma.journalEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          companyId: 'c1',
+          date: { gte: expect.any(Date) },
+        }),
+      }),
+    )
+  })
+})
+
 // ─── Regression tests: JE edit/void entryNumber uniqueness bug ───────────────
 
 describe('AccountingRepository - JE edit/void entryNumber uniqueness', () => {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common'
 import { AccountingRepository } from './accounting.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { listTemplates, findTemplateForIndustry, writeTemplatesToDisk } from './coa-templates'
@@ -129,6 +129,8 @@ const DEFAULT_COA: Array<{
 
 @Injectable()
 export class AccountingService {
+    private readonly logger = new Logger(AccountingService.name)
+
     constructor(
         private readonly repo: AccountingRepository,
         private readonly prisma: PrismaService,
@@ -1091,21 +1093,52 @@ export class AccountingService {
 
     async getMultiCurrencyRevaluation(userId: string, companyId: string, opts: any = {}) {
         await this.assertCompanyAccess(userId, companyId)
-        // Fetch journal entries that involve foreign currency accounts as revaluation proxy
-        const entries = await this.prisma.journalEntry.findMany({
-            where: {
-                companyId,
-                ...(opts.from ? { date: { gte: new Date(opts.from) } } : {}),
-                ...(opts.to ? { date: { lte: new Date(opts.to) } } : {}),
-            },
-            include: {
-                lines: {
-                    include: { account: { select: { id: true, code: true, name: true } } },
+
+        const dateFilter: any = {}
+        if (opts.from) {
+            dateFilter.gte = new Date(opts.from)
+        }
+        if (opts.to) {
+            dateFilter.lte = new Date(opts.to)
+        }
+
+        try {
+            const revaluations = await this.prisma.currencyRevaluation.findMany({
+                where: {
+                    companyId,
+                    ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
                 },
-            },
-            orderBy: { date: 'desc' },
-            take: 50,
-        }).catch(() => [])
-        return { entries, generatedAt: new Date().toISOString() }
+                include: {
+                    lines: {
+                        include: { account: { select: { id: true, code: true, name: true, type: true } } },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50,
+            })
+
+            if (Array.isArray(revaluations) && revaluations.length > 0) {
+                return { revaluations, entries: revaluations, generatedAt: new Date().toISOString() }
+            }
+
+            const legacyEntries = await this.prisma.journalEntry.findMany({
+                where: {
+                    companyId,
+                    ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+                },
+                include: {
+                    lines: {
+                        include: { account: { select: { id: true, code: true, name: true } } },
+                    },
+                },
+                orderBy: { date: 'desc' },
+                take: 50,
+            })
+
+            return { revaluations: [], entries: legacyEntries, generatedAt: new Date().toISOString() }
+        } catch (error: any) {
+            this.logger.error(`Failed to fetch multi-currency revaluation for company ${companyId}: ${error?.message ?? error}`, error?.stack)
+            throw error
+        }
     }
 }
