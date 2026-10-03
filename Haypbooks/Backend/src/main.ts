@@ -103,6 +103,7 @@ async function bootstrap() {
       '/api/auth/verify-otp',
       '/api/auth/forgot-password',
       '/api/auth/reset-password',
+      '/billing/webhooks/stripe',
     ]
     app.use((req, res, next) => {
       const method = req.method
@@ -156,6 +157,8 @@ async function bootstrap() {
 
   // Body size limits — prevent oversized payloads (DoS protection)
   const express = require('express')
+  // Scoped raw body parser ONLY for Stripe webhooks (required for signature verification)
+  app.use('/billing/webhooks/stripe', express.raw({ type: 'application/json', limit: '10mb' }))
   app.use(express.json({ limit: '10mb' }))
   app.use(express.urlencoded({ limit: '10mb', extended: true }))
 
