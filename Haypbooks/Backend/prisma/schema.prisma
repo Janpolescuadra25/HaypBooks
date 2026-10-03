@@ -442,6 +442,13 @@ enum PaymentReminderStatus {
   CANCELLED
 }
 
+enum WebhookEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
 enum PayrollRunStatus {
   DRAFT
   SUBMITTED
@@ -1148,6 +1155,7 @@ model Workspace {
   // Billing & usage tracking (migrated from TenantBilling* legacy tables)
   billingInvoices             WorkspaceBillingInvoice[]
   billingUsages               WorkspaceBillingUsage[]
+  stripeWebhookEvents         StripeWebhookEvent[]
   // Workspace-scoped additions for new modules
   constructionProjects        ConstructionProject[]
   grants                      Grant[]
@@ -1323,6 +1331,8 @@ model Subscription {
   practice Practice? @relation("PracticeSubscription", fields: [practiceId], references: [id], onDelete: Cascade)
   plan     Plan?     @relation(fields: [planId], references: [id], onDelete: Restrict)
 
+  stripeWebhookEvents StripeWebhookEvent[]
+
   // Auto-added opposite relations (generated)
   reminders SubscriptionReminder[]
 
@@ -1332,6 +1342,23 @@ model Subscription {
   @@index([practiceId])
   @@index([status])
   @@index([planId])
+}
+
+model StripeWebhookEvent {
+  id             String             @id @default(uuid())
+  stripeEventId  String             @unique
+  type           String
+  workspaceId    String?
+  subscriptionId String?
+  processedAt    DateTime           @default(now())
+  processingErrors Json?
+  status         WebhookEventStatus @default(PROCESSED)
+
+  workspace    Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([stripeEventId])
+  @@index([type, processedAt])
 }
 
 model Practice {

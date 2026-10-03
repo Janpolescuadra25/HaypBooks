@@ -146,7 +146,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
 
-### 13  Paid plans, trials and Stripe (PARTIAL, P0 - Step 1 complete: Stripe SDK, Plan schema fields, and .env templates are in place; remaining billing contract, checkout, and webhook foundation still require implementation)
+### 13  Paid plans, trials and Stripe (PARTIAL, P0 - Step 1 complete: Stripe SDK, Plan schema fields, and .env templates are in place; Step 2A complete: BillingModule, StripeService, and StripeWebhookEvent model are in place; remaining billing contract, checkout, webhook ingestion, and portal foundation still require implementation)
 
 - Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
 - Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.

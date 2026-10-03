@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common'
 import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
+import { BillingModule } from './billing/billing.module'
 import { AuthModule } from './auth/auth.module'
 import { AppThrottlerGuard } from './shared/app-throttler.guard'
 import { UsersModule } from './users/users.module'
@@ -39,6 +40,7 @@ const RepositoriesModule = PrismaRepositoriesModule
       limit: 60,
     }]),
     RepositoriesModule,
+    BillingModule,
     AuthModule,
     UsersModule,
     OnboardingModule,
