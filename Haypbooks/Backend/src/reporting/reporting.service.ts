@@ -384,16 +384,18 @@ export class ReportingService {
         }) as Array<any>
 
         return accounts.map((account) => {
-            const totalDebit = account.journalLines.reduce((sum: number, line: any) => {
+            const journalLines = Array.isArray(account.journalLines) ? account.journalLines : []
+            const totalDebit = Number(account.totalDebit ?? journalLines.reduce((sum: number, line: any) => {
                 const rate = Number(line.journal?.exchangeRate ?? 1)
                 return sum + Number(line.debit ?? 0) * rate
-            }, 0)
-            const totalCredit = account.journalLines.reduce((sum: number, line: any) => {
+            }, 0))
+            const totalCredit = Number(account.totalCredit ?? journalLines.reduce((sum: number, line: any) => {
                 const rate = Number(line.journal?.exchangeRate ?? 1)
                 return sum + Number(line.credit ?? 0) * rate
-            }, 0)
-            const accountType = account.type?.category ?? 'ASSET'
-            const netBalance = this._roundMoney(totalDebit - totalCredit)
+            }, 0))
+            const resolvedNetBalance = account.netBalance != null ? Number(account.netBalance) : totalDebit - totalCredit
+            const accountType = account.type?.category ?? account.accountType ?? 'ASSET'
+            const netBalance = this._roundMoney(resolvedNetBalance)
             return {
                 accountId: account.id,
                 accountCode: account.code,
@@ -426,16 +428,18 @@ export class ReportingService {
         }) as Array<any>
 
         return accounts.map((account) => {
-            const totalDebit = account.journalLines.reduce((sum: number, line: any) => {
+            const journalLines = Array.isArray(account.journalLines) ? account.journalLines : []
+            const totalDebit = Number(account.totalDebit ?? journalLines.reduce((sum: number, line: any) => {
                 const rate = Number(line.journal?.exchangeRate ?? 1)
                 return sum + Number(line.debit ?? 0) * rate
-            }, 0)
-            const totalCredit = account.journalLines.reduce((sum: number, line: any) => {
+            }, 0))
+            const totalCredit = Number(account.totalCredit ?? journalLines.reduce((sum: number, line: any) => {
                 const rate = Number(line.journal?.exchangeRate ?? 1)
                 return sum + Number(line.credit ?? 0) * rate
-            }, 0)
-            const accountType = account.type?.category ?? 'ASSET'
-            const netBalance = this._roundMoney(totalDebit - totalCredit)
+            }, 0))
+            const resolvedNetBalance = account.netBalance != null ? Number(account.netBalance) : totalDebit - totalCredit
+            const accountType = account.type?.category ?? account.accountType ?? 'ASSET'
+            const netBalance = this._roundMoney(resolvedNetBalance)
             return {
                 accountId: account.id,
                 accountCode: account.code,
@@ -512,6 +516,21 @@ export class ReportingService {
     }
 
     private async _buildBalanceSheet(companyId: string, asOf: Date) {
+        const company = await this.prisma.company.findUnique({
+            where: { id: companyId },
+            select: { fiscalYearStart: true },
+        })
+
+        const fiscalYearStartMonth = company?.fiscalYearStart && company.fiscalYearStart >= 1 && company.fiscalYearStart <= 12
+            ? company.fiscalYearStart
+            : 1
+
+        const fiscalYearStart = new Date(asOf.getFullYear(), fiscalYearStartMonth - 1, 1)
+        if (asOf.getMonth() + 1 < fiscalYearStartMonth) {
+            fiscalYearStart.setFullYear(asOf.getFullYear() - 1)
+        }
+
+        const yearToDateBalances = await this._getAccountBalancesForPeriod(companyId, fiscalYearStart, asOf)
         const balances = await this._getAccountBalances(companyId, asOf)
         const assets: any[] = []
         const liabilities: any[] = []
@@ -526,6 +545,29 @@ export class ReportingService {
                 equity.push({ accountId: row.accountId, accountCode: row.accountCode, accountName: row.accountName, accountType: row.accountType, accountSubtype: row.accountSubtype, balance: this._roundMoney(-row.netBalance) })
             }
         }
+
+        let totalRevenue = 0
+        let totalExpense = 0
+
+        for (const row of yearToDateBalances) {
+            const type = String(row.accountType ?? '').toUpperCase()
+            const accountName = String(row.accountName ?? '').toUpperCase()
+            if (type === 'REVENUE' || accountName.includes('REVENUE')) {
+                totalRevenue += Number(row.netBalance ?? 0) * -1
+            } else if (type === 'EXPENSE' || accountName.includes('EXPENSE')) {
+                totalExpense += Number(row.netBalance ?? 0)
+            }
+        }
+
+        const currentYearEarnings = this._roundMoney(totalRevenue - totalExpense)
+        equity.push({
+            accountId: 'current-year-earnings',
+            accountCode: '3999',
+            accountName: 'Current-Year Earnings (Net Income)',
+            accountType: 'EQUITY',
+            accountSubtype: 'Retained Earnings',
+            balance: currentYearEarnings,
+        })
 
         const totalAssets = this._roundMoney(assets.reduce((sum, account) => sum + account.balance, 0))
         const totalLiabilities = this._roundMoney(liabilities.reduce((sum, account) => sum + account.balance, 0))
