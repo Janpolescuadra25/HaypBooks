@@ -26,7 +26,7 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 | Evidence | Confirmed source behavior | Priority / phase |
 |---|---|---|
 | E4: `Haypbooks/Backend/src/reporting/reporting.service.ts:514546` | Balance sheet classifies asset/liability/equity without explicit current-year income/expense earnings presentation. | P0 reports / 4 |
-| E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237278` | DRAFT transaction creation changes stock without a GL call inside that transaction. | P0 inventory / 5 |
+| E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237-278` | RESOLVED (2026-10-04): DRAFT transactions now return before stock mutation, and direct `POSTED` transactions run atomic stock updates plus `SubLedgerService.postInventoryTransactionToGL`, `journalEntryId` linking, and `POST_TO_GL` audit logging in the same Prisma transaction. | DONE (P0 inventory / 5) |
 | E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
 | E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |
 

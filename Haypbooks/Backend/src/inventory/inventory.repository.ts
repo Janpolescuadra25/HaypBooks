@@ -1,9 +1,13 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Optional } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { SubLedgerService } from '../shared/sub-ledger.service'
 
 @Injectable()
 export class InventoryRepository {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        @Optional() private readonly subLedger?: SubLedgerService,
+    ) { }
 
     // ─── Items ────────────────────────────────────────────────────────────────
 
@@ -234,16 +238,24 @@ export class InventoryRepository {
         })
     }
 
-    async createInventoryTransaction(workspaceId: string, companyId: string, data: {
-        type: string; reference?: string
-        lines: Array<{ itemId: string; qty: number; unitCost?: number; stockLocationId?: string; lineType?: string }>
-    }) {
+    async createInventoryTransaction(
+        workspaceId: string,
+        companyId: string,
+        data: {
+            type: string
+            reference?: string
+            postingStatus?: 'DRAFT' | 'POSTED' | 'VOIDED'
+            userId?: string
+            lines: Array<{ itemId: string; qty: number; unitCost?: number; stockLocationId?: string; lineType?: string }>
+        },
+        userId?: string,
+    ) {
         const txNumber = `INV-${Date.now()}`
         return this.prisma.$transaction(async (tx) => {
             const txn = await tx.inventoryTransaction.create({
                 data: {
                     workspaceId, companyId, type: data.type, reference: data.reference ?? null,
-                    transactionNumber: txNumber, postingStatus: 'DRAFT',
+                    transactionNumber: txNumber, postingStatus: data.postingStatus ?? 'DRAFT',
                     lines: {
                         create: data.lines.map((l) => ({
                             workspaceId, itemId: l.itemId, qty: l.qty, unitCost: l.unitCost ?? null,
@@ -254,7 +266,14 @@ export class InventoryRepository {
                 include: { lines: true },
             })
 
-            // Update stock levels
+            if (data.postingStatus !== 'POSTED') {
+                return txn
+            }
+
+            if ((txn as any).journalEntryId) {
+                return txn
+            }
+
             for (const line of data.lines) {
                 if (!line.stockLocationId) continue
                 const existing = await tx.stockLevel.findUnique({
@@ -272,7 +291,107 @@ export class InventoryRepository {
                     })
                 }
             }
+
+            if (this.subLedger) {
+                const jeId = await this.subLedger.postInventoryTransactionToGL(
+                    companyId,
+                    {
+                        id: txn.id,
+                        date: txn.createdAt ?? new Date(),
+                        type: txn.type ?? data.type,
+                        lines: (txn.lines ?? data.lines).map((line: any) => ({
+                            productId: line.itemId,
+                            qty: Number(line.qty),
+                            unitCost: Number(line.unitCost ?? 0),
+                        })),
+                    },
+                    tx,
+                )
+
+                if (!jeId) {
+                    throw new Error('Inventory GL posting failed')
+                }
+
+                const updatedTxn = await tx.inventoryTransaction.update({
+                    where: { id: txn.id },
+                    data: { journalEntryId: jeId },
+                    include: { lines: true },
+                })
+
+                await tx.auditLog.create({
+                    data: {
+                        workspaceId,
+                        companyId,
+                        userId: userId ?? data.userId ?? 'system',
+                        action: 'POST_TO_GL',
+                        tableName: 'InventoryTransaction',
+                        recordId: txn.id,
+                        changes: { journalEntryId: jeId, postingStatus: 'POSTED' },
+                    },
+                })
+
+                return updatedTxn
+            }
+
             return txn
+        })
+    }
+
+    async postInventoryTransaction(companyId: string, transactionId: string, tx: any = this.prisma) {
+        const current = await tx.inventoryTransaction.findUnique({
+            where: { id: transactionId },
+            include: { lines: true },
+        })
+
+        if (!current) {
+            throw new Error('Inventory transaction not found')
+        }
+
+        if (current.postingStatus === 'POSTED') {
+            throw new Error('Inventory transaction is already POSTED')
+        }
+
+        if (current.postingStatus === 'VOIDED') {
+            throw new Error('Inventory transaction is already VOIDED')
+        }
+
+        if (current.companyId !== companyId) {
+            throw new Error('Inventory transaction does not belong to company')
+        }
+
+        for (const line of current.lines) {
+            if (!line.stockLocationId) continue
+            const existing = await tx.stockLevel.findUnique({
+                where: {
+                    companyId_itemId_stockLocationId: {
+                        companyId,
+                        itemId: line.itemId,
+                        stockLocationId: line.stockLocationId,
+                    },
+                },
+            })
+            const delta = current.type === 'SHIPMENT' ? -Number(line.qty) : Number(line.qty)
+            if (existing) {
+                await tx.stockLevel.update({
+                    where: { id: existing.id },
+                    data: { quantity: { increment: delta } },
+                })
+            } else {
+                await tx.stockLevel.create({
+                    data: {
+                        companyId,
+                        itemId: line.itemId,
+                        stockLocationId: line.stockLocationId,
+                        quantity: delta,
+                        reserved: 0,
+                    },
+                })
+            }
+        }
+
+        return tx.inventoryTransaction.update({
+            where: { id: transactionId },
+            data: { postingStatus: 'POSTED', journalEntryId: undefined },
         })
     }
 

@@ -331,9 +331,100 @@ export class InventoryService {
         await this.assertAccess(userId, companyId)
         if (!data.type) throw new BadRequestException('type is required')
         if (!data.lines?.length) throw new BadRequestException('At least one line is required')
-        return this.repo.createInventoryTransaction(workspaceId, companyId, {
-            type: data.type, reference: data.reference,
-            lines: data.lines.map((l: any) => ({ ...l, qty: Number(l.qty), unitCost: l.unitCost ? Number(l.unitCost) : undefined })),
+        return this.repo.createInventoryTransaction(
+            workspaceId,
+            companyId,
+            {
+                type: data.type,
+                reference: data.reference,
+                postingStatus: data.postingStatus,
+                userId,
+                lines: data.lines.map((l: any) => ({ ...l, qty: Number(l.qty), unitCost: l.unitCost ? Number(l.unitCost) : undefined })),
+            },
+            userId,
+        )
+    }
+
+    async postInventoryTransaction(userId: string, companyId: string, transactionId: string) {
+        await this.assertAccess(userId, companyId)
+
+        const txn = await this.prisma.inventoryTransaction.findUnique({
+            where: { id: transactionId },
+            include: { lines: true },
+        })
+
+        if (!txn || txn.companyId !== companyId) {
+            throw new NotFoundException('Inventory transaction not found')
+        }
+
+        if (txn.postingStatus === 'POSTED') {
+            throw new BadRequestException('Inventory transaction is already POSTED')
+        }
+
+        if (txn.postingStatus === 'VOIDED') {
+            throw new BadRequestException('Inventory transaction is already VOIDED')
+        }
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        return this.prisma.$transaction(async (tx) => {
+            const current = await tx.inventoryTransaction.findUnique({
+                where: { id: transactionId },
+                include: { lines: true },
+            })
+
+            if (!current) {
+                throw new NotFoundException('Inventory transaction not found')
+            }
+
+            if (current.postingStatus === 'POSTED') {
+                throw new BadRequestException('Inventory transaction is already POSTED')
+            }
+
+            if (current.postingStatus === 'VOIDED') {
+                throw new BadRequestException('Inventory transaction is already VOIDED')
+            }
+
+            await this.repo.postInventoryTransaction(companyId, transactionId, tx)
+
+            const jeId = await this.subLedger.postInventoryTransactionToGL(
+                companyId,
+                {
+                    id: current.id,
+                    date: current.createdAt,
+                    type: current.type,
+                    lines: current.lines.map((line: any) => ({
+                        productId: line.itemId,
+                        qty: Number(line.qty),
+                        unitCost: Number(line.unitCost ?? 0),
+                    })),
+                },
+                tx,
+            )
+
+            if (!jeId) {
+                throw new BadRequestException('Inventory GL posting failed')
+            }
+
+            const updated = await tx.inventoryTransaction.update({
+                where: { id: transactionId },
+                data: { journalEntryId: jeId },
+                include: { lines: true },
+            })
+
+            await tx.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'POST_TO_GL',
+                    tableName: 'InventoryTransaction',
+                    recordId: transactionId,
+                    changes: { journalEntryId: jeId, postingStatus: 'POSTED' },
+                },
+            })
+
+            return updated
         })
     }
 
