@@ -25,7 +25,7 @@ describe('Void Lifecycle', () => {
   beforeEach(() => {
     jest.resetAllMocks()
 
-    mockAuditService = { log: jest.fn() }
+    mockAuditService = { log: jest.fn().mockResolvedValue({}) }
 
     mockRepo = {
       findVendorCreditById: jest.fn(),
@@ -42,11 +42,15 @@ describe('Void Lifecycle', () => {
       auditLog: { create: jest.fn().mockResolvedValue({}) },
       $transaction: jest.fn(async (work: any) => (typeof work === 'function' ? await work(mockPrisma) : work)),
       vendorCredit: { update: jest.fn().mockResolvedValue({ id: 'credit-1', status: 'VOIDED', postingStatus: 'VOIDED' }) },
-      mileageLog: { findFirst: jest.fn(), update: jest.fn().mockResolvedValue({ id: 'log-1', status: 'VOIDED' }) },
-      perDiemClaim: { findFirst: jest.fn(), update: jest.fn().mockResolvedValue({ id: 'perdiem-1', status: 'VOIDED' }) },
-      expenseClaim: { findUnique: jest.fn(), update: jest.fn().mockResolvedValue({ id: 'claim-1', status: 'VOIDED', postingStatus: 'VOIDED' }) },
+      mileageLog: { findFirst: jest.fn(), update: jest.fn().mockResolvedValue({ id: 'log-1', status: 'VOIDED', postingStatus: 'VOIDED' }) },
+      perDiemClaim: { findFirst: jest.fn(), update: jest.fn().mockResolvedValue({ id: 'perdiem-1', status: 'VOIDED', postingStatus: 'VOIDED' }) },
+      expenseClaim: {
+        findFirst: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn().mockResolvedValue({ id: 'claim-1', status: 'VOIDED', postingStatus: 'VOIDED' }),
+      },
       journalEntry: { findFirst: jest.fn() },
-      billPayment: { findFirst: jest.fn(), update: jest.fn() },
+      billPayment: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
       billPaymentApplication: { findMany: jest.fn(), delete: jest.fn() },
       bill: { findUnique: jest.fn(), update: jest.fn() },
     }
@@ -66,8 +70,8 @@ describe('Void Lifecycle', () => {
       {} as any,
       mockPrisma as any,
       {} as any,
-      mockAuditService as any,
       mockSubLedger as any,
+      mockAuditService as any,
       new ExpenseStatusTransitionGuard({} as any),
       { validateExpenseAgainstPolicy: jest.fn().mockResolvedValue([]) } as any,
     )
@@ -95,7 +99,9 @@ describe('Void Lifecycle', () => {
     })
 
     it('should void a posted bill payment through the service and reverse GL via subledger', async () => {
-      mockPrisma.billPayment.findUnique.mockResolvedValue({ id: 'payment-1', companyId: 'company-1', postingStatus: 'POSTED' })
+      const postedPayment = { id: 'payment-1', companyId: 'company-1', postingStatus: 'POSTED' }
+      mockPrisma.billPayment.findFirst.mockResolvedValue(postedPayment)
+      mockPrisma.billPayment.findUnique.mockResolvedValue(postedPayment)
       mockRepo.voidBillPayment.mockResolvedValue({ id: 'payment-1', status: 'VOIDED', postingStatus: 'VOIDED' })
 
       const result = await apService.voidBillPayment('user-1', 'company-1', 'payment-1')
@@ -109,26 +115,26 @@ describe('Void Lifecycle', () => {
   describe('Mileage void', () => {
     it('should void a posted mileage entry and reverse GL', async () => {
       mockPrisma.mileageLog.findFirst.mockResolvedValue({ id: 'log-1', companyId: 'company-1', status: 'APPROVED', postingStatus: 'POSTED' })
-      mockPrisma.mileageLog.update.mockResolvedValue({ id: 'log-1', status: 'VOIDED' })
+      mockPrisma.mileageLog.update.mockResolvedValue({ id: 'log-1', status: 'VOIDED', postingStatus: 'VOIDED' })
 
       const result = await apService.voidMileage('user-1', 'company-1', 'log-1')
 
       expect(mockSubLedger.postMileageReversalToGL).toHaveBeenCalledWith('log-1', mockPrisma)
-      expect(mockPrisma.mileageLog.update).toHaveBeenCalledWith({ where: { id: 'log-1' }, data: { status: 'VOIDED' } })
-      expect(result).toEqual({ id: 'log-1', status: 'VOIDED' })
+      expect(mockPrisma.mileageLog.update).toHaveBeenCalledWith({ where: { id: 'log-1' }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
+      expect(result).toEqual({ id: 'log-1', status: 'VOIDED', postingStatus: 'VOIDED' })
     })
   })
 
   describe('Per Diem void', () => {
     it('should void a posted per diem and reverse GL', async () => {
       mockPrisma.perDiemClaim.findFirst.mockResolvedValue({ id: 'perdiem-1', companyId: 'company-1', status: 'APPROVED', postingStatus: 'POSTED' })
-      mockPrisma.perDiemClaim.update.mockResolvedValue({ id: 'perdiem-1', status: 'VOIDED' })
+      mockPrisma.perDiemClaim.update.mockResolvedValue({ id: 'perdiem-1', status: 'VOIDED', postingStatus: 'VOIDED' })
 
       const result = await apService.voidPerDiem('user-1', 'company-1', 'perdiem-1')
 
       expect(mockSubLedger.postPerDiemReversalToGL).toHaveBeenCalledWith('perdiem-1', mockPrisma)
-      expect(mockPrisma.perDiemClaim.update).toHaveBeenCalledWith({ where: { id: 'perdiem-1' }, data: { status: 'VOIDED' } })
-      expect(result).toEqual({ id: 'perdiem-1', status: 'VOIDED' })
+      expect(mockPrisma.perDiemClaim.update).toHaveBeenCalledWith({ where: { id: 'perdiem-1' }, data: { status: 'VOIDED', postingStatus: 'VOIDED' } })
+      expect(result).toEqual({ id: 'perdiem-1', status: 'VOIDED', postingStatus: 'VOIDED' })
     })
   })
 
@@ -153,7 +159,9 @@ describe('Void Lifecycle', () => {
 
   describe('Expense Claim void', () => {
     it('should void an APPROVED claim (single reversal)', async () => {
-      mockPrisma.expenseClaim.findUnique.mockResolvedValue({ id: 'claim-1', companyId: 'company-1', status: 'APPROVED', postingStatus: 'POSTED' })
+      const approvedClaim = { id: 'claim-1', companyId: 'company-1', status: 'APPROVED', postingStatus: 'POSTED' }
+      mockPrisma.expenseClaim.findFirst.mockResolvedValue(approvedClaim)
+      mockPrisma.expenseClaim.findUnique.mockResolvedValue(approvedClaim)
       mockPrisma.expenseClaim.update.mockResolvedValue({ id: 'claim-1', status: 'VOIDED', postingStatus: 'VOIDED' })
 
       const result = await expensesService.voidExpenseClaim('user-1', 'company-1', 'claim-1')
@@ -165,7 +173,9 @@ describe('Void Lifecycle', () => {
     })
 
     it('should void a PAID claim (double reversal)', async () => {
-      mockPrisma.expenseClaim.findUnique.mockResolvedValue({ id: 'claim-2', companyId: 'company-1', status: 'PAID', postingStatus: 'POSTED' })
+      const paidClaim = { id: 'claim-2', companyId: 'company-1', status: 'PAID', postingStatus: 'POSTED' }
+      mockPrisma.expenseClaim.findFirst.mockResolvedValue(paidClaim)
+      mockPrisma.expenseClaim.findUnique.mockResolvedValue(paidClaim)
       mockPrisma.expenseClaim.update.mockResolvedValue({ id: 'claim-2', status: 'VOIDED', postingStatus: 'VOIDED' })
 
       const result = await expensesService.voidExpenseClaim('user-1', 'company-1', 'claim-2')
@@ -177,3 +187,4 @@ describe('Void Lifecycle', () => {
     })
   })
 })
+
