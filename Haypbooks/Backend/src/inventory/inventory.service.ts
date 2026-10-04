@@ -331,6 +331,7 @@ export class InventoryService {
         await this.assertAccess(userId, companyId)
         if (!data.type) throw new BadRequestException('type is required')
         if (!data.lines?.length) throw new BadRequestException('At least one line is required')
+        // E5 invariant: keep the authenticated userId on the repository call so POST_TO_GL audit entries remain attributable.
         return this.repo.createInventoryTransaction(
             workspaceId,
             companyId,

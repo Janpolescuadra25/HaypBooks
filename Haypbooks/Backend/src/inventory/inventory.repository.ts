@@ -266,6 +266,7 @@ export class InventoryRepository {
                 include: { lines: true },
             })
 
+            // E5 invariant: DRAFT transactions must never mutate stock or post to GL.
             if (data.postingStatus !== 'POSTED') {
                 return txn
             }

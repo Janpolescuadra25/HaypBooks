@@ -26,7 +26,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 | Evidence | Confirmed source behavior | Priority / phase |
 |---|---|---|
 | E4: `Haypbooks/Backend/src/reporting/reporting.service.ts:514546` | Balance sheet classifies asset/liability/equity without explicit current-year income/expense earnings presentation. | P0 reports / 4 |
-| E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237-278` | RESOLVED (2026-10-04): DRAFT transactions now return before stock mutation, and direct `POSTED` transactions run atomic stock updates plus `SubLedgerService.postInventoryTransactionToGL`, `journalEntryId` linking, and `POST_TO_GL` audit logging in the same Prisma transaction. | DONE (P0 inventory / 5) |
 | E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
 | E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |
 
@@ -112,7 +111,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 12** | Security and tenant isolation | DONE & VERIFIED | 19/19 tenant controllers guarded, test endpoints blocked in prod, admin routes restricted, auth rate limiting and session revocation complete |
 | **Phase 16D** | Explicit remaining-module inventory and retention | Comprehensive backend module inventory created 2026-10-02, 39 controllers documented, Batch 1/Batch 2 mapped | [Module Inventory README](Haypbooks/Backend/docs/implementations/module-inventory/README.md) |
 | **Phase 13 — Paid Plans, Trials & Stripe Billing** | **DONE & VERIFIED (2026-10-03)** | Four canonical paid plans + 30-day non-destructive trial (`planId: DEFAULT_TRIAL_PLAN_ID`), `/api/subscriptions/create` onboarding route & inline `role="alert"` error handling (E2), trial bootstrap & 30-day ticker alignment (E9), Stripe SDK checkout/portal/webhook lifecycle (`docs/implementations/subscription-onboarding/README.md`, `docs/implementations/billing-trial-alignment/README.md`, `docs/implementations/module-inventory/README.md`). | |
-
+| **Phase 5 — E5 Inventory Stock & GL Atomic Synchronization** | **DONE & VERIFIED (2026-10-04)** | Fixed `DRAFT` stock mutation, added double-posting guard, and enforced atomic `POSTED` stock updates + `SubLedgerService.postInventoryTransactionToGL` + `journalEntryId` linking + `POST_TO_GL` audit logging inside a single Prisma `$transaction` (`docs/implementations/inventory-gl-sync/README.md`). | |
 ---
 
 ## Active & Remaining Implementation Phases

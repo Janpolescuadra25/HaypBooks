@@ -6,6 +6,8 @@
 ## Overview
 This implementation resolves release-blocking P0 Defect E5 (`Haypbooks/Backend/src/inventory/inventory.repository.ts:237-278` and `Haypbooks/Backend/src/inventory/inventory.service.ts:329-422`) by enforcing strict lifecycle separation between `DRAFT` and `POSTED` inventory transactions and guaranteeing atomic General Ledger posting whenever stock levels are mutated.
 
+Completed and verified on 2026-10-04: the final E5 archive keeps `DRAFT` transactions read-only, ensures direct `POSTED` creates call `SubLedgerService.postInventoryTransactionToGL` inside the same Prisma transaction, and records `journalEntryId` plus `POST_TO_GL` audit updates before returning.
+
 ## Root Cause Addressed
 1. **DRAFT Stock Mutation Prevention**
    - `DRAFT` inventory transactions return early before any `stockLevel` mutation or GL call occurs.
