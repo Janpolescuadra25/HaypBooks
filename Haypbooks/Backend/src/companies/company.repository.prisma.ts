@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { DEFAULT_TRIAL_PLAN_ID } from './subscription.util'
 // Seed helper to create default roles when new tenant is created
 let seedDefaultRolesForTenant: (tenantId: string) => Promise<void> = async () => {}
 try { seedDefaultRolesForTenant = require('../../prisma/seed').seedDefaultRolesForTenant } catch (e) { /* best-effort only */ }
@@ -94,7 +95,7 @@ export class CompanyRepository {
         if (!tenant.trialUsed) {
           const trialEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           // Ensure subscription exists for this company (centralized validation)
-          await this.ensureSubscriptionForCompany(tenant.id, { companyId: tenant.id, plan: 'FREE', status: 'TRIAL' })
+          await this.ensureSubscriptionForCompany(tenant.id, { companyId: tenant.id, planId: DEFAULT_TRIAL_PLAN_ID, status: 'TRIAL' })
           await this.prisma.workspace.update({ where: { id: tenant.id }, data: { trialEndsAt: trialEnds, trialUsed: true } })
         }
       } catch (e) {
@@ -675,7 +676,7 @@ export class CompanyRepository {
         const trialEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         // Best-effort: ensure a subscription exists; handle races gracefully
         try {
-          await this.ensureSubscriptionForCompany(company.id, { companyId: company.id, plan: 'FREE', status: 'TRIAL' })
+          await this.ensureSubscriptionForCompany(company.id, { companyId: company.id, planId: DEFAULT_TRIAL_PLAN_ID, status: 'TRIAL' })
         } catch (e) {
           // Log and continue; subscription race or DB error should not block onboarding
           // eslint-disable-next-line no-console
