@@ -7,6 +7,7 @@ module.exports = {
     '**/test/**/*.test.ts',
     '<rootDir>/src/__tests__/**/*.spec.ts',
     '<rootDir>/src/__tests__/shared/gl-integration-period-lock.spec.ts',
+    '<rootDir>/src/shared/**/*.spec.ts',
   ],
   globals: {
     'ts-jest': {

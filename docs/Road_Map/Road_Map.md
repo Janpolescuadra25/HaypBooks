@@ -25,7 +25,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 
 | Evidence | Confirmed source behavior | Priority / phase |
 |---|---|---|
-| E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
 | E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |
 
 ## Audit review (attachment AW)
@@ -112,6 +111,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 13 — Paid Plans, Trials & Stripe Billing** | **DONE & VERIFIED (2026-10-03)** | Four canonical paid plans + 30-day non-destructive trial (`planId: DEFAULT_TRIAL_PLAN_ID`), `/api/subscriptions/create` onboarding route & inline `role="alert"` error handling (E2), trial bootstrap & 30-day ticker alignment (E9), Stripe SDK checkout/portal/webhook lifecycle (`docs/implementations/subscription-onboarding/README.md`, `docs/implementations/billing-trial-alignment/README.md`, `docs/implementations/module-inventory/README.md`). | |
 | **Phase 5 — E5 Inventory Stock & GL Atomic Synchronization** | **DONE & VERIFIED (2026-10-04)** | Fixed `DRAFT` stock mutation, added double-posting guard, and enforced atomic `POSTED` stock updates + `SubLedgerService.postInventoryTransactionToGL` + `journalEntryId` linking + `POST_TO_GL` audit logging inside a single Prisma `$transaction` (`docs/implementations/inventory-gl-sync/README.md`). | |
 | **Phase 4 — E4 Balance Sheet Current-Year Earnings Presentation** | **DONE & VERIFIED (2026-10-04)** | Added fiscal-year-start calculation, year-to-date revenue/expense aggregation (`_getAccountBalancesForPeriod`), and synthetic equity line `Current-Year Earnings (Net Income)` (`accountCode: '3999'`) in `_buildBalanceSheet` with `isBalanced` verification (`docs/implementations/balance-sheet-earnings/README.md`). | |
+| **E10 — Practice Hub Invitation Acceptance (`practice-hub.service.ts:214`)** | **DONE & VERIFIED (2026-10-04)** | Verified transactional `acceptInvite` implementation in `src/practice-hub/practice-hub.service.ts:214` (identity/company access checks, atomic engagement creation + invite `ACCEPTED` status update; `docs/implementations/practice-hub-invites/README.md`). | |
 ---
 
 ## Active & Remaining Implementation Phases

@@ -94,9 +94,10 @@ Note: the full unit-suite baseline does not currently complete in this environme
 - Posting methods expect a caller-provided transaction — correct isolation is the caller's responsibility.
 - Remaining ledger-integrity gaps are tracked in the roadmap's P1 Accounting & Ledger Integrity workstream (`docs/Road_Map/Road_Map.md`).
 
-## Known gaps (do not assume otherwise)
-- `postInventoryTransactionToGL` is NOT implemented — inventory-transaction → GL posting is the remaining ledger-integrity gap (P1, Road_Map.md).
-- The legacy `createAndPostJE` path drops the `entryNumber` parameter before `journalEntry.create` — reported, not yet fixed; tracked as a P1 item in Road_Map.md.
+## Inventory lifecycle & GL status
+- `postInventoryTransactionToGL` and `reverseInventoryTransactionGL` are implemented and are used by the inventory posting flow to create balanced GL entries, enforce period-lock checks, and record audit activity.
+- The inventory repository now keeps DRAFT transactions from mutating stock and enforces a strict `DRAFT -> POSTED` posting transition before updating stock levels and creating the ledger posting.
+- The general-ledger helper persists `entryNumber` on journal entry creation as part of the fix for the earlier numbering gap.
 
 ## Wiring verification (2026-08-31, Hydra audit)
 - `PayrollService.postPayrollRun` → `subLedger.postPayrollRunToGL()` ✅
