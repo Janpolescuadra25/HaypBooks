@@ -25,11 +25,9 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 
 | Evidence | Confirmed source behavior | Priority / phase |
 |---|---|---|
-| E2: `Haypbooks/Frontend/src/app/get-started/subscribe/page.tsx:6067`; practice equivalent `get-started/practice/subscribe/page.tsx:4046` | Company errors swallowed and timer sets success independently; practice uses simulated success. | P0 / 13 |
+| E2: `Haypbooks/Frontend/src/app/get-started/subscribe/page.tsx:57-80`; practice equivalent `get-started/practice/subscribe/page.tsx:41-68` | RESOLVED (2026-10-04): `/api/subscriptions/create` now confirms activation before setting success, and both onboarding pages await the server response and render inline role="alert" banners for real failure states. | DONE (P0 / 13) |
 | E4: `Haypbooks/Backend/src/reporting/reporting.service.ts:514546` | Balance sheet classifies asset/liability/equity without explicit current-year income/expense earnings presentation. | P0 reports / 4 |
 | E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237278` | DRAFT transaction creation changes stock without a GL call inside that transaction. | P0 inventory / 5 |
-| E6: `Haypbooks/Backend/src/banking/banking.service.ts:611-636`; `banking.repository.ts:237-255` | RESOLVED (2026-10-03): repository fails closed on missing journalEntryLineId; auto-match resolves valid GL lines by date/amount and excludes duplicate GL line bindings. | DONE (P0 banking / 6) |
-| E7: `Haypbooks/Backend/src/accounting/accounting.service.ts:1092-1110` | Revaluation was a journal-entry proxy; date bounds could overwrite one another; query errors were silent. | RESOLVED / 7 |
 | E9: `Haypbooks/Backend/src/companies/company.repository.prisma.ts:97,678`; frontend public signup line 150 | FREE/TRIAL bootstrap and 14-day copy conflict with four paid plans/30-day direction. | P0 billing / 13 |
 | E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
 | E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |

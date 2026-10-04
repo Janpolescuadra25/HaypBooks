@@ -8,6 +8,15 @@ import {
   CheckCircle2, Lock, Calendar, Sparkles,
   User as UserIcon,
 } from 'lucide-react'
+import { api } from '@/lib/api'
+
+interface SubscriptionCreateResponse {
+  ok: boolean
+  status: string
+  plan: string
+  scope?: string
+  activatedAt?: string
+}
 
 const PLAN_LABELS: Record<string, string> = {
   growth:       'Growth',
@@ -53,19 +62,32 @@ function CheckoutPage() {
 
   const [isProcessing, setIsProcessing] = React.useState(false)
   const [isSuccess,    setIsSuccess]    = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsProcessing(true)
-    fetch('/api/subscriptions/create', { credentials: 'include',
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ plan: planKey }),
-    }).catch(() => {})
-    setTimeout(() => {
-      setIsProcessing(false)
+    setError(null)
+
+    try {
+      const res = await api<SubscriptionCreateResponse>('/api/subscriptions/create', {
+        method: 'POST',
+        body: JSON.stringify({ plan: planKey, scope: 'company' }),
+      })
+
+      if (!res || res.ok === false) {
+        throw new Error('Subscription activation was not confirmed by the server.')
+      }
+
       setIsSuccess(true)
-    }, 2500)
+    } catch (err: unknown) {
+      const message = err instanceof Error
+        ? err.message
+        : 'Subscription activation failed. Please check your payment details and try again.'
+      setError(message)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   return (
@@ -159,6 +181,12 @@ function CheckoutPage() {
                 </div>
 
                 <form onSubmit={handlePayment} className="space-y-6">
+                  {error && (
+                    <div role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                      {error}
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     <CheckoutInput label="Cardholder Name" placeholder="Juan Dela Cruz" icon={<UserIcon size={18} />} />
                     <CheckoutInput label="Card Number" placeholder="0000 0000 0000 0000" icon={<CreditCard size={18} />} />
