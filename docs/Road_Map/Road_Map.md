@@ -27,7 +27,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 |---|---|---|
 | E4: `Haypbooks/Backend/src/reporting/reporting.service.ts:514546` | Balance sheet classifies asset/liability/equity without explicit current-year income/expense earnings presentation. | P0 reports / 4 |
 | E5: `Haypbooks/Backend/src/inventory/inventory.repository.ts:237278` | DRAFT transaction creation changes stock without a GL call inside that transaction. | P0 inventory / 5 |
-| E9: `Haypbooks/Backend/src/companies/company.repository.prisma.ts:94,664`; `Haypbooks/Frontend/src/components/landing/Ticker.tsx:8` | RESOLVED (2026-10-04): replaced legacy `plan: 'FREE'` trial bootstrap with `planId: DEFAULT_TRIAL_PLAN_ID`, added canonical paid-plan IDs and FREE-plan rejection in `subscription.util.ts`, and unified the landing ticker copy to 30-day trial messaging. | DONE (P0 billing / 13) |
 | E10: `Haypbooks/Backend/src/practice-hub/practice-hub.service.ts:214` | Existing invitation acceptance checks identity/company access and transactionally creates engagement plus invite update. Stats/client/invite functionality exists. | Existing foundation / 11 |
 | E12: `Haypbooks/Backend/src/ap/ap.repository.ts`; `src/shared/sub-ledger.service.ts` | Posting/reversal foundations and conditional audit writes exist. Uniform lifecycle enforcement remains unverified. | Audit / 14 |
 
@@ -112,6 +111,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across 10 core controllers, Batch 1 rollout completed 2026-10-02, array workspace ID rejection bug fix, request context propagation, 10/10 unit tests passing | [Workspace Access Guard README](Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md) |
 | **Phase 12** | Security and tenant isolation | DONE & VERIFIED | 19/19 tenant controllers guarded, test endpoints blocked in prod, admin routes restricted, auth rate limiting and session revocation complete |
 | **Phase 16D** | Explicit remaining-module inventory and retention | Comprehensive backend module inventory created 2026-10-02, 39 controllers documented, Batch 1/Batch 2 mapped | [Module Inventory README](Haypbooks/Backend/docs/implementations/module-inventory/README.md) |
+| **Phase 13 — Paid Plans, Trials & Stripe Billing** | **DONE & VERIFIED (2026-10-03)** | Four canonical paid plans + 30-day non-destructive trial (`planId: DEFAULT_TRIAL_PLAN_ID`), `/api/subscriptions/create` onboarding route & inline `role="alert"` error handling (E2), trial bootstrap & 30-day ticker alignment (E9), Stripe SDK checkout/portal/webhook lifecycle (`docs/implementations/subscription-onboarding/README.md`, `docs/implementations/billing-trial-alignment/README.md`, `docs/implementations/module-inventory/README.md`). | |
 
 ---
 
@@ -144,16 +144,6 @@ The following core accounting modules and defects have been fully resolved, test
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
 - Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
 - Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
-
-### 13  Paid plans, trials and Stripe (DONE & VERIFIED, P0 - Phase 13 archived: Stripe SDK, Plan schema fields, StripeWebhookEvent model, BillingModule, StripeService, webhook ingestion, checkout session creation, customer portal creation, and subscription lifecycle state synchronization are all complete and verified.)
-
-- Audit: every public/company/practice price/copy/seed/model/capacity/checkout/webhook/portal path; planId and FREE compatibility. Consult local Stripe material critically and current official provider docs during implementation.
-- Contract: four paid levels, no permanent free tier, 30-day trial. Approve whether company/practice use separate catalogs; prices/currency/monthly-annual terms/tax/card requirement/conversion/cancellation are unresolved decisions.
-- Deliver: authoritative catalog shared by landing/checkout/settings/backend. Capacity matrix specifies company seats/storage/documents or transactions/AI/features and practice staff/active clients/engagements/storage, units/reset periods/add-ons/overage.
-- Provider-confirmed state drives success; authenticated idempotent webhook handling covers trial/active/overdue/canceled/expired, delays/out-of-order events. No timer-based payment success.
-- Requirements: explicit existing-customer migration, no silent charge/conversion/data deletion; trial distinct from free plan, bonuses distinct from paid base.
-- Depends on: 9/12, owner economics, 11 bonuses.
-- Current state: archived. The Stripe dependency is installed, the Plan schema includes Stripe product/price fields, the billing module is registered, `StripeService.createCheckoutSession()` creates checkout sessions, `createCustomerPortalSession()` exists, and the webhook endpoint verifies signatures, deduplicates processed events, and synchronizes subscription lifecycle metadata. The Phase 13 implementation is complete and verified.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
