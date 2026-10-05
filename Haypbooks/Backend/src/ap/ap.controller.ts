@@ -66,6 +66,11 @@ export class ApController {
         return this.svc.getBillActivity(req.user.userId, cid, bid, q)
     }
 
+    @Get('approvals/pending')
+    listPendingApprovals(@Req() req: any, @Param('companyId') cid: string) {
+        return this.svc.listPendingApprovals(req.user.userId, cid)
+    }
+
     @Get('bills/:billId')
     getBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string) {
         return this.svc.getBill(req.user.userId, cid, bid)

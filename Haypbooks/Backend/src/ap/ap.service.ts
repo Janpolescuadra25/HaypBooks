@@ -483,6 +483,10 @@ export class ApService {
         const bill = await this.repo.findBillById(companyId, billId)
         if (!bill) throw new NotFoundException('Bill not found')
         if (bill.status !== 'DRAFT') throw new BadRequestException('Only draft bills can be deleted')
+        await this.prisma.approvalRequest.updateMany({
+            where: { entityId: billId, status: 'PENDING' },
+            data: { status: 'REJECTED' },
+        }).catch(() => { /* non-critical */ })
         await this.prisma.auditLog.create({
             data: { workspaceId: await this.getWorkspaceId(companyId), companyId, userId, action: 'DELETE', tableName: 'Bill', recordId: billId, changes: { status: bill.status } },
         }).catch(() => { /* non-critical */ })
@@ -495,6 +499,31 @@ export class ApService {
         if (!bill) throw new NotFoundException('Bill not found')
         if (bill.status === 'DRAFT') throw new BadRequestException('Bill must be submitted (PENDING) before approval')
         if (bill.status !== 'PENDING') throw new BadRequestException('Only pending bills can be approved')
+
+        const workflow = await this.prisma.approvalWorkflow.findFirst({
+            where: { workspaceId: bill.workspaceId, entityType: 'BILL', isActive: true },
+            orderBy: { createdAt: 'desc' },
+        })
+
+        if (bill.createdById && bill.createdById === userId) {
+            throw new BadRequestException('Self-approval is not permitted for the bill creator')
+        }
+
+        if (workflow) {
+            const pendingRequests = await this.prisma.approvalRequest.findMany({
+                where: { entityId: billId, status: 'PENDING' },
+                select: { id: true, requestedById: true },
+                orderBy: { createdAt: 'asc' },
+            })
+
+            if (pendingRequests.length !== 1) {
+                throw new BadRequestException('A single pending approval request is required before this bill can be approved')
+            }
+
+            if (pendingRequests[0].requestedById === userId) {
+                throw new BadRequestException('Self-approval is not permitted for the original requester')
+            }
+        }
 
         const result = await this.prisma.$transaction(async (tx) => {
             await this.subLedger.postBillToGL(billId, userId, tx)
@@ -534,6 +563,12 @@ export class ApService {
 
         const result = await this.prisma.$transaction(async (tx) => {
             if (workflow) {
+                const existingPending = await tx.approvalRequest.findFirst({
+                    where: { entityId: billId, status: 'PENDING' },
+                })
+                if (existingPending) {
+                    throw new BadRequestException('A pending approval request already exists for this bill')
+                }
                 await tx.approvalRequest.create({
                     data: {
                         workflowId: workflow.id,
@@ -612,6 +647,10 @@ export class ApService {
         if (!b) throw new NotFoundException('Bill not found')
         if (b.status === 'CANCELLED' || b.status === 'VOIDED') throw new BadRequestException('Bill is already void')
         if (Number(b.total) - Number(b.balance) > 0) throw new BadRequestException('Cannot void a bill that has payments applied')
+        await this.prisma.approvalRequest.updateMany({
+            where: { entityId: billId, status: 'PENDING' },
+            data: { status: 'REJECTED' },
+        }).catch(() => { /* non-critical */ })
         const workspaceId = await this.getWorkspaceId(companyId)
         return this.repo.voidBill(companyId, billId, { workspaceId, userId })
     }
@@ -632,6 +671,46 @@ export class ApService {
             this.prisma.auditLog.count({ where }),
         ])
         return { data: logs, total }
+    }
+
+    async listPendingApprovals(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        const requests = await this.prisma.approvalRequest.findMany({
+            where: {
+                status: 'PENDING',
+                workflow: { workspaceId, isActive: true },
+                bill: { companyId, deletedAt: null },
+            },
+            include: {
+                workflow: { select: { id: true, name: true, entityType: true } },
+                bill: {
+                    include: {
+                        vendor: { include: { contact: { select: { displayName: true } } } },
+                        createdBy: { select: { id: true, name: true, email: true } },
+                    },
+                },
+                requester: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        })
+
+        return requests.map((req: any) => ({
+            id: req.id,
+            workflowId: req.workflowId,
+            workflowName: req.workflow?.name ?? 'Bill Approval',
+            entityType: req.workflow?.entityType ?? 'BILL',
+            billId: req.bill?.id ?? req.entityId,
+            billNumber: req.bill?.billNumber ?? null,
+            vendorName: req.bill?.vendor?.contact?.displayName ?? req.bill?.vendor?.id ?? null,
+            requestedBy: req.requester ? { id: req.requester.id, name: req.requester.name, email: req.requester.email } : null,
+            createdBy: req.bill?.createdBy ? { id: req.bill.createdBy.id, name: req.bill.createdBy.name, email: req.bill.createdBy.email } : null,
+            requestedAt: req.createdAt,
+            status: req.status,
+            companyId,
+            workspaceId,
+        }))
     }
 
     // ─── Bill Payments ────────────────────────────────────────────────────────

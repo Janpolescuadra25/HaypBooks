@@ -112,6 +112,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 4 — E4 Balance Sheet Current-Year Earnings Presentation** | **DONE & VERIFIED (2026-10-04)** | Added fiscal-year-start calculation, year-to-date revenue/expense aggregation (`_getAccountBalancesForPeriod`), and synthetic equity line `Current-Year Earnings (Net Income)` (`accountCode: '3999'`) in `_buildBalanceSheet` with `isBalanced` verification (`docs/implementations/balance-sheet-earnings/README.md`). | |
 | **E10 — Practice Hub Invitation Acceptance (`practice-hub.service.ts:214`)** | **DONE & VERIFIED (2026-10-04)** | Verified transactional `acceptInvite` implementation in `src/practice-hub/practice-hub.service.ts:214` (identity/company access checks, atomic engagement creation + invite `ACCEPTED` status update; `docs/implementations/practice-hub-invites/README.md`). | |
 | **E12 — Sub-Ledger & AP/AR Posting/Reversal Lifecycle (`ap.repository.ts`, `sub-ledger.service.ts`)** | **DONE & VERIFIED (2026-10-04)** | Verified transactional posting/reversal foundations, `assertPeriodOpen` enforcement, `createReversingJE` in `ap.repository.ts:voidBill`, conditional audit writes, and AP/sub-ledger unit test suites (`gl-integrity.spec.ts`, `bill-lifecycle.spec.ts`, `void-lifecycle.spec.ts`, `approval-workflow.spec.ts`; `docs/implementations/sub-ledger-lifecycle/README.md`). | |
+| **14A — Approval workflow completion** | **DONE & VERIFIED (2026-10-05)** | Added `listPendingApprovals`, pending-approval route exposure, creator/requester self-approval prevention, replay protection for already posted bills, and company/workspace-scoped authorization checks for the approval queue (`docs/implementations/approval-workflow-completion/README.md`). | [Approval Workflow README](../implementations/approval-workflow-completion/README.md) |
 ---
 
 ## Active & Remaining Implementation Phases
@@ -221,12 +222,6 @@ Conflicts resolved:
 - Existing models must be reused: current Prisma schema includes FixedAsset, Approval, ApprovalWorkflow and ApprovalRequest. Do not execute old instructions to create duplicate models. Practice XP fields exist; field presence alone does not prove a working progression system.
 - Current owner controller uses SystemRoleGuard/SUPER_ADMIN declarations. Do not replace existing owner APIs based on older blank-feature claims. Trace endpoint and frontend coverage first.
 - The older '22 stubs' count and test counts are historical inventory claims, not verified current totals. Re-enumerate actual implementations before classifying missing work.
-
-### 14A  Approval workflow completion (legacy Plan D; AUDIT REQUIRED)
-
-- Scope: configurable action/amount/role approval matrix, JE thresholds, reconciliation sign-off, pending dashboard and single/sequential approval as actually required. Inspect existing approval models, services and states first.
-- Output: server-enforced transitions including pending/approved/rejected/canceled, reasons and actor/source audit linkage; no self-approval or bypass where policy forbids it. Approved content cannot change unnoticed afterward.
-- Dependencies: 12 identity/permissions, 14 posting lifecycle, owner/accountant policy. Acceptance: threshold boundaries, rejected/canceled/replayed requests, changed documents, concurrent approvers and unauthorized approval tests; accepted records post once. Reuse existing models and README.
 
 ### 15A  Platform administration and three-role navigation (legacy H-3; PARTIAL / AUDIT REQUIRED)
 

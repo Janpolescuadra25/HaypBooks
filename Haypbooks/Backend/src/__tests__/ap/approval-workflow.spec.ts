@@ -20,7 +20,11 @@ describe('ApService - Approval Workflow Rules', () => {
       company: { findUnique: jest.fn().mockResolvedValue({ workspaceId: 'w1' }) },
       auditLog: { create: jest.fn().mockResolvedValue({}) },
       approvalWorkflow: { findFirst: jest.fn().mockResolvedValue(null) },
-      approvalRequest: { create: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({}) },
+      approvalRequest: {
+        create: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({}),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       bill: { update: jest.fn().mockResolvedValue({ id: 'bill-1', status: 'PENDING' }) },
       $transaction: jest.fn(async (work: any) => (typeof work === 'function' ? await work(mockPrisma) : work)),
     }
@@ -100,6 +104,55 @@ describe('ApService - Approval Workflow Rules', () => {
   test('rejecting a non-pending bill throws', async () => {
     mockRepo.findBillById.mockResolvedValue({ id: 'bill-1', companyId: 'company-1', status: 'APPROVED', workspaceId: 'w1' })
     await expect(service.rejectBill('user-1', 'company-1', 'bill-1', 'nope')).rejects.toThrow(BadRequestException)
+  })
+
+  test('listPendingApprovals returns only pending company-scoped requests', async () => {
+    mockPrisma.approvalRequest.findMany.mockResolvedValue([
+      {
+        id: 'req-1',
+        entityId: 'bill-1',
+        status: 'PENDING',
+        requestedById: 'user-2',
+        workflow: { id: 'wf-1', name: 'Bill Approval', entityType: 'BILL' },
+        bill: { id: 'bill-1', companyId: 'company-1', workspaceId: 'w1', status: 'PENDING', billNumber: 'BILL-0001' },
+      },
+    ])
+
+    const result = await service.listPendingApprovals('user-1', 'company-1')
+
+    expect(result).toHaveLength(1)
+    expect(result[0].billId).toBe('bill-1')
+    expect(mockPrisma.approvalRequest.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: 'PENDING' }),
+    }))
+  })
+
+  test('approveBill rejects a self-approval when creator is the approver', async () => {
+    mockRepo.findBillById.mockResolvedValue({
+      id: 'bill-1',
+      companyId: 'company-1',
+      workspaceId: 'w1',
+      status: 'PENDING',
+      createdById: 'user-1',
+      billNumber: 'BILL-0001',
+    })
+
+    await expect(service.approveBill('user-1', 'company-1', 'bill-1')).rejects.toThrow(BadRequestException)
+  })
+
+  test('approveBill rejects approval when no pending request exists or replay is attempted', async () => {
+    mockRepo.findBillById.mockResolvedValue({
+      id: 'bill-1',
+      companyId: 'company-1',
+      workspaceId: 'w1',
+      status: 'PENDING',
+      createdById: 'user-2',
+      billNumber: 'BILL-0001',
+    })
+    mockPrisma.approvalWorkflow.findFirst.mockResolvedValue({ id: 'wf-1', entityType: 'BILL', workspaceId: 'w1', isActive: true })
+    mockPrisma.approvalRequest.findMany.mockResolvedValue([])
+
+    await expect(service.approveBill('user-3', 'company-1', 'bill-1')).rejects.toThrow(BadRequestException)
   })
 
   test('deleting a rejected bill is not permitted by current service implementation', async () => {
