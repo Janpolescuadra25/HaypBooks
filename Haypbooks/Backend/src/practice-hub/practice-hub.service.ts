@@ -253,6 +253,23 @@ export class PracticeHubService {
         throw new ConflictException('An active engagement already exists for this company and practice')
       }
 
+      const practice = await tx.practice.findUnique({
+        where: { id: invite.practiceId },
+        include: { subscription: { include: { plan: true } } },
+      })
+      if (!practice || practice.isActive === false) {
+        throw new NotFoundException('Practice not found or inactive')
+      }
+
+      if (practice.subscription?.plan?.maxClients) {
+        const activeCount = await tx.engagement.count({
+          where: { practiceId: invite.practiceId, status: 'ACTIVE' },
+        })
+        if (activeCount >= practice.subscription.plan.maxClients) {
+          throw new BadRequestException('Client limit reached for your subscription plan')
+        }
+      }
+
       const engagement = await tx.engagement.create({
         data: {
           practiceId: invite.practiceId,
@@ -264,8 +281,8 @@ export class PracticeHubService {
         },
       })
 
-      await tx.practiceInvite.update({
-        where: { id: invite.id },
+      const claimed = await tx.practiceInvite.updateMany({
+        where: { id: invite.id, status: 'PENDING' },
         data: {
           status: 'ACCEPTED',
           acceptedByUserId: userId,
@@ -274,8 +291,47 @@ export class PracticeHubService {
           acceptedAt: new Date(),
         },
       })
+      if (claimed.count !== 1) {
+        throw new ConflictException('This invitation has already been used or is no longer valid')
+      }
 
       return engagement
+    })
+  }
+
+  async revokeInvite(userId: string, inviteId: string) {
+    const practice = await this.findPracticeForUser(userId)
+    if (!practice) throw new NotFoundException('Practice not found for user')
+
+    const invite = await this.prisma.practiceInvite.findFirst({
+      where: { id: inviteId, practiceId: practice.id },
+    })
+    if (!invite) throw new NotFoundException('Invite not found')
+    if (invite.status !== 'PENDING') {
+      throw new BadRequestException('Only pending invitations can be revoked')
+    }
+
+    return this.prisma.practiceInvite.update({
+      where: { id: invite.id },
+      data: { status: 'REVOKED' },
+    })
+  }
+
+  async revokeEngagement(userId: string, engagementId: string) {
+    const practice = await this.findPracticeForUser(userId)
+    if (!practice) throw new NotFoundException('Practice not found for user')
+
+    const engagement = await this.prisma.engagement.findFirst({
+      where: { id: engagementId, practiceId: practice.id },
+    })
+    if (!engagement) throw new NotFoundException('Engagement not found')
+    if (engagement.status !== 'ACTIVE') {
+      throw new BadRequestException('Only active engagements can be revoked')
+    }
+
+    return this.prisma.engagement.update({
+      where: { id: engagement.id },
+      data: { status: 'ARCHIVED', endDate: new Date() },
     })
   }
 }

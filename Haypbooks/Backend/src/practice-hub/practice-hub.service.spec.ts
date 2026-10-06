@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PracticeHubService } from './practice-hub.service';
 import { PrismaService } from '../repositories/prisma/prisma.service';
 import { MailService } from '../common/mail.service';
 
-describe('PracticeHubService - Capacity Gating', () => {
+describe('PracticeHubService - Capacity Gating, Invite Races & Revocation', () => {
   let service: PracticeHubService;
   let prismaService: any;
   let mailService: any;
@@ -19,12 +19,24 @@ describe('PracticeHubService - Capacity Gating', () => {
       },
       practiceInvite: {
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
       },
       engagement: {
         findFirst: jest.fn(),
         count: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
       },
+      user: {
+        findUnique: jest.fn(),
+      },
+      company: {
+        findFirst: jest.fn(),
+      },
+      $transaction: jest.fn((cb: any) => cb(prismaService)),
     };
 
     mailService = {
@@ -61,7 +73,7 @@ describe('PracticeHubService - Capacity Gating', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('should throw BadRequestException if the active engagement count reaches the plan limit', async () => {
+  it('should throw BadRequestException if the active engagement count reaches the plan limit on createInvite', async () => {
     prismaService.practiceUser.findFirst.mockResolvedValue({ practiceId: 'prac-1' });
     prismaService.practice.findUnique.mockResolvedValue({
       id: 'prac-1',
@@ -107,5 +119,149 @@ describe('PracticeHubService - Capacity Gating', () => {
 
     expect(result).toBeDefined();
     expect(prismaService.practiceInvite.create).toHaveBeenCalled();
+  });
+
+  describe('acceptInvite - acceptance-time capacity & atomic race protection', () => {
+    const validInvite = {
+      id: 'inv-1',
+      code: 'code-123',
+      practiceId: 'prac-1',
+      email: 'client@example.com',
+      engagementName: '2026 Bookkeeping',
+      engagementType: 'BOOKKEEPING',
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      expiresAt: new Date(Date.now() + 86400000),
+      status: 'PENDING',
+    };
+
+    it('should enforce maxClients capacity at acceptance time and throw BadRequestException when full', async () => {
+      prismaService.practiceInvite.findUnique.mockResolvedValue(validInvite);
+      prismaService.user.findUnique.mockResolvedValue({ id: 'user-client', email: 'client@example.com' });
+      prismaService.company.findFirst.mockResolvedValue({ id: 'comp-1' });
+      prismaService.engagement.findFirst.mockResolvedValue(null);
+      prismaService.practice.findUnique.mockResolvedValue({
+        id: 'prac-1',
+        isActive: true,
+        subscription: { plan: { maxClients: 2 } },
+      });
+      prismaService.engagement.count.mockResolvedValue(2);
+
+      await expect(service.acceptInvite('user-client', 'code-123', 'comp-1')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prismaService.engagement.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException if concurrent acceptance race causes updateMany count to be 0', async () => {
+      prismaService.practiceInvite.findUnique.mockResolvedValue(validInvite);
+      prismaService.user.findUnique.mockResolvedValue({ id: 'user-client', email: 'client@example.com' });
+      prismaService.company.findFirst.mockResolvedValue({ id: 'comp-1' });
+      prismaService.engagement.findFirst.mockResolvedValue(null);
+      prismaService.practice.findUnique.mockResolvedValue({
+        id: 'prac-1',
+        isActive: true,
+        subscription: { plan: { maxClients: 5 } },
+      });
+      prismaService.engagement.count.mockResolvedValue(1);
+      prismaService.engagement.create.mockResolvedValue({ id: 'eng-1' });
+      prismaService.practiceInvite.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.acceptInvite('user-client', 'code-123', 'comp-1')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should accept invite and create active engagement when below capacity and race check succeeds', async () => {
+      prismaService.practiceInvite.findUnique.mockResolvedValue(validInvite);
+      prismaService.user.findUnique.mockResolvedValue({ id: 'user-client', email: 'client@example.com' });
+      prismaService.company.findFirst.mockResolvedValue({ id: 'comp-1' });
+      prismaService.engagement.findFirst.mockResolvedValue(null);
+      prismaService.practice.findUnique.mockResolvedValue({
+        id: 'prac-1',
+        isActive: true,
+        subscription: { plan: { maxClients: 5 } },
+      });
+      prismaService.engagement.count.mockResolvedValue(1);
+      prismaService.engagement.create.mockResolvedValue({ id: 'eng-1', status: 'ACTIVE' });
+      prismaService.practiceInvite.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.acceptInvite('user-client', 'code-123', 'comp-1');
+      expect(result).toEqual({ id: 'eng-1', status: 'ACTIVE' });
+      expect(prismaService.practiceInvite.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'inv-1', status: 'PENDING' },
+        }),
+      );
+    });
+  });
+
+  describe('revokeInvite & revokeEngagement', () => {
+    it('should revoke a PENDING invite for the practice', async () => {
+      prismaService.practiceUser.findFirst.mockResolvedValue({ practiceId: 'prac-1' });
+      prismaService.practice.findUnique.mockResolvedValue({ id: 'prac-1', isActive: true });
+      prismaService.practiceInvite.findFirst.mockResolvedValue({
+        id: 'inv-1',
+        practiceId: 'prac-1',
+        status: 'PENDING',
+      });
+      prismaService.practiceInvite.update.mockResolvedValue({
+        id: 'inv-1',
+        practiceId: 'prac-1',
+        status: 'REVOKED',
+      });
+
+      const res = await service.revokeInvite('user-1', 'inv-1');
+      expect(res.status).toBe('REVOKED');
+      expect(prismaService.practiceInvite.update).toHaveBeenCalledWith({
+        where: { id: 'inv-1' },
+        data: { status: 'REVOKED' },
+      });
+    });
+
+    it('should reject revoking a non-PENDING invite', async () => {
+      prismaService.practiceUser.findFirst.mockResolvedValue({ practiceId: 'prac-1' });
+      prismaService.practice.findUnique.mockResolvedValue({ id: 'prac-1', isActive: true });
+      prismaService.practiceInvite.findFirst.mockResolvedValue({
+        id: 'inv-1',
+        practiceId: 'prac-1',
+        status: 'ACCEPTED',
+      });
+
+      await expect(service.revokeInvite('user-1', 'inv-1')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should archive an ACTIVE engagement on revokeEngagement so active relationship checks fail closed and capacity is freed', async () => {
+      prismaService.practiceUser.findFirst.mockResolvedValue({ practiceId: 'prac-1' });
+      prismaService.practice.findUnique.mockResolvedValue({ id: 'prac-1', isActive: true });
+      prismaService.engagement.findFirst.mockResolvedValue({
+        id: 'eng-1',
+        practiceId: 'prac-1',
+        status: 'ACTIVE',
+      });
+      prismaService.engagement.update.mockResolvedValue({
+        id: 'eng-1',
+        practiceId: 'prac-1',
+        status: 'ARCHIVED',
+      });
+
+      const res = await service.revokeEngagement('user-1', 'eng-1');
+      expect(res.status).toBe('ARCHIVED');
+      expect(prismaService.engagement.update).toHaveBeenCalledWith({
+        where: { id: 'eng-1' },
+        data: expect.objectContaining({ status: 'ARCHIVED', endDate: expect.any(Date) }),
+      });
+    });
+
+    it('should reject revoking a non-ACTIVE engagement', async () => {
+      prismaService.practiceUser.findFirst.mockResolvedValue({ practiceId: 'prac-1' });
+      prismaService.practice.findUnique.mockResolvedValue({ id: 'prac-1', isActive: true });
+      prismaService.engagement.findFirst.mockResolvedValue({
+        id: 'eng-1',
+        practiceId: 'prac-1',
+        status: 'ARCHIVED',
+      });
+
+      await expect(service.revokeEngagement('user-1', 'eng-1')).rejects.toThrow(BadRequestException);
+    });
   });
 });

@@ -8,6 +8,7 @@ module.exports = {
     '<rootDir>/src/__tests__/**/*.spec.ts',
     '<rootDir>/src/__tests__/shared/gl-integration-period-lock.spec.ts',
     '<rootDir>/src/shared/**/*.spec.ts',
+    '<rootDir>/src/practice-hub/**/*.spec.ts',
   ],
   globals: {
     'ts-jest': {

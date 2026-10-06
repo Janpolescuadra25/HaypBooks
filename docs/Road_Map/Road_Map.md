@@ -144,6 +144,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
 - Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
 - Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
+- Step 3 status: invite acceptance now enforces `maxClients` capacity and atomic `PENDING` race protection inside `$transaction`, and practice invite/engagement revocation (`revokeInvite` / `revokeEngagement`, archiving engagements so active-relationship checks in `WorkspaceAccessGuard` fail closed and capacity slots release) is implemented and unit-tested in `practice-hub.service.spec.ts` (Phase 11 remains `PARTIAL` while owner/staff/client roles, tasks, reviews, switching, and progression remain open).
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 

@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Param, Req, UnauthorizedException, NotFoundException, UseGuards, Post, Body, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common'
+import { Controller, Get, Param, Req, UnauthorizedException, NotFoundException, UseGuards, Post, Body, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
@@ -91,5 +91,23 @@ export class PracticeHubController {
   async acceptInvite(@Req() req: any, @Param('code') code: string, @Body() body: AcceptPracticeInviteDto) {
     const userId = req.user?.userId
     return this.service.acceptInvite(userId, code, body.companyId)
+  }
+
+  /** POST /api/practice-hub/invites/:id/revoke */
+  @Post('invites/:id/revoke')
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(WorkspaceTypeGuard)
+  async revokeInvite(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user?.userId
+    return this.service.revokeInvite(userId, id)
+  }
+
+  /** POST /api/practice-hub/engagements/:id/revoke */
+  @Post('engagements/:id/revoke')
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(WorkspaceTypeGuard)
+  async revokeEngagement(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user?.userId
+    return this.service.revokeEngagement(userId, id)
   }
 }
