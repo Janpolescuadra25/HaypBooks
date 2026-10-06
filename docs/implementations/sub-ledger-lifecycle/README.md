@@ -4,7 +4,7 @@
 - **STATUS: DONE**
 - **STATUS: DONE (verified via HYDRA audit)**
 - **Completion Date:** 2026-10-04
-- **Scope Clarification:** Only audit item **E12** (`Haypbooks/Backend/src/ap/ap.repository.ts; src/shared/sub-ledger.service.ts`) is archived as complete. Note that `Phase 14` (`Accounting lifecycle controls`) is already listed in the `Completed & Verified Implementation Phases` table (line 111), while Section **`14A` (`Approval workflow completion — legacy Plan D; AUDIT REQUIRED`)** remains in active development in `docs/Road_Map/Road_Map.md`.
+This implementation note documents the verified closure of Section **`E12` (`Sub-ledger lifecycle (AR/AP depth) — FULL PHASE AUDIT`)**; Section **`14A` (`Approval workflow completion — legacy Plan D`)** is also **DONE & VERIFIED** in `docs/Road_Map/Road_Map.md` and `docs/implementations/approval-workflow-completion/README.md`.
 
 ## Files & Methods Involved
 1. **`Haypbooks/Backend/src/ap/ap.repository.ts`**:
