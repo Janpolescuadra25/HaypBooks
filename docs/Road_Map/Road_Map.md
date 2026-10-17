@@ -240,3 +240,5 @@ Conflicts resolved:
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
 
 
+
+| Phase A6 (Partial: BANK-01) | Banking Reconciliation: Auto-Match Invariants | Enforced 4 financial invariants in autoMatchReconciliation: Company isolation, GL account match, POSTED status filter, and duplicate line consumption protection. Verified with 6 unit tests passing. | docs/implementations/banking-reconciliation/README.md |

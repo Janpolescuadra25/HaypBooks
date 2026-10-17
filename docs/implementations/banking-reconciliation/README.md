@@ -37,3 +37,27 @@ Phase 6 Step 1 resolves the release-blocking Defect E6 in the banking reconcilia
 - exact debit/credit match on absolute amount
 
 To prevent duplicate binding in the same reconciliation pass, the service tracks previously claimed `journalEntryLineId` values in a `Set<string>` and excludes them via `id: { notIn: Array.from(usedJournalLineIds) }` while a batch of transactions is being processed.
+
+---
+
+## BANK-01: Auto-Match Financial Invariants Implementation
+
+**Status:** DONE & VERIFIED (2026-10-17)  
+**Location:** `Haypbooks/Backend/src/banking/banking.service.ts` (`autoMatchReconciliation`)  
+**Tests:** `Haypbooks/Backend/src/banking/banking.service.spec.ts`
+
+### Overview
+Hardened the automated bank statement line matching engine (`autoMatchReconciliation`) to enforce strict enterprise accounting rules, cross-tenant isolation, and zero false-positive matches.
+
+### Core Invariants Enforced
+1. **Tenant & Workspace Isolation:**
+   - Enforces workspace isolation by calling `assertAccess(userId, companyId)`.
+   - Validates that the requested `bankAccountId` belongs strictly to the authenticated tenant and workspace.
+2. **GL Account Exact Matching:**
+   - Extracts the bank account's linked `glAccountId`.
+   - Constrains candidate journal entry lines strictly to those matching `accountId == glAccountId`.
+3. **Posting Status Filter (`POSTED` Only):**
+   - Filters journal entries to only match lines where `journalEntry.status == 'POSTED'`. Draft or void entries are strictly excluded from reconciliation.
+4. **Duplicate Match Protection:**
+   - Tracks matched journal entry line IDs in an in-memory set during the auto-match loop.
+   - Prevents the same journal entry line from being consumed by multiple bank statement lines within the same batch.
