@@ -616,6 +616,14 @@ export class BankingService {
         if (!recon) throw new NotFoundException('Reconciliation not found')
         if (recon.status === 'COMPLETED') throw new BadRequestException('Reconciliation is already completed')
 
+        const bankAccount = await this.prisma.bankAccount.findUnique({
+            where: { id: recon.bankAccountId },
+            select: { id: true, workspaceId: true, glAccountId: true },
+        })
+        if (!bankAccount) throw new NotFoundException('Bank account not found')
+        if (bankAccount.workspaceId !== wid) throw new ForbiddenException('Access denied to this bank account')
+        if (!bankAccount.glAccountId) throw new BadRequestException('Bank account does not have an associated GL account configured for reconciliation')
+
         // Fetch unmatched bank transactions for this account
         const transactions = await this.prisma.bankTransaction.findMany({
             where: { workspaceId: wid, bankAccountId: recon.bankAccountId },
@@ -638,9 +646,13 @@ export class BankingService {
             const candidateLine = await this.prisma.journalEntryLine.findFirst({
                 where: {
                     workspaceId: wid,
+                    companyId,
+                    accountId: bankAccount.glAccountId,
                     ...(usedJournalLineIds.size > 0 ? { id: { notIn: Array.from(usedJournalLineIds) } } : {}),
                     journal: {
                         workspaceId: wid,
+                        companyId,
+                        postingStatus: 'POSTED',
                         date: { gte: minDate, lte: maxDate },
                     },
                     OR: [
