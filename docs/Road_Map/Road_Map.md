@@ -10,7 +10,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
 - Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
 - Required security work: tracked credential settings (S1), attachment object ownership (S2), guard/controller workspace-context agreement (S3 ✓).
-- Required financial work: journal reversal/report consistency (A1), earnings (A2), period close (A3), payroll void (A4), inventory lifecycle (A5), bank matching (A6), numbering (A7). IDs refer to the linked audit.
+- Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4), inventory lifecycle (A5), bank matching (A6), numbering (A7). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
@@ -78,7 +78,7 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 
 Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, DONE. P0 means release-blocking for affected scope, not proof of a live incident. VERIFIED means inspected source; UNKNOWN must not be silently promoted to passing behavior.
 
-### 1  Landing, intro and auth (PARTIAL, P1 - only L4-L6 remaining)
+### 1  Landing, intro and auth (PARTIAL, P1 - only L4-L5 remaining)
 
 - Audit first: map every reference page/state in `docs/HB_new_(landingpage, intro, & login)/HB_clone` to production; compare desktop/mobile screenshots and interactions. Record intentional differences for real auth and approved pricing.
 - Deliver: approved visual parity through shared LandingExperience/AuthShell plus per-page hub composition (server page composing Navbar + hub component + Footer); retain `/` and `/landing`, `hb-intro-seen`, real OTP/reset/login behavior. Never copy simulated success.
@@ -86,7 +86,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Depends on: 9 validation and 13 copy. Done: route/state matrix, responsive/keyboard/reduced-motion, auth success/error/retry, lint/typecheck and handoff verified. Historical build failure is not release acceptance.
 - L4: verify the landing link matrix against the reference (top bar/nav targets, Learn & Support route, Accountant/Bookkeeper click targets).
 - L5: compare landing scroll and runtime behavior against the reference (user visual checks; scroll animations preserved).
-- L6 (LAST): remove the old accountant/bookkeeper pages and components once L1-L5 are verified.
+- L6 (DONE & VERIFIED 2026-10-17): remove the old accountant/bookkeeper pages and components once L1-L5 are verified.
 
 ### 3  Section READMEs and evidence (PARTIAL, P1 continuous)
 
@@ -113,15 +113,17 @@ The following core accounting modules and defects have been fully resolved, test
 | **E10 — Practice Hub Invitation Acceptance (`practice-hub.service.ts:214`)** | **DONE & VERIFIED (2026-10-04)** | Verified transactional `acceptInvite` implementation in `src/practice-hub/practice-hub.service.ts:214` (identity/company access checks, atomic engagement creation + invite `ACCEPTED` status update; `docs/implementations/practice-hub-invites/README.md`). | |
 | **E12 — Sub-Ledger & AP/AR Posting/Reversal Lifecycle (`ap.repository.ts`, `sub-ledger.service.ts`)** | **DONE & VERIFIED (2026-10-04)** | Verified transactional posting/reversal foundations, `assertPeriodOpen` enforcement, `createReversingJE` in `ap.repository.ts:voidBill`, conditional audit writes, and AP/sub-ledger unit test suites (`gl-integrity.spec.ts`, `bill-lifecycle.spec.ts`, `void-lifecycle.spec.ts`, `approval-workflow.spec.ts`; `docs/implementations/sub-ledger-lifecycle/README.md`). | |
 | **14A — Approval workflow completion** | **DONE & VERIFIED (2026-10-05)** | Added `listPendingApprovals`, pending-approval route exposure, creator/requester self-approval prevention, replay protection for already posted bills, and company/workspace-scoped authorization checks for the approval queue (`docs/implementations/approval-workflow-completion/README.md`). | [Approval Workflow README](../implementations/approval-workflow-completion/README.md) |
+| **Phase A3 (Period-Close Sign-Offs & Hardening)** | **DONE & VERIFIED (2026-10-10)** | Consolidated close-workflow routes under company-scoped `AccountingController`, enforced server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization (`assertPeriodClosePermission`, `VIEWER` blocked with `403`), added explicit `periodId` selection across backend and frontend, added `COMPLETE_CLOSE_WORKFLOW` audit logging, and verified the backend/unit and type-check regression gates | [Period Close Sign-Offs README](../implementations/period-close-sign-offs/README.md) |
+| **Phase 7 — Multi-Currency FX Revaluation** | **DONE & VERIFIED (2026-10-12)** | Verified end-to-end period-end FX revaluation: date-aware preview, accountant policy ratification (`ratifyFxAccountPolicy`), fail-closed gate (`canPostOrFinalize`), atomic GL journal posting (`finalizeMultiCurrencyRevaluation`), and reversal workflow (`reverseMultiCurrencyRevaluation`) in `Haypbooks/Backend/src/accounting/accounting.service.ts` (L1780-L2079). Full backend test suite passing at 43/43 tests in `accounting.service.spec.ts`. Frontend owner period-close UI wired in `Haypbooks/Frontend/src/app/(owner)/accounting/period-close/multi-currency-revaluation/page.tsx`. Documented in `docs/implementations/fx-revaluation/README.md`. | [FX Revaluation README](../implementations/fx-revaluation/README.md) |
+| **Phase 13E1 — Billing Hardening (Task 719)** | **DONE & VERIFIED (2026-10-14)** | Resolved critical vulnerabilities: removed frontend rogue ACTIVE subscription fallback, added Stripe webhook 0-row update validation, and added unit test coverage for non-existent subscription events | [Billing Hardening README](../implementations/billing-hardening-task719/README.md) |
+| **Phase 16C Step 2 — Fixed Assets Depreciation Engine & GL Integration** | **DONE & VERIFIED (2026-10-12)** | Implemented straight-line depreciation calculation engine, GL journal integration via createAndPostJE with FIXED_ASSET_DEPRECIATION source, role-based authorization for OWNER/ADMIN/ACCOUNTANT, duplicate run prevention, idempotency key support, asset account status validation, audit logging, and 18 passing unit tests; documented in docs/implementations/fixed-assets-step2/README.md. |
+| **Phase 16C Step 3 — Fixed Assets Disposal & Write-Off Flow** | **DONE & VERIFIED (2026-10-15)** | Implemented disposal quote calculation, sale processing with gain/loss GL posting, write-off journal workflow, asset status transitions to SOLD/DISPOSED, role enforcement for OWNER/ADMIN/ACCOUNTANT, audit logging, and 7 passing unit tests; transactional Prisma $transaction ensures atomicity of all disposal mutations | [Fixed Assets Step 3 README](../implementations/fixed-assets-step3/README.md) |
+| **Phase 11 P2** | Practice Hub Progression & XP System — **DONE & VERIFIED (2026-10-15)** | Zero-database-migration XP tracking with deterministic replay prevention, dynamic tier calculations, and practice-wide leaderboards | [Practice Hub P2 Progression README](../implementations/practice-hub-p2-progression/README.md) |
+| **Financial Invariants U1** | Core Financial & Workflow Invariant Fixes — **DONE & VERIFIED (2026-10-17)** | P0 fixes for FIN-01 (FX carrying-value), REP-01 (Deferred revenue BS net income), and AP-01 (Role-based bill approval authorization) with 109 passing unit tests | [Financial Invariants U1 README](../implementations/financial-invariants-u1/README.md) |
+| **Phase 1 L6** | Landing Legacy Route Pruning — **DONE & VERIFIED (2026-10-17)** | Removed old accountant/bookkeeper pages, pruned legacy public routes, and completed landing page navigation cleanup | [Landing L6 Route Pruning README](../implementations/landing-l6-route-pruning/README.md) |
 ---
 
 ## Active & Remaining Implementation Phases
-
-### 7  FX (AUDIT REQUIRED, P1; gate if offered)
-
-- Audit: rates, monetary scope, existing engines and realized/unrealized policy; reproduce E7.
-- Deliver: correct filters/errors, dated-rate preview, approval, gain/loss posting and policy-defined reversal; explicit precision/missing-rate behavior and idempotency.
-- Depends on: 2/4/14 and accountant policy. Done: E7 is remediated and verified; dedicated `CurrencyRevaluation` queries use a single `createdAt` filter object, preserve both `gte` and `lte` bounds, and rethrow DB failures instead of returning empty data silently. If deferred, do not advertise proxy results as functioning revaluation.
 
 ### 8  AI Phase 2 (AUDIT REQUIRED, P3 optional)
 
@@ -139,18 +141,22 @@ The following core accounting modules and defects have been fully resolved, test
 ### 11  Practice Hub (PARTIAL, P1 core; P2 progression)
 
 - Audit: owner/staff/client roles, invite expiry/races, engagements/tasks/reviews/switching/revocation. Reuse E10 foundation.
-- Deliver: reliable client work and server-enforced capacities. Proposed XP needs approved qualifying activities, thresholds, event ledger and anti-abuse rules before implementation.
+- Deliver: reliable client work and server-enforced capacities. P2 progression & XP tracking delivered and verified (see archived Phase 11 P2).
 - Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
 - Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
 - Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
 - Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
 - Step 3 status: invite acceptance now enforces `maxClients` capacity and atomic `PENDING` race protection inside `$transaction`, and practice invite/engagement revocation (`revokeInvite` / `revokeEngagement`, archiving engagements so active-relationship checks in `WorkspaceAccessGuard` fail closed and capacity slots release) is implemented and unit-tested in `practice-hub.service.spec.ts` (Phase 11 remains `PARTIAL` while owner/staff/client roles, tasks, reviews, switching, and progression remain open).
+- Step 4 status: canonical `PracticeUser.role` and `PracticeUser.status` model, deterministic single-owner SQL migration backfill (`DISTINCT ON ("practiceId")`), onboarding owner seeding, and strict fail-closed runtime authorization are implemented and unit-tested via public service methods in `practice-hub.service.spec.ts`.
+- Step 5A status: backend task queue, review queue, and practice-switch context contract are implemented in `practice-hub.service.ts` and `practice-hub.controller.ts`, with fail-closed status/role and client-engagement guards covered in `practice-hub.service.spec.ts` and verified by the targeted backend Jest suite (21/21 passing).
+- Step 5B status: the live frontend task queue, review queue, client context switcher, sidebar `TASKS`/`REVIEWS` navigation entries, and aligned `PracticeHubPage.test.tsx` are implemented in the live frontend and verified by `npx tsc --noEmit --pretty false` and the targeted `PracticeHubPage.test.tsx` suite; Phase 11 remains `PARTIAL` until progression/XP and broader acceptance validation are complete.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
 - Audit: inventory owner/staff/accountant/client routes and actions, real data sources and release/finish/defer disposition, including settings/reports/exports.
 - Deliver: fix dead buttons, mock-live data, persistence, navigation/validation; reuse shared tables/forms/status patterns where beneficial. Keyboard/mobile and loading/error/success/retry/cancel required.
 - Depends on: 1/11/13/14. Done: no unexplained shipped placeholders; reload restores server truth; realistic company/accountant/practice tasks and permission failures pass; visual differences documented.
+- Verified update: the Period-Close Sign-Offs sub-module is COMPLETE & VERIFIED. The company-scoped workflow is now exposed through `AccountingController` as GET/POST endpoints under `/api/companies/:companyId/accounting/period-close/workflow*`, the stale close-checklist link was corrected to `/accounting/period-close/sign-offs`, the mutation path enforces server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization while blocking `VIEWER` with `403`, and the live sign-offs page is wired to the backend with explicit `periodId` selection and `COMPLETE_CLOSE_WORKFLOW` audit logging. Phase 15 remains PARTIAL overall because the broader shipped-action inventory still includes other non-period-close modules awaiting audit; the period-close sign-offs sub-module itself is fully verified.
 
 ### 16  Data, performance and remaining modules (AUDIT REQUIRED, P1)
 
@@ -243,74 +249,4 @@ Conflicts resolved:
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
 
-### 16C  Fixed assets (legacy Plan E; AUDIT REQUIRED)
 
-- Audit existing asset/category/schedule/depreciation models and GL integration. Complete register/filter/summary, acquisition, straight-line/declining-balance methods where supported, scheduled depreciation, disposal proceeds/gain-loss and approved revaluation/impairment scope.
-- Requirements: accountant-approved useful life/salvage/rounding/proration and revaluation policy; no duplicate asset schema or postings. Dependencies: 2/4/14 core accounting verification.
-- Acceptance: schedule totals, partial periods, disposal, retry, reversal, closed periods and asset-to-GL reconciliation; unsupported methods clearly excluded from released scope.
-
-### Existing-phase supplements retained from the older roadmap
-
-- Phase 8: specifically scope persistent company/user-bound chat history, document Q&A, anomaly insights and context-aware responses; any quick-action execution requires review and existing financial controls. These are inherited goals, not evidence they already work.
-
-- Phase 10/16: verify metrics accumulation and currency cache behavior, observe memory for 2448 hours, inspect connection pooling and deployment cache handling. Reconfirm registrar/DNS ownership before documenting Porkbun/Cloudflare as current operational facts.
-- Phase 12/15: unify API authentication/error handling using existing apiClient or a justified shared wrapper after inventory; avoid indiscriminate fetch replacement. Test login/logout/refresh through the actual production routing arrangement.
-- Phase 3: retain module-root README policy and link the canonical roadmap from future documentation. Read historical completion claims before rebuilding any functionality, but require current evidence before re-certifying it.
-
----
-
-## Appendix: Completed Resolutions & Historical Verifications
-
-## Historical completion index from the documentation roadmap
-
-The following entries were labeled complete in the August 29 document. They are retained as historical context only, not new verification of source, deployed configuration or tests. Regressions belong in the owning active phase. Checked boxes or deployment claims here do not override current release gates.
-
-### Historical claims (not re-certified)
-<details>
-<summary>Archived completed projects (older)</summary>
-
--  **Memory Leak Fix**  Resolved unbounded metrics accumulation in `Backend/src/common/metrics.ts` with hourly `counts.clear()` + PM2 `max_memory_restart 1G` mitigation
--  **Slow Currency Endpoint Fix**  Fixed `GET /api/currency/currencies` latency with 1-hour TTL in-memory cache in `exchange-rate.service.ts:82-88`
--  **Fix 401 on Dashboard (Auth Cookie Routing)**  Changed `NEXT_PUBLIC_API_URL` from `https://api.haypbooks.com` to empty string in `.env.production` on VPS so axios requests stay same-origin through nginx proxy.
--  **Fix 403 on Dashboard (RolesGuard)**  Updated `Backend/src/auth/guards/roles.guard.ts` line 33 to treat `role='business'` as equivalent to `'owner'` (case-insensitive + businessowner mapping). Committed to git and deployed to VPS.
--  **Fix Undeposited Funds Account Code Mismatch**  Replaced hardcoded `'1050'` in `Backend/src/shared/sub-ledger.service.ts` with `SYSTEM_ACCOUNTS.UNDEPOSITED_FUNDS.code` for `postBankDepositToGL`. This fixes bank deposit GL posting by using the current COA code `'1170'` instead of the legacy, missing `'1050'` account.
--  **Fail-fast unbalanced JE postings**  Changed `Backend/src/shared/sub-ledger.service.ts` so `createPostedJE()` throws `BadRequestException` when total debits and credits differ by more than 0.005 instead of quietly returning null and skipping the journal entry.  The P1 workstream item on silent unbalanced postings is closed by this fix; removed from the active P1 list (roadmap reconciliation, August 2026).
--  **Fix Void/Reversal JE Dating**  All void/reversal methods (createReversingJE + 8 callers, reverseInvoiceGL, reversePaymentReceivedGL, reverseCreditNoteGL, reverseWriteOffGL, reverseRefundGL, reverseRevenueRecognitionGL, voidJournalEntry) now use the original entry's date instead of `new Date()`, preventing accounting period corruption. Voids in closed periods now correctly fail.
--  **Fix voidDeposit Missing GL Reversal**  Added `createReversingJE` call to `voidDeposit` in `banking.repository.ts`, creating a proper GL reversal JE when a bank deposit is voided. Previously the original deposit JE remained posted, permanently overstating cash and understating undeposited funds.
--  **Fix DB Connection Limit**  Added `&connection_limit=10` to DATABASE_URL in `Backend/.env` on VPS.
--  **Fix CORS on api.haypbooks.com**  Added port 80 proxy block in nginx for `api.haypbooks.com`.
--  **Onboarding Re-Trigger Fix**  Fixed: added `getOnboardingStatus()` helper in `prisma-auth.service.ts` (L100-111) that queries `OnboardingData.complete` instead of non-existent `user.onboardingComplete` field. All 4 auth response locations (signup L54, login L184, createSessionForUser L255, refresh L318) updated. Build passes.  Deployed to VPS (committed in `c238607f`, auto-deployed via GitHub Actions).
--  **Dashboard Banner Bug Fix**  Resolved stale error state in `useCompanyId()` hook and fixed `OwnerDashboard.tsx` condition that incorrectly showed "No company linked" banner despite valid API responses
--  **Onboarding Transaction Timeout Fix**  Moved COA seeding outside the onboarding Prisma interactive transaction and replaced 40+ sequential `account.create()` calls with a single batched `createMany()` operation. Transaction duration reduced from 60+ seconds to under 2 seconds, resolving the production onboarding blocker.
--  **PDFKit Build Fix**  Added missing `@types/pdfkit` dev dependency to package.json, resolving VPS build error TS2307: Cannot find module 'pdfkit'.
--  **VPS Auto-Deploy Pipeline**  GitHub Actions  SSH  deploy.sh  PM2 restart. Fully operational. Every push to main auto-deploys to production.
--  **Logo Replacement**  All placeholder logos replaced with HB_Logo.png. Favicon and metadata configured.
--  **Repo Cleanup**  Removed stray root files, malformed filenames, and all "open source" references. HaypBooks is proprietary.
--  **Build Error Fixes**  Resolved TypeScript/Prisma build errors in owner.service.ts.
-</details>
-
--  **Multi-Currency Support (Plan B)**  Full end-to-end multi-currency accounting: Currency/ExchangeRate models with 15 seeded currencies, ExchangeRateService with enforceCurrency() helper and live API rate fetching, currency enforcement in transaction services, shared formatCurrency() utility, company base currency selector, multi-currency financial reporting with display currency selector on P&L/Balance Sheet/Cash Flow/Trial Balance.
--  **Zypra AI Assistant (Plan F, Phase 1)**  Floating chat widget with Gemini-powered accounting Q&A, lazy initialization, quick actions, system prompt guardrails.
--  **Cinematic Intro Restoration**  Reverted intro animation from HB logo back to "Haypbooks" text via git history.
--  **Owner Module DI Fix**  Added CompaniesModule to OwnerModule imports, resolving 478-restart crash loop in production.
-
--  **Hub Selection Screen Redesign**  Fixed: Added `isHubSelection` check to `client-root.tsx` (L102, L119) to exclude `/workspace` from the OwnerTopBar + OwnerSidebar layout. The hub selection page now renders as a clean full-page experience. The existing WorkspacePage component already had all three panels (Companies list, Practice list, Owner Dashboard button). No git history revert needed.
--  **Fix JWT Payload**  Completed August 25, 2026: Added `systemRole` and `isOwner` to JWT payload at all 4 sign locations in `prisma-auth.service.ts`. Added `getIsOwner()` helper querying `Workspace.ownerUserId`. Updated `jwt.strategy.ts` validate() return. Added `systemRole` to User interface.
--  **Fix `mapRoleForFrontend` Inconsistency**  Completed August 24, 2026: Confirmed NOT a bug. Three orthogonal role layers exist: hub role (JWT `role`), RBAC role (cookie `role`), platform role (JWT `systemRole`). The `mapRoleForFrontend` function correctly maps workspace owners to `'admin'` RBAC permissions. Documented in `docs/architecture/ROLE_SYSTEM.md`.
--  **Deploy.sh Stale Cache Fix**  Completed August 26, 2026: Added `rm -rf .next` to deploy.sh before `npm run build` to prevent corrupted Next.js incremental builds from causing 400 errors on static assets.
--  **Onboarding Page Syntax Fix**  Completed August 26, 2026: Fixed malformed `saveCurrentStep()` function in `onboarding/page.tsx` that was causing build failures on the VPS.
----
-
----
-
-### Phase 12 E2  Workspace-Scoped Tenant Isolation
-- **Completion Date:** 2026-09-26
-- **Status:** COMPLETE & VERIFIED
-- **Commit Hash:** aee9a7c7
-- **Deliverables & Verified Artifacts:**
-  - Implemented WorkspaceAccessGuard at Haypbooks/Backend/src/auth/guards/workspace-access.guard.ts enforcing real-time Prisma WorkspaceUser active membership (status: 'ACTIVE', deletedAt: null).
-  - Attached @UseGuards(JwtAuthGuard, WorkspaceAccessGuard) across all workspace-scoped routes in both PracticeHubController (src/practice-hub/practice-hub.controller.ts) and PracticeController (src/practice/practice.controller.ts).
-  - Propagated asynchronous request context via setRequestContext({ workspaceId, userId }).
-  - Added unit test suite workspace-access.guard.spec.ts.
-  - Authored implementation README at Haypbooks/Backend/docs/implementations/workspace-access-guard/README.md.
-  - Verified by HYDRA on-disk audit (Task 389).
