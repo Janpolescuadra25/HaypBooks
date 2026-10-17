@@ -78,16 +78,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 
 Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, DONE. P0 means release-blocking for affected scope, not proof of a live incident. VERIFIED means inspected source; UNKNOWN must not be silently promoted to passing behavior.
 
-### 1  Landing, intro and auth (PARTIAL, P1 - only L4-L5 remaining)
-
-- Audit first: map every reference page/state in `docs/HB_new_(landingpage, intro, & login)/HB_clone` to production; compare desktop/mobile screenshots and interactions. Record intentional differences for real auth and approved pricing.
-- Deliver: approved visual parity through shared LandingExperience/AuthShell plus per-page hub composition (server page composing Navbar + hub component + Footer); retain `/` and `/landing`, `hb-intro-seen`, real OTP/reset/login behavior. Never copy simulated success.
-- Requirements: preserve zero-new-dependency, read-only/untracked reference, Next14/Tailwind3/motion-react and no-Prisma constraints; explicit staging/local-only commit when authorized. Reverify historical baseline 83cec1ed/analytics-fix claims.
-- Depends on: 9 validation and 13 copy. Done: route/state matrix, responsive/keyboard/reduced-motion, auth success/error/retry, lint/typecheck and handoff verified. Historical build failure is not release acceptance.
-- L4: verify the landing link matrix against the reference (top bar/nav targets, Learn & Support route, Accountant/Bookkeeper click targets).
-- L5: compare landing scroll and runtime behavior against the reference (user visual checks; scroll animations preserved).
-- L6 (DONE & VERIFIED 2026-10-17): remove the old accountant/bookkeeper pages and components once L1-L5 are verified.
-
 ### 3  Section READMEs and evidence (PARTIAL, P1 continuous)
 
 - Audit: distinguish source presence, observed execution and historical claims. Auth artifact has corrupted excerpts; any rebuild remains separately scoped. Never invent timestamps/transcripts.
@@ -120,7 +110,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 16C Step 3 — Fixed Assets Disposal & Write-Off Flow** | **DONE & VERIFIED (2026-10-15)** | Implemented disposal quote calculation, sale processing with gain/loss GL posting, write-off journal workflow, asset status transitions to SOLD/DISPOSED, role enforcement for OWNER/ADMIN/ACCOUNTANT, audit logging, and 7 passing unit tests; transactional Prisma $transaction ensures atomicity of all disposal mutations | [Fixed Assets Step 3 README](../implementations/fixed-assets-step3/README.md) |
 | **Phase 11 P2** | Practice Hub Progression & XP System — **DONE & VERIFIED (2026-10-15)** | Zero-database-migration XP tracking with deterministic replay prevention, dynamic tier calculations, and practice-wide leaderboards | [Practice Hub P2 Progression README](../implementations/practice-hub-p2-progression/README.md) |
 | **Financial Invariants U1** | Core Financial & Workflow Invariant Fixes — **DONE & VERIFIED (2026-10-17)** | P0 fixes for FIN-01 (FX carrying-value), REP-01 (Deferred revenue BS net income), and AP-01 (Role-based bill approval authorization) with 109 passing unit tests | [Financial Invariants U1 README](../implementations/financial-invariants-u1/README.md) |
-| **Phase 1 L6** | Landing Legacy Route Pruning — **DONE & VERIFIED (2026-10-17)** | Removed old accountant/bookkeeper pages, pruned legacy public routes, and completed landing page navigation cleanup | [Landing L6 Route Pruning README](../implementations/landing-l6-route-pruning/README.md) |
+| **Phase 1** | Landing, Intro & Public Experience (L1–L6) — **DONE & VERIFIED (2026-10-17)** | Full landing page overhaul, intro animation sequences, responsive layout, dark/light theme, verified public route pruning (L6), and footer authenticated workspace link remediation (L4) | [Landing L4 README](../implementations/landing-l4-footer-links/README.md) · [Landing L6 README](../implementations/landing-l6-route-pruning/README.md) |
 ---
 
 ## Active & Remaining Implementation Phases
