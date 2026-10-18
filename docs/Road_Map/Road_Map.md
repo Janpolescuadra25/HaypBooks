@@ -5,7 +5,7 @@
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD b00f0710 plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
+- Working tree at HEAD 406d157b60a224d0e56dfe28a4c6cf3a4b9c0b3f plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
 - Verified today: frontend typecheck PASS; backend typecheck PASS; frontend lint exit 0 with 166 warning lines; five selected backend suites PASS (41 tests). Frontend checkout suites BLOCKED before execution by missing tmpl/lib/tmpl. Full builds, DB integration and browser parity remain unverified in this checkpoint.
 - Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
 - Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
@@ -146,7 +146,7 @@ The following core accounting modules and defects have been fully resolved, test
 - Audit: inventory owner/staff/accountant/client routes and actions, real data sources and release/finish/defer disposition, including settings/reports/exports.
 - Deliver: fix dead buttons, mock-live data, persistence, navigation/validation; reuse shared tables/forms/status patterns where beneficial. Keyboard/mobile and loading/error/success/retry/cancel required.
 - Depends on: 1/11/13/14. Done: no unexplained shipped placeholders; reload restores server truth; realistic company/accountant/practice tasks and permission failures pass; visual differences documented.
-- Verified update: the Period-Close Sign-Offs sub-module is COMPLETE & VERIFIED. The company-scoped workflow is now exposed through `AccountingController` as GET/POST endpoints under `/api/companies/:companyId/accounting/period-close/workflow*`, the stale close-checklist link was corrected to `/accounting/period-close/sign-offs`, the mutation path enforces server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization while blocking `VIEWER` with `403`, and the live sign-offs page is wired to the backend with explicit `periodId` selection and `COMPLETE_CLOSE_WORKFLOW` audit logging. Phase 15 remains PARTIAL overall because the broader shipped-action inventory still includes other non-period-close modules awaiting audit; the period-close sign-offs sub-module itself is fully verified.
+- Verified update: the Period-Close Sign-Offs sub-module is COMPLETE & VERIFIED. The company-scoped workflow is now exposed through `AccountingController` as GET/POST endpoints under `/api/companies/:companyId/accounting/period-close/workflow*`, the stale close-checklist link was corrected to `/accounting/period-close/sign-offs`, the mutation path enforces server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization while blocking `VIEWER` with `403`, and the live sign-offs page is wired to the backend with explicit `periodId` selection and `COMPLETE_CLOSE_WORKFLOW` audit logging. Phase 15 remains PARTIAL overall because the broader shipped-action inventory still includes other non-period-close modules awaiting audit; the period-close sign-offs sub-module itself is fully verified. Note: Period-close sign-offs verified complete (docs/implementations/period-close-sign-offs/README.md).
 
 ### 16  Data, performance and remaining modules (AUDIT REQUIRED, P1)
 
@@ -183,7 +183,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 
 ## Appendix: Completed Tasks
 
-- [x] **Phase 16C: Fixed Assets Management** — Asset creation, depreciation schedules (straight-line, declining balance), and asset disposal with journal gain/loss realization.
+- [x] **Phase 16C: Fixed Assets Management** (Completed & Verified: 2026-10-18) — Asset creation, depreciation schedules (straight-line, declining balance), and asset disposal with journal gain/loss realization.
 
 ## Definition of finished
 
@@ -243,4 +243,4 @@ Conflicts resolved:
 
 
 
-| **Phase A6 (Partial: BANK-01, BANK-02)** | Banking Reconciliation: Auto-Match Invariants & Statement Ingestion Hardening — **DONE & VERIFIED (2026-10-18)** | Auto-match invariants, duplicate line protection, zero-amount filtering, invalid date validation, and workspace isolation; 9/9 unit tests passing | [Banking Reconciliation README](../implementations/banking-reconciliation/README.md) |
+| **Phase A6 (Partial: BANK-01, BANK-02)** | Banking Reconciliation: Auto-Match Invariants & Statement Ingestion Hardening — **DONE & VERIFIED (2026-10-18)** | Partial: BANK-01 (reconciliation invariants) and BANK-02 (statement ingestion hardening) complete. Rule-based matching functional via `applySmartRules()` (exact, prefix, contains, amount-range). Advanced matching algorithms remaining. | [Banking Reconciliation README](../implementations/banking-reconciliation/README.md) |
