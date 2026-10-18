@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
 import { BankingRepository } from './banking.repository'
 import { BankingService } from './banking.service'
 
@@ -137,6 +137,71 @@ describe('Banking E6 auto-match validation', () => {
         }),
       }),
     }))
+  })
+
+  it('throws NotFoundException when the bank account is missing in the workspace during import', async () => {
+    const mockRepo = {
+      findBankAccountById: jest.fn().mockResolvedValue(null),
+      importTransactions: jest.fn(),
+    }
+    const service = new BankingService(mockRepo as any, prisma, {} as any, {} as any)
+    jest.spyOn(service as any, 'getWorkspaceId').mockResolvedValue('ws-123')
+    jest.spyOn(service as any, 'assertAccess').mockResolvedValue(undefined)
+
+    await expect(
+      service.importTransactions('user-1', 'comp-1', 'acc-999', []),
+    ).rejects.toThrow(NotFoundException)
+  })
+
+  it('throws BadRequestException when an imported transaction date is invalid', async () => {
+    const mockRepo = {
+      findBankAccountById: jest.fn().mockResolvedValue({ id: 'acc-1' }),
+      importTransactions: jest.fn(),
+    }
+    const service = new BankingService(mockRepo as any, prisma, {} as any, {} as any)
+    jest.spyOn(service as any, 'getWorkspaceId').mockResolvedValue('ws-123')
+    jest.spyOn(service as any, 'assertAccess').mockResolvedValue(undefined)
+
+    await expect(
+      service.importTransactions('user-1', 'comp-1', 'acc-1', [
+        { date: 'not-a-valid-date', description: 'Test', amount: 100 },
+      ]),
+    ).rejects.toThrow(BadRequestException)
+  })
+
+  it('filters zero-amount transactions, tracks skipped, and preserves backward-compatible import payloads', async () => {
+    const mockRepo = {
+      findBankAccountById: jest.fn().mockResolvedValue({ id: 'acc-1' }),
+      importTransactions: jest.fn().mockResolvedValue({
+        count: 1,
+        transactions: [{ id: 'tx-1', amount: 150.5 }],
+      }),
+    }
+    const service = new BankingService(mockRepo as any, prisma, {} as any, {} as any)
+    jest.spyOn(service as any, 'getWorkspaceId').mockResolvedValue('ws-123')
+    jest.spyOn(service as any, 'assertAccess').mockResolvedValue(undefined)
+
+    const payload = [
+      { date: '2026-03-31T00:00:00.000Z', description: 'Zero tx', amount: 0 },
+      { date: '2026-03-31T00:00:00.000Z', description: 'Valid tx', amount: 150.5 },
+    ]
+
+    const result = await service.importTransactions('user-1', 'comp-1', 'acc-1', payload)
+
+    expect(result).toEqual({
+      count: 1,
+      imported: 1,
+      skipped: 1,
+      total: 2,
+      transactions: [{ id: 'tx-1', amount: 150.5 }],
+    })
+    expect(mockRepo.importTransactions).toHaveBeenCalledWith('ws-123', 'acc-1', [
+      {
+        date: new Date('2026-03-31T00:00:00.000Z'),
+        description: 'Valid tx',
+        amount: 150.5,
+      },
+    ])
   })
 
   it('allows a manual match when a valid journalEntryLineId is provided', async () => {

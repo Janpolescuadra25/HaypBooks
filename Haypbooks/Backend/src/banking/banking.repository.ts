@@ -94,16 +94,29 @@ export class BankingRepository {
         })
     }
 
-    async importTransactions(workspaceId: string, bankAccountId: string, transactions: Array<{
-        date: Date; description: string; amount: number
-    }>) {
+    async importTransactions(
+        workspaceId: string,
+        bankAccountId: string,
+        transactions: Array<{ date: Date; description: string; amount: number }>,
+    ): Promise<{ count: number; transactions: any[] }> {
+        if (!transactions || transactions.length === 0) {
+            return { count: 0, transactions: [] }
+        }
+
         const created = await this.prisma.$transaction(
-            transactions.map((t) =>
+            transactions.map((tx) =>
                 this.prisma.bankTransaction.create({
-                    data: { workspaceId, bankAccountId, date: t.date, description: t.description, amount: t.amount },
-                })
-            )
+                    data: {
+                        workspaceId,
+                        bankAccountId,
+                        date: tx.date,
+                        description: tx.description,
+                        amount: new Prisma.Decimal(tx.amount),
+                    },
+                }),
+            ),
         )
+
         return { count: created.length, transactions: created }
     }
 

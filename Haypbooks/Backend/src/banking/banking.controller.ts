@@ -63,6 +63,7 @@ export class BankingController {
         return this.svc.listTransactions(req.user.userId, cid, bid, q)
     }
 
+    // Import bank transactions from an uploaded statement into the tenant workspace.
     @Post('accounts/:bankAccountId/transactions/import')
     @HttpCode(HttpStatus.OK)
     importTransactions(

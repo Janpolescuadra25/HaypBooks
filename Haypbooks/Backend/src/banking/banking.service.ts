@@ -173,16 +173,65 @@ export class BankingService {
         })
     }
 
-    async importTransactions(userId: string, companyId: string, bankAccountId: string, data: any[]) {
-        const wid = await this.getWorkspaceId(companyId)
+    async importTransactions(
+        userId: string,
+        companyId: string,
+        bankAccountId: string,
+        data: any[],
+    ): Promise<{
+        count: number;
+        imported: number;
+        skipped: number;
+        total: number;
+        transactions: any[];
+    }> {
+        const workspaceId = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
-        if (!Array.isArray(data) || !data.length) throw new BadRequestException('No transactions provided')
-        const txns = data.map((t) => ({
-            date: new Date(t.date),
-            description: t.description ?? '',
-            amount: Number(t.amount),
-        }))
-        return this.repo.importTransactions(wid, bankAccountId, txns)
+
+        const bankAccount = await this.repo.findBankAccountById(workspaceId, bankAccountId)
+        if (!bankAccount) {
+            throw new NotFoundException(`Bank account ${bankAccountId} not found`)
+        }
+
+        if (!Array.isArray(data)) {
+            throw new BadRequestException('Import payload must be an array of transactions')
+        }
+
+        const validItems: Array<{ date: Date; description: string; amount: number }> = []
+        let skipped = 0
+
+        for (const item of data) {
+            const amount = Number(item.amount)
+            if (isNaN(amount) || amount === 0) {
+                skipped++
+                continue
+            }
+
+            const dateObj = new Date(item.date)
+            if (isNaN(dateObj.getTime())) {
+                throw new BadRequestException(`Invalid transaction date: ${item.date}`)
+            }
+
+            validItems.push({
+                date: dateObj,
+                description: item.description ? String(item.description).trim() : '',
+                amount,
+            })
+        }
+
+        const repoResult = await this.repo.importTransactions(
+            workspaceId,
+            bankAccountId,
+            validItems,
+        )
+
+        return {
+            count: repoResult.count,
+            imported: repoResult.count,
+            skipped,
+            total: data.length,
+            transactions: repoResult.transactions,
+        }
     }
 
     async createTransaction(userId: string, companyId: string, bankAccountId: string, data: any) {
