@@ -16,6 +16,8 @@ describe('Banking E6 auto-match validation', () => {
       workspaceUser: { findFirst: jest.fn() },
       bankTransaction: { findMany: jest.fn() },
       bankAccount: { findUnique: jest.fn() },
+      bankFeedRule: { findMany: jest.fn() },
+      account: { findMany: jest.fn() },
       journalEntryLine: { findFirst: jest.fn(), findMany: jest.fn() },
     }
   })
@@ -272,5 +274,168 @@ describe('Banking E6 auto-match validation', () => {
         id: { notIn: ['jel-1'] },
       }),
     )
+  })
+
+  it('applies the highest confidence rule when multiple rules match the same transaction', async () => {
+    const repo = {
+      updateTransaction: jest.fn().mockResolvedValue({ id: 'txn-1' }),
+    }
+    prisma.company.findUnique.mockResolvedValue({ workspaceId: 'ws-1' })
+    prisma.workspaceUser.findFirst.mockResolvedValue({ id: 'wu-1' })
+    prisma.bankFeedRule.findMany.mockResolvedValue([
+      {
+        id: 'rule-contains',
+        priority: 1,
+        matchType: 'CONTAINS',
+        matchString: 'STARBUCKS',
+        amountRangeMin: null,
+        amountRangeMax: null,
+        assignmentAccountId: 'acct-1',
+        assignmentPayee: null,
+      },
+      {
+        id: 'rule-exact',
+        priority: 5,
+        matchType: 'EXACT',
+        matchString: 'STARBUCKS COFFEE',
+        amountRangeMin: null,
+        amountRangeMax: null,
+        assignmentAccountId: 'acct-2',
+        assignmentPayee: null,
+      },
+    ])
+    prisma.bankTransaction.findMany.mockResolvedValue([
+      { id: 'txn-1', description: 'STARBUCKS COFFEE', amount: 125, status: 'PENDING' },
+    ])
+    prisma.account.findMany.mockResolvedValue([
+      { id: 'acct-1', name: 'Coffee Shop' },
+      { id: 'acct-2', name: 'Favorite Coffee' },
+    ])
+
+    const service = new BankingService(repo as any, prisma, {} as any, {} as any)
+    jest.spyOn(service as any, 'getWorkspaceId').mockResolvedValue('ws-1')
+    jest.spyOn(service as any, 'assertAccess').mockResolvedValue(undefined)
+
+    const result = await service.applySmartRules('user-1', 'company-1', { bankAccountId: 'ba-1' })
+
+    expect(result).toEqual({ applied: 1, failed: 0 })
+    expect(repo.updateTransaction).toHaveBeenCalledWith('ws-1', 'txn-1', expect.objectContaining({
+      status: 'CATEGORIZED',
+      category: 'Favorite Coffee',
+    }))
+  })
+
+  it('applies amount range specificity bonus to break match type ties', async () => {
+    const repo = {
+      updateTransaction: jest.fn().mockResolvedValue({ id: 'txn-1' }),
+    }
+    prisma.company.findUnique.mockResolvedValue({ workspaceId: 'ws-1' })
+    prisma.workspaceUser.findFirst.mockResolvedValue({ id: 'wu-1' })
+    prisma.bankFeedRule.findMany.mockResolvedValue([
+      {
+        id: 'rule-generic',
+        priority: 1,
+        matchType: 'STARTS_WITH',
+        matchString: 'AMAZON',
+        amountRangeMin: null,
+        amountRangeMax: null,
+        assignmentAccountId: 'acct-1',
+        assignmentPayee: null,
+      },
+      {
+        id: 'rule-bounded',
+        priority: 10,
+        matchType: 'STARTS_WITH',
+        matchString: 'AMAZON',
+        amountRangeMin: 50,
+        amountRangeMax: 150,
+        assignmentAccountId: 'acct-2',
+        assignmentPayee: null,
+      },
+    ])
+    prisma.bankTransaction.findMany.mockResolvedValue([
+      { id: 'txn-1', description: 'AMAZON PURCHASE', amount: 120, status: 'PENDING' },
+    ])
+    prisma.account.findMany.mockResolvedValue([
+      { id: 'acct-1', name: 'Amazon Generic' },
+      { id: 'acct-2', name: 'Amazon Bounded' },
+    ])
+
+    const service = new BankingService(repo as any, prisma, {} as any, {} as any)
+    jest.spyOn(service as any, 'getWorkspaceId').mockResolvedValue('ws-1')
+    jest.spyOn(service as any, 'assertAccess').mockResolvedValue(undefined)
+
+    const result = await service.applySmartRules('user-1', 'company-1', { bankAccountId: 'ba-1' })
+
+    expect(result).toEqual({ applied: 1, failed: 0 })
+    expect(repo.updateTransaction).toHaveBeenCalledWith('ws-1', 'txn-1', expect.objectContaining({
+      category: 'Amazon Bounded',
+    }))
+  })
+
+  it('handles null or empty transaction descriptions gracefully when applying smart rules', async () => {
+    const repo = {
+      updateTransaction: jest.fn(),
+    }
+    prisma.bankFeedRule.findMany.mockResolvedValue([
+      {
+        id: 'rule-contains',
+        priority: 1,
+        matchType: 'CONTAINS',
+        matchString: 'AMAZON',
+        amountRangeMin: null,
+        amountRangeMax: null,
+        assignmentAccountId: 'acct-1',
+        assignmentPayee: null,
+      },
+    ])
+    prisma.bankTransaction.findMany.mockResolvedValue([
+      { id: 'txn-1', description: '', amount: 120, status: 'PENDING' },
+    ])
+    prisma.account.findMany.mockResolvedValue([{ id: 'acct-1', name: 'Amazon' }])
+
+    const service = new BankingService(repo as any, prisma, {} as any, {} as any)
+    jest.spyOn(service as any, 'getWorkspaceId').mockResolvedValue('ws-1')
+    jest.spyOn(service as any, 'assertAccess').mockResolvedValue(undefined)
+
+    await expect(service.applySmartRules('user-1', 'company-1', { bankAccountId: 'ba-1' })).resolves.toEqual({
+      applied: 0,
+      failed: 0,
+    })
+    expect(repo.updateTransaction).not.toHaveBeenCalled()
+  })
+
+  it('autoMatchReconciliation selects the closest date candidate when multiple journal lines match the amount', async () => {
+    const repo = {
+      matchTransactionToJournalLine: jest.fn().mockResolvedValue({ id: 'match-1' }),
+      findReconciliationById: jest.fn().mockResolvedValue({
+        id: 'recon-1',
+        status: 'OPEN',
+        bankAccountId: 'ba-1',
+        statementDate: new Date('2026-03-31'),
+        BankReconciliationLine: [],
+      }),
+    }
+    prisma.company.findUnique.mockResolvedValue({ workspaceId: 'ws-1' })
+    prisma.workspaceUser.findFirst.mockResolvedValue({ id: 'wu-1' })
+    prisma.bankTransaction.findMany.mockResolvedValue([
+      { id: 'txn-1', description: 'Amazon purchase', amount: 120, date: new Date('2026-03-30T00:00:00.000Z') },
+    ])
+    prisma.bankAccount.findUnique.mockResolvedValue({ id: 'ba-1', workspaceId: 'ws-1', glAccountId: 'acct-1010' })
+    prisma.journalEntryLine.findMany.mockResolvedValue([
+      { id: 'jel-1', description: 'Old helper', journal: { date: new Date('2026-03-28T00:00:00.000Z'), description: 'Old helper' } },
+      { id: 'jel-2', description: 'Amazon purchase', journal: { date: new Date('2026-03-30T00:00:00.000Z'), description: 'Amazon purchase' } },
+    ])
+
+    const service = new BankingService(repo as any, prisma, {} as any, {} as any)
+
+    const result = await service.autoMatchReconciliation('user-1', 'company-1', 'recon-1')
+
+    expect(result).toEqual({ matched: 1, total: 1 })
+    expect(repo.matchTransactionToJournalLine).toHaveBeenCalledWith('ws-1', 'recon-1', {
+      bankTransactionId: 'txn-1',
+      journalEntryLineId: 'jel-2',
+      matchType: 'AUTO',
+    })
   })
 })

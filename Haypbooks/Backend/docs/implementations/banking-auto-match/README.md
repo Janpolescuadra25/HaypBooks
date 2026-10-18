@@ -32,3 +32,25 @@ Verified through the targeted backend unit test suite and type-check runs:
 - `npx jest src/banking/banking.service.spec.ts --runInBand --config jest.unit.config.js --verbose`
 - `npx tsc --noEmit --pretty false`
 - Frontend lint and typecheck completed successfully.
+
+## Phase A6 — Banking Auto-Match Scoring & Invariant Hardening
+
+### Multi-Rule Confidence Scoring Hierarchy
+In `applySmartRules()`, rules are ranked by match confidence rather than arbitrary array order:
+- `EXACT` match: Base score 100
+- `STARTS_WITH` match: Base score 80
+- `CONTAINS` match: Base score 60
+- `Amount Range Specificity`: +15 bonus points if bounded by `amountRangeMin` or `amountRangeMax`
+- Tie-breaker: Rule `priority` ascending (lower number = higher precedence)
+
+### Candidate Ranking in Reconciliation Auto-Match
+In `autoMatchReconciliation()`, candidate `journalEntryLine` records are scored by:
+- Same-day date proximity: +30 points
+- Within 1 day: +20 points
+- Within 2-3 days: +10 points
+- Description/memo keyword alignment: +15 bonus points
+- Ties broken by minimum absolute date difference
+
+### Status
+- **Status:** DONE & VERIFIED
+- **Date:** 2026-10-18

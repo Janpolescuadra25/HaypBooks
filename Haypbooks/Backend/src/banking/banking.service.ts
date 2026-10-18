@@ -8,6 +8,8 @@ import { encryptField, safeDecryptField } from '../common/utils/field-encryption
 
 @Injectable()
 export class BankingService {
+    private readonly logger?: { warn?: (message?: string, ...optionalParams: any[]) => void }
+
     constructor(
       private readonly repo: BankingRepository,
       private readonly prisma: PrismaService,
@@ -692,7 +694,7 @@ export class BankingService {
             const maxDate = new Date(txnDate.getTime() + 3 * 24 * 60 * 60 * 1000)
             const absAmount = Math.abs(Number(txn.amount))
 
-            const candidateLine = await this.prisma.journalEntryLine.findFirst({
+            const candidateQuery: any = {
                 where: {
                     workspaceId: wid,
                     companyId,
@@ -701,7 +703,7 @@ export class BankingService {
                     journal: {
                         workspaceId: wid,
                         companyId,
-                        postingStatus: 'POSTED',
+                        postingStatus: 'POSTED' as any,
                         date: { gte: minDate, lte: maxDate },
                     },
                     OR: [
@@ -709,17 +711,51 @@ export class BankingService {
                         { credit: { equals: absAmount } },
                     ],
                 },
-                select: { id: true },
+                select: {
+                    id: true,
+                    description: true,
+                    journal: { select: { date: true, description: true } },
+                },
+            }
+
+            const candidateRows: any[] = await this.prisma.journalEntryLine.findMany?.(candidateQuery as any) ?? []
+            if (candidateRows.length === 0 && this.prisma.journalEntryLine.findFirst) {
+                const fallback = await this.prisma.journalEntryLine.findFirst({ ...candidateQuery } as any)
+                if (fallback) candidateRows.push(fallback)
+            }
+
+            if (candidateRows.length === 0) continue
+
+            const scoredCandidates = candidateRows.map((candidate: any) => {
+                const journalDate = candidate.journal?.date ? new Date(candidate.journal.date).getTime() : txnDate.getTime()
+                const dateDiffDays = Math.abs(txnDate.getTime() - journalDate) / (24 * 60 * 60 * 1000)
+
+                let score = 10
+                if (dateDiffDays < 0.5) score = 30
+                else if (dateDiffDays <= 1.5) score = 20
+
+                const txDesc = (txn.description || '').trim().replace(/\s+/g, ' ').toUpperCase()
+                const lineDesc = ((candidate.description || candidate.journal?.description || '') || '').trim().replace(/\s+/g, ' ').toUpperCase()
+                if (lineDesc && txDesc && (lineDesc.includes(txDesc) || txDesc.includes(lineDesc))) {
+                    score += 15
+                }
+
+                return { candidate, score, dateDiffDays }
             })
 
-            if (!candidateLine) continue
+            scoredCandidates.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score
+                return a.dateDiffDays - b.dateDiffDays
+            })
+
+            const bestCandidate = scoredCandidates[0].candidate
 
             await this.repo.matchTransactionToJournalLine(wid, reconId, {
                 bankTransactionId: txn.id,
-                journalEntryLineId: candidateLine.id,
+                journalEntryLineId: bestCandidate.id,
                 matchType: 'AUTO',
             })
-            usedJournalLineIds.add(candidateLine.id)
+            usedJournalLineIds.add(bestCandidate.id)
             matched++
         }
         return { matched, total: unmatched.length }
@@ -1011,7 +1047,7 @@ export class BankingService {
             }),
         ])
 
-        if (rules.length === 0 || transactions.length === 0) return { applied: 0 }
+        if (rules.length === 0 || transactions.length === 0) return { applied: 0, failed: 0 }
 
         const accountIds = rules.map(r => r.assignmentAccountId).filter((id): id is string => id != null)
         const accountMap = accountIds.length > 0
@@ -1024,24 +1060,52 @@ export class BankingService {
             : new Map<string, string>()
 
         let applied = 0
+        let failed = 0
+
         for (const tx of transactions) {
-            const desc = tx.description.toUpperCase()
+            const desc = (tx.description || '').trim().replace(/\s+/g, ' ').toUpperCase()
             const amt = Number(tx.amount)
 
-            const matched = rules.find(rule => {
-                const kw = rule.matchString.toUpperCase()
+            const scoredCandidates: Array<{ rule: typeof rules[0]; score: number }> = []
+
+            for (const rule of rules) {
+                const kw = (rule.matchString || '').trim().replace(/\s+/g, ' ').toUpperCase()
+                if (!kw) continue
+
                 let hit = false
-                if (rule.matchType === 'EXACT') hit = desc === kw
-                else if (rule.matchType === 'STARTS_WITH') hit = desc.startsWith(kw)
-                else hit = desc.includes(kw)
-                if (!hit) return false
-                if (rule.amountRangeMin != null && amt < Number(rule.amountRangeMin)) return false
-                if (rule.amountRangeMax != null && amt > Number(rule.amountRangeMax)) return false
-                return true
+                let baseScore = 0
+
+                if (rule.matchType === 'EXACT') {
+                    hit = desc === kw
+                    baseScore = 100
+                } else if (rule.matchType === 'STARTS_WITH') {
+                    hit = desc.startsWith(kw)
+                    baseScore = 80
+                } else {
+                    hit = desc.includes(kw)
+                    baseScore = 60
+                }
+
+                if (!hit) continue
+                if (rule.amountRangeMin != null && amt < Number(rule.amountRangeMin)) continue
+                if (rule.amountRangeMax != null && amt > Number(rule.amountRangeMax)) continue
+
+                let totalScore = baseScore
+                if (rule.amountRangeMin != null || rule.amountRangeMax != null) {
+                    totalScore += 15
+                }
+
+                scoredCandidates.push({ rule, score: totalScore })
+            }
+
+            if (scoredCandidates.length === 0) continue
+
+            scoredCandidates.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score
+                return a.rule.priority - b.rule.priority
             })
 
-            if (!matched) continue
-
+            const matched = scoredCandidates[0].rule
             const categoryName = matched.assignmentAccountId
                 ? accountMap.get(matched.assignmentAccountId) ?? matched.assignmentPayee ?? null
                 : matched.assignmentPayee ?? null
@@ -1052,10 +1116,13 @@ export class BankingService {
                     ...(categoryName && { category: categoryName }),
                 })
                 applied++
-            } catch { /* skip individual apply failures */ }
+            } catch (err) {
+                failed++
+                this.logger?.warn?.(`Failed to apply rule ${matched.id} to transaction ${tx.id}: ${(err as Error)?.message}`)
+            }
         }
 
-        return { applied }
+        return { applied, failed }
     }
 
     // ─── Feed Connections ────────────────────────────────────────────────────
