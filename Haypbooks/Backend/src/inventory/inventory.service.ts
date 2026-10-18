@@ -429,6 +429,74 @@ export class InventoryService {
         })
     }
 
+    async voidInventoryTransaction(
+        userId: string,
+        companyId: string,
+        transactionId: string,
+        reason?: string,
+    ) {
+        await this.assertAccess(userId, companyId)
+
+        const txn = await this.prisma.inventoryTransaction.findUnique({
+            where: { id: transactionId },
+            include: { lines: true },
+        })
+
+        if (!txn || txn.companyId !== companyId) {
+            throw new NotFoundException('Inventory transaction not found')
+        }
+
+        if (txn.postingStatus !== 'POSTED') {
+            throw new BadRequestException(
+                `Only POSTED inventory transactions can be voided (current: ${txn.postingStatus})`,
+            )
+        }
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        return this.prisma.$transaction(async (tx) => {
+            const reversedJeId = await this.subLedger.reverseInventoryTransactionGL(
+                companyId,
+                transactionId,
+                reason,
+                tx,
+            )
+
+            if (!reversedJeId) {
+                throw new BadRequestException(
+                    'Inventory GL reversal failed: original journal entry not found or accounting period is closed',
+                )
+            }
+
+            const updated = await tx.inventoryTransaction.update({
+                where: { id: transactionId },
+                data: {
+                    postingStatus: 'VOIDED',
+                    deletedAt: new Date(),
+                },
+                include: { lines: true },
+            })
+
+            await tx.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'VOID_INVENTORY_TRANSACTION',
+                    tableName: 'InventoryTransaction',
+                    recordId: transactionId,
+                    changes: {
+                        postingStatus: 'VOIDED',
+                        reversingJournalEntryId: reversedJeId,
+                        reason: reason ?? `Void inventory transaction ${transactionId}`,
+                    },
+                },
+            })
+
+            return updated
+        })
+    }
+
     // ─── Fixed Assets ─────────────────────────────────────────────────────────
 
     async listFixedAssets(userId: string, companyId: string, opts: any) {

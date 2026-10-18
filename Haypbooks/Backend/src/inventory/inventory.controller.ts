@@ -108,6 +108,30 @@ export class InventoryController {
         return this.svc.createTransaction(req.user.userId, cid, body)
     }
 
+    @Post('transactions/:transactionId/post')
+    async postTransaction(
+        @Req() req: any,
+        @Param('companyId') cid: string,
+        @Param('transactionId') transactionId: string,
+    ) {
+        return this.svc.postInventoryTransaction(req.user.userId, cid, transactionId)
+    }
+
+    @Post('transactions/:transactionId/void')
+    async voidTransaction(
+        @Req() req: any,
+        @Param('companyId') cid: string,
+        @Param('transactionId') transactionId: string,
+        @Body() body?: { reason?: string },
+    ) {
+        return this.svc.voidInventoryTransaction(
+            req.user.userId,
+            cid,
+            transactionId,
+            body?.reason,
+        )
+    }
+
     // ─── Fixed Assets ─────────────────────────────────────────────────────────
 
     @Get('assets')
