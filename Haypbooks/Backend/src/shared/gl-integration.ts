@@ -93,6 +93,23 @@ function effectiveNormalSide(acct: { typeId: number; normalSide: string | null }
     return NORMAL_SIDE_BY_TYPE[acct.typeId] ?? 'DEBIT'
 }
 
+async function generateJournalEntryNumber(tx: any, companyId: string): Promise<string> {
+    const sequence = await tx.documentSequence.upsert({
+        where: { companyId_documentType: { companyId, documentType: 'JOURNAL_ENTRY' } },
+        create: {
+            companyId,
+            documentType: 'JOURNAL_ENTRY',
+            prefix: 'JE-',
+            nextNumber: 2,
+            format: 'JE-{number}',
+        },
+        update: {
+            nextNumber: { increment: 1 },
+        },
+    })
+    return `JE-${String(sequence.nextNumber - 1).padStart(6, '0')}`
+}
+
 /**
  * Create a journal entry, post it (update account balances), and return the JE id.
  * Must be called within a Prisma $transaction.
@@ -178,12 +195,16 @@ export async function createAndPostJE(
         throw new Error(`Journal entry is not balanced: debits ${totalDebits} ≠ credits ${totalCredits}`)
     }
 
+    const resolvedEntryNumber = data.entryNumber && data.entryNumber.trim().length > 0
+        ? data.entryNumber
+        : await generateJournalEntryNumber(tx, data.companyId)
+
     // Create JE + lines
     const je = await tx.journalEntry.create({
         data: {
             workspaceId: data.workspaceId,
             companyId: data.companyId,
-            entryNumber: data.entryNumber,
+            entryNumber: resolvedEntryNumber,
             date: data.date,
             description: data.description,
             currency: data.currency ?? await resolveCompanyCurrency(tx, data.companyId),

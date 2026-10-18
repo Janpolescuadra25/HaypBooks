@@ -5555,7 +5555,7 @@ model JournalEntry {
   id                String        @id @default(uuid())
   workspaceId       String
   companyId         String
-  entryNumber       String?       @unique
+  entryNumber       String?
   date              DateTime
   description       String?
   createdAt         DateTime      @default(now())
@@ -5633,6 +5633,7 @@ model JournalEntry {
   previousVersion              JournalEntry?             @relation("JournalVersion", fields: [previousId], references: [id])
   nextVersions                 JournalEntry[]            @relation("JournalVersion")
 
+  @@unique([companyId, entryNumber])
   @@index([workspaceId, date])
   @@index([companyId, date])
   @@index([companyId, postingStatus])

@@ -112,6 +112,100 @@ describe('GL integration guardrails', () => {
     ).rejects.toThrow("Idempotency key 'dup-124' reused with mismatched transaction payload.")
   })
 
+  it('auto-generates a company-local journal entry number from DocumentSequence when no override is supplied', async () => {
+    ;(assertPeriodOpen as jest.Mock).mockResolvedValue(undefined)
+
+    const tx: any = {
+      documentSequence: {
+        upsert: jest.fn().mockResolvedValue({ nextNumber: 2 }),
+      },
+      journalEntry: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'je-generated',
+          lines: [
+            { accountId: 'acct-1', debit: 100, credit: 0 },
+            { accountId: 'acct-2', debit: 0, credit: 100 },
+          ],
+        }),
+        update: jest.fn().mockResolvedValue({ id: 'je-generated' }),
+      },
+      company: { findUnique: jest.fn().mockResolvedValue({ currency: 'PHP' }) },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'acct-1', typeId: 1, normalSide: 'DEBIT' }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    }
+
+    const created = await createAndPostJE(tx, {
+      workspaceId: 'ws-1',
+      companyId: 'company-1',
+      date: new Date('2026-02-10'),
+      description: 'auto number test',
+      lines: [
+        { accountId: 'acct-1', debit: 100, credit: 0 },
+        { accountId: 'acct-2', debit: 0, credit: 100 },
+      ],
+    })
+
+    expect(created).toBe('je-generated')
+    expect(tx.documentSequence.upsert).toHaveBeenCalledWith({
+      where: { companyId_documentType: { companyId: 'company-1', documentType: 'JOURNAL_ENTRY' } },
+      create: {
+        companyId: 'company-1',
+        documentType: 'JOURNAL_ENTRY',
+        prefix: 'JE-',
+        nextNumber: 2,
+        format: 'JE-{number}',
+      },
+      update: { nextNumber: { increment: 1 } },
+    })
+    expect(tx.journalEntry.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ entryNumber: 'JE-000001' }),
+    }))
+  })
+
+  it('keeps a caller-supplied journal entry number and does not generate a new sequence', async () => {
+    ;(assertPeriodOpen as jest.Mock).mockResolvedValue(undefined)
+
+    const tx: any = {
+      documentSequence: { upsert: jest.fn() },
+      journalEntry: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'je-provided',
+          lines: [
+            { accountId: 'acct-1', debit: 100, credit: 0 },
+            { accountId: 'acct-2', debit: 0, credit: 100 },
+          ],
+        }),
+        update: jest.fn().mockResolvedValue({ id: 'je-provided' }),
+      },
+      company: { findUnique: jest.fn().mockResolvedValue({ currency: 'PHP' }) },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'acct-1', typeId: 1, normalSide: 'DEBIT' }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    }
+
+    await createAndPostJE(tx, {
+      workspaceId: 'ws-1',
+      companyId: 'company-1',
+      date: new Date('2026-02-10'),
+      description: 'manual number override',
+      entryNumber: 'JE-777',
+      lines: [
+        { accountId: 'acct-1', debit: 100, credit: 0 },
+        { accountId: 'acct-2', debit: 0, credit: 100 },
+      ],
+    })
+
+    expect(tx.documentSequence.upsert).not.toHaveBeenCalled()
+    expect(tx.journalEntry.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ entryNumber: 'JE-777' }),
+    }))
+  })
+
   it('rejects an idempotencyKey collision across company boundaries', async () => {
     ;(assertPeriodOpen as jest.Mock).mockResolvedValue(undefined)
 
