@@ -150,7 +150,6 @@ The following core accounting modules and defects have been fully resolved, test
 
 ### 16  Data, performance and remaining modules (AUDIT REQUIRED, P1)
 
-- 16C: Fixed Assets Management (Completed & Archived to Appendix) — Asset creation, depreciation schedules (straight-line and declining balance), and asset disposal with journal gain/loss realization.
 - Audit: schema/migrations/isolated DB, FKs/indexes/RLS, precision/timezone, retention/import/export/jobs; tax/payroll/assets and every advertised module not covered. Select jurisdictions with owner; do not invent compliance scope.
 - Deliver: demonstrated defects repaired with reviewed reversible changes, bounded queries, retry-safe jobs, secure storage and recovery. Restructure only for demonstrated benefit.
 - Requirements: read-only profiling before explicit data-repair plan; no blanket reseed/delete. Depends on: 9/12/14.
