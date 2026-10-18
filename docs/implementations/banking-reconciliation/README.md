@@ -61,3 +61,32 @@ Hardened the automated bank statement line matching engine (`autoMatchReconcilia
 4. **Duplicate Match Protection:**
    - Tracks matched journal entry line IDs in an in-memory set during the auto-match loop.
    - Prevents the same journal entry line from being consumed by multiple bank statement lines within the same batch.
+
+---
+
+## BANK-02: Transaction Ingestion Hardening & Tenant Isolation
+**Completion Date:** 2026-10-18  
+**Commit:** `2d22be60375662f1d696639a2f4af2093b17a7f2`  
+**Status:** DONE & VERIFIED
+
+### Overview
+Hardened the bank statement transaction import pipeline in `Haypbooks/Backend`, establishing strict data integrity and multi-tenant isolation prior to auto-matching.
+
+### Key Invariants
+1. **Zero-Amount Filtering:** Transactions with `$0.00` or invalid numeric amounts are skipped from persistence, incrementing the `skipped` metric.
+2. **Date Validation:** Unparseable transaction dates throw an immediate `BadRequestException` prior to database transactions.
+3. **Tenant Account Isolation:** Validates bank account existence and workspace ownership via `findBankAccountById(workspaceId, bankAccountId)`, throwing `NotFoundException` on mismatch.
+4. **Decimal Precision:** Transaction amounts are wrapped in `new Prisma.Decimal(tx.amount)` matching `Decimal(19,4)` in `schema.prisma`.
+5. **Backward-Compatible Return Shape:**
+   ```typescript
+   {
+     count: number;        // Persisted count (legacy contract)
+     imported: number;     // Alias for count
+     skipped: number;      // Filtered zero-amount count
+     total: number;        // Total input items
+     transactions: any[];  // Persisted records (legacy contract)
+   }
+   ```
+6. **Backward Compatibility:** Preserves 100% compatibility with BANK-01 auto-reconciliation endpoints.
+
+---

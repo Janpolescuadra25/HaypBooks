@@ -10,7 +10,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
 - Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
 - Required security work: tracked credential settings (S1), attachment object ownership (S2), guard/controller workspace-context agreement (S3 ✓).
-- Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4), inventory lifecycle (A5), bank matching (A6), numbering (A7). IDs refer to the linked audit.
+- Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4), inventory lifecycle (A5), bank matching (A6): BANK-02 ingestion guards completed, remaining matching algorithm work outstanding, numbering (A7). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
@@ -241,4 +241,4 @@ Conflicts resolved:
 
 
 
-| Phase A6 (Partial: BANK-01) | Banking Reconciliation: Auto-Match Invariants | Enforced 4 financial invariants in autoMatchReconciliation: Company isolation, GL account match, POSTED status filter, and duplicate line consumption protection. Verified with 6 unit tests passing. | docs/implementations/banking-reconciliation/README.md |
+| **Phase A6 (Partial: BANK-01, BANK-02)** | Banking Reconciliation: Auto-Match Invariants & Statement Ingestion Hardening — **DONE & VERIFIED (2026-10-18)** | Auto-match invariants, duplicate line protection, zero-amount filtering, invalid date validation, and workspace isolation; 9/9 unit tests passing | [Banking Reconciliation README](../implementations/banking-reconciliation/README.md) |
