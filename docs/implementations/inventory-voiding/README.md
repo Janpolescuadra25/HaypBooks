@@ -44,9 +44,18 @@ Phase A5 implements a fail-closed, atomic voiding workflow for inventory transac
 ## 3. Unit Test Verification
 - **Test File:** `Haypbooks/Backend/src/inventory/inventory.service.spec.ts`
 - **Execution Command:** `npm run test:unit -- src/inventory/inventory.service.spec.ts`
-- **Test Results (5/5 passing):**
-  1. `successfully voids a POSTED inventory transaction, reverses GL, updates status, and creates an audit log` (PASS)
-  2. `throws NotFoundException when the inventory transaction does not exist or belongs to a different company` (PASS)
-  3. `throws BadRequestException when the inventory transaction is in DRAFT status` (PASS)
-  4. `throws BadRequestException when the inventory transaction is already VOIDED` (PASS)
-  5. `throws BadRequestException when the GL reversal fails` (PASS)
+- **Test Results (10/10 passing):**
+  1. `voids a POSTED inventory transaction and its GL entries atomically` (PASS)
+  2. `throws NotFoundException if inventory transaction does not exist` (PASS)
+  3. `throws BadRequestException if transaction is not in POSTED status` (PASS)
+  4. `throws error if GL reversal fails during voiding` (PASS)
+  5. `voids a SHIPMENT transaction by incrementing stock back at original location` (PASS)
+  6. `voids a RECEIPT transaction by decrementing stock and removing the unconsumed cost layer` (PASS)
+  7. `throws BadRequestException when voiding a receipt would create negative stock` (PASS)
+  8. `throws BadRequestException when the receipt cost layer has already been consumed` (PASS)
+  9. `throws BadRequestException when the inventory transaction type is unsupported for voiding` (PASS)
+  10. `creates an audit log with the repository-scoped inventory transaction metadata` (PASS)
+
+## 4. Implementation Status
+- **Status:** DONE & VERIFIED
+- **Date:** 2026-10-18

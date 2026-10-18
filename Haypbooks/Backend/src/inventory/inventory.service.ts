@@ -452,9 +452,92 @@ export class InventoryService {
             )
         }
 
+        const transactionType = txn.type?.toUpperCase()
+        if (transactionType !== 'RECEIPT' && transactionType !== 'SHIPMENT') {
+            throw new BadRequestException(
+                `Voiding ${transactionType ?? txn.type ?? 'UNKNOWN'} inventory transactions is not supported in this phase. Only RECEIPT and SHIPMENT transactions may be voided.`,
+            )
+        }
+
         const workspaceId = await this.getWorkspaceId(companyId)
 
         return this.prisma.$transaction(async (tx) => {
+            for (const line of txn.lines ?? []) {
+                if (!line.itemId || !line.stockLocationId) {
+                    throw new BadRequestException(
+                        `Cannot void ${transactionType} inventory transaction: line ${line.id ?? 'unknown'} is missing item or stock location data.`,
+                    )
+                }
+
+                const lineQty = Number(line.qty ?? 0)
+                const stockDelta = transactionType === 'SHIPMENT' ? lineQty : -lineQty
+
+                const stockLevel = await tx.stockLevel.findUnique({
+                    where: {
+                        companyId_itemId_stockLocationId: {
+                            companyId,
+                            itemId: line.itemId,
+                            stockLocationId: line.stockLocationId,
+                        },
+                    },
+                })
+
+                const currentStockQty = Number(stockLevel?.quantity ?? 0)
+                const projectedQty = currentStockQty + stockDelta
+
+                if (projectedQty < 0) {
+                    throw new BadRequestException(
+                        `Cannot void inventory transaction: item ${line.itemId} at location ${line.stockLocationId} would result in negative stock balance (${projectedQty}). Current stock is ${currentStockQty}.`,
+                    )
+                }
+
+                if (transactionType === 'RECEIPT') {
+                    const costLayer = await tx.inventoryCostLayer.findFirst({
+                        where: {
+                            companyId,
+                            itemId: line.itemId,
+                            inventoryTxLineId: line.id,
+                        },
+                        orderBy: { createdAt: 'asc' },
+                    })
+
+                    if (!costLayer) {
+                        throw new BadRequestException(
+                            `Cannot void receipt: no cost layer found for item ${line.itemId} in stock location ${line.stockLocationId}.`,
+                        )
+                    }
+
+                    const remainingQty = Number(costLayer.remainingQty ?? 0)
+                    const layerQty = Number(costLayer.quantity ?? 0)
+                    if (remainingQty !== layerQty) {
+                        throw new BadRequestException(
+                            `Cannot void receipt: inventory cost layer for item ${line.itemId} has already been partially or fully consumed (remaining: ${remainingQty} of ${layerQty}).`,
+                        )
+                    }
+
+                    await tx.inventoryCostLayer.delete({
+                        where: { id: costLayer.id },
+                    })
+                }
+
+                if (stockLevel) {
+                    await tx.stockLevel.update({
+                        where: { id: stockLevel.id },
+                        data: { quantity: { increment: stockDelta } },
+                    })
+                } else if (stockDelta > 0) {
+                    await tx.stockLevel.create({
+                        data: {
+                            companyId,
+                            itemId: line.itemId,
+                            stockLocationId: line.stockLocationId,
+                            quantity: stockDelta,
+                            reserved: 0,
+                        },
+                    })
+                }
+            }
+
             const reversedJeId = await this.subLedger.reverseInventoryTransactionGL(
                 companyId,
                 transactionId,
@@ -489,6 +572,7 @@ export class InventoryService {
                         postingStatus: 'VOIDED',
                         reversingJournalEntryId: reversedJeId,
                         reason: reason ?? `Void inventory transaction ${transactionId}`,
+                        stockRestored: true,
                     },
                 },
             })

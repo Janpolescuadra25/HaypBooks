@@ -15,6 +15,15 @@ describe('InventoryService voidInventoryTransaction', () => {
       inventoryTransaction: {
         update: jest.fn(),
       },
+      stockLevel: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+      inventoryCostLayer: {
+        findFirst: jest.fn(),
+        delete: jest.fn(),
+      },
       auditLog: {
         create: jest.fn(),
       },
@@ -49,20 +58,26 @@ describe('InventoryService voidInventoryTransaction', () => {
       id: 'txn-1',
       companyId: 'company-1',
       postingStatus: 'POSTED',
-      lines: [{ id: 'line-1', itemId: 'item-1' }],
+      type: 'SHIPMENT',
+      lines: [{ id: 'line-1', itemId: 'item-1', stockLocationId: 'loc-1', qty: '5' }],
     })
+    tx.stockLevel.findUnique.mockResolvedValue({ id: 'stock-1', quantity: 10 })
     mockSubLedger.reverseInventoryTransactionGL.mockResolvedValue('je-reversal-1')
     tx.inventoryTransaction.update.mockResolvedValue({
       id: 'txn-1',
       companyId: 'company-1',
       postingStatus: 'VOIDED',
       deletedAt: now,
-      lines: [{ id: 'line-1', itemId: 'item-1' }],
+      lines: [{ id: 'line-1', itemId: 'item-1', stockLocationId: 'loc-1', qty: '5' }],
     })
 
     const result = await service.voidInventoryTransaction('user-1', 'company-1', 'txn-1', 'Bad inventory entry')
 
     expect((service as any).assertAccess).toHaveBeenCalledWith('user-1', 'company-1')
+    expect(tx.stockLevel.update).toHaveBeenCalledWith({
+      where: { id: 'stock-1' },
+      data: { quantity: { increment: 5 } },
+    })
     expect(mockSubLedger.reverseInventoryTransactionGL).toHaveBeenCalledWith(
       'company-1',
       'txn-1',
@@ -89,6 +104,7 @@ describe('InventoryService voidInventoryTransaction', () => {
           postingStatus: 'VOIDED',
           reversingJournalEntryId: 'je-reversal-1',
           reason: 'Bad inventory entry',
+          stockRestored: true,
         },
       },
     })
@@ -97,7 +113,7 @@ describe('InventoryService voidInventoryTransaction', () => {
       companyId: 'company-1',
       postingStatus: 'VOIDED',
       deletedAt: now,
-      lines: [{ id: 'line-1', itemId: 'item-1' }],
+      lines: [{ id: 'line-1', itemId: 'item-1', stockLocationId: 'loc-1', qty: '5' }],
     })
   })
 
@@ -112,6 +128,7 @@ describe('InventoryService voidInventoryTransaction', () => {
       id: 'txn-2',
       companyId: 'company-2',
       postingStatus: 'POSTED',
+      type: 'SHIPMENT',
       lines: [],
     })
 
@@ -125,6 +142,7 @@ describe('InventoryService voidInventoryTransaction', () => {
       id: 'txn-3',
       companyId: 'company-1',
       postingStatus: 'DRAFT',
+      type: 'SHIPMENT',
       lines: [],
     })
 
@@ -138,6 +156,7 @@ describe('InventoryService voidInventoryTransaction', () => {
       id: 'txn-4',
       companyId: 'company-1',
       postingStatus: 'VOIDED',
+      type: 'SHIPMENT',
       lines: [],
     })
 
@@ -151,6 +170,7 @@ describe('InventoryService voidInventoryTransaction', () => {
       id: 'txn-5',
       companyId: 'company-1',
       postingStatus: 'POSTED',
+      type: 'SHIPMENT',
       lines: [],
     })
     mockSubLedger.reverseInventoryTransactionGL.mockResolvedValue(null)
@@ -158,5 +178,122 @@ describe('InventoryService voidInventoryTransaction', () => {
     await expect(service.voidInventoryTransaction('user-1', 'company-1', 'txn-5')).rejects.toThrow(
       new BadRequestException('Inventory GL reversal failed: original journal entry not found or accounting period is closed'),
     )
+  })
+
+  it('voids a RECEIPT transaction by decrementing stock and removing the unconsumed cost layer', async () => {
+    mockPrisma.inventoryTransaction.findUnique.mockResolvedValue({
+      id: 'txn-receipt',
+      companyId: 'company-1',
+      postingStatus: 'POSTED',
+      type: 'RECEIPT',
+      lines: [{ id: 'line-receipt', itemId: 'item-1', stockLocationId: 'loc-1', qty: '3' }],
+    })
+    tx.stockLevel.findUnique.mockResolvedValue({ id: 'stock-1', quantity: 10 })
+    tx.inventoryCostLayer.findFirst.mockResolvedValue({ id: 'layer-1', quantity: 3, remainingQty: 3 })
+    mockSubLedger.reverseInventoryTransactionGL.mockResolvedValue('je-reversal-2')
+    tx.inventoryTransaction.update.mockResolvedValue({
+      id: 'txn-receipt',
+      companyId: 'company-1',
+      postingStatus: 'VOIDED',
+      deletedAt: new Date(),
+      lines: [{ id: 'line-receipt', itemId: 'item-1', stockLocationId: 'loc-1', qty: '3' }],
+    })
+
+    await service.voidInventoryTransaction('user-1', 'company-1', 'txn-receipt', 'Receipt adjustment')
+
+    expect(tx.stockLevel.update).toHaveBeenCalledWith({
+      where: { id: 'stock-1' },
+      data: { quantity: { increment: -3 } },
+    })
+    expect(tx.inventoryCostLayer.delete).toHaveBeenCalledWith({
+      where: { id: 'layer-1' },
+    })
+  })
+
+  it('throws BadRequestException when voiding a receipt would create negative stock', async () => {
+    mockPrisma.inventoryTransaction.findUnique.mockResolvedValue({
+      id: 'txn-negative',
+      companyId: 'company-1',
+      postingStatus: 'POSTED',
+      type: 'RECEIPT',
+      lines: [{ id: 'line-negative', itemId: 'item-1', stockLocationId: 'loc-1', qty: '5' }],
+    })
+    tx.stockLevel.findUnique.mockResolvedValue({ id: 'stock-1', quantity: 2 })
+    tx.inventoryCostLayer.findFirst.mockResolvedValue({ id: 'layer-1', quantity: 5, remainingQty: 5 })
+
+    await expect(service.voidInventoryTransaction('user-1', 'company-1', 'txn-negative')).rejects.toThrow(
+      new BadRequestException('Cannot void inventory transaction: item item-1 at location loc-1 would result in negative stock balance (-3). Current stock is 2.'),
+    )
+    expect(tx.stockLevel.update).not.toHaveBeenCalled()
+    expect(tx.inventoryCostLayer.delete).not.toHaveBeenCalled()
+  })
+
+  it('throws BadRequestException when the receipt cost layer has already been consumed', async () => {
+    mockPrisma.inventoryTransaction.findUnique.mockResolvedValue({
+      id: 'txn-consumed',
+      companyId: 'company-1',
+      postingStatus: 'POSTED',
+      type: 'RECEIPT',
+      lines: [{ id: 'line-consumed', itemId: 'item-1', stockLocationId: 'loc-1', qty: '3' }],
+    })
+    tx.stockLevel.findUnique.mockResolvedValue({ id: 'stock-1', quantity: 10 })
+    tx.inventoryCostLayer.findFirst.mockResolvedValue({ id: 'layer-1', quantity: 3, remainingQty: 1 })
+
+    await expect(service.voidInventoryTransaction('user-1', 'company-1', 'txn-consumed')).rejects.toThrow(
+      new BadRequestException('Cannot void receipt: inventory cost layer for item item-1 has already been partially or fully consumed (remaining: 1 of 3).'),
+    )
+    expect(tx.stockLevel.update).not.toHaveBeenCalled()
+  })
+
+  it('throws BadRequestException when the inventory transaction type is unsupported for voiding', async () => {
+    mockPrisma.inventoryTransaction.findUnique.mockResolvedValue({
+      id: 'txn-transfer',
+      companyId: 'company-1',
+      postingStatus: 'POSTED',
+      type: 'TRANSFER',
+      lines: [{ id: 'line-transfer', itemId: 'item-1', stockLocationId: 'loc-1', qty: '2' }],
+    })
+
+    await expect(service.voidInventoryTransaction('user-1', 'company-1', 'txn-transfer')).rejects.toThrow(
+      new BadRequestException('Voiding TRANSFER inventory transactions is not supported in this phase. Only RECEIPT and SHIPMENT transactions may be voided.'),
+    )
+  })
+
+  it('creates an audit log with the repository-scoped inventory transaction metadata', async () => {
+    mockPrisma.inventoryTransaction.findUnique.mockResolvedValue({
+      id: 'txn-audit',
+      companyId: 'company-1',
+      postingStatus: 'POSTED',
+      type: 'SHIPMENT',
+      lines: [{ id: 'line-audit', itemId: 'item-1', stockLocationId: 'loc-1', qty: '4' }],
+    })
+    tx.stockLevel.findUnique.mockResolvedValue({ id: 'stock-1', quantity: 10 })
+    mockSubLedger.reverseInventoryTransactionGL.mockResolvedValue('je-reversal-audit')
+    tx.inventoryTransaction.update.mockResolvedValue({
+      id: 'txn-audit',
+      companyId: 'company-1',
+      postingStatus: 'VOIDED',
+      deletedAt: new Date(),
+      lines: [{ id: 'line-audit', itemId: 'item-1', stockLocationId: 'loc-1', qty: '4' }],
+    })
+
+    await service.voidInventoryTransaction('user-1', 'company-1', 'txn-audit', 'Audit void')
+
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        workspaceId: 'ws-1',
+        companyId: 'company-1',
+        userId: 'user-1',
+        action: 'VOID_INVENTORY_TRANSACTION',
+        tableName: 'InventoryTransaction',
+        recordId: 'txn-audit',
+        changes: {
+          postingStatus: 'VOIDED',
+          reversingJournalEntryId: 'je-reversal-audit',
+          reason: 'Audit void',
+          stockRestored: true,
+        },
+      },
+    })
   })
 })
