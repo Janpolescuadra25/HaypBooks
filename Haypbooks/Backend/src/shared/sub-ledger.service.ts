@@ -1934,6 +1934,23 @@ const lines = (invoice as any).lines ?? []
     }
   }
 
+  async reversePayrollRunFromGL(
+    tx: any,
+    companyId: string,
+    journalEntryId: string,
+    reason: string,
+    reversalDate: Date = new Date(),
+  ): Promise<string | null> {
+    const reversingJeId = await createReversingJE(
+      tx,
+      companyId,
+      journalEntryId,
+      reason,
+      reversalDate,
+    )
+    return reversingJeId
+  }
+
   async postPayrollRunToGL(params: {
     companyId: string
     workspaceId: string

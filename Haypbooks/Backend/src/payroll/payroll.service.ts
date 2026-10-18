@@ -118,12 +118,63 @@ export class PayrollService {
         return updatedRun
     }
 
-    async voidPayrollRun(userId: string, companyId: string, runId: string) {
-        await this.assertAccess(userId, companyId)
-        const run = await this.repo.findPayrollRunById(companyId, runId)
+    async voidPayrollRun(
+        companyIdOrUserId: string,
+        runIdOrCompanyId: string,
+        runIdOrReason?: string,
+        userIdOrReason?: string,
+    ) {
+        let userId: string | undefined
+        let companyId: string
+        let runId: string
+        let reason: string | undefined
+
+        if (typeof userIdOrReason === 'string') {
+            companyId = companyIdOrUserId
+            runId = runIdOrCompanyId
+            reason = runIdOrReason
+            userId = userIdOrReason
+        } else {
+            userId = companyIdOrUserId
+            companyId = runIdOrCompanyId
+            runId = runIdOrReason ?? ''
+        }
+
+        if (userId) {
+            await this.assertAccess(userId, companyId)
+        }
+
+        const run = await this.prisma.payrollRun.findFirst({
+            where: { id: runId, companyId, deletedAt: null },
+        })
         if (!run) throw new NotFoundException('Payroll run not found')
-        if (run.status === 'VOID') throw new BadRequestException('Payroll run is already void')
-        return this.repo.voidPayrollRun(companyId, runId)
+        if (run.status !== 'POSTED') throw new BadRequestException('Only POSTED payroll runs can be voided')
+
+        return this.prisma.$transaction(async (tx) => {
+            const startStr = run.startDate ? new Date(run.startDate).toISOString().slice(0, 10) : ''
+            const endStr = run.endDate ? new Date(run.endDate).toISOString().slice(0, 10) : ''
+            const memo = reason || `Void Payroll Run: ${startStr} - ${endStr}`
+
+            if (run.journalEntryId) {
+                await this.subLedger.reversePayrollRunFromGL(tx, companyId, run.journalEntryId, memo, new Date())
+            }
+
+            const updatedRun = await tx.payrollRun.update({
+                where: { id: runId },
+                data: {
+                    status: 'VOID',
+                    postingStatus: 'VOIDED',
+                    deletedAt: new Date(),
+                },
+            })
+
+            await tx.paycheck.updateMany({
+                where: { payrollRunId: runId, companyId },
+                data: { deletedAt: new Date() },
+            })
+
+            return updatedRun
+        })
     }
 
     // ─── Paychecks ────────────────────────────────────────────────────────────

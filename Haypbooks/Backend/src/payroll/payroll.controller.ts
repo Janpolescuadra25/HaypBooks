@@ -86,8 +86,13 @@ export class PayrollController {
 
     @Post('runs/:runId/void')
     @HttpCode(HttpStatus.OK)
-    voidRun(@Req() req: any, @Param('companyId') cid: string, @Param('runId') rid: string) {
-        return this.svc.voidPayrollRun(req.user.userId, cid, rid)
+    voidRun(
+        @Req() req: any,
+        @Param('companyId') cid: string,
+        @Param('runId') rid: string,
+        @Body() body: { reason?: string } = {},
+    ) {
+        return this.svc.voidPayrollRun(cid, rid, body?.reason, req.user?.id ?? req.user?.userId)
     }
 
     // ─── Paychecks ────────────────────────────────────────────────────────────
