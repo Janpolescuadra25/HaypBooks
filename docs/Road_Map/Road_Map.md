@@ -150,6 +150,7 @@ The following core accounting modules and defects have been fully resolved, test
 
 ### 16  Data, performance and remaining modules (AUDIT REQUIRED, P1)
 
+- 16C: Fixed Assets Management (Completed & Archived to Appendix) — Asset creation, depreciation schedules (straight-line and declining balance), and asset disposal with journal gain/loss realization.
 - Audit: schema/migrations/isolated DB, FKs/indexes/RLS, precision/timezone, retention/import/export/jobs; tax/payroll/assets and every advertised module not covered. Select jurisdictions with owner; do not invent compliance scope.
 - Deliver: demonstrated defects repaired with reviewed reversible changes, bounded queries, retry-safe jobs, secure storage and recovery. Restructure only for demonstrated benefit.
 - Requirements: read-only profiling before explicit data-repair plan; no blanket reseed/delete. Depends on: 9/12/14.
@@ -182,6 +183,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 
 ## Appendix: Completed Tasks
 
+- [x] **Phase 16C: Fixed Assets Management** — Asset creation, depreciation schedules (straight-line, declining balance), and asset disposal with journal gain/loss realization.
 
 ## Definition of finished
 
@@ -199,7 +201,7 @@ The governing [Product Maturity Standard](../standards/PRODUCT_MATURITY_STANDARD
 | Plan B multicurrency completion claim | 4/7/14 regression verification; does not establish revaluation completion |
 | Plan C-3 budgeting | 16B below |
 | Plan D approvals | 14A below |
-| Plan E fixed assets | 16C below |
+| Plan E fixed assets | 16C archived to appendix |
 | Plan F-1/F-2 AI | 8 plus supplement below |
 | Plan G / S1S6 | 2/4/5/6/7/14 (S1), 12 (S2), 16 (S3), 9/14/16 (S4), 1/15 (S5), 3/9/10/17 (S6) |
 | H-3 platform owner | 15A below |
