@@ -245,5 +245,4 @@ Conflicts resolved:
 
 
 | **Phase A6 (Partial: BANK-01, BANK-02)** | Banking Reconciliation: Auto-Match Invariants & Statement Ingestion Hardening — **DONE & VERIFIED (2026-10-18)** | Partial: BANK-01 (reconciliation invariants) and BANK-02 (statement ingestion hardening) complete. Rule-based matching functional via `applySmartRules()` (exact, prefix, contains, amount-range). Advanced matching algorithms remaining. | [Banking Reconciliation README](../implementations/banking-reconciliation/README.md) |
-| **Phase A5 (Inventory Voiding & GL Reversal)** | Inventory Voiding & General Ledger Reversal Workflow — **DONE & VERIFIED (2026-10-18)** | Full transactional voiding implemented in inventory.service.ts with sub-ledger GL reversal (everseInventoryTransactionGL), period assertions, status transitions, soft-delete, and audit logging. Endpoints exposed in inventory.controller.ts. Regression suite: 5/5 unit tests passing (src/inventory/inventory.service.spec.ts). | [Inventory Voiding README](../implementations/inventory-voiding/README.md) |
 
