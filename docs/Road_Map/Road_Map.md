@@ -1,6 +1,6 @@
 # HaypBooks  End-to-End Completion Roadmap
 
-## Current verification checkpoint - 2026-09-26
+## Current verification checkpoint - 2026-10-19
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
@@ -10,12 +10,12 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
 - Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
 - Required security work: tracked credential settings (S1), attachment object ownership (S2), guard/controller workspace-context agreement (S3 ✓).
-- Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6): BANK-02 ingestion guards completed, remaining matching algorithm work outstanding, numbering (A7). IDs refer to the linked audit.
+- Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
 
-Updated 2026-09-12. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
+Updated 2026-10-19. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
 
@@ -113,6 +113,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase 1** | Landing, Intro & Public Experience (L1–L6) — **DONE & VERIFIED (2026-10-17)** | Full landing page overhaul, intro animation sequences, responsive layout, dark/light theme, verified public route pruning (L6), and footer authenticated workspace link remediation (L4) | [Landing L4 README](../implementations/landing-l4-footer-links/README.md) · [Landing L6 README](../implementations/landing-l6-route-pruning/README.md) |
 | **Phase 16A** | Payroll Voiding & GL Reversal | Implemented full payroll run voiding workflow: added `reversePayrollRunFromGL` to `sub-ledger.service.ts`, updated `voidPayrollRun` in `payroll.service.ts` with transactional atomicity, GL reversal integration via `createReversingJE`, and paycheck soft-deletion; maintains all accounting invariants and authorization controls; marked DONE & VERIFIED (2026-10-18) | [Payroll Voiding README](../implementations/payroll-voiding/README.md) |
 | **Phase A5 (Inventory Voiding & GL Reversal)** | Inventory Voiding & General Ledger Reversal Workflow — **DONE & VERIFIED (2026-10-18)** | Full transactional voiding implemented in `inventory.service.ts` with sub-ledger GL reversal (`reverseInventoryTransactionGL`), period assertions, status transitions, soft-delete, and audit logging. Endpoints exposed in `inventory.controller.ts`. Regression suite: 5/5 unit tests passing (`src/inventory/inventory.service.spec.ts`). | [Inventory Voiding README](../implementations/inventory-voiding/README.md) |
+| **Phase A6 (Banking Auto-Match Scoring & Invariant Hardening)** | **DONE & VERIFIED (2026-10-18)** | Implemented full multi-rule confidence scoring hierarchy (`EXACT`: 100, `STARTS_WITH`: 80, `CONTAINS`: 60, amount specificity: +15), candidate date proximity/description similarity ranking, and duplicate match prevention for bank reconciliation auto-match. All 13 unit tests pass. | [Banking Auto-Match README](../../Haypbooks/Backend/docs/implementations/banking-auto-match/README.md) |
 ---
 
 ## Active & Remaining Implementation Phases
