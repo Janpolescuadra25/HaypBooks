@@ -68,3 +68,29 @@ docs/Prompt_only/
 
 # Root clutter
 dummy.txt
+
+# -------------------------------------------------------------
+# Publication & Development Safety Hardening (Task 802)
+# -------------------------------------------------------------
+# Archives, binaries, and temporary docs
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+docs/*.zip
+docs/Astra/
+docs/Astra.zip
+
+# Frontend and Backend diagnostics & lint outputs
+**/eslint-*.json
+Haypbooks/Frontend/eslint-*.json
+*.tsbuildinfo
+
+# Environment backups and production overrides
+.env.backup
+.env.production
+*.backup
+**/*.backup
+
+# Prompt relay buffer
+docs/Prompt_only/Prompt_only.md
