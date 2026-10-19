@@ -1,4 +1,4 @@
-# HaypBooks  End-to-End Completion Roadmap
+﻿# HaypBooks  End-to-End Completion Roadmap
 
 ## Current verification checkpoint - 2026-10-19
 
@@ -115,7 +115,7 @@ The following core accounting modules and defects have been fully resolved, test
 | **Phase A5 (Inventory Voiding & GL Reversal)** | Inventory Voiding & General Ledger Reversal Workflow — **DONE & VERIFIED (2026-10-18)** | Full transactional voiding implemented in `inventory.service.ts` with sub-ledger GL reversal (`reverseInventoryTransactionGL`), period assertions, status transitions, soft-delete, and audit logging. Endpoints exposed in `inventory.controller.ts`. Regression suite: 5/5 unit tests passing (`src/inventory/inventory.service.spec.ts`). | [Inventory Voiding README](../implementations/inventory-voiding/README.md) |
 | **Phase A6 (Banking Auto-Match Scoring & Invariant Hardening)** | **DONE & VERIFIED (2026-10-18)** | Implemented full multi-rule confidence scoring hierarchy (`EXACT`: 100, `STARTS_WITH`: 80, `CONTAINS`: 60, amount specificity: +15), candidate date proximity/description similarity ranking, and duplicate match prevention for bank reconciliation auto-match. All 13 unit tests pass. | [Banking Auto-Match README](../../Haypbooks/Backend/docs/implementations/banking-auto-match/README.md) |
 | **Phase A7 (Journal Entry Company-Local Sequence Generator & Schema Hardening)** | **DONE & VERIFIED (2026-10-19)** | Implemented company-local journal entry sequence generation (`JE-XXXXXX`) via `DocumentSequence.upsert` with atomic increment in `createAndPostJE`. Replaced global `@unique` on `entryNumber` with composite `@@unique([companyId, entryNumber])`. All unit tests pass. | [Journal Entry Numbering README](../../Haypbooks/Backend/docs/implementations/journal-entry-numbering/README.md) |
-| **Phase T802 (Gitignore Publication & Safety Hardening)** | **DONE & VERIFIED (2026-10-20)** | Added all required safety rules to root .gitignore: archives, binaries, lint outputs, env backups, and prompt relay buffer. Staged and committed only .gitignore, kept changes strictly local on checkpoint/dev. | [Gitignore Hardening README](../../Haypbooks/Backend/docs/implementations/gitignore-hardening-task802/README.md) |
+| **Phase T802 (Gitignore Publication & Safety Hardening)** | **DONE & VERIFIED (2026-10-20)** | Added all required safety rules to root .gitignore: archives, binaries, lint outputs, env backups, and prompt relay buffer. Staged and committed only .gitignore, kept changes strictly local on checkpoint/dev. | [Gitignore Hardening README](../implementations/gitignore-hardening-task802/README.md) |
 ---
 
 ## Active & Remaining Implementation Phases
