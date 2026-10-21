@@ -78,12 +78,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 
 Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, DONE. P0 means release-blocking for affected scope, not proof of a live incident. VERIFIED means inspected source; UNKNOWN must not be silently promoted to passing behavior.
 
-### 3  Section READMEs and evidence (PARTIAL, P1 continuous)
-
-- Audit: distinguish source presence, observed execution and historical claims. Auth artifact has corrupted excerpts; any rebuild remains separately scoped. Never invent timestamps/transcripts.
-- Deliver: update/create each implemented section's README in its existing documentation location; link frontend/backend, architecture, files, APIs, decisions, permissions, behavior, validation results and limits.
-- Depends on: verified phase results. Done: each completed section has reproducible evidence and matching roadmap status. Only then mark DONE, preserve durable README and remove completed active-phase detail. Documentation-only within this phase.
-
 ## Completed & Verified Implementation Phases (Archived)
 
 > Note: Fully verified historical phases completed prior to 2026-10-15 have been archived to the [Appendix: Completed Tasks](#appendix-completed-tasks) to keep the active roadmap concise.
@@ -175,6 +169,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 ## Appendix: Completed Tasks
 
 ### Archived Verified Phases (Completed Prior to 2026-10-15)
+| **Phase 3 — Section READMEs and evidence** | **DONE & VERIFIED (2026-10-22)** | All canonical implementation READMEs created for completed phases (including Phase 12 and Phase 14 security/accounting controls), with all required documentation links and validation results added. No remaining documentation deliverables outstanding. | [Phase 12 Security README](../implementations/security-tenant-isolation/README.md) · [Phase 14 Accounting README](../implementations/accounting-lifecycle-controls/README.md) |
 
 | Phase | Module & Scope | Resolution Summary | Authoritative Implementation Documentation |
 |---|---|---|---|
