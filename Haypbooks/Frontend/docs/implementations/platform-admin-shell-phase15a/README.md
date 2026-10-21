@@ -1,4 +1,4 @@
-﻿# Phase 15A: Platform Administration Navigation & Dedicated Sidebar Shell
+# Phase 15A: Platform Administration Navigation & Dedicated Sidebar Shell
 
 ## 1. Executive Summary
 Phase 15A establishes the dedicated administrative navigation shell for Platform Super Administrators (`SUPER_ADMIN`). It introduces role-gated ingress from the global application header, an isolated full-height administrative layout with route guards, and a persistent sidebar providing navigation across administrative sub-domains.
@@ -27,13 +27,13 @@ Phase 15A establishes the dedicated administrative navigation shell for Platform
 - **Structural Layout:** Replaces the bare viewport container with a full-height flex container (`flex h-screen bg-slate-50`) hosting the fixed sidebar on the left and the scrollable child page content on the right.
 
 ### 3.3 Platform Admin Dedicated Sidebar (`Haypbooks/Frontend/src/components/platform-admin/PlatformAdminSidebar.tsx`)
-- **Sidebar Dimensions:** Fixed 256px (`w-64`) dark slate sidebar (`bg-slate-900 text-white`).
+- **Sidebar Dimensions:** Fixed 256px (`w-64`) dark slate sidebar (`bg-white border-r border-slate-200 text-white`).
 - **Branding Header:** Displays shield badge with title "Platform Admin" and subtitle "System Administration".
 - **Navigation Links:**
   - `Overview & Metrics`: `/platform-admin/metrics` (`Activity` icon)
   - `Storage Usage`: `/platform-admin/storage` (`HardDrive` icon)
   - `User Management`: `/platform-admin/users` (`Users` icon)
-- **Active Route Highlighting:** Employs `usePathname()` to dynamically apply active styling (`bg-slate-800 text-white font-medium`) vs inactive styling (`text-slate-400 hover:text-white hover:bg-slate-800/60`).
+- **Active Route Highlighting:** Employs `usePathname()` to dynamically apply active styling (`bg-purple-50 text-purple-700 font-medium font-medium`) vs inactive styling (`text-slate-400 hover:text-white hover:bg-slate-800/60`).
 - **Return to App Ingress:** Bottom action link providing safe return to `/home/dashboard` (`ArrowLeft` icon).
 
 ---
