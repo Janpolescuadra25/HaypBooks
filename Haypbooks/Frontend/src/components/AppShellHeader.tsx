@@ -1,6 +1,9 @@
 'use client'
 import { usePathname } from 'next/navigation'
 import UserMenu from '@/components/UserMenu'
+import Link from 'next/link'
+import { useUser } from '@/hooks/use-user'
+import { Shield } from 'lucide-react'
 import { RoleSwitcher } from '@/components/RoleSwitcher'
 import NewMenu from '@/components/NewMenu'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -12,7 +15,8 @@ import HubSwitcher from '@/components/HubSwitcher'
 import NotificationsPanel from '@/components/NotificationsPanel'
 
 export default function AppShellHeader() {
-  const pathname = usePathname() ?? ''
+{
+  const { user } = useUser()
   const { toggleSidebar } = useUI()
   const [perms, setPerms] = useState<string[] | null>(null)
   const [query, setQuery] = useState('')
@@ -653,6 +657,16 @@ export default function AppShellHeader() {
               </Popover>
             )}
           </div>
+          {user?.systemRole === 'SUPER_ADMIN' && (
+            <Link
+              href="/platform-admin/metrics"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors shrink-0"
+              title="Platform Administration"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Platform Admin</span>
+            </Link>
+          )}
           <RoleSwitcher />
           <UserMenu />
         </div>
