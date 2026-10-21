@@ -227,12 +227,15 @@ Conflicts resolved:
 - Current owner controller uses SystemRoleGuard/SUPER_ADMIN declarations. Do not replace existing owner APIs based on older blank-feature claims. Trace endpoint and frontend coverage first.
 - The older '22 stubs' count and test counts are historical inventory claims, not verified current totals. Re-enumerate actual implementations before classifying missing work.
 
-### 15A  Platform administration and three-role navigation (legacy H-3; PARTIAL / AUDIT REQUIRED)
+### 15A  Platform administration and dedicated platform-admin shell (COMPLETED)
 
-- 15A  PARTIAL: server-side RBAC is implemented and verified for the owner controller; broader authorization coverage is pending further audit.
+- **Status:** [x] COMPLETED (Commit: `28a2779e`)
+- **Documentation:** `Haypbooks/Frontend/docs/implementations/platform-admin-shell-phase15a/README.md`
+- **Delivered scope:** Dedicated `SUPER_ADMIN` header entry point, route-guarded platform-admin layout, and a dedicated sidebar with Metrics, Storage, User Management, and Return-to-App navigation.
 - Distinguish SUPER_ADMIN platform administration, company administration and practice administration. Build an authorized dashboard switcher; hiding navigation is not authorization. Platform administration itself is not a paid customer plan; any bypass must be server-side, auditable and limited to platform operations. Company/practice tenant access still needs explicit policy.
 - Verify workspace creation choices, no-company layout, useCompanyId behavior, stale demo identities, and platform links shown to ordinary workspace owners. Company/practice crossover follows owner-approved membership/plan policy, not a blanket role-name assumption.
 - Dependencies: 12/13/15. Acceptance: full role/route/API matrix, denied direct URLs/requests, persistent status changes, pagination/filtering, consistent metrics and audit entries. No blanket cascade user/file deletion.
+- **Next phase:** Phase 15B continues with the concrete platform-admin pages and operational metrics/user-management endpoints.
 
 ### 16A  Database hosting decision (legacy Plan A; AUDIT REQUIRED, optional)
 
