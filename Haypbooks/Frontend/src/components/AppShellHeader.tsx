@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { usePathname } from 'next/navigation'
 import UserMenu from '@/components/UserMenu'
 import Link from 'next/link'
@@ -15,7 +15,6 @@ import HubSwitcher from '@/components/HubSwitcher'
 import NotificationsPanel from '@/components/NotificationsPanel'
 
 export default function AppShellHeader() {
-{
   const { user } = useUser()
   const { toggleSidebar } = useUI()
   const [perms, setPerms] = useState<string[] | null>(null)

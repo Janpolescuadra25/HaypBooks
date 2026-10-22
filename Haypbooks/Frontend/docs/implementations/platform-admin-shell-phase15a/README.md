@@ -1,4 +1,4 @@
-# Phase 15A: Platform Administration Navigation & Dedicated Sidebar Shell
+﻿# Phase 15A: Platform Administration Navigation & Dedicated Sidebar Shell
 
 ## 1. Executive Summary
 Phase 15A establishes the dedicated administrative navigation shell for Platform Super Administrators (`SUPER_ADMIN`). It introduces role-gated ingress from the global application header, an isolated full-height administrative layout with route guards, and a persistent sidebar providing navigation across administrative sub-domains.
@@ -33,7 +33,7 @@ Phase 15A establishes the dedicated administrative navigation shell for Platform
   - `Overview & Metrics`: `/platform-admin/metrics` (`Activity` icon)
   - `Storage Usage`: `/platform-admin/storage` (`HardDrive` icon)
   - `User Management`: `/platform-admin/users` (`Users` icon)
-- **Active Route Highlighting:** Employs `usePathname()` to dynamically apply active styling (`bg-purple-50 text-purple-700 font-medium font-medium`) vs inactive styling (`text-slate-400 hover:text-white hover:bg-slate-800/60`).
+- **Active Route Highlighting:** Employs `usePathname()` to dynamically apply active styling (`bg-purple-50 text-purple-700 font-medium font-medium`) vs inactive styling (`text-slate-600 hover:bg-slate-50 hover:text-slate-900`).
 - **Return to App Ingress:** Bottom action link providing safe return to `/home/dashboard` (`ArrowLeft` icon).
 
 ---
