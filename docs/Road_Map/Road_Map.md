@@ -1,6 +1,6 @@
 # HaypBooks  End-to-End Completion Roadmap
 
-## Current verification checkpoint - 2026-10-19
+## Current verification checkpoint - 2026-10-23
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
@@ -15,9 +15,10 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
 
-Updated 2026-10-19. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
+Updated 2026-10-23. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
+- All 13 completed phases verified against codebase and READMEs by Hydra on 2026-10-23 at commit 6f8335e42752b276761e14f0bf3b938afeec63b0; pruned from active tracking table.
 
 ## Current audit findings
 
@@ -77,26 +78,6 @@ Paths below are repository-relative. Rediscover anchors before implementation.
 ## Active completion plan
 
 Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, DONE. P0 means release-blocking for affected scope, not proof of a live incident. VERIFIED means inspected source; UNKNOWN must not be silently promoted to passing behavior.
-
-## Completed & Verified Implementation Phases (Archived)
-
-> Note: Fully verified historical phases completed prior to 2026-10-15 have been archived to the [Appendix: Completed Tasks](#appendix-completed-tasks) to keep the active roadmap concise.
-
-| Phase | Module & Scope | Resolution Summary | Authoritative Implementation Documentation |
-|---|---|---|---|
-| **Phase 14** | Accounting lifecycle controls | Period-lock validation (`assertPeriodOpen`), GL idempotency deduplication, exact payload-conflict validation, and deterministic caller wiring for bill/inventory/bank categorization flows | [Accounting Lifecycle README](../implementations/accounting-lifecycle-controls/README.md) |
-| **Phase 9** | Lint & Type Baseline Enforcement | Full codebase ESLint and TypeScript baseline restored with clean exit code 0 | [Lint Baseline README](Haypbooks/Frontend/docs/implementations/lint-baseline-enforcement/README.md) |
-| **Phase 12 E1** | Test Endpoint Security Guard & Hardening | ensureEnabled() environment guard, test tokens, 8/8 tests green | [Test Security README](Haypbooks/Backend/src/test/README.md) |
-| **Phase H-0** | SUPER_ADMIN provisioning | JWT `systemRole` and `isOwner` claims, strategy validation, verified seed script | [Auth Module](Haypbooks/Backend/src/auth/prisma-auth.service.ts) |
-| **Phase 12** | Security and tenant isolation | DONE & VERIFIED | 19/19 tenant controllers guarded, test endpoints blocked in prod, admin routes restricted, auth rate limiting and session revocation complete |
-| **Phase 11 P2** | Practice Hub Progression & XP System — **DONE & VERIFIED (2026-10-15)** | Zero-database-migration XP tracking with deterministic replay prevention, dynamic tier calculations, and practice-wide leaderboards | [Practice Hub P2 Progression README](../implementations/practice-hub-p2-progression/README.md) |
-| **Financial Invariants U1** | Core Financial & Workflow Invariant Fixes — **DONE & VERIFIED (2026-10-17)** | P0 fixes for FIN-01 (FX carrying-value), REP-01 (Deferred revenue BS net income), and AP-01 (Role-based bill approval authorization) with 109 passing unit tests | [Financial Invariants U1 README](../implementations/financial-invariants-u1/README.md) |
-| **Phase 1** | Landing, Intro & Public Experience (L1–L6) — **DONE & VERIFIED (2026-10-17)** | Full landing page overhaul, intro animation sequences, responsive layout, dark/light theme, verified public route pruning (L6), and footer authenticated workspace link remediation (L4) | [Landing L4 README](../implementations/landing-l4-footer-links/README.md) · [Landing L6 README](../implementations/landing-l6-route-pruning/README.md) |
-| **Phase 16A** | Payroll Voiding & GL Reversal | Implemented full payroll run voiding workflow: added `reversePayrollRunFromGL` to `sub-ledger.service.ts`, updated `voidPayrollRun` in `payroll.service.ts` with transactional atomicity, GL reversal integration via `createReversingJE`, and paycheck soft-deletion; maintains all accounting invariants and authorization controls; marked DONE & VERIFIED (2026-10-18) | [Payroll Voiding README](../implementations/payroll-voiding/README.md) |
-| **Phase A5 (Inventory Voiding & GL Reversal)** | Inventory Voiding & General Ledger Reversal Workflow — **DONE & VERIFIED (2026-10-18)** | Full transactional voiding implemented in `inventory.service.ts` with sub-ledger GL reversal (`reverseInventoryTransactionGL`), period assertions, status transitions, soft-delete, and audit logging. Endpoints exposed in `inventory.controller.ts`. Regression suite: 5/5 unit tests passing (`src/inventory/inventory.service.spec.ts`). | [Inventory Voiding README](../implementations/inventory-voiding/README.md) |
-| **Phase A6 (Banking Auto-Match Scoring & Invariant Hardening)** | **DONE & VERIFIED (2026-10-18)** | Implemented full multi-rule confidence scoring hierarchy (`EXACT`: 100, `STARTS_WITH`: 80, `CONTAINS`: 60, amount specificity: +15), candidate date proximity/description similarity ranking, and duplicate match prevention for bank reconciliation auto-match. All 13 unit tests pass. | [Banking Auto-Match README](../implementations/banking-auto-match/README.md) |
-| **Phase A7 (Journal Entry Company-Local Sequence Generator & Schema Hardening)** | **DONE & VERIFIED (2026-10-19)** | Implemented company-local journal entry sequence generation (`JE-XXXXXX`) via `DocumentSequence.upsert` with atomic increment in `createAndPostJE`. Replaced global `@unique` on `entryNumber` with composite `@@unique([companyId, entryNumber])`. All unit tests pass. | [Journal Entry Numbering README](../implementations/journal-entry-numbering/README.md) |
-| **Phase T802 (Gitignore Publication & Safety Hardening)** | **DONE & VERIFIED (2026-10-20)** | Added all required safety rules to root .gitignore: archives, binaries, lint outputs, env backups, and prompt relay buffer. Staged and committed only .gitignore, kept changes strictly local on checkpoint/dev. | [Gitignore Hardening README](../implementations/gitignore-hardening-task802/README.md) |
 
 ## Active & Remaining Implementation Phases
 
@@ -175,7 +156,6 @@ For each row: success, invalid input, permission denial, network/server failure,
 |---|---|---|---|
 | **Phase 3 — Section READMEs and evidence** | **DONE & VERIFIED (2026-10-22)** | All canonical implementation READMEs created for completed phases (including Phase 12 and Phase 14 security/accounting controls), with all required documentation links and validation results added. No remaining documentation deliverables outstanding. | [Phase 12 Security README](../implementations/security-tenant-isolation/README.md) · [Phase 14 Accounting README](../implementations/accounting-lifecycle-controls/README.md) |
 | **Phase 16C Step 3 — Fixed Assets Disposal & Write-Off Flow** | **DONE & VERIFIED (2026-10-15)** | Implemented disposal quote calculation, sale processing with gain/loss GL posting, write-off journal workflow, asset status transitions to SOLD/DISPOSED, role enforcement for OWNER/ADMIN/ACCOUNTANT, audit logging, and 7 passing unit tests; transactional Prisma $transaction ensures atomicity of all disposal mutations | [Fixed Assets Step 3 README](../implementations/fixed-assets-step3/README.md) |
-| **Phase 12 E2** | WorkspaceAccessGuard implementation | Centralized tenant context guard across 10 core controllers, Batch 1 rollout completed 2026-10-02, array workspace ID rejection bug fix, request context propagation, 10/10 unit tests passing | [Workspace Access Guard README](../implementations/workspace-access-guard/README.md) |
 | **Phase 16D** | Explicit remaining-module inventory and retention | Comprehensive backend module inventory created 2026-10-02, 39 controllers documented, Batch 1/Batch 2 mapped | [Module Inventory README](../implementations/module-inventory/README.md) |
 | **Phase 13 — Paid Plans, Trials & Stripe Billing** | **DONE & VERIFIED (2026-10-03)** | Four canonical paid plans + 30-day non-destructive trial (`planId: DEFAULT_TRIAL_PLAN_ID`), `/api/subscriptions/create` onboarding route & inline `role="alert"` error handling (E2), trial bootstrap & 30-day ticker alignment (E9), Stripe SDK checkout/portal/webhook lifecycle (`docs/implementations/subscription-onboarding/README.md`, `docs/implementations/billing-trial-alignment/README.md`, `docs/implementations/module-inventory/README.md`). | |
 | **Phase 5 — E5 Inventory Stock & GL Atomic Synchronization** | **DONE & VERIFIED (2026-10-04)** | Fixed `DRAFT` stock mutation, added double-posting guard, and enforced atomic `POSTED` stock updates + `SubLedgerService.postInventoryTransactionToGL` + `journalEntryId` linking + `POST_TO_GL` audit logging inside a single Prisma `$transaction` (`docs/implementations/inventory-gl-sync/README.md`). | |
@@ -249,6 +229,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 
