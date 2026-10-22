@@ -15,6 +15,7 @@ import HubSwitcher from '@/components/HubSwitcher'
 import NotificationsPanel from '@/components/NotificationsPanel'
 
 export default function AppShellHeader() {
+  const pathname = usePathname()
   const { user } = useUser()
   const { toggleSidebar } = useUI()
   const [perms, setPerms] = useState<string[] | null>(null)
