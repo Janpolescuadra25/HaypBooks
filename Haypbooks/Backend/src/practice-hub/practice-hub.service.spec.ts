@@ -24,11 +24,19 @@ describe('PracticeHubService - Capacity Gating, Invite Races & Revocation', () =
         update: jest.fn(),
         updateMany: jest.fn(),
       },
+      task: {
+        count: jest.fn(),
+        findMany: jest.fn(),
+      },
+      practiceCalendar: {
+        findMany: jest.fn(),
+      },
       engagement: {
         findFirst: jest.fn(),
         count: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        findMany: jest.fn(),
       },
       user: {
         findUnique: jest.fn(),
@@ -119,6 +127,155 @@ describe('PracticeHubService - Capacity Gating, Invite Races & Revocation', () =
 
     expect(result).toBeDefined();
     expect(prismaService.practiceInvite.create).toHaveBeenCalled();
+  });
+
+  describe('Existing Dashboard & Client Operations', () => {
+    it('should return dashboard stats for active clients, open tasks, pending reviews, and completed MTD', async () => {
+      prismaService.engagement.count.mockResolvedValueOnce(6);
+      prismaService.task.count.mockResolvedValueOnce(9);
+      prismaService.task.count.mockResolvedValueOnce(3);
+      prismaService.task.count.mockResolvedValueOnce(4);
+
+      const result = await service.getDashboardStats('prac-1');
+
+      expect(result).toEqual({
+        activeClients: 6,
+        openTasks: 9,
+        pendingReviews: 3,
+        completedMtd: 4,
+      });
+      expect(prismaService.engagement.count).toHaveBeenCalledWith({
+        where: { practiceId: 'prac-1', status: 'ACTIVE' },
+      });
+      expect(prismaService.task.count).toHaveBeenCalledTimes(3);
+    });
+
+    it('should return recent activity items mapped from recent practice tasks', async () => {
+      prismaService.task.findMany.mockResolvedValue([
+        {
+          id: 'task-1',
+          title: 'Quarter-end review',
+          status: 'DONE',
+          updatedAt: new Date('2026-03-15T12:00:00.000Z'),
+          company: { name: 'Northwind Foods' },
+        },
+        {
+          id: 'task-2',
+          title: 'Payroll checkup',
+          status: 'IN_PROGRESS',
+          updatedAt: new Date('2026-03-14T07:15:00.000Z'),
+          company: { name: 'Summit Group' },
+        },
+      ]);
+
+      const result = await service.getRecentActivity('prac-1');
+
+      expect(result).toEqual([
+        {
+          id: 'task-1',
+          client: 'Northwind Foods',
+          action: 'Quarter-end review',
+          time: '2026-03-15T12:00:00.000Z',
+          status: 'done',
+        },
+        {
+          id: 'task-2',
+          client: 'Summit Group',
+          action: 'Payroll checkup',
+          time: '2026-03-14T07:15:00.000Z',
+          status: 'info',
+        },
+      ]);
+      expect(prismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { practiceId: 'prac-1', deletedAt: null },
+          take: 10,
+        }),
+      );
+    });
+
+    it('should return upcoming deadlines sorted by due date with urgent flags', async () => {
+      prismaService.practiceCalendar.findMany.mockResolvedValue([]);
+      prismaService.task.findMany.mockResolvedValue([
+        {
+          id: 'task-1',
+          title: '2026 tax filing',
+          dueDate: new Date('2026-03-20T00:00:00.000Z'),
+          priority: 'URGENT',
+          company: { name: 'Apex Works' },
+        },
+        {
+          id: 'task-2',
+          title: 'Monthly close',
+          dueDate: new Date('2026-03-15T00:00:00.000Z'),
+          priority: 'NORMAL',
+          company: { name: 'Blue Rock' },
+        },
+      ]);
+
+      const result = await service.getUpcomingDeadlines('prac-1');
+
+      expect(result).toEqual([
+        {
+          id: 'task-2',
+          label: 'Monthly close — Blue Rock',
+          date: '2026-03-15T00:00:00.000Z',
+          urgent: false,
+        },
+        {
+          id: 'task-1',
+          label: '2026 tax filing — Apex Works',
+          date: '2026-03-20T00:00:00.000Z',
+          urgent: true,
+        },
+      ]);
+    });
+
+    it('should return the active client list with engagement details', async () => {
+      prismaService.engagement.findMany.mockResolvedValue([
+        {
+          id: 'eng-1',
+          companyId: 'comp-1',
+          name: 'Year-end audit',
+          type: 'AUDIT',
+          startDate: new Date('2026-01-15T00:00:00.000Z'),
+          endDate: new Date('2026-12-31T00:00:00.000Z'),
+          company: { id: 'comp-1', name: 'Northwind Foods' },
+        },
+        {
+          id: 'eng-2',
+          companyId: 'comp-2',
+          name: 'Tax planning',
+          type: 'TAX',
+          startDate: new Date('2026-02-01T00:00:00.000Z'),
+          endDate: null,
+          company: { id: 'comp-2', name: 'Summit Group' },
+        },
+      ]);
+
+      const result = await service.getClientList('prac-1');
+
+      expect(result).toEqual([
+        {
+          id: 'eng-1',
+          companyId: 'comp-1',
+          companyName: 'Northwind Foods',
+          engagementName: 'Year-end audit',
+          type: 'AUDIT',
+          startDate: '2026-01-15T00:00:00.000Z',
+          endDate: '2026-12-31T00:00:00.000Z',
+        },
+        {
+          id: 'eng-2',
+          companyId: 'comp-2',
+          companyName: 'Summit Group',
+          engagementName: 'Tax planning',
+          type: 'TAX',
+          startDate: '2026-02-01T00:00:00.000Z',
+          endDate: null,
+        },
+      ]);
+    });
   });
 
   describe('assertPracticeOwner', () => {

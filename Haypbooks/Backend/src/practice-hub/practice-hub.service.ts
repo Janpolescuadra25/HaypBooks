@@ -65,12 +65,14 @@ export class PracticeHubService {
     })
 
     if (events.length > 0) {
-      return events.map((e) => ({
-        id: e.id,
-        label: e.title + (e.company ? ` — ${e.company.name}` : ''),
-        date: e.startAt.toISOString(),
-        urgent: e.eventType === 'DEADLINE' || e.eventType === 'TAX_FILING',
-      }))
+      return events
+        .map((e) => ({
+          id: e.id,
+          label: e.title + (e.company ? ` — ${e.company.name}` : ''),
+          date: e.startAt.toISOString(),
+          urgent: e.eventType === 'DEADLINE' || e.eventType === 'TAX_FILING',
+        }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     }
 
     // Fallback: use task due dates if no calendar events
@@ -81,12 +83,14 @@ export class PracticeHubService {
       include: { company: { select: { name: true } } },
     })
 
-    return tasks.map((t) => ({
-      id: t.id,
-      label: t.title + (t.company ? ` — ${t.company.name}` : ''),
-      date: t.dueDate!.toISOString(),
-      urgent: t.priority === 'URGENT' || t.priority === 'HIGH',
-    }))
+    return tasks
+      .map((t) => ({
+        id: t.id,
+        label: t.title + (t.company ? ` — ${t.company.name}` : ''),
+        date: t.dueDate!.toISOString(),
+        urgent: t.priority === 'URGENT' || t.priority === 'HIGH',
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   }
 
   /** Client list: all active engagements with company info */
