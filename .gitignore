@@ -94,3 +94,4 @@ Haypbooks/Frontend/eslint-*.json
 
 # Prompt relay buffer
 docs/Prompt_only/Prompt_only.md
+.vscode/
