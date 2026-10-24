@@ -48,6 +48,8 @@ fix_mock.js
 response.json
 audit_results.txt
 
+# Local editor settings
 .vscode/
 
 .vercel
+.vscode/

@@ -5,7 +5,7 @@
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD a0c0ec76fcbc6bad2c71662e4af7806b8c933374 plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
+- Working tree at HEAD 35f94663e1b0bf5ab7ddd54d764adc516833425a plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
 - Verified today: frontend typecheck PASS; backend typecheck PASS; frontend lint exit 0 with 166 warning lines; five selected backend suites PASS (41 tests). Frontend checkout suites BLOCKED before execution by missing tmpl/lib/tmpl. Full builds, DB integration and browser parity remain unverified in this checkpoint.
 - Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
 - Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
@@ -103,9 +103,9 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
 - Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
 - Step 3 status: invite acceptance now enforces `maxClients` capacity and atomic `PENDING` race protection inside `$transaction`, and practice invite/engagement revocation (`revokeInvite` / `revokeEngagement`, archiving engagements so active-relationship checks in `WorkspaceAccessGuard` fail closed and capacity slots release) is implemented and unit-tested in `practice-hub.service.spec.ts` (Phase 11 remains `PARTIAL` while owner/staff/client roles, tasks, reviews, switching, and progression remain open).
-- Step 4 status: canonical `PracticeUser.role` and `PracticeUser.status` model, deterministic single-owner SQL migration backfill (`DISTINCT ON ("practiceId")`), onboarding owner seeding, and strict fail-closed runtime authorization are implemented and unit-tested via public service methods in `practice-hub.service.spec.ts`.
-- Step 5A status: backend task queue, review queue, and practice-switch context contract are implemented in `practice-hub.service.ts` and `practice-hub.controller.ts`, with fail-closed status/role and client-engagement guards covered in `practice-hub.service.spec.ts` and verified by the targeted backend Jest suite (21/21 passing).
-- Step 5B status: the live frontend task queue, review queue, client context switcher, sidebar `TASKS`/`REVIEWS` navigation entries, and aligned `PracticeHubPage.test.tsx` are implemented in the live frontend and verified by `npx tsc --noEmit --pretty false` and the targeted `PracticeHubPage.test.tsx` suite; Phase 11 remains `PARTIAL` until progression/XP and broader acceptance validation are complete.
+- Step 4 status: DONE & VERIFIED. Canonical PracticeUser.role and PracticeUser.status model, deterministic single-owner SQL migration backfill, onboarding owner seeding, and strict fail-closed runtime authorization are implemented and unit-tested. Phase 11 remains PARTIAL pending step 5A/5B (task/review queues) and XP/progression features.
+- Step 5A status: NOT STARTED — backend queue implementation pending
+- Step 5B status: NOT STARTED — frontend queue implementation pending
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
@@ -233,6 +233,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 
