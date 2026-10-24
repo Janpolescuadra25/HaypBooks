@@ -5,7 +5,7 @@
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD 406d157b60a224d0e56dfe28a4c6cf3a4b9c0b3f plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
+- Working tree at HEAD 2396d9eb142306d06ba56661aa3aa51ab65ca8f2 plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
 - Verified today: frontend typecheck PASS; backend typecheck PASS; frontend lint exit 0 with 166 warning lines; five selected backend suites PASS (41 tests). Frontend checkout suites BLOCKED before execution by missing tmpl/lib/tmpl. Full builds, DB integration and browser parity remain unverified in this checkpoint.
 - Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
 - Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.

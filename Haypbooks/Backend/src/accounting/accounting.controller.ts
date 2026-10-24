@@ -62,6 +62,23 @@ export class AccountingController {
         return this.svc.listCoaTemplates(req.user.userId, companyId)
     }
 
+    @Get('period-close/workflow')
+    async getCloseWorkflow(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.getCloseWorkflow(req.user.userId, companyId)
+    }
+
+    @Post('period-close/workflow/complete')
+    @HttpCode(HttpStatus.OK)
+    async completeCloseWorkflow(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.completeCloseWorkflow(req.user.userId, companyId)
+    }
+
     @Get('accounts/audit-log')
     @SkipThrottle()
     async getAccountAuditLog(

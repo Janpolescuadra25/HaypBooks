@@ -29,6 +29,12 @@ export const accountingService = {
   listCoaTemplates: (companyId: string) =>
     apiClient.get(`/companies/${companyId}/accounting/coa-templates`),
 
+  getCloseWorkflow: (companyId: string) =>
+    apiClient.get(`/companies/${companyId}/accounting/period-close/workflow`),
+
+  completeCloseWorkflow: (companyId: string) =>
+    apiClient.post(`/companies/${companyId}/accounting/period-close/workflow/complete`),
+
   getAccountLedger: (companyId: string, accountId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/accounting/accounts/${accountId}/ledger`, { params: query }),
 
