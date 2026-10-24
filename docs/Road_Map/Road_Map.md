@@ -5,11 +5,11 @@
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD 2396d9eb142306d06ba56661aa3aa51ab65ca8f2 plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
+- Working tree at HEAD a0c0ec76fcbc6bad2c71662e4af7806b8c933374 plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
 - Verified today: frontend typecheck PASS; backend typecheck PASS; frontend lint exit 0 with 166 warning lines; five selected backend suites PASS (41 tests). Frontend checkout suites BLOCKED before execution by missing tmpl/lib/tmpl. Full builds, DB integration and browser parity remain unverified in this checkpoint.
 - Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
 - Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
-- Required security work: tracked credential settings (S1), attachment object ownership (S2), guard/controller workspace-context agreement (S3 ✓).
+- Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
 - Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7 ✓ 2026-10-19). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
@@ -149,6 +149,10 @@ For each row: success, invalid input, permission denial, network/server failure,
 
 <a id="appendix-completed-tasks"></a>
 ## Appendix: Completed Tasks
+| **S1 — Tracked Credential Settings Containment** | **DONE & VERIFIED (2026-10-24)** | Untracked .vscode/settings.json from Git index, added .vscode/ to .gitignore, local settings preserved on disk. | [Gitignore Hardening README](../implementations/gitignore-hardening-task802/README.md#task-848s1-extension-tracked-credential-settings-containment-vscode) |
+| **S2 — Attachment Object Ownership & Tenant Isolation** | **DONE & VERIFIED (2026-10-24)** | Enforced workspaceId filtering and uploader ownership for attachment access and deletions. | [Attachment Ownership README](../implementations/attachment-ownership/README.md) |
+| **S3 — Guard/Controller Workspace Context Agreement** | **DONE & VERIFIED (2026-10-24)** | Enforced WorkspaceAccessGuard across all routes; eliminated raw header fallbacks. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
+
 
 ### Archived Verified Phases (Completed Prior to 2026-10-15)
 
@@ -229,6 +233,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 

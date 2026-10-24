@@ -17,3 +17,22 @@ Added comprehensive publication and development safety ignore rules to prevent a
 - Sensitive files (`docs/Astra.zip`, `docs/Astra/`, `Haypbooks/Frontend/eslint-*.json`, `docs/Prompt_only/Prompt_only.md`) verified ignored
 - Parent commit: `7d0c648f49428edb7b0b61d84a7110c3fd611f03`
 - Sealed commit hash: `1695043f3ed8bcd144d8d29978ef0f4ece62b80b`
+
+
+---
+
+## Task 848.S1 Extension: Tracked Credential Settings Containment (.vscode/)
+**Completion Status:** DONE & VERIFIED (2026-10-24)  
+**Commit SHA:** `a0c0ec76fcbc6bad2c71662e4af7806b8c933374` on branch `checkpoint/dev`
+
+### 1. Overview & Purpose
+Eliminated accidental tracking of local developer and workspace IDE configuration files (`.vscode/settings.json`) in Git, ensuring local workspace settings remain strictly on the developer's machine and are never committed.
+
+### 2. Implementation Details
+- Appended `.vscode/` to root, backend, and frontend `.gitignore` files.
+- Untracked `.vscode/settings.json` from the Git index using `git rm --cached .vscode/settings.json` while preserving the file on local disk.
+
+### 3. Verification & Evidence
+- `git status --ignored --short .vscode/settings.json` confirmed `!! .vscode/settings.json`.
+- `Test-Path '.vscode/settings.json'` confirmed `True` (file preserved on disk).
+- Staged index verified: exactly `{ .gitignore, .vscode/settings.json (deleted from index) }`.
