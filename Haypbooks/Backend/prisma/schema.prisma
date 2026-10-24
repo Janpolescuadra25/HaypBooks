@@ -2062,6 +2062,8 @@ model PracticeUser {
   practiceId  String
   workspaceId String
   userId      String
+  role        String @default("STAFF")
+  status      String @default("ACTIVE")
 
   // Practice-level access is granted only to workspace members
   practice            Practice              @relation(fields: [practiceId], references: [id], onDelete: Cascade)

@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { MailService } from '../common/mail.service'
+import { PracticeUserRole, PracticeUserStatus } from './types/practice-user.types'
 import crypto from 'crypto'
 
 @Injectable()
@@ -116,7 +117,22 @@ export class PracticeHubService {
     })
   }
 
-  async createInvite(userId: string, dto: { email: string; companyName?: string; engagementName: string; engagementType: string; startDate: string }) {
+  async assertPracticeOwner(practiceId: string, userId: string): Promise<void> {
+    const practiceUser = await this.prisma.practiceUser.findFirst({
+      where: {
+        practiceId,
+        userId,
+        role: PracticeUserRole.OWNER,
+        status: PracticeUserStatus.ACTIVE,
+      },
+    })
+
+    if (!practiceUser) {
+      throw new ForbiddenException('Practice owner access required')
+    }
+  }
+
+  async createInvite(userId: string, dto: { email: string; companyName?: string; engagementName: string; engagementType: string; startDate: string; role?: PracticeUserRole }) {
     const practice = await this.findPracticeForUser(userId)
     if (!practice) throw new NotFoundException('Practice not found for user')
 
@@ -138,6 +154,8 @@ export class PracticeHubService {
     if (!allowedTypes.includes(dto.engagementType)) {
       throw new BadRequestException('Invalid engagement type')
     }
+
+    await this.assertPracticeOwner(practice.id, userId)
 
     const existingPending = await this.prisma.practiceInvite.findFirst({
       where: { practiceId: practice.id, email: normalizedEmail, status: 'PENDING' },
@@ -166,6 +184,9 @@ export class PracticeHubService {
     if (existingEngagement) {
       throw new ConflictException('This practice already has an active engagement with a company for that email')
     }
+
+    const inviteRole = dto.role ?? PracticeUserRole.STAFF
+    void inviteRole
 
     const code = crypto.randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)

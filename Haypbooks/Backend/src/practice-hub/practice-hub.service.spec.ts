@@ -121,6 +121,32 @@ describe('PracticeHubService - Capacity Gating, Invite Races & Revocation', () =
     expect(prismaService.practiceInvite.create).toHaveBeenCalled();
   });
 
+  describe('assertPracticeOwner', () => {
+    it('should resolve without error when the user is an active OWNER', async () => {
+      prismaService.practiceUser.findFirst.mockResolvedValue({
+        id: 'pu-1',
+        practiceId: 'prac-1',
+        userId: 'user-1',
+        role: 'OWNER',
+        status: 'ACTIVE',
+      });
+
+      await expect(service.assertPracticeOwner('prac-1', 'user-1')).resolves.toBeUndefined();
+    });
+
+    it('should throw ForbiddenException when the user is not an active OWNER', async () => {
+      prismaService.practiceUser.findFirst.mockResolvedValue(null);
+
+      await expect(service.assertPracticeOwner('prac-1', 'user-2')).rejects.toThrow('Practice owner access required');
+    });
+
+    it('should throw ForbiddenException when the user has STAFF role', async () => {
+      prismaService.practiceUser.findFirst.mockResolvedValue(null);
+
+      await expect(service.assertPracticeOwner('prac-1', 'user-3')).rejects.toThrow('Practice owner access required');
+    });
+  });
+
   describe('acceptInvite - acceptance-time capacity & atomic race protection', () => {
     const validInvite = {
       id: 'inv-1',

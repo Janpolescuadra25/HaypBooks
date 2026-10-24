@@ -48,4 +48,6 @@ fix_mock.js
 response.json
 audit_results.txt
 
+.vscode/
+
 .vercel

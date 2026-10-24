@@ -1,4 +1,5 @@
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, IsDateString, MaxLength } from 'class-validator'
+import { IsEmail, IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, IsDateString, MaxLength } from 'class-validator'
+import { PracticeUserRole } from '../types/practice-user.types'
 
 export class CreatePracticeInviteDto {
   @IsEmail()
@@ -8,6 +9,10 @@ export class CreatePracticeInviteDto {
   @IsString()
   @MaxLength(140)
   companyName?: string
+
+  @IsOptional()
+  @IsEnum(PracticeUserRole)
+  role?: PracticeUserRole
 
   @IsString()
   @IsNotEmpty()
