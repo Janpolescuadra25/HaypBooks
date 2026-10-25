@@ -79,6 +79,16 @@ export class PracticeHubController {
     return this.service.getClientList(practice.id)
   }
 
+  /** GET /api/practice-hub/members */
+  @Get('members')
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(WorkspaceTypeGuard)
+  async getPracticeMembers(@Req() req: any) {
+    const workspaceId = this.extractWorkspaceId(req)
+    const userId = this.extractUserId(req)
+    return this.service.getPracticeMembers(workspaceId, userId)
+  }
+
   @Post('tasks')
   @RequireWorkspaceType('PRACTICE')
   @UseGuards(WorkspaceTypeGuard)

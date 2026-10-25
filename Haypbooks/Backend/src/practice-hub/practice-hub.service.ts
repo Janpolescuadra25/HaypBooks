@@ -168,6 +168,56 @@ export class PracticeHubService {
     }
   }
 
+  async assertValidClientCompany(practiceId: string, companyId: string): Promise<void> {
+    const engagement = await this.prisma.engagement.findFirst({
+      where: {
+        practiceId,
+        companyId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    })
+
+    if (!engagement) {
+      throw new BadRequestException('Client must have an active engagement with this practice')
+    }
+  }
+
+  async getPracticeMembers(workspaceId: string, userId: string) {
+    const practice = await this.findPracticeByWorkspace(workspaceId)
+    if (!practice) throw new NotFoundException('Practice not found for this workspace')
+
+    await this.assertPracticeMember(practice.id, userId)
+
+    const members = await this.prisma.practiceUser.findMany({
+      where: {
+        practiceId: practice.id,
+        workspaceId,
+        status: PracticeUserStatus.ACTIVE,
+      },
+      include: {
+        member: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+    })
+
+    return members
+      .map((member) => ({
+        id: member.id,
+        role: member.role,
+        userId: member.userId,
+        user: member.member.user,
+      }))
+      .sort((left, right) =>
+        (left.user.name || left.user.email).localeCompare(right.user.name || right.user.email),
+      )
+  }
+
   async createPracticeTask(workspaceId: string, userId: string, dto: CreateTaskDto) {
     const practice = await this.findPracticeByWorkspace(workspaceId)
     if (!practice) throw new NotFoundException('Practice not found for this workspace')
@@ -176,6 +226,9 @@ export class PracticeHubService {
 
     if (dto.assigneeId) {
       await this.assertValidAssignee(practice.id, dto.assigneeId)
+    }
+    if (dto.companyId) {
+      await this.assertValidClientCompany(practice.id, dto.companyId)
     }
 
     return this.prisma.task.create({
@@ -358,6 +411,9 @@ export class PracticeHubService {
 
     if (dto.assigneeId) {
       await this.assertValidAssignee(practice.id, dto.assigneeId)
+    }
+    if (dto.companyId) {
+      await this.assertValidClientCompany(practice.id, dto.companyId)
     }
 
     const data: Prisma.TaskUncheckedUpdateInput = {}

@@ -8,7 +8,7 @@ export class CreateTaskDto {
 
   @IsString()
   @IsOptional()
-  description?: string
+  description?: string | null
 
   @IsEnum(TaskPriority)
   @IsOptional()
@@ -20,13 +20,13 @@ export class CreateTaskDto {
 
   @IsISO8601()
   @IsOptional()
-  dueDate?: string
+  dueDate?: string | null
 
   @IsString()
   @IsOptional()
-  assigneeId?: string
+  assigneeId?: string | null
 
   @IsString()
   @IsOptional()
-  companyId?: string
+  companyId?: string | null
 }

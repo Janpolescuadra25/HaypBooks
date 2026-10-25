@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users } from 'lucide-react'
+import { BriefcaseBusiness, LayoutDashboard, Users } from 'lucide-react'
 
 export interface NavTab {
   label: string
@@ -79,6 +79,25 @@ export const practiceHubNavigation: NavSection[] = [
             title: 'All Clients',
             path: '/practice-hub/clients',
           },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'WORK MGMT',
+    label: 'WORK',
+    id: 'work-management',
+    icon: BriefcaseBusiness,
+    groups: [
+      {
+        title: 'Work Management',
+        icon: BriefcaseBusiness,
+        items: [
+          { title: 'Work Queue', path: '/practice-hub?view=work-queue' },
+          { title: 'Tasks', path: '/practice-hub?view=tasks' },
+          { title: 'Review Queue', path: '/practice-hub?view=review-queue' },
+          { title: 'Work in Progress (WIP)', path: '/practice-hub?view=wip' },
+          { title: 'Calendar', path: '/practice-hub?view=calendar' },
         ],
       },
     ],

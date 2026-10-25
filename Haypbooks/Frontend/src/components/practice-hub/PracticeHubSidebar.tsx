@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { practiceHubNavigation, NavSection, NavItem } from './practiceHubNavConfig'
@@ -206,8 +206,11 @@ export default function PracticeHubSidebar() {
     [country]
   )
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const requestedView = searchParams.get('view')
+  const activePath = requestedView ? `${pathname}?view=${requestedView}` : (pathname ?? '')
   const [activeSection, setActiveSection] = useState<NavSection>(
-    () => findSectionForPath(filteredNavigation, pathname ?? '') ?? filteredNavigation[0]
+    () => findSectionForPath(filteredNavigation, activePath) ?? filteredNavigation[0]
   )
   const [isSecondaryVisible, setIsSecondaryVisible] = useState(true)
 
@@ -229,30 +232,30 @@ export default function PracticeHubSidebar() {
   )
 
   useEffect(() => {
-    if (!pathname || !filteredNavigation.length) return
-    const match = findSectionForPath(filteredNavigation, pathname)
+    if (!activePath || !filteredNavigation.length) return
+    const match = findSectionForPath(filteredNavigation, activePath)
     if (match) setActiveSection(match)
-  }, [pathname, filteredNavigation])
+  }, [activePath, filteredNavigation])
 
   useEffect(() => {
     if (!filteredNavigation.length) return
     if (!activeSection || !filteredNavigation.find((s) => s.title === activeSection.title)) {
       setActiveSection(
-        findSectionForPath(filteredNavigation, pathname ?? '') ?? filteredNavigation[0]
+        findSectionForPath(filteredNavigation, activePath) ?? filteredNavigation[0]
       )
     }
-  }, [filteredNavigation, activeSection, pathname])
+  }, [filteredNavigation, activeSection, activePath])
 
   useEffect(() => {
-    if (!activeSection.groups || !pathname) return
+    if (!activeSection.groups || !activePath) return
     const initialOpen = new Set<string>()
     activeSection.groups.forEach((group) => {
-      if (group.title && hasActiveNavItem(group.items, pathname)) {
+      if (group.title && hasActiveNavItem(group.items, activePath)) {
         initialOpen.add(group.title)
       }
     })
     setOpenGroups(initialOpen)
-  }, [activeSection, pathname])
+  }, [activeSection, activePath])
 
   useEffect(() => {
     let mounted = true
@@ -485,7 +488,7 @@ export default function PracticeHubSidebar() {
                                     )
                                   }
                                   return (
-                                    <RecursiveNavItem key={idx} item={item} activePath={pathname ?? ''} />
+                                    <RecursiveNavItem key={idx} item={item} activePath={activePath} />
                                   )
                                 })}
                               </div>
@@ -507,7 +510,7 @@ export default function PracticeHubSidebar() {
                       )
                     }
                     return (
-                      <RecursiveNavItem key={idx} item={item} activePath={pathname ?? ''} />
+                      <RecursiveNavItem key={idx} item={item} activePath={activePath} />
                     )
                   })
                 )}

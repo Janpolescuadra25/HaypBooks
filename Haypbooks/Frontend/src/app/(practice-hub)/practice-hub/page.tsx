@@ -20,6 +20,9 @@ import {
   Wallet,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import ReviewQueueView from '@/components/practice-hub/ReviewQueueView'
+import TaskQueueView from '@/components/practice-hub/TaskQueueView'
+import { useSearchParams } from 'next/navigation'
 
 const primaryGroups = ['Home', 'Clients', 'Work Mgmt', 'Workspace', 'Billing', 'Team', 'Analytics', 'Settings'] as const
 
@@ -40,6 +43,8 @@ const navItemsByGroup: Record<string, Array<{ title: string }>> = {
   ],
   'Work Mgmt': [
     { title: 'Work Queue' },
+    { title: 'Tasks' },
+    { title: 'Review Queue' },
     { title: 'Work in Progress (WIP)' },
     { title: 'Calendar' },
   ],
@@ -79,6 +84,7 @@ const getDocumentationTitle = (itemTitle: string) => {
 }
 
 function PracticeHubPage() {
+  const searchParams = useSearchParams()
   const [selectedGroup, setSelectedGroup] = useState<string>('Home')
   const [selectedItem, setSelectedItem] = useState<string>('Practice Dashboard')
   const [isSecondaryVisible, setIsSecondaryVisible] = useState(true)
@@ -132,6 +138,21 @@ function PracticeHubPage() {
   useEffect(() => {
     void loadData()
   }, [])
+
+  useEffect(() => {
+    const requestedView = searchParams.get('view')
+    const requestedItem: Record<string, string> = {
+      'work-queue': 'Work Queue',
+      tasks: 'Tasks',
+      'review-queue': 'Review Queue',
+      wip: 'Work in Progress (WIP)',
+      calendar: 'Calendar',
+    }
+    if (requestedView && requestedItem[requestedView]) {
+      setSelectedGroup('Work Mgmt')
+      setSelectedItem(requestedItem[requestedView])
+    }
+  }, [searchParams])
 
   const sectionHeading =
     selectedGroup === 'Clients' && currentItem.title === 'My Clients' ? 'Clients' : currentItem.title
@@ -482,6 +503,14 @@ function PracticeHubPage() {
 
     if (selectedGroup === 'Clients' && currentItem.title === 'My Clients') {
       return renderClientList()
+    }
+
+    if (selectedGroup === 'Work Mgmt' && currentItem.title === 'Tasks') {
+      return <TaskQueueView />
+    }
+
+    if (selectedGroup === 'Work Mgmt' && currentItem.title === 'Review Queue') {
+      return <ReviewQueueView />
     }
 
     return renderDocsView()

@@ -14,6 +14,30 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }))
 
+jest.mock('@/lib/api-client', () => ({
+  __esModule: true,
+  default: {
+    get: jest.fn((url: string) => {
+      if (url.includes('/tasks') || url.includes('/reviews')) {
+        return Promise.resolve({ data: { tasks: [], total: 0, page: 1, totalPages: 1 } })
+      }
+      if (url.includes('/clients') || url.includes('/members')) {
+        return Promise.resolve({ data: [] })
+      }
+      if (url.includes('/activity') || url.includes('/deadlines')) {
+        return Promise.resolve({ data: [] })
+      }
+      if (url.includes('/stats')) {
+        return Promise.resolve({ data: { activeClients: 0, openTasks: 0, pendingReviews: 0, completedMtd: 0 } })
+      }
+      return Promise.resolve({ data: {} })
+    }),
+    post: jest.fn().mockResolvedValue({ data: {} }),
+    patch: jest.fn().mockResolvedValue({ data: {} }),
+    delete: jest.fn().mockResolvedValue({ data: {} }),
+  },
+}))
+
 beforeAll(() => {
   global.fetch = jest.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }) as any
 })
@@ -162,6 +186,25 @@ describe('Practice Hub - Client List', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     })
     expect(screen.queryByRole('heading', { name: 'Client List Help' })).not.toBeInTheDocument()
+  })
+})
+
+describe('Practice Hub - Task and review queues', () => {
+  it('renders task queue controls', async () => {
+    const result = await renderHub()
+    await navigateToSection(result.container, 'Work Mgmt', 'Tasks')
+
+    expect(screen.getByRole('heading', { name: 'Tasks' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/search tasks/i)).toBeInTheDocument()
+  })
+
+  it('renders review queue controls', async () => {
+    const result = await renderHub()
+    await navigateToSection(result.container, 'Work Mgmt', 'Review Queue')
+
+    expect(screen.getByRole('heading', { name: 'Review Queue' })).toBeInTheDocument()
+    expect(screen.getByText(/no tasks awaiting review/i)).toBeInTheDocument()
   })
 })
 
