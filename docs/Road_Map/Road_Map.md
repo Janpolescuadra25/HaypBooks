@@ -1,4 +1,4 @@
-# HaypBooks  End-to-End Completion Roadmap
+﻿# HaypBooks  End-to-End Completion Roadmap
 
 ## Current verification checkpoint - 2026-10-25
 
@@ -8,7 +8,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
 - Working tree at HEAD `b724209bad9322031d614b11ac78386bc6114886` on `checkpoint/dev` is clean and matches the authoritatively audited checkpoint. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; current implementation remains limited to the shell and not the full functional queue modules.
-- Practice Hub status: Step 4 is COMPLETE & VERIFIED: fresh practice creator onboarding now assigns OWNER + ACTIVE on creation, and the prior role-default defect has been resolved. Step 5A/5B remain unstarted.
+- Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is COMPLETE & VERIFIED (Backend task & review queues, DTOs, service methods, workspace type guards in commit ``def107fec9bde848d43b3c4002e6f601d42f76d6``). Step 5B is the active priority (Frontend Queues).
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
 - Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7 ✓ 2026-10-19). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
@@ -107,8 +107,8 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
 - Step 3 status: invite acceptance now enforces `maxClients` capacity and atomic `PENDING` race protection inside `$transaction`, and practice invite/engagement revocation (`revokeInvite` / `revokeEngagement`, archiving engagements so active-relationship checks in `WorkspaceAccessGuard` fail closed and capacity slots release) is implemented and unit-tested in `practice-hub.service.spec.ts` (Phase 11 remains `PARTIAL` while owner/staff/client roles, tasks, reviews, switching, and progression remain open).
 - Step 4 status: COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding all implemented; the onboarding role assignment defect was fixed 2026-10-25 with explicit OWNER role and ACTIVE status assignment in onboarding.service.ts)
-- Step 5A status: NOT STARTED (Immediate P1 Functional Priority: Backend Task & Review Queues).
-- Step 5B status: NOT STARTED (Frontend Queues: navigation shell and placeholder tests verified; functional modules pending).
+- Step 5A status: COMPLETE & VERIFIED (Backend Task & Review Queues: 3 DTOs, 8 service methods, 6 controller routes with `@RequireWorkspaceType('PRACTICE')` and `@UseGuards(WorkspaceTypeGuard)`, zero schema migrations, fully verified in commit ``def107fec9bde848d43b3c4002e6f601d42f76d6``; documented in `docs/implementations/practice-hub-step5a-backend-tasks/README.md`).
+- Step 5B status: NOT STARTED (Immediate P1 Functional Priority: Frontend Task & Review Queues, components, and client workspace task linkage).
 - Verification note: `PracticeHubPage.test.tsx` asserts placeholder shell content (`"Content is coming soon"`) and currently covers the navigation shell rather than delivered queue functionality.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
