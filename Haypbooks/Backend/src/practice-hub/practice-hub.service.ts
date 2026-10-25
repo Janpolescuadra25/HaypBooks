@@ -1,7 +1,11 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common'
+import { Prisma, TaskPriority, TaskStatus } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { MailService } from '../common/mail.service'
 import { PracticeUserRole, PracticeUserStatus } from './types/practice-user.types'
+import { CreateTaskDto } from './dto/create-task.dto'
+import { QueryTasksDto } from './dto/query-tasks.dto'
+import { UpdateTaskDto } from './dto/update-task.dto'
 import crypto from 'crypto'
 
 @Injectable()
@@ -134,6 +138,280 @@ export class PracticeHubService {
     if (!practiceUser) {
       throw new ForbiddenException('Practice owner access required')
     }
+  }
+
+  async assertPracticeMember(practiceId: string, userId: string): Promise<void> {
+    const member = await this.prisma.practiceUser.findFirst({
+      where: {
+        practiceId,
+        userId,
+        status: PracticeUserStatus.ACTIVE,
+      },
+    })
+
+    if (!member) {
+      throw new ForbiddenException('User is not an active member of this practice')
+    }
+  }
+
+  async assertValidAssignee(practiceId: string, assigneeId: string): Promise<void> {
+    const member = await this.prisma.practiceUser.findFirst({
+      where: {
+        practiceId,
+        userId: assigneeId,
+        status: PracticeUserStatus.ACTIVE,
+      },
+    })
+
+    if (!member) {
+      throw new BadRequestException('Assignee must be an active member of the practice')
+    }
+  }
+
+  async createPracticeTask(workspaceId: string, userId: string, dto: CreateTaskDto) {
+    const practice = await this.findPracticeByWorkspace(workspaceId)
+    if (!practice) throw new NotFoundException('Practice not found for this workspace')
+
+    await this.assertPracticeMember(practice.id, userId)
+
+    if (dto.assigneeId) {
+      await this.assertValidAssignee(practice.id, dto.assigneeId)
+    }
+
+    return this.prisma.task.create({
+      data: {
+        workspaceId,
+        practiceId: practice.id,
+        companyId: dto.companyId ?? null,
+        title: dto.title,
+        description: dto.description ?? null,
+        status: dto.status ?? TaskStatus.PENDING,
+        priority: dto.priority ?? TaskPriority.MEDIUM,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        assigneeId: dto.assigneeId ?? null,
+        createdById: userId,
+      },
+      include: {
+        assignee: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+    })
+  }
+
+  async getPracticeTasks(workspaceId: string, userId: string, query: QueryTasksDto) {
+    const practice = await this.findPracticeByWorkspace(workspaceId)
+    if (!practice) throw new NotFoundException('Practice not found for this workspace')
+
+    await this.assertPracticeMember(practice.id, userId)
+
+    const page = query.page && query.page > 0 ? query.page : 1
+    const limit = query.limit && query.limit > 0 ? query.limit : 20
+    const skip = (page - 1) * limit
+
+    const where: Prisma.TaskWhereInput = {
+      practiceId: practice.id,
+      deletedAt: null,
+    }
+
+    if (query.status) where.status = query.status
+    if (query.priority) where.priority = query.priority
+    if (query.assigneeId) where.assigneeId = query.assigneeId
+    if (query.companyId) where.companyId = query.companyId
+
+    if (query.search) {
+      where.OR = [
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+      ]
+    }
+
+    const [tasks, total] = await Promise.all([
+      this.prisma.task.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+        include: {
+          assignee: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.task.count({ where }),
+    ])
+
+    return {
+      tasks,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    }
+  }
+
+  async getReviewQueueTasks(workspaceId: string, userId: string, query: QueryTasksDto) {
+    const practice = await this.findPracticeByWorkspace(workspaceId)
+    if (!practice) throw new NotFoundException('Practice not found for this workspace')
+
+    await this.assertPracticeMember(practice.id, userId)
+
+    const page = query.page && query.page > 0 ? query.page : 1
+    const limit = query.limit && query.limit > 0 ? query.limit : 20
+    const skip = (page - 1) * limit
+
+    const where: Prisma.TaskWhereInput = {
+      practiceId: practice.id,
+      status: TaskStatus.PENDING,
+      deletedAt: null,
+    }
+
+    if (query.priority) where.priority = query.priority
+    if (query.assigneeId) where.assigneeId = query.assigneeId
+    if (query.companyId) where.companyId = query.companyId
+
+    if (query.search) {
+      where.OR = [
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+      ]
+    }
+
+    const [tasks, total] = await Promise.all([
+      this.prisma.task.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+        include: {
+          assignee: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.task.count({ where }),
+    ])
+
+    return {
+      tasks,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    }
+  }
+
+  async getPracticeTaskById(workspaceId: string, userId: string, taskId: string) {
+    const practice = await this.findPracticeByWorkspace(workspaceId)
+    if (!practice) throw new NotFoundException('Practice not found for this workspace')
+
+    await this.assertPracticeMember(practice.id, userId)
+
+    const task = await this.prisma.task.findFirst({
+      where: {
+        id: taskId,
+        practiceId: practice.id,
+        deletedAt: null,
+      },
+      include: {
+        assignee: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+    })
+
+    if (!task) throw new NotFoundException('Task not found')
+    return task
+  }
+
+  async updatePracticeTask(workspaceId: string, userId: string, taskId: string, dto: UpdateTaskDto) {
+    const practice = await this.findPracticeByWorkspace(workspaceId)
+    if (!practice) throw new NotFoundException('Practice not found for this workspace')
+
+    await this.assertPracticeMember(practice.id, userId)
+
+    const existingTask = await this.prisma.task.findFirst({
+      where: {
+        id: taskId,
+        practiceId: practice.id,
+        deletedAt: null,
+      },
+    })
+
+    if (!existingTask) throw new NotFoundException('Task not found')
+
+    if (dto.assigneeId) {
+      await this.assertValidAssignee(practice.id, dto.assigneeId)
+    }
+
+    const data: Prisma.TaskUncheckedUpdateInput = {}
+
+    if (dto.title !== undefined) data.title = dto.title
+    if (dto.description !== undefined) data.description = dto.description
+    if (dto.priority !== undefined) data.priority = dto.priority
+    if (dto.companyId !== undefined) data.companyId = dto.companyId
+    if (dto.assigneeId !== undefined) data.assigneeId = dto.assigneeId
+    if (dto.dueDate !== undefined) data.dueDate = dto.dueDate ? new Date(dto.dueDate) : null
+    if (dto.status !== undefined) {
+      data.status = dto.status
+      if (dto.status === TaskStatus.DONE && existingTask.status !== TaskStatus.DONE) {
+        data.completedAt = new Date()
+      } else if (dto.status !== TaskStatus.DONE) {
+        data.completedAt = null
+      }
+    }
+
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data,
+      include: {
+        assignee: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+    })
+  }
+
+  async deletePracticeTask(workspaceId: string, userId: string, taskId: string) {
+    const practice = await this.findPracticeByWorkspace(workspaceId)
+    if (!practice) throw new NotFoundException('Practice not found for this workspace')
+
+    await this.assertPracticeMember(practice.id, userId)
+
+    const existingTask = await this.prisma.task.findFirst({
+      where: {
+        id: taskId,
+        practiceId: practice.id,
+        deletedAt: null,
+      },
+    })
+
+    if (!existingTask) throw new NotFoundException('Task not found')
+
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: { deletedAt: new Date() },
+    })
   }
 
   async createInvite(userId: string, dto: { email: string; companyName?: string; engagementName: string; engagementType: string; startDate: string; role?: PracticeUserRole }) {

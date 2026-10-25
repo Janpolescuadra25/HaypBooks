@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req, UnauthorizedException, NotFoundException, UseGuards, Post, Body, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common'
+import { Controller, Get, Param, Req, UnauthorizedException, NotFoundException, UseGuards, Post, Body, ConflictException, BadRequestException, ForbiddenException, Query, Patch, Delete } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { WorkspaceAccessGuard } from '../auth/guards/workspace-access.guard'
 import { RequireWorkspaceType } from '../auth/decorators/workspace-type.decorator'
@@ -6,6 +6,9 @@ import { WorkspaceTypeGuard } from '../auth/guards/workspace-type.guard'
 import { PracticeHubService } from './practice-hub.service'
 import { CreatePracticeInviteDto } from './dto/create-practice-invite.dto'
 import { AcceptPracticeInviteDto } from './dto/accept-practice-invite.dto'
+import { CreateTaskDto } from './dto/create-task.dto'
+import { QueryTasksDto } from './dto/query-tasks.dto'
+import { UpdateTaskDto } from './dto/update-task.dto'
 
 @UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
 @Controller('api/practice-hub')
@@ -16,6 +19,12 @@ export class PracticeHubController {
     const wsId = req.workspaceId ?? (req.user?.workspaceId || req.user?.tenantId)
     if (!wsId) throw new UnauthorizedException('No workspace context')
     return wsId
+  }
+
+  private extractUserId(req: any): string {
+    const userId = req.user?.id || req.user?.sub || req.user?.userId
+    if (!userId) throw new UnauthorizedException('User identification is missing from token')
+    return userId
   }
 
   /** GET /api/practice-hub/dashboard — combined stats, activity, deadlines */
@@ -68,6 +77,54 @@ export class PracticeHubController {
     const practice = await this.service.findPracticeByWorkspace(wsId)
     if (!practice) throw new NotFoundException('No practice found')
     return this.service.getClientList(practice.id)
+  }
+
+  @Post('tasks')
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(WorkspaceTypeGuard)
+  async createTask(@Req() req: any, @Body() body: CreateTaskDto) {
+    const workspaceId = this.extractWorkspaceId(req)
+    const userId = this.extractUserId(req)
+    return this.service.createPracticeTask(workspaceId, userId, body)
+  }
+
+  @Get('tasks')
+  async getTasks(@Req() req: any, @Query() query: QueryTasksDto) {
+    const workspaceId = this.extractWorkspaceId(req)
+    const userId = this.extractUserId(req)
+    return this.service.getPracticeTasks(workspaceId, userId, query)
+  }
+
+  @Get('reviews')
+  async getReviews(@Req() req: any, @Query() query: QueryTasksDto) {
+    const workspaceId = this.extractWorkspaceId(req)
+    const userId = this.extractUserId(req)
+    return this.service.getReviewQueueTasks(workspaceId, userId, query)
+  }
+
+  @Get('tasks/:id')
+  async getTaskById(@Req() req: any, @Param('id') id: string) {
+    const workspaceId = this.extractWorkspaceId(req)
+    const userId = this.extractUserId(req)
+    return this.service.getPracticeTaskById(workspaceId, userId, id)
+  }
+
+  @Patch('tasks/:id')
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(WorkspaceTypeGuard)
+  async updateTask(@Req() req: any, @Param('id') id: string, @Body() body: UpdateTaskDto) {
+    const workspaceId = this.extractWorkspaceId(req)
+    const userId = this.extractUserId(req)
+    return this.service.updatePracticeTask(workspaceId, userId, id, body)
+  }
+
+  @Delete('tasks/:id')
+  @RequireWorkspaceType('PRACTICE')
+  @UseGuards(WorkspaceTypeGuard)
+  async deleteTask(@Req() req: any, @Param('id') id: string) {
+    const workspaceId = this.extractWorkspaceId(req)
+    const userId = this.extractUserId(req)
+    return this.service.deletePracticeTask(workspaceId, userId, id)
   }
 
   /** POST /api/practice-hub/invites */
