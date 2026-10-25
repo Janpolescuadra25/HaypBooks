@@ -8,7 +8,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
 - Working tree at HEAD `b724209bad9322031d614b11ac78386bc6114886` on `checkpoint/dev` is clean and matches the authoritatively audited checkpoint. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; current implementation remains limited to the shell and not the full functional queue modules.
-- Practice Hub status: historical Step 4 artifacts are complete and verified, but the fresh-signup onboarding defect remains open and blocks owner role correctness for newly created practice members. Step 5A/5B remain unstarted.
+- Practice Hub status: Step 4 is COMPLETE & VERIFIED: fresh practice creator onboarding now assigns OWNER + ACTIVE on creation, and the prior role-default defect has been resolved. Step 5A/5B remain unstarted.
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
 - Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7 ✓ 2026-10-19). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
@@ -106,7 +106,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
 - Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
 - Step 3 status: invite acceptance now enforces `maxClients` capacity and atomic `PENDING` race protection inside `$transaction`, and practice invite/engagement revocation (`revokeInvite` / `revokeEngagement`, archiving engagements so active-relationship checks in `WorkspaceAccessGuard` fail closed and capacity slots release) is implemented and unit-tested in `practice-hub.service.spec.ts` (Phase 11 remains `PARTIAL` while owner/staff/client roles, tasks, reviews, switching, and progression remain open).
-- Step 4 status: HISTORICAL ARTIFACTS COMPLETE (Schema, types, guards, and migration verified; OPEN DEFECT logged: fresh practice creator onboarding in `onboarding.service.ts` omits `role: 'OWNER'`, defaulting to `STAFF` instead and breaking `createInvite` authorization).
+- Step 4 status: COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding all implemented; the onboarding role assignment defect was fixed 2026-10-25 with explicit OWNER role and ACTIVE status assignment in onboarding.service.ts)
 - Step 5A status: NOT STARTED (Immediate P1 Functional Priority: Backend Task & Review Queues).
 - Step 5B status: NOT STARTED (Frontend Queues: navigation shell and placeholder tests verified; functional modules pending).
 - Verification note: `PracticeHubPage.test.tsx` asserts placeholder shell content (`"Content is coming soon"`) and currently covers the navigation shell rather than delivered queue functionality.
@@ -239,6 +239,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 
