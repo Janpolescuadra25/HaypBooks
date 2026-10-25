@@ -1,23 +1,24 @@
 # HaypBooks  End-to-End Completion Roadmap
 
-## Current verification checkpoint - 2026-10-23
+## Current verification checkpoint - 2026-10-25
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
+- Source checkpoint reference: `b724209bad9322031d614b11ac78386bc6114886`.
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD 35f94663e1b0bf5ab7ddd54d764adc516833425a plus existing uncommitted changes; GitHub main cd3d30e8, 41 commits behind local HEAD. Deployment revision unknown.
-- Verified today: frontend typecheck PASS; backend typecheck PASS; frontend lint exit 0 with 166 warning lines; five selected backend suites PASS (41 tests). Frontend checkout suites BLOCKED before execution by missing tmpl/lib/tmpl. Full builds, DB integration and browser parity remain unverified in this checkpoint.
-- Progress: test helpers now authenticate caller tokens and have conditional module registration; workspace guard added to practice controllers; createAndPostJE now persists supplied entryNumber; frontend build skips are disabled. Historical E8 bypass wording and earlier test-token-presence-only descriptions are superseded.
-- Numbering is only partially accepted: company-local sequence generation conflicts with schema-wide unique entryNumber and needs concurrent/cross-company tests. Do not infer complete Phase 2 acceptance from the one-field fix.
+- Working tree at HEAD `b724209bad9322031d614b11ac78386bc6114886` on `checkpoint/dev` is clean and matches the authoritatively audited checkpoint. Deployment revision is not claiming live production release.
+- Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; current implementation remains limited to the shell and not the full functional queue modules.
+- Practice Hub status: historical Step 4 artifacts are complete and verified, but the fresh-signup onboarding defect remains open and blocks owner role correctness for newly created practice members. Step 5A/5B remain unstarted.
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
 - Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7 ✓ 2026-10-19). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
 
-Updated 2026-10-23. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
+Updated 2026-10-25. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
+- Provenance pin: audited source commit `b724209bad9322031d614b11ac78386bc6114886`; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
 - All 13 completed phases verified against codebase and READMEs by Hydra on 2026-10-23 at commit 6f8335e42752b276761e14f0bf3b938afeec63b0; pruned from active tracking table.
 
 ## Current audit findings
@@ -81,11 +82,12 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ## Active & Remaining Implementation Phases
 
-### 8  AI Phase 2 (AUDIT REQUIRED, P3 optional)
+### 8  AI Phase 2 (DEFERRED / OPTIONAL)
 
 - Audit: existing AI, tenant data exposure, provider cost, failures and owner/JP goals.
 - Deliver: agreed assistance with source traceability, uncertainty and human review for financial writes; permissions/budgets/secrets enforced. Autonomous posting requires separate approved controls.
-- Depends on: 12/14/17. Done: agreed evaluations, cross-tenant denial, incorrect answer, outage and cost-limit cases pass. Does not block non-AI release.
+- Depends on: 12/14/17. Historical backlog preserved as optional expansion; not required for near-term release gating.
+- Status: DEFERRED / OPTIONAL. Original backlog retained for future reassessment.
 
 ### 10  VPS release (BLOCKED, P1 final gate)
 
@@ -93,6 +95,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Deliver: reviewed revision -> owner push -> controlled pull/install/build/migration if approved -> restart/health check, with rollback. No blind overwrite of server changes.
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
 - Depends on: 9/12/13/16/17 and released accounting phases. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
+- Current blocker clarity: release remains blocked until Phase 11 Step 5A/5B is implemented, the fresh-signup owner onboarding defect is fixed, tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed.
 
 ### 11  Practice Hub (PARTIAL, P1 core; P2 progression)
 
@@ -103,9 +106,10 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
 - Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
 - Step 3 status: invite acceptance now enforces `maxClients` capacity and atomic `PENDING` race protection inside `$transaction`, and practice invite/engagement revocation (`revokeInvite` / `revokeEngagement`, archiving engagements so active-relationship checks in `WorkspaceAccessGuard` fail closed and capacity slots release) is implemented and unit-tested in `practice-hub.service.spec.ts` (Phase 11 remains `PARTIAL` while owner/staff/client roles, tasks, reviews, switching, and progression remain open).
-- Step 4 status: DONE & VERIFIED. Canonical PracticeUser.role and PracticeUser.status model, deterministic single-owner SQL migration backfill, onboarding owner seeding, and strict fail-closed runtime authorization are implemented and unit-tested. Phase 11 remains PARTIAL pending step 5A/5B (task/review queues) and XP/progression features.
-- Step 5A status: NOT STARTED — backend queue implementation pending
-- Step 5B status: NOT STARTED — frontend queue implementation pending
+- Step 4 status: HISTORICAL ARTIFACTS COMPLETE (Schema, types, guards, and migration verified; OPEN DEFECT logged: fresh practice creator onboarding in `onboarding.service.ts` omits `role: 'OWNER'`, defaulting to `STAFF` instead and breaking `createInvite` authorization).
+- Step 5A status: NOT STARTED (Immediate P1 Functional Priority: Backend Task & Review Queues).
+- Step 5B status: NOT STARTED (Frontend Queues: navigation shell and placeholder tests verified; functional modules pending).
+- Verification note: `PracticeHubPage.test.tsx` asserts placeholder shell content (`"Content is coming soon"`) and currently covers the navigation shell rather than delivered queue functionality.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
@@ -119,6 +123,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Audit: schema/migrations/isolated DB, FKs/indexes/RLS, precision/timezone, retention/import/export/jobs; tax/payroll/assets and every advertised module not covered. Select jurisdictions with owner; do not invent compliance scope.
 - Deliver: demonstrated defects repaired with reviewed reversible changes, bounded queries, retry-safe jobs, secure storage and recovery. Restructure only for demonstrated benefit.
 - Requirements: read-only profiling before explicit data-repair plan; no blanket reseed/delete. Depends on: 9/12/14.
+- Scope hygiene: retain active tracking for data performance audit and remaining module inventory; remove duplicate active tracking of Phase 16C Fixed Assets lifecycle from the active list while preserving verified historical records in the appendix.
 - Done: migration rehearsal, pre/post counts/balances, restore, realistic large-tenant load and job recovery pass; other advertised modules verified or excluded from release.
 
 ### 17  Integrated acceptance (NOT STARTED, P1 mandatory)
@@ -152,6 +157,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 | **S1 — Tracked Credential Settings Containment** | **DONE & VERIFIED (2026-10-24)** | Untracked .vscode/settings.json from Git index, added .vscode/ to .gitignore, local settings preserved on disk. | [Gitignore Hardening README](../implementations/gitignore-hardening-task802/README.md#task-848s1-extension-tracked-credential-settings-containment-vscode) |
 | **S2 — Attachment Object Ownership & Tenant Isolation** | **DONE & VERIFIED (2026-10-24)** | Enforced workspaceId filtering and uploader ownership for attachment access and deletions. | [Attachment Ownership README](../implementations/attachment-ownership/README.md) |
 | **S3 — Guard/Controller Workspace Context Agreement** | **DONE & VERIFIED (2026-10-24)** | Enforced WorkspaceAccessGuard across all routes; eliminated raw header fallbacks. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
+| **Phase 8 — AI Phase 2** | **DEFERRED / OPTIONAL** | Historical backlog retained for future AI review work; not a release-blocking phase for core product stability. | [Legacy AI roadmap backlog retained in this document] |
 
 
 ### Archived Verified Phases (Completed Prior to 2026-10-15)
@@ -204,7 +210,7 @@ The governing [Product Maturity Standard](../standards/PRODUCT_MATURITY_STANDARD
 Conflicts resolved:
 
 - One canonical roadmap at this path. The root copy is removed after consolidation verification; the prior root's duplicated historical phase list is not retained as a competing plan.
-- Four paid plans and a 30-day trial replace the older FREE-plan proposal. Trial expiry must not trigger automatic permanent deletion. Data retention/deletion needs explicit ownership, retention and recovery policy; historical financial records and other members' shared files are protected.
+- Subscription policy alignment: no permanent free tier; 15-day free trial; four paid subscription tiers with differentiated capacities. Historical 30-day references remain for reconciliation only and must not be treated as current policy. Trial expiry must not trigger automatic permanent deletion. Data retention/deletion needs explicit ownership, retention and recovery policy; historical financial records and other members' shared files are protected.
 - The old recommendation to broaden cookie domain/change SameSite is now audit-first. Verify actual same-origin/proxy requirements and CSRF defenses; do not weaken cookie boundaries by rote.
 - Old 4 GB server and fixed 5121024 MB heap advice is not a current sizing decision. Measure the actual server and workloads; owner reported 8 GB. Preserve 2448-hour memory monitoring as a validation task.
 - Automatic deployment was historically claimed operational. Audit workflow triggers before any push; owner-only push still applies and may initiate a live deployment.
