@@ -7,6 +7,7 @@ import { TenantsService } from '../tenants/tenants.service'
 import { AccountingService } from '../accounting/accounting.service'
 import { increment as incMetric } from '../common/metrics'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { PracticeUserRole, PracticeUserStatus } from '../practice-hub/types/practice-user.types'
 
 @Injectable()
 export class OnboardingService {
@@ -365,7 +366,13 @@ export class OnboardingService {
             }
             await (this.prisma as any).practiceUser.upsert({
               where: { practiceId_workspaceId_userId: { practiceId: resolvedPractice.id, workspaceId: existingWorkspace.id, userId } },
-              create: { practiceId: resolvedPractice.id, workspaceId: existingWorkspace.id, userId },
+              create: {
+                practiceId: resolvedPractice.id,
+                workspaceId: existingWorkspace.id,
+                userId,
+                role: PracticeUserRole.OWNER,
+                status: PracticeUserStatus.ACTIVE,
+              },
               update: {},
             })
             this.logger.log('[ONBOARDING-COMPLETE] ✅ PracticeUser linked for practice: ' + resolvedPractice.id)
@@ -403,7 +410,13 @@ export class OnboardingService {
             }
             await (this.prisma as any).practiceUser.upsert({
               where: { practiceId_workspaceId_userId: { practiceId: newPractice.id, workspaceId: newPracticeWorkspace.id, userId } },
-              create: { practiceId: newPractice.id, workspaceId: newPracticeWorkspace.id, userId },
+              create: {
+                practiceId: newPractice.id,
+                workspaceId: newPracticeWorkspace.id,
+                userId,
+                role: PracticeUserRole.OWNER,
+                status: PracticeUserStatus.ACTIVE,
+              },
               update: {},
             })
             this.logger.log('[ONBOARDING-COMPLETE] ✅ PracticeUser linked for practice: ' + newPractice.id)
