@@ -1,6 +1,6 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
-## Current verification checkpoint - 2026-10-25
+## Current verification checkpoint - 2026-10-27
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
@@ -15,7 +15,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
 
-Updated 2026-10-25. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
+Updated 2026-10-27. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
 - Provenance pin: audited source commit `b724209bad9322031d614b11ac78386bc6114886`; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
@@ -112,8 +112,9 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Scope hygiene: retain active tracking for data performance audit and remaining module inventory; remove duplicate active tracking of Phase 16C Fixed Assets lifecycle from the active list while preserving verified historical records in the appendix.
 - Done: migration rehearsal, pre/post counts/balances, restore, realistic large-tenant load and job recovery pass; other advertised modules verified or excluded from release.
 
-### 17  Integrated acceptance (NOT STARTED, P1 mandatory)
+### 17  Integrated acceptance (READY TO START, P1 mandatory)
 
+- Prerequisites: Phase 9 complete.
 - Deliver: deterministic full-workflow fixtures connecting UI/API/persistence/ledger/reports/billing/permissions; independently review results and route defects to owning phases.
 - Requirements: realistic roles/data sizes, revision/environment/commands/expected-actual results and honest limitations. No inferred passes.
 - Depends on: every phase required for release scope. Done: matrix below passes, no P0, residual risks scoped/accepted, READMEs/support/rollback ready; then release 10.
@@ -165,6 +166,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 | **Phase 16C Step 2 — Fixed Assets Depreciation Engine & GL Integration** | **DONE & VERIFIED (2026-10-12)** | Implemented straight-line depreciation calculation engine, GL journal integration via createAndPostJE with FIXED_ASSET_DEPRECIATION source, role-based authorization for OWNER/ADMIN/ACCOUNTANT, duplicate run prevention, idempotency key support, asset account status validation, audit logging, and 18 passing unit tests; documented in docs/implementations/fixed-assets-step2/README.md. |
 | **Phase 16C — Fixed Assets Management** | **DONE & VERIFIED (2026-10-18)** | Full fixed assets lifecycle implemented: creation, straight-line/declining balance depreciation engines, disposal & write-off workflows with GL posting, all unit tests passing. | [Fixed Assets README](../implementations/fixed-assets/README.md) · [Fixed Assets Step 2 README](../implementations/fixed-assets-step2/README.md) · [Fixed Assets Step 3 README](../implementations/fixed-assets-step3/README.md) |
 | **Phase 11 — Practice Hub Complete** | **DONE & VERIFIED (2026-10-26)** | All Practice Hub steps (1 through 5B) implemented, tested, and verified: workspace shell, client list, onboarding, invitations, backend tasks/reviews, and frontend task/review queues. 18/18 backend tests and 29/29 frontend tests pass. | [Phase 11 Frontend Queues README](../implementations/practice-hub-step5b-frontend-queues/README.md) |
+| **Phase 9 — Reproducible Baseline Test Configuration** | **DONE & VERIFIED (2026-10-27)** | Added a standard backend `npm test` entry point and an 8192 MB Node.js heap allocation for unit tests; backend build, frontend typecheck, and both scoped test entry points verified successfully. | [Phase 9 Test Configuration README](../implementations/phase9-test-configuration/README.md) |
 
 
 
