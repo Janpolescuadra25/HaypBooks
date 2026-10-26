@@ -97,20 +97,6 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Depends on: 9/12/13/16/17 and released accounting phases. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
 - Current blocker clarity: release remains blocked until Phase 11 Step 5A/5B is implemented, the fresh-signup owner onboarding defect is fixed, tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed.
 
-### 11  Practice Hub (PARTIAL, P1 core; P2 progression)
-
-- Audit: owner/staff/client roles, invite expiry/races, engagements/tasks/reviews/switching/revocation. Reuse E10 foundation.
-- Deliver: reliable client work and server-enforced capacities. P2 progression & XP tracking delivered and verified (see archived Phase 11 P2).
-- Recommendation: guarantee paid base capacity; earn separate bonuses. Prefer grace/gradual bonus decay over resetting XP to zero. Preserve historical read/export access when over capacity; disclose restrictions on new additions. Paid boosts disclose quantity/duration/renewal/refunds and remain distinct from earned XP.
-- Depends on: 12/13/16 and owner economics. Done: permissions/invite races/revocation/capacity pass; if progression ships, replay/earning/decay/grace/boost tests pass. Paid entitlements never silently shrink; core can ship without gamification.
-- Step 1 status: practice models exist, engagement flow is implemented, and tenant delegation in `WorkspaceAccessGuard` is active for active `Engagement` relationships between a practice and a client workspace.
-- Step 2 status: invite creation now enforces the practice plan's `maxClients` limit, preventing new client invitations beyond the active plan capacity.
-- Step 3 status: invite acceptance now enforces `maxClients` capacity and atomic `PENDING` race protection inside `$transaction`, and practice invite/engagement revocation (`revokeInvite` / `revokeEngagement`, archiving engagements so active-relationship checks in `WorkspaceAccessGuard` fail closed and capacity slots release) is implemented and unit-tested in `practice-hub.service.spec.ts` (Phase 11 remains `PARTIAL` while owner/staff/client roles, tasks, reviews, switching, and progression remain open).
-- Step 4 status: COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding all implemented; the onboarding role assignment defect was fixed 2026-10-25 with explicit OWNER role and ACTIVE status assignment in onboarding.service.ts)
-- Step 5A status: COMPLETE & VERIFIED (Backend Task & Review Queues: 3 DTOs, 8 service methods, 6 controller routes with `@RequireWorkspaceType('PRACTICE')` and `@UseGuards(WorkspaceTypeGuard)`, zero schema migrations, fully verified in commit ``def107fec9bde848d43b3c4002e6f601d42f76d6``; documented in `docs/implementations/practice-hub-step5a-backend-tasks/README.md`).
-- Step 5B status: COMPLETE & VERIFIED (Frontend Task & Review Queues: task modal, live filters, pagination, review actions, navigation, member retrieval, and active-client linkage implemented; backend build and frontend typecheck pass; 29/29 scoped frontend tests pass; documented in `docs/implementations/practice-hub-step5b-frontend-queues/README.md`).
-- Verification note: `PracticeHubPage.test.tsx` now includes Tasks and Review Queue smoke coverage alongside the existing shell and placeholder checks. Database-backed and browser acceptance remain Phase 17 release gates.
-
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
 - Audit: inventory owner/staff/accountant/client routes and actions, real data sources and release/finish/defer disposition, including settings/reports/exports.
@@ -178,6 +164,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 | **Phase 13E1 — Billing Hardening (Task 719)** | **DONE & VERIFIED (2026-10-14)** | Resolved critical vulnerabilities: removed frontend rogue ACTIVE subscription fallback, added Stripe webhook 0-row update validation, and added unit test coverage for non-existent subscription events | [Billing Hardening README](../implementations/billing-hardening-task719/README.md) |
 | **Phase 16C Step 2 — Fixed Assets Depreciation Engine & GL Integration** | **DONE & VERIFIED (2026-10-12)** | Implemented straight-line depreciation calculation engine, GL journal integration via createAndPostJE with FIXED_ASSET_DEPRECIATION source, role-based authorization for OWNER/ADMIN/ACCOUNTANT, duplicate run prevention, idempotency key support, asset account status validation, audit logging, and 18 passing unit tests; documented in docs/implementations/fixed-assets-step2/README.md. |
 | **Phase 16C — Fixed Assets Management** | **DONE & VERIFIED (2026-10-18)** | Full fixed assets lifecycle implemented: creation, straight-line/declining balance depreciation engines, disposal & write-off workflows with GL posting, all unit tests passing. | [Fixed Assets README](../implementations/fixed-assets/README.md) · [Fixed Assets Step 2 README](../implementations/fixed-assets-step2/README.md) · [Fixed Assets Step 3 README](../implementations/fixed-assets-step3/README.md) |
+| **Phase 11 — Practice Hub Complete** | **DONE & VERIFIED (2026-10-26)** | All Practice Hub steps (1 through 5B) implemented, tested, and verified: workspace shell, client list, onboarding, invitations, backend tasks/reviews, and frontend task/review queues. 18/18 backend tests and 29/29 frontend tests pass. | [Phase 11 Frontend Queues README](../implementations/practice-hub-step5b-frontend-queues/README.md) |
 
 
 
