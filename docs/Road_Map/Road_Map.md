@@ -94,8 +94,9 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Audit: read-only local/remote revisions, server checkout, PM2, TLS/proxy, environment/migration state. Historical drift claims are not fresh facts.
 - Deliver: reviewed revision -> owner push -> controlled pull/install/build/migration if approved -> restart/health check, with rollback. No blind overwrite of server changes.
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
-- Depends on: 9/12/13/16/17 and released accounting phases. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
+- Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
 - Current blocker clarity: release remains blocked until Phase 11 Step 5A/5B is implemented, the fresh-signup owner onboarding defect is fixed, tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed.
+- Critical database migration blocker: active backend on VPS is still connected to the legacy Neon cloud database, not the intended self-hosted PostgreSQL. Complete database backup, schema migration verification, connection testing, and rollback plan before VPS release.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
@@ -137,6 +138,13 @@ For each row: success, invalid input, permission denial, network/server failure,
 | Report  filter  drill-down  export | Same posted dataset and totals |
 | Tax/payroll/assets/other released modules | Approved business rules and downstream effects |
 | Backup  restore  deploy  health  rollback | Recoverable data and exact monitored revision |
+
+### 18  Database Migration to Self-Hosted PostgreSQL (BLOCKED, P1 mandatory before Phase 10)
+
+- Prerequisites: VPS access (`haypbooks-dev` at `77.42.85.129`), verified database credentials, and compatible local/VPS `pg_dump`, `pg_restore`, and `psql` tools.
+- Deliver: full cutover from the legacy Neon cloud database to self-hosted PostgreSQL on `haypbooks-dev`. Complete a verified source dump, restore into `haypbooks_dev`, verify all repository Prisma migrations (51 directories observed on 2026-10-28; re-count at cutover) and schema/data/accounting parity, update the backend `.env` `DATABASE_URL` from the Neon pooler to the approved `localhost:5432/haypbooks_dev` target, restart the PM2 backend only after gates pass, run auth/tenancy/ledger smoke tests, and prove rollback.
+- Review: independent verification of zero data loss, schema and accounting integrity, absence of split-brain writes, and active-process isolation before marking unblocked.
+- Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9.
 
 
 <a id="appendix-completed-tasks"></a>
