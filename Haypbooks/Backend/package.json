@@ -89,6 +89,7 @@
     "test:serial": "cross-env NODE_OPTIONS=--max-old-space-size=8192 DATABASE_URL=$DATABASE_URL npx jest --runInBand --config jest.e2e.config.js",
     "test": "npm run test:unit",
     "test:unit": "cross-env NODE_OPTIONS=--max-old-space-size=8192 npx jest --runInBand --config jest.unit.config.js",
+    "test:acceptance": "cross-env NODE_ENV=test JWT_SECRET=acceptance-test-only-secret-key-32chars NODE_OPTIONS=--max-old-space-size=8192 jest --runInBand --config jest.acceptance.config.js",
     "audit:owner-workspace": "ts-node scripts/debug/owner-workspace-audit.ts",
     "test:quick-verify": "node ./scripts/test/quick-verify.js",
     "db:seed:smoke": "npm run db:seed:dev && npm run db:seed:inventory",
