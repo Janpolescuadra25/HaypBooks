@@ -2,11 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../../../src/app.module';
 import { PrismaService } from '../../../src/repositories/prisma/prisma.service';
+import { OnboardingService } from '../../../src/onboarding/onboarding.service';
+import { ContactsService } from '../../../src/contacts/contacts.service';
+import { ArService } from '../../../src/ar/ar.service';
 
 export interface AcceptanceTestContext {
   app: INestApplication;
   moduleFixture: TestingModule;
   prisma: PrismaService;
+  onboardingService: OnboardingService;
+  contactsService: ContactsService;
+  arService: ArService;
 }
 
 /**
@@ -29,11 +35,17 @@ export async function createAcceptanceTestApp(): Promise<AcceptanceTestContext> 
   await app.init();
 
   const prisma = app.get(PrismaService);
+  const onboardingService = app.get(OnboardingService);
+  const contactsService = app.get(ContactsService);
+  const arService = app.get(ArService);
 
   return {
     app,
     moduleFixture,
     prisma,
+    onboardingService,
+    contactsService,
+    arService,
   };
 }
 
