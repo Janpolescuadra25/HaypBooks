@@ -113,12 +113,20 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Scope hygiene: retain active tracking for data performance audit and remaining module inventory; remove duplicate active tracking of Phase 16C Fixed Assets lifecycle from the active list while preserving verified historical records in the appendix.
 - Done: migration rehearsal, pre/post counts/balances, restore, realistic large-tenant load and job recovery pass; other advertised modules verified or excluded from release.
 
-### 17  Integrated acceptance (READY TO START, P1 mandatory)
+### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
-- Prerequisites: Phase 9 complete.
-- Deliver: deterministic full-workflow fixtures connecting UI/API/persistence/ledger/reports/billing/permissions; independently review results and route defects to owning phases.
-- Requirements: realistic roles/data sizes, revision/environment/commands/expected-actual results and honest limitations. No inferred passes.
-- Depends on: every phase required for release scope. Done: matrix below passes, no P0, residual risks scoped/accepted, READMEs/support/rollback ready; then release 10.
+- **Owner:** Hydra (test verification) + Mantra (fixtures)
+- **Status:** PARTIALLY COMPLETE (Harness infrastructure committed and compile-verified; runtime acceptance matrix pending isolated database provisioning.)
+- **Verified update (2026-10-28, commit `cabed9ef44b0b16e4feb3cc21eb8cb142788b38d`):** Dedicated `jest.acceptance.config.js`, shared `acceptance-harness.ts`, initial `journey-1-owner-lifecycle.acceptance-spec.ts`, and the `test:acceptance` package script are implemented. Backend build and frontend typecheck pass. The runner loads the NestJS graph and reaches Prisma initialization, then fails closed when no `DATABASE_URL` is supplied; no Journey 1 runtime pass or database-backed acceptance certification is claimed yet.
+- **Prerequisites:** Phase 9 verified complete; provision a dedicated isolated acceptance PostgreSQL database before runtime execution.
+- **Scope:**
+  - Deterministic acceptance fixtures for Owner complete lifecycle, Accountant multi-entity, AP bill lifecycle, Fixed Asset lifecycle, and Multi-Currency/Tax handling.
+  - Isolated execution with zero pollution of production or development databases.
+- **Delivery criteria:**
+  - Five core journey fixtures pass deterministically in CI and approved local runs.
+  - Period-close workflows, ledger balancing, tenant isolation, permissions, and account-state transitions satisfy their acceptance assertions.
+  - Evidence records the exact revision, isolated database identity, commands, expected/actual results, cleanup, and limitations.
+- **Depends on:** Every phase required for release scope. Done only when the matrix below passes, no P0 remains, residual risks are scoped and accepted, and support/restore/rollback evidence is ready; then proceed to Phase 10.
 
 ## End-to-end acceptance matrix
 
