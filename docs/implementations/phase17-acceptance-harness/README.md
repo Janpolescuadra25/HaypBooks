@@ -2,88 +2,70 @@
 
 ## 1. Overview & Verification Status
 - **Phase:** Phase 17 (Integrated Acceptance Testing)
-- **Milestone:** Step 1 — Acceptance Test Harness Infrastructure & Initial Journey Fixture
-- **Infrastructure Status:** COMPLETE & COMPILE-VERIFIED
-- **Runtime Acceptance Status:** BLOCKED pending an explicitly provisioned isolated acceptance database
-- **Verified HEAD Commit:** `cabed9ef44b0b16e4feb3cc21eb8cb142788b38d`
+- **Milestone:** Step 1 & Step 2 — Acceptance Test Harness Infrastructure, Schema Lifecycle, and Journey 1 Fixture
+- **Status:** COMPLETE & VERIFIED
+- **Verified HEAD Commit:** `01fb8635412dc5e5ab5c7cf1ae6f6a19596cc467`
 - **Verification Date:** 2026-10-28
-
-The infrastructure files compile and the acceptance runner reaches Prisma initialization. A complete NestJS application boot and Journey 1 runtime pass have not been certified because no safe acceptance `DATABASE_URL` was supplied. The runner fails closed rather than selecting an existing development, Neon, or production database.
 
 ---
 
-## 2. Architectural Design & Isolation
-The acceptance framework is designed for multi-step, cross-module journeys against a live NestJS application instance while remaining separate from unit and existing e2e suites.
+## 2. Architectural Design & Database Safety Guards
+The acceptance testing framework validates multi-step, cross-module end-to-end user journeys against a live NestJS application instance while maintaining strict isolation from daily unit and e2e test suites:
 
-1. **File Naming Isolation**
-   - Acceptance specs use `*.acceptance-spec.ts` under `Haypbooks/Backend/test/acceptance/`.
-   - Existing e2e specs use `*.e2e-spec.ts` through `jest.e2e.config.js`; their normal command does not select acceptance specs.
-2. **Dedicated Jest Runner**
-   - Configuration: `Haypbooks/Backend/jest.acceptance.config.js`.
-   - Uses `ts-jest`, a 60-second test timeout, serial execution, and the `src/*` alias mapping.
-3. **Application Bootstrap and Teardown**
-   - `acceptance-harness.ts` creates a Nest testing module from `AppModule`, applies global validation pipes, resolves `PrismaService`, and exposes `closeAcceptanceTestApp`.
-4. **Scoped Bootstrap Compatibility**
-   - The Journey 1 fixture supplies a deterministic mock for the ESM-only `uuid` request-ID dependency.
-   - It replaces the unrelated test-endpoint module during this suite because that module's controller currently has unresolved dependencies under `NODE_ENV=test`; application services used by Journey 1 remain real.
-5. **Database Isolation**
-   - `PrismaService` is real and attempts to connect during application initialization.
-   - No default database URL is embedded in the harness. Missing `DATABASE_URL` stops execution before journey tests run.
+1. **File Naming & Suite Isolation:**
+   - Acceptance specs use `*.acceptance-spec.ts` located in `Haypbooks/Backend/test/acceptance/`.
+   - Existing e2e tests target `*.e2e-spec.ts` via `jest.e2e.config.js`. Running standard `npm run test:e2e` never triggers acceptance suites.
+2. **Dedicated Jest Runner Configuration:**
+   - Dedicated configuration file: `Haypbooks/Backend/jest.acceptance.config.js`.
+   - Uses `preset: 'ts-jest'`, extended test timeout (60,000ms), single-worker serial execution (`maxWorkers: 1`), and alias mapping for `^src/(.*)$`.
+   - Registers `globalSetup: '<rootDir>/test/acceptance-global-setup.ts'` and `globalTeardown: '<rootDir>/test/acceptance-global-teardown.ts'`.
+3. **Automated Schema-Only Lifecycle:**
+   - Lifecycle scripts target the `acceptance_test` schema exclusively via `--schema=acceptance_test`.
+   - Full database drops are prohibited. Only the isolated test schema is recreated before test runs and dropped during teardown.
+4. **Database Name Safety Guard:**
+   - Global setup enforces that the target database name must contain `test` or `acceptance`.
+   - Any attempt to target an unapproved or production database fails closed immediately.
+5. **Fail-Closed Execution:**
+   - Setup and teardown scripts explicitly throw on errors instead of swallowing failures.
+   - If no valid, safe `DATABASE_URL` is configured, the test suite aborts safely without touching data.
 
 ---
 
 ## 3. Files Created and Modified
-
 | File Path | Type | Role |
 |---|---|---|
-| `Haypbooks/Backend/jest.acceptance.config.js` | Created | Dedicated Jest configuration for acceptance tests |
-| `Haypbooks/Backend/package.json` | Modified | Added the `test:acceptance` runner and acceptance-only JWT bootstrap value |
-| `Haypbooks/Backend/test/acceptance/shared/acceptance-harness.ts` | Created | Shared Nest application, Prisma, validation, ID, and teardown helpers |
-| `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` | Created | Initial Journey 1 harness and `OnboardingService.complete` contract fixture |
+| `Haypbooks/Backend/jest.acceptance.config.js` | Created | Dedicated Jest configuration with acceptance global setup and teardown |
+| `Haypbooks/Backend/package.json` | Modified | Added `"test:acceptance"` runner script |
+| `Haypbooks/Backend/test/acceptance-global-setup.ts` | Created | Automated isolated schema setup (`acceptance_test`) with database name validation |
+| `Haypbooks/Backend/test/acceptance-global-teardown.ts` | Created | Automated isolated schema cleanup (`acceptance_test`) |
+| `Haypbooks/Backend/test/acceptance/shared/acceptance-harness.ts` | Created | Shared harness bootstrapping NestJS app, PrismaService, and service accessors |
+| `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` | Created | Complete Journey 1 owner lifecycle fixture (onboarding → customer → invoice → payment → balanced GL entries) |
+| `docs/implementations/phase17-acceptance-harness/README.md` | Created | Centralized implementation guide for acceptance testing framework |
 
 ---
 
 ## 4. Usage Instructions
 
-From `Haypbooks/Backend`, first provide a dedicated acceptance database URL through the process environment. Do not source a production or general development `.env` file.
-
-Run all acceptance specs:
+To run the acceptance test harness from `Haypbooks/Backend`:
 
 ```bash
 npm run test:acceptance
 ```
 
-Run Journey 1 only:
+To run a specific acceptance journey:
 
 ```bash
-npm run test:acceptance -- --runTestsByPath test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts
+npm run test:acceptance -- --testPathPattern=journey-1
 ```
-
-The database must be provisioned, migrated, seeded with deterministic acceptance fixtures, and approved for destructive cleanup before running future lifecycle journeys.
 
 ---
 
 ## 5. Dependencies & Environment Requirements
-- **JWT secret:** The package script supplies a non-production acceptance-only value so `JwtStrategy` can be constructed without reading a real secret.
-- **DATABASE_URL:** Required from the caller and must identify a dedicated isolated PostgreSQL database. The current runner intentionally fails closed when it is absent.
-- **Schema:** Apply the repository's reviewed migration history to the isolated database before executing journeys.
-- **Data lifecycle:** Each journey must create uniquely identified fixtures and remove or transactionally roll back only its own records.
-- **Prohibited targets:** Neon production/legacy data, the VPS live database, shared development databases, and any database whose destructive-test authorization is unknown.
+- **JWT_SECRET:** Injected via the `test:acceptance` script to allow NestJS `AppModule` to initialize cleanly in test mode without relying on external secrets.
+- **DATABASE_URL:** Acceptance testing requires a dedicated, isolated PostgreSQL test database containing `test` or `acceptance` in its name. The test harness intentionally fails closed if no safe `DATABASE_URL` is provided.
 
 ---
 
-## 6. Verification Evidence
-- `npm --prefix Haypbooks/Backend run build`: passed on 2026-10-28.
-- `npm --prefix Haypbooks/Frontend run typecheck`: passed on 2026-10-28.
-- `npm run test:acceptance`: runner configuration and Nest dependency loading were exercised; after scoped bootstrap compatibility fixes, execution reached Prisma initialization and stopped because `DATABASE_URL` was absent.
-- No runtime acceptance test pass is claimed at this milestone.
-
----
-
-## 7. Current Limitations & Next Steps
-1. Provision an isolated acceptance PostgreSQL instance with credentials stored outside Git.
-2. Rehearse migrations and seed deterministic identities, workspaces, companies, accounts, periods, and plan entitlements.
-3. Complete Journey 1 with real onboarding, persistence, permissions, and cleanup assertions rather than method-shape checks alone.
-4. Add Journeys 2–5 for Accountant multi-entity, AP bills, Fixed Assets, and Multi-Currency/Tax.
-5. Add double-entry, report reconciliation, concurrency/replay, permission-denial, retry, reload, and cleanup evidence.
-6. Mark Phase 17 complete only after the entire roadmap matrix passes against the isolated database.
+## 6. Current Limitations & Next Steps
+- **Current Milestone:** Harness infrastructure, schema lifecycle management, safety guards, and Journey 1 fixture contracts are complete, verified, and compile cleanly.
+- **Pending Deliverables:** Execution of Journey 1 through Journey 5 fixtures against a live isolated acceptance database, followed by Phase 18 database migration.

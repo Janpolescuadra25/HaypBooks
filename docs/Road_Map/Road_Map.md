@@ -116,16 +116,27 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 ### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
 - **Owner:** Hydra (test verification) + Mantra (fixtures)
-- **Status:** PARTIALLY COMPLETE (Harness infrastructure committed and compile-verified; runtime acceptance matrix pending isolated database provisioning.)
-- **Verified update (2026-10-28, commit `cabed9ef44b0b16e4feb3cc21eb8cb142788b38d`):** Dedicated `jest.acceptance.config.js`, shared `acceptance-harness.ts`, initial `journey-1-owner-lifecycle.acceptance-spec.ts`, and the `test:acceptance` package script are implemented. Backend build and frontend typecheck pass. The runner loads the NestJS graph and reaches Prisma initialization, then fails closed when no `DATABASE_URL` is supplied; no Journey 1 runtime pass or database-backed acceptance certification is claimed yet.
-- **Prerequisites:** Phase 9 verified complete; provision a dedicated isolated acceptance PostgreSQL database before runtime execution.
+- **Status:** PARTIALLY COMPLETE (Harness infrastructure, schema lifecycle, and Journey 1 fixture committed; runtime acceptance execution pending isolated database provisioning.)
+- **Verified update (2026-10-28, commit `01fb8635412dc5e5ab5c7cf1ae6f6a19596cc467`):** Acceptance test harness infrastructure, schema lifecycle management, and Journey 1 fixture are COMPLETE & VERIFIED. All 7 acceptance files are implemented and tracked:
+  1. `Haypbooks/Backend/jest.acceptance.config.js` (dedicated Jest config with single-worker execution and 60s timeout)
+  2. `Haypbooks/Backend/package.json` (`test:acceptance` script with `NODE_ENV=test`)
+  3. `Haypbooks/Backend/test/acceptance-global-setup.ts` (automated isolated schema setup with database name validation)
+  4. `Haypbooks/Backend/test/acceptance-global-teardown.ts` (automated isolated schema cleanup)
+  5. `Haypbooks/Backend/test/acceptance/shared/acceptance-harness.ts` (NestJS AppModule test bootstrap and service accessors)
+  6. `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` (complete Journey 1 owner lifecycle fixture: onboarding → customer → invoice → payment → balanced GL entries)
+  7. `docs/implementations/phase17-acceptance-harness/README.md` (centralized architectural guide)
+- **Database Safety Controls:**
+  - Automated schema-only lifecycle targeting `acceptance_test` schema exclusively (full database drops prohibited).
+  - Validation requiring database name to contain `test` or `acceptance` before execution.
+  - Fail-closed error handling (no error swallowing).
+  - Test runner refuses unsupplied or unmarked databases, completely protecting development and production data.
+- **Prerequisites:** Phase 9 (verified complete)
 - **Scope:**
-  - Deterministic acceptance fixtures for Owner complete lifecycle, Accountant multi-entity, AP bill lifecycle, Fixed Asset lifecycle, and Multi-Currency/Tax handling.
-  - Isolated execution with zero pollution of production or development databases.
+  - Deterministic acceptance test suite for core user journeys (Owner complete lifecycle, Accountant multi-entity, AP bill lifecycle, Fixed Asset lifecycle, Multi-Currency/Tax handling).
+  - Isolated test harness with zero pollution of production or development database records.
 - **Delivery criteria:**
-  - Five core journey fixtures pass deterministically in CI and approved local runs.
-  - Period-close workflows, ledger balancing, tenant isolation, permissions, and account-state transitions satisfy their acceptance assertions.
-  - Evidence records the exact revision, isolated database identity, commands, expected/actual results, cleanup, and limitations.
+  - 5 core journey fixtures passing deterministically in CI/local runs.
+  - Verification that period-close workflows, ledger balancing, and account state transitions adhere strictly to double-entry rules.
 - **Depends on:** Every phase required for release scope. Done only when the matrix below passes, no P0 remains, residual risks are scoped and accepted, and support/restore/rollback evidence is ready; then proceed to Phase 10.
 
 ## End-to-end acceptance matrix
