@@ -1,12 +1,21 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
-## Current verification checkpoint - 2026-10-27
+- Last Checkpoint Date: `2026-10-29`
+- Provenance Pin: `01e470e9d2ddd687557f29fe96e3a72f48aa0c90`
+- Authority: `Hydra 2026-10-29 Task 893 Comprehensive Audit`
+
+## 0. NEXT IMMEDIATE ACTION (CRITICAL PATH)
+- **Immediate Milestone:** Execute Phase 17 Journey 1 Acceptance Test (`journey-1-owner-lifecycle.acceptance-spec.ts`) against local isolated test schema (`acceptance_test`).
+- **Prerequisite:** Ensure local PostgreSQL service is running and configured with `$env:DATABASE_URL = "postgresql://<user>:<password>@localhost:5432/haypbooks_test?schema=acceptance_test"` (database `haypbooks_test` must exist).
+- **Unblocks:** Successful Journey 1 verification unblocks Phase 18 (Database Migration to Self-Hosted PostgreSQL) and subsequent Phase 10 (VPS Release).
+
+## Current verification checkpoint - 2026-10-29
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
-- Source checkpoint reference: `b724209bad9322031d614b11ac78386bc6114886`.
+- Source checkpoint reference: `01e470e9d2ddd687557f29fe96e3a72f48aa0c90`.
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD `b724209bad9322031d614b11ac78386bc6114886` on `checkpoint/dev` is clean and matches the authoritatively audited checkpoint. Deployment revision is not claiming live production release.
+- Working tree at HEAD `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` on `checkpoint/dev` is clean and matches the authoritatively audited checkpoint. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; current implementation remains limited to the shell and not the full functional queue modules.
 - Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is COMPLETE & VERIFIED (Backend task & review queues, DTOs, service methods, workspace type guards in commit ``def107fec9bde848d43b3c4002e6f601d42f76d6``). Step 5B is the active priority (Frontend Queues).
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
@@ -103,7 +112,8 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Audit: inventory owner/staff/accountant/client routes and actions, real data sources and release/finish/defer disposition, including settings/reports/exports.
 - Deliver: fix dead buttons, mock-live data, persistence, navigation/validation; reuse shared tables/forms/status patterns where beneficial. Keyboard/mobile and loading/error/success/retry/cancel required.
 - Depends on: 1/11/13/14. Done: no unexplained shipped placeholders; reload restores server truth; realistic company/accountant/practice tasks and permission failures pass; visual differences documented.
-- Verified update: the Period-Close Sign-Offs sub-module is COMPLETE & VERIFIED. The company-scoped workflow is now exposed through `AccountingController` as GET/POST endpoints under `/api/companies/:companyId/accounting/period-close/workflow*`, the stale close-checklist link was corrected to `/accounting/period-close/sign-offs`, the mutation path enforces server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization while blocking `VIEWER` with `403`, and the live sign-offs page is wired to the backend with explicit `periodId` selection and `COMPLETE_CLOSE_WORKFLOW` audit logging. Phase 15 remains PARTIAL overall because the broader shipped-action inventory still includes other non-period-close modules awaiting audit; the period-close sign-offs sub-module itself is fully verified. Note: Period-close sign-offs verified complete (docs/implementations/period-close-sign-offs/README.md).
+- **Verified complete sub-module:** `Period-Close Sign-Offs` is `VERIFIED COMPLETE` and documented in [docs/implementations/period-close-sign-offs/README.md](../implementations/period-close-sign-offs/README.md). The company-scoped workflow is exposed through `AccountingController` as GET/POST endpoints under `/api/companies/:companyId/accounting/period-close/workflow*`, the stale close-checklist link was corrected to `/accounting/period-close/sign-offs`, the mutation path enforces server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization while blocking `VIEWER` with `403`, and the live sign-offs page is wired to the backend with explicit `periodId` selection and `COMPLETE_CLOSE_WORKFLOW` audit logging.
+- **Remaining Phase 15 scope:** VAT and multi-currency compliance pathways remain `AUDIT REQUIRED, P1`; overall Phase 15 remains partial until those additional routes are verified and the broader shipped-action inventory is fully audited.
 
 ### 16  Data, performance and remaining modules (AUDIT REQUIRED, P1)
 
@@ -116,15 +126,16 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 ### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
 - **Owner:** Hydra (test verification) + Mantra (fixtures)
-- **Status:** PARTIALLY COMPLETE (Harness infrastructure, schema lifecycle, and Journey 1 fixture committed; runtime acceptance execution pending isolated database provisioning.)
-- **Verified update (2026-10-28, commit `01fb8635412dc5e5ab5c7cf1ae6f6a19596cc467`):** Acceptance test harness infrastructure, schema lifecycle management, and Journey 1 fixture are COMPLETE & VERIFIED. All 7 acceptance files are implemented and tracked:
+- **Status:** PARTIALLY COMPLETE (Harness infrastructure, schema lifecycle, Journey 1 fixture, and local provisioning guide are verified; runtime acceptance execution remains gated on local schema provisioning and a safe test database.)
+- **Verified implementation update (2026-10-28, commit `01fb8635412dc5e5ab5c7cf1ae6f6a19596cc467`):** Acceptance test harness infrastructure, schema lifecycle management, and Journey 1 fixture are COMPLETE & VERIFIED. Local database provisioning documentation was added at baseline `01e470e9d2ddd687557f29fe96e3a72f48aa0c90`.
+- **Acceptance harness inventory:**
   1. `Haypbooks/Backend/jest.acceptance.config.js` (dedicated Jest config with single-worker execution and 60s timeout)
   2. `Haypbooks/Backend/package.json` (`test:acceptance` script with `NODE_ENV=test`)
   3. `Haypbooks/Backend/test/acceptance-global-setup.ts` (automated isolated schema setup with database name validation)
   4. `Haypbooks/Backend/test/acceptance-global-teardown.ts` (automated isolated schema cleanup)
   5. `Haypbooks/Backend/test/acceptance/shared/acceptance-harness.ts` (NestJS AppModule test bootstrap and service accessors)
   6. `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` (complete Journey 1 owner lifecycle fixture: onboarding → customer → invoice → payment → balanced GL entries)
-  7. `docs/implementations/phase17-acceptance-harness/README.md` (centralized architectural guide)
+  7. `docs/implementations/phase17-acceptance-harness/README.md` (centralized architectural guide and local provisioning instructions)
 - **Database Safety Controls:**
   - Automated schema-only lifecycle targeting `acceptance_test` schema exclusively (full database drops prohibited).
   - Validation requiring database name to contain `test` or `acceptance` before execution.
@@ -176,24 +187,21 @@ For each row: success, invalid input, permission denial, network/server failure,
 
 ### Archived Verified Phases (Completed Prior to 2026-10-15)
 
-| Phase | Module & Scope | Resolution Summary | Authoritative Implementation Documentation |
+| Phase | Title | Commit SHA | Verified Date |
 |---|---|---|---|
-| **Phase 3 — Section READMEs and evidence** | **DONE & VERIFIED (2026-10-22)** | All canonical implementation READMEs created for completed phases (including Phase 12 and Phase 14 security/accounting controls), with all required documentation links and validation results added. No remaining documentation deliverables outstanding. | [Phase 12 Security README](../implementations/security-tenant-isolation/README.md) · [Phase 14 Accounting README](../implementations/accounting-lifecycle-controls/README.md) |
-| **Phase 16C Step 3 — Fixed Assets Disposal & Write-Off Flow** | **DONE & VERIFIED (2026-10-15)** | Implemented disposal quote calculation, sale processing with gain/loss GL posting, write-off journal workflow, asset status transitions to SOLD/DISPOSED, role enforcement for OWNER/ADMIN/ACCOUNTANT, audit logging, and 7 passing unit tests; transactional Prisma $transaction ensures atomicity of all disposal mutations | [Fixed Assets Step 3 README](../implementations/fixed-assets-step3/README.md) |
-| **Phase 16D** | Explicit remaining-module inventory and retention | Comprehensive backend module inventory created 2026-10-02, 39 controllers documented, Batch 1/Batch 2 mapped | [Module Inventory README](../implementations/module-inventory/README.md) |
-| **Phase 13 — Paid Plans, Trials & Stripe Billing** | **DONE & VERIFIED (2026-10-03)** | Four canonical paid plans + 30-day non-destructive trial (`planId: DEFAULT_TRIAL_PLAN_ID`), `/api/subscriptions/create` onboarding route & inline `role="alert"` error handling (E2), trial bootstrap & 30-day ticker alignment (E9), Stripe SDK checkout/portal/webhook lifecycle (`docs/implementations/subscription-onboarding/README.md`, `docs/implementations/billing-trial-alignment/README.md`, `docs/implementations/module-inventory/README.md`). | |
-| **Phase 5 — E5 Inventory Stock & GL Atomic Synchronization** | **DONE & VERIFIED (2026-10-04)** | Fixed `DRAFT` stock mutation, added double-posting guard, and enforced atomic `POSTED` stock updates + `SubLedgerService.postInventoryTransactionToGL` + `journalEntryId` linking + `POST_TO_GL` audit logging inside a single Prisma `$transaction` (`docs/implementations/inventory-gl-sync/README.md`). | |
-| **Phase 4 — E4 Balance Sheet Current-Year Earnings Presentation** | **DONE & VERIFIED (2026-10-04)** | Added fiscal-year-start calculation, year-to-date revenue/expense aggregation (`_getAccountBalancesForPeriod`), and synthetic equity line `Current-Year Earnings (Net Income)` (`accountCode: '3999'`) in `_buildBalanceSheet` with `isBalanced` verification (`docs/implementations/balance-sheet-earnings/README.md`). | |
-| **E10 — Practice Hub Invitation Acceptance (`practice-hub.service.ts:214`)** | **DONE & VERIFIED (2026-10-04)** | Verified transactional `acceptInvite` implementation in `src/practice-hub/practice-hub.service.ts:214` (identity/company access checks, atomic engagement creation + invite `ACCEPTED` status update; `docs/implementations/practice-hub-invites/README.md`). | |
-| **E12 — Sub-Ledger & AP/AR Posting/Reversal Lifecycle (`ap.repository.ts`, `sub-ledger.service.ts`)** | **DONE & VERIFIED (2026-10-04)** | Verified transactional posting/reversal foundations, `assertPeriodOpen` enforcement, `createReversingJE` in `ap.repository.ts:voidBill`, conditional audit writes, and AP/sub-ledger unit test suites (`gl-integrity.spec.ts`, `bill-lifecycle.spec.ts`, `void-lifecycle.spec.ts`, `approval-workflow.spec.ts`; `docs/implementations/sub-ledger-lifecycle/README.md`). | |
-| **14A — Approval workflow completion** | **DONE & VERIFIED (2026-10-05)** | Added `listPendingApprovals`, pending-approval route exposure, creator/requester self-approval prevention, replay protection for already posted bills, and company/workspace-scoped authorization checks for the approval queue (`docs/implementations/approval-workflow-completion/README.md`). | [Approval Workflow README](../implementations/approval-workflow-completion/README.md) |
-| **Phase A3 (Period-Close Sign-Offs & Hardening)** | **DONE & VERIFIED (2026-10-10)** | Consolidated close-workflow routes under company-scoped `AccountingController`, enforced server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization (`assertPeriodClosePermission`, `VIEWER` blocked with `403`), added explicit `periodId` selection across backend and frontend, added `COMPLETE_CLOSE_WORKFLOW` audit logging, and verified the backend/unit and type-check regression gates | [Period Close Sign-Offs README](../implementations/period-close-sign-offs/README.md) |
-| **Phase 7 — Multi-Currency FX Revaluation** | **DONE & VERIFIED (2026-10-12)** | Verified end-to-end period-end FX revaluation: date-aware preview, accountant policy ratification (`ratifyFxAccountPolicy`), fail-closed gate (`canPostOrFinalize`), atomic GL journal posting (`finalizeMultiCurrencyRevaluation`), and reversal workflow (`reverseMultiCurrencyRevaluation`) in `Haypbooks/Backend/src/accounting/accounting.service.ts` (L1780-L2079). Full backend test suite passing at 43/43 tests in `accounting.service.spec.ts`. Frontend owner period-close UI wired in `Haypbooks/Frontend/src/app/(owner)/accounting/period-close/multi-currency-revaluation/page.tsx`. Documented in `docs/implementations/fx-revaluation/README.md`. | [FX Revaluation README](../implementations/fx-revaluation/README.md) |
-| **Phase 13E1 — Billing Hardening (Task 719)** | **DONE & VERIFIED (2026-10-14)** | Resolved critical vulnerabilities: removed frontend rogue ACTIVE subscription fallback, added Stripe webhook 0-row update validation, and added unit test coverage for non-existent subscription events | [Billing Hardening README](../implementations/billing-hardening-task719/README.md) |
-| **Phase 16C Step 2 — Fixed Assets Depreciation Engine & GL Integration** | **DONE & VERIFIED (2026-10-12)** | Implemented straight-line depreciation calculation engine, GL journal integration via createAndPostJE with FIXED_ASSET_DEPRECIATION source, role-based authorization for OWNER/ADMIN/ACCOUNTANT, duplicate run prevention, idempotency key support, asset account status validation, audit logging, and 18 passing unit tests; documented in docs/implementations/fixed-assets-step2/README.md. |
-| **Phase 16C — Fixed Assets Management** | **DONE & VERIFIED (2026-10-18)** | Full fixed assets lifecycle implemented: creation, straight-line/declining balance depreciation engines, disposal & write-off workflows with GL posting, all unit tests passing. | [Fixed Assets README](../implementations/fixed-assets/README.md) · [Fixed Assets Step 2 README](../implementations/fixed-assets-step2/README.md) · [Fixed Assets Step 3 README](../implementations/fixed-assets-step3/README.md) |
-| **Phase 11 — Practice Hub Complete** | **DONE & VERIFIED (2026-10-26)** | All Practice Hub steps (1 through 5B) implemented, tested, and verified: workspace shell, client list, onboarding, invitations, backend tasks/reviews, and frontend task/review queues. 18/18 backend tests and 29/29 frontend tests pass. | [Phase 11 Frontend Queues README](../implementations/practice-hub-step5b-frontend-queues/README.md) |
-| **Phase 9 — Reproducible Baseline Test Configuration** | **DONE & VERIFIED (2026-10-27)** | Added a standard backend `npm test` entry point and an 8192 MB Node.js heap allocation for unit tests; backend build, frontend typecheck, and both scoped test entry points verified successfully. | [Phase 9 Test Configuration README](../implementations/phase9-test-configuration/README.md) |
+| **Phase 3** | Section READMEs and evidence | `6f8335e42752b276761e14f0bf3b938afeec63b0` | 2026-10-22 |
+| **Phase 4** | Balance Sheet Current-Year Earnings | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
+| **Phase 5** | Inventory stock & GL atomic synchronization | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
+| **Phase 7** | Multi-Currency FX Revaluation | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-12 |
+| **Phase 9** | Reproducible Baseline Test Configuration | `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` | 2026-10-27 |
+| **Phase 11** | Practice Hub Complete | `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` | 2026-10-26 |
+| **Phase 13** | Paid Plans, Trials & Stripe Billing | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-03 |
+| **Phase 14A** | Approval workflow completion | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-05 |
+| **Phase A3** | Period-Close Sign-Offs & Hardening | `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` | 2026-10-10 |
+| **Phase 16C** | Fixed Assets management | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-18 |
+| **Phase 16D** | Remaining-module inventory and retention | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-02 |
+| **E10** | Practice Hub invitation acceptance | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
+| **E12** | Sub-ledger & AP/AR posting/reversal lifecycle | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
 
 
 
