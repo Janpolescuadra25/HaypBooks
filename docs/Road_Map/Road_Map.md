@@ -1,23 +1,26 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
-- Last Checkpoint Date: `2026-10-29`
-- Provenance Pin: `01e470e9d2ddd687557f29fe96e3a72f48aa0c90`
-- Authority: `Hydra 2026-10-29 Task 893 Comprehensive Audit`
+- Last Checkpoint Date: `2026-10-30`
+- Provenance Pin: `42d004be3943434d4f7575c4e4d3d7df96ab36d4`
+- Authority: `Hydra 2026-10-30 Task 897 Comprehensive Audit`
 
 ## 0. NEXT IMMEDIATE ACTION (CRITICAL PATH)
 - **Immediate Milestone:** Execute Phase 17 Journey 1 Acceptance Test (`journey-1-owner-lifecycle.acceptance-spec.ts`) against local isolated test schema (`acceptance_test`).
-- **Prerequisite:** Ensure local PostgreSQL service is running and configured with `$env:DATABASE_URL = "postgresql://<user>:<password>@localhost:5432/haypbooks_test?schema=acceptance_test"` (database `haypbooks_test` must exist).
-- **Unblocks:** Successful Journey 1 verification unblocks Phase 18 (Database Migration to Self-Hosted PostgreSQL) and subsequent Phase 10 (VPS Release).
+- **Prerequisites on Local Host:**
+  1. Local PostgreSQL running on port 5432.
+  2. Ensure database `haypbooks_test` exists (`CREATE DATABASE haypbooks_test;`).
+  3. Set `$env:DATABASE_URL = "postgresql://postgres:<your-local-postgres-password>@localhost:5432/haypbooks_test?schema=acceptance_test"`.
+- **Unblocks:** Successful Journey 1 verification unblocks Phase 18 (Database Migration to Self-Hosted PostgreSQL) and Phase 10 (VPS Release).
 
-## Current verification checkpoint - 2026-10-29
+## Current verification checkpoint - 2026-10-30
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
-- Source checkpoint reference: `01e470e9d2ddd687557f29fe96e3a72f48aa0c90`.
+- Source checkpoint reference: `42d004be3943434d4f7575c4e4d3d7df96ab36d4`.
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` on `checkpoint/dev` is clean and matches the authoritatively audited checkpoint. Deployment revision is not claiming live production release.
+- Working tree at HEAD `42d004be3943434d4f7575c4e4d3d7df96ab36d4` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; current implementation remains limited to the shell and not the full functional queue modules.
-- Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is COMPLETE & VERIFIED (Backend task & review queues, DTOs, service methods, workspace type guards in commit ``def107fec9bde848d43b3c4002e6f601d42f76d6``). Step 5B is the active priority (Frontend Queues).
+- Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is the active remaining scope (frontend queue pages under `Haypbooks/Frontend/src/app/practice/`).
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
 - Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7 ✓ 2026-10-19). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
@@ -104,8 +107,14 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Deliver: reviewed revision -> owner push -> controlled pull/install/build/migration if approved -> restart/health check, with rollback. No blind overwrite of server changes.
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
-- Current blocker clarity: release remains blocked until Phase 11 Step 5A/5B is implemented, the fresh-signup owner onboarding defect is fixed, tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed.
+- Current blocker clarity: release remains blocked until Phase 11 Step 5B is implemented and verified, tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed. Phase 11 Step 5A and the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
 - Critical database migration blocker: active backend on VPS is still connected to the legacy Neon cloud database, not the intended self-hosted PostgreSQL. Complete database backup, schema migration verification, connection testing, and rollback plan before VPS release.
+
+### 11 Step 5B  Practice Hub frontend queue views (ACTIVE, P1)
+
+- **Verified prerequisite:** Step 5A backend task and review queues are `VERIFIED COMPLETE`; see [docs/implementations/practice-hub-step5a-backend-tasks/README.md](../implementations/practice-hub-step5a-backend-tasks/README.md).
+- **Active remaining scope:** Implement and verify the task and review queue pages under `Haypbooks/Frontend/src/app/practice/`, using the existing Step 5A APIs and practice-workspace authorization contracts.
+- **Done:** task/review lists, filters, pagination, assignment, status transitions, loading/empty/error/retry states, responsive and keyboard behavior, denied access, reload persistence, and API/UI state agreement pass focused frontend and integrated acceptance checks.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
@@ -115,13 +124,12 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - **Verified complete sub-module:** `Period-Close Sign-Offs` is `VERIFIED COMPLETE` and documented in [docs/implementations/period-close-sign-offs/README.md](../implementations/period-close-sign-offs/README.md). The company-scoped workflow is exposed through `AccountingController` as GET/POST endpoints under `/api/companies/:companyId/accounting/period-close/workflow*`, the stale close-checklist link was corrected to `/accounting/period-close/sign-offs`, the mutation path enforces server-side `OWNER`/`ADMIN`/`ACCOUNTANT` authorization while blocking `VIEWER` with `403`, and the live sign-offs page is wired to the backend with explicit `periodId` selection and `COMPLETE_CLOSE_WORKFLOW` audit logging.
 - **Remaining Phase 15 scope:** VAT and multi-currency compliance pathways remain `AUDIT REQUIRED, P1`; overall Phase 15 remains partial until those additional routes are verified and the broader shipped-action inventory is fully audited.
 
-### 16  Data, performance and remaining modules (AUDIT REQUIRED, P1)
+### 16  Secondary data performance and indexing review (AUDIT REQUIRED, P1)
 
-- Audit: schema/migrations/isolated DB, FKs/indexes/RLS, precision/timezone, retention/import/export/jobs; tax/payroll/assets and every advertised module not covered. Select jurisdictions with owner; do not invent compliance scope.
-- Deliver: demonstrated defects repaired with reviewed reversible changes, bounded queries, retry-safe jobs, secure storage and recovery. Restructure only for demonstrated benefit.
-- Requirements: read-only profiling before explicit data-repair plan; no blanket reseed/delete. Depends on: 9/12/14.
-- Scope hygiene: retain active tracking for data performance audit and remaining module inventory; remove duplicate active tracking of Phase 16C Fixed Assets lifecycle from the active list while preserving verified historical records in the appendix.
-- Done: migration rehearsal, pre/post counts/balances, restore, realistic large-tenant load and job recovery pass; other advertised modules verified or excluded from release.
+- **Archived core:** `WorkspaceAccessGuard` enforcement across 24 controllers and the Prisma `AuditLog` model are verified and recorded in the Archived Verified Phases table.
+- **Remaining audit only:** profile high-volume tenant queries and migration-backed indexes, then document query plans, measured bottlenecks, missing/redundant index findings, and any bounded remediation. Do not reopen verified guard or audit-model work without contrary evidence.
+- **Requirements:** read-only profiling first; no blanket reseed, delete, or speculative index creation. Depends on 9/12/14 and must use representative isolated data.
+- **Done:** reviewed before/after query plans and load measurements demonstrate acceptable bounded behavior, migrations are reversible, and no regression is introduced in writes, tenant isolation, accounting, backup, or restore.
 
 ### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
@@ -185,7 +193,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 | **Phase 8 — AI Phase 2** | **DEFERRED / OPTIONAL** | Historical backlog retained for future AI review work; not a release-blocking phase for core product stability. | [Legacy AI roadmap backlog retained in this document] |
 
 
-### Archived Verified Phases (Completed Prior to 2026-10-15)
+### Archived Verified Phases
 
 | Phase | Title | Commit SHA | Verified Date |
 |---|---|---|---|
@@ -194,12 +202,13 @@ For each row: success, invalid input, permission denial, network/server failure,
 | **Phase 5** | Inventory stock & GL atomic synchronization | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
 | **Phase 7** | Multi-Currency FX Revaluation | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-12 |
 | **Phase 9** | Reproducible Baseline Test Configuration | `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` | 2026-10-27 |
-| **Phase 11** | Practice Hub Complete | `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` | 2026-10-26 |
+| **Phase 11 Step 5A** | Practice Hub backend task and review queues | `def107fec9bde848d43b3c4002e6f601d42f76d6` | 2026-10-26 |
 | **Phase 13** | Paid Plans, Trials & Stripe Billing | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-03 |
 | **Phase 14A** | Approval workflow completion | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-05 |
 | **Phase A3** | Period-Close Sign-Offs & Hardening | `01e470e9d2ddd687557f29fe96e3a72f48aa0c90` | 2026-10-10 |
 | **Phase 16C** | Fixed Assets management | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-18 |
 | **Phase 16D** | Remaining-module inventory and retention | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-02 |
+| 16 | Core Audit Logging & Role Guards (WorkspaceAccessGuard & AuditLog model) | `42d004be3943434d4f7575c4e4d3d7df96ab36d4` | 2026-10-30 |
 | **E10** | Practice Hub invitation acceptance | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
 | **E12** | Sub-ledger & AP/AR posting/reversal lifecycle | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
 
