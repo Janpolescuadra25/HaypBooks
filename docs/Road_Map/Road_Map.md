@@ -1,24 +1,22 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
-- Last Checkpoint Date: `2026-10-30`
-- Provenance Pin: `42d004be3943434d4f7575c4e4d3d7df96ab36d4`
-- Authority: `Hydra 2026-10-30 Task 897 Comprehensive Audit`
+- Last Checkpoint Date: `2026-10-31`
+- Provenance Pin: `783a1f57c991ab7f4f28d243422651a5c6c6035b`
+- Authority: `Hydra 2026-10-31 Task 910 Post-Execution Audit`
 
 ## 0. NEXT IMMEDIATE ACTION (CRITICAL PATH)
-- **Immediate Milestone:** Execute Phase 17 Journey 1 Acceptance Test (`journey-1-owner-lifecycle.acceptance-spec.ts`) against local isolated test schema (`acceptance_test`).
-- **Prerequisites on Local Host:**
-  1. Local PostgreSQL running on port 5432.
-  2. Ensure database `haypbooks_test` exists (`CREATE DATABASE haypbooks_test;`).
-  3. Set `$env:DATABASE_URL = "postgresql://postgres:<your-local-postgres-password>@localhost:5432/haypbooks_test?schema=acceptance_test"`.
-- **Unblocks:** Successful Journey 1 verification unblocks Phase 18 (Database Migration to Self-Hosted PostgreSQL) and Phase 10 (VPS Release).
+- **Phase 17 Journey 1 milestone:** **VERIFIED COMPLETE** on 2026-10-31 at commit `783a1f57c991ab7f4f28d243422651a5c6c6035b`. The isolated live run passed one suite and all three tests, covering owner onboarding, customer and invoice creation, invoice sending, payment recording, and balanced double-entry AR posting.
+- **Priority 1 (P1): Phase 18 Database Migration to Self-Hosted PostgreSQL — ACTIVE / UNBLOCKED FOR SCOPING.** Scope VPS Docker PostgreSQL provisioning, connection pooling, backup/restore rehearsal, cutover, rollback, and live connection validation before execution.
+- **Priority 2 (P1): Phase 11 Step 5B — Practice Hub Frontend Queues.** Implement client task and review queues under `Haypbooks/Frontend/src/app/practice/` against the verified Step 5A APIs.
+- **Priority 3 (P2): Phase 17 Journeys 2–5.** Expand isolated acceptance coverage across multi-currency, payroll, period-close, and accountant-review flows.
 
-## Current verification checkpoint - 2026-10-30
+## Current verification checkpoint - 2026-10-31
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
-- Source checkpoint reference: `42d004be3943434d4f7575c4e4d3d7df96ab36d4`.
+- Source checkpoint reference: `783a1f57c991ab7f4f28d243422651a5c6c6035b`.
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD `42d004be3943434d4f7575c4e4d3d7df96ab36d4` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
+- Working tree at HEAD `783a1f57c991ab7f4f28d243422651a5c6c6035b` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; current implementation remains limited to the shell and not the full functional queue modules.
 - Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is the active remaining scope (frontend queue pages under `Haypbooks/Frontend/src/app/practice/`).
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
@@ -134,8 +132,9 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 ### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
 - **Owner:** Hydra (test verification) + Mantra (fixtures)
-- **Status:** PARTIALLY COMPLETE (Harness infrastructure, schema lifecycle, Journey 1 fixture, and local provisioning guide are verified; runtime acceptance execution remains gated on local schema provisioning and a safe test database.)
-- **Verified implementation update (2026-10-28, commit `01fb8635412dc5e5ab5c7cf1ae6f6a19596cc467`):** Acceptance test harness infrastructure, schema lifecycle management, and Journey 1 fixture are COMPLETE & VERIFIED. Local database provisioning documentation was added at baseline `01e470e9d2ddd687557f29fe96e3a72f48aa0c90`.
+- **Status:** PARTIALLY COMPLETE (Journey 1 and harness infrastructure VERIFIED COMPLETE; Journeys 2–5 remaining).
+- **Verified passing commit:** `783a1f57c991ab7f4f28d243422651a5c6c6035b` (2026-10-31). Live isolated execution passed one suite and all three Journey 1 tests.
+- **Verified runtime components:** dedicated acceptance Jest configuration; schema-aware, idempotent migrations; Windows-compatible Prisma migration invocation; sequential lock-safe teardown; immutable invoice-line tax resolution with a bounded transaction; and the balanced double-entry owner AR lifecycle.
 - **Acceptance harness inventory:**
   1. `Haypbooks/Backend/jest.acceptance.config.js` (dedicated Jest config with single-worker execution and 60s timeout)
   2. `Haypbooks/Backend/package.json` (`test:acceptance` script with `NODE_ENV=test`)
@@ -177,8 +176,9 @@ For each row: success, invalid input, permission denial, network/server failure,
 | Tax/payroll/assets/other released modules | Approved business rules and downstream effects |
 | Backup  restore  deploy  health  rollback | Recoverable data and exact monitored revision |
 
-### 18  Database Migration to Self-Hosted PostgreSQL (BLOCKED, P1 mandatory before Phase 10)
+### 18  Database Migration to Self-Hosted PostgreSQL (ACTIVE / UNBLOCKED FOR SCOPING, P1 mandatory before Phase 10)
 
+- **Prerequisite satisfied:** Phase 17 Journey 1 acceptance passed cleanly at commit `783a1f57c991ab7f4f28d243422651a5c6c6035b` on 2026-10-31. Journeys 2–5 remain Phase 17 work but no longer block Phase 18 planning and rehearsal scope.
 - Prerequisites: VPS access (`haypbooks-dev` at `77.42.85.129`), verified database credentials, and compatible local/VPS `pg_dump`, `pg_restore`, and `psql` tools.
 - Deliver: full cutover from the legacy Neon cloud database to self-hosted PostgreSQL on `haypbooks-dev`. Complete a verified source dump, restore into `haypbooks_dev`, verify all repository Prisma migrations (51 directories observed on 2026-10-28; re-count at cutover) and schema/data/accounting parity, update the backend `.env` `DATABASE_URL` from the Neon pooler to the approved `localhost:5432/haypbooks_dev` target, restart the PM2 backend only after gates pass, run auth/tenancy/ledger smoke tests, and prove rollback.
 - Review: independent verification of zero data loss, schema and accounting integrity, absence of split-brain writes, and active-process isolation before marking unblocked.

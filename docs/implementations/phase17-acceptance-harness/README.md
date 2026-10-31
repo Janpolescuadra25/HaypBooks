@@ -3,9 +3,9 @@
 ## 1. Overview & Verification Status
 - **Phase:** Phase 17 (Integrated Acceptance Testing)
 - **Milestone:** Step 1 & Step 2 — Acceptance Test Harness Infrastructure, Schema Lifecycle, and Journey 1 Fixture
-- **Status:** COMPLETE & VERIFIED
-- **Verified HEAD Commit:** `01fb8635412dc5e5ab5c7cf1ae6f6a19596cc467`
-- **Verification Date:** 2026-10-28
+- **Status:** Harness and Journey 1 COMPLETE & VERIFIED; Journeys 2–5 remaining
+- **Verified HEAD Commit:** `783a1f57c991ab7f4f28d243422651a5c6c6035b`
+- **Verification Date:** 2026-10-31
 
 ---
 
@@ -37,10 +37,17 @@ The acceptance testing framework validates multi-step, cross-module end-to-end u
 | `Haypbooks/Backend/jest.acceptance.config.js` | Created | Dedicated Jest configuration with acceptance global setup and teardown |
 | `Haypbooks/Backend/package.json` | Modified | Added `"test:acceptance"` runner script |
 | `Haypbooks/Backend/test/acceptance-global-setup.ts` | Created | Automated isolated schema setup (`acceptance_test`) with database name validation |
-| `Haypbooks/Backend/test/acceptance-global-teardown.ts` | Created | Automated isolated schema cleanup (`acceptance_test`) |
+| `Haypbooks/Backend/test/acceptance-global-teardown.ts` | Created | Sequential, lock-safe isolated schema cleanup (`acceptance_test`) |
 | `Haypbooks/Backend/test/acceptance/shared/acceptance-harness.ts` | Created | Shared harness bootstrapping NestJS app, PrismaService, and service accessors |
 | `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` | Created | Complete Journey 1 owner lifecycle fixture (onboarding → customer → invoice → payment → balanced GL entries) |
 | `docs/implementations/phase17-acceptance-harness/README.md` | Created | Centralized implementation guide for acceptance testing framework |
+
+### Execution deliverables
+
+| Deliverable | Location | Status |
+|---|---|---|
+| Journey 1 Execution | `test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` | `VERIFIED PASSED (1 test suite, 3/3 tests, 100%)` |
+| Journeys 2–5 | `test/acceptance/` | `REMAINING` |
 
 ---
 
@@ -67,8 +74,19 @@ npm run test:acceptance -- --testPathPattern=journey-1
 ---
 
 ## 6. Current Limitations & Next Steps
-- **Current Milestone:** Harness infrastructure, schema lifecycle management, safety guards, and Journey 1 fixture contracts are complete, verified, and compile cleanly.
-- **Pending Deliverables:** Execution of Journey 1 through Journey 5 fixtures against a live isolated acceptance database, followed by Phase 18 database migration.
+- **Current Milestone:** Harness infrastructure, schema lifecycle management, safety guards, and Journey 1 live execution are complete and verified.
+- **Pending Deliverables:** Implement and execute Journeys 2–5 against an isolated acceptance database while Phase 18 migration scoping proceeds.
+
+---
+
+## Runtime Acceptance Fixes
+
+Commit `783a1f57c991ab7f4f28d243422651a5c6c6035b` delivered and verified these runtime repairs:
+
+1. **Migration schema-awareness and idempotency:** `current_schema()` guards in the affected migration SQL prevent enum, column, index, and constraint collisions when the full migration chain runs in `acceptance_test`.
+2. **Sequential teardown cleanup:** `test/acceptance-global-teardown.ts` drops schema objects sequentially before removing the schema, preventing PostgreSQL shared-memory lock exhaustion caused by one monolithic cascade.
+3. **Immutable AR tax resolution and transaction guard:** `ArRepository.resolveInvoiceLineTaxData` uses immutable copies and short-circuits untaxed lines; invoice creation uses a 10-second Prisma transaction timeout to prevent indefinite lock stalls.
+4. **Windows shell handling:** `acceptance-global-setup.ts` invokes Prisma migrations through a platform-appropriate shell so Windows can execute the CLI reliably.
 
 ## Local Test Database Provisioning & Execution Guide
 
@@ -77,8 +95,8 @@ The acceptance test suite executes real domain services and persists data via Pr
 
 1. **Database Name Whitelist:** The target database name in `DATABASE_URL` must contain either `test` or `acceptance` (case-insensitive). Attempting to run against `haypbooks_dev` or production databases will immediately abort execution.
 2. **Dedicated Schema Isolation:** The connection string must include `?schema=acceptance_test`, and `TEST_SCHEMA` must be set to `acceptance_test`.
-3. **Schema-Only Lifecycle:** The test harness drops and recreates ONLY the `acceptance_test` schema using raw PostgreSQL DDL (`DROP SCHEMA IF EXISTS "acceptance_test" CASCADE; CREATE SCHEMA "acceptance_test";`). The overall database is never dropped.
-4. **Prisma Schema Synchronization:** After schema initialization, the setup harness runs `npx prisma db push --skip-generate` scoped strictly to `acceptance_test`.
+3. **Schema-Only Lifecycle:** Setup recreates only `acceptance_test`; teardown removes its objects sequentially and then removes that schema. The overall database is never dropped.
+4. **Prisma Schema Synchronization:** After schema initialization, setup runs `npx prisma migrate deploy --schema=prisma/schema.prisma` against `acceptance_test`.
 
 ### 2. Provisioning the Local Test Database
 Ensure your local PostgreSQL instance is running on `localhost:5432`. If the database `haypbooks_test` does not exist, create it once via `psql` or PowerShell:
@@ -89,7 +107,7 @@ CREATE DATABASE haypbooks_test;
 ### 3. Environment Variables Configuration
 Set the following environment variables in your terminal session before execution:
 ```powershell
-$env:DATABASE_URL = "postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test?schema=acceptance_test"
+$env:DATABASE_URL = "postgresql://postgres:<your-local-postgres-password>@localhost:5432/haypbooks_test?schema=acceptance_test"
 $env:TEST_SCHEMA = "acceptance_test"
 $env:JWT_SECRET = "acceptance-test-only-secret-key-32chars"
 ```
