@@ -2,6 +2,7 @@ import { Injectable, ConflictException, NotFoundException, BadRequestException, 
 import { Prisma, TaskPriority, TaskStatus } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { MailService } from '../common/mail.service'
+import { AuditService } from '../audit/audit.service'
 import { PracticeUserRole, PracticeUserStatus } from './types/practice-user.types'
 import { CreateTaskDto } from './dto/create-task.dto'
 import { QueryTasksDto } from './dto/query-tasks.dto'
@@ -12,7 +13,11 @@ import crypto from 'crypto'
 export class PracticeHubService {
   private readonly logger = new Logger(PracticeHubService.name)
 
-  constructor(private readonly prisma: PrismaService, private readonly mailService: MailService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /** Find the practice record for a given workspace */
   async findPracticeByWorkspace(workspaceId: string) {
@@ -152,6 +157,18 @@ export class PracticeHubService {
     if (!member) {
       throw new ForbiddenException('User is not an active member of this practice')
     }
+  }
+
+  async assertPracticeRole(practiceId: string, userId: string, allowedRoles: PracticeUserRole[]): Promise<PracticeUserRole> {
+    const member = await this.prisma.practiceUser.findFirst({
+      where: { practiceId, userId, status: PracticeUserStatus.ACTIVE },
+      select: { role: true },
+    })
+    if (!member) throw new ForbiddenException('User is not an active member of this practice')
+    if (!allowedRoles.includes(member.role as PracticeUserRole)) {
+      throw new ForbiddenException(`Access denied. Required role: ${allowedRoles.join(', ')}`)
+    }
+    return member.role as PracticeUserRole
   }
 
   async assertValidAssignee(practiceId: string, assigneeId: string): Promise<void> {
@@ -315,7 +332,7 @@ export class PracticeHubService {
     const practice = await this.findPracticeByWorkspace(workspaceId)
     if (!practice) throw new NotFoundException('Practice not found for this workspace')
 
-    await this.assertPracticeMember(practice.id, userId)
+    await this.assertPracticeRole(practice.id, userId, [PracticeUserRole.OWNER, PracticeUserRole.ADMIN])
 
     const page = query.page && query.page > 0 ? query.page : 1
     const limit = query.limit && query.limit > 0 ? query.limit : 20
@@ -323,6 +340,7 @@ export class PracticeHubService {
 
     const where: Prisma.TaskWhereInput = {
       practiceId: practice.id,
+      // This repository's Prisma enum represents review-pending work as PENDING.
       status: TaskStatus.PENDING,
       deletedAt: null,
     }
@@ -397,7 +415,11 @@ export class PracticeHubService {
     const practice = await this.findPracticeByWorkspace(workspaceId)
     if (!practice) throw new NotFoundException('Practice not found for this workspace')
 
-    await this.assertPracticeMember(practice.id, userId)
+    const member = await this.prisma.practiceUser.findFirst({
+      where: { practiceId: practice.id, userId, status: PracticeUserStatus.ACTIVE },
+      select: { role: true },
+    })
+    if (!member) throw new ForbiddenException('User is not an active member of this practice')
 
     const existingTask = await this.prisma.task.findFirst({
       where: {
@@ -408,6 +430,11 @@ export class PracticeHubService {
     })
 
     if (!existingTask) throw new NotFoundException('Task not found')
+
+    if (dto.status === TaskStatus.DONE && existingTask.status === TaskStatus.PENDING &&
+        ![PracticeUserRole.OWNER, PracticeUserRole.ADMIN].includes(member.role as PracticeUserRole)) {
+      throw new ForbiddenException('Only Practice Owners or Admins can approve tasks in review')
+    }
 
     if (dto.assigneeId) {
       await this.assertValidAssignee(practice.id, dto.assigneeId)
@@ -433,7 +460,7 @@ export class PracticeHubService {
       }
     }
 
-    return this.prisma.task.update({
+    const updatedTask = await this.prisma.task.update({
       where: { id: taskId },
       data,
       include: {
@@ -446,6 +473,20 @@ export class PracticeHubService {
         },
       },
     })
+
+    await this.auditService.log({
+      workspaceId: existingTask.workspaceId,
+      companyId: existingTask.companyId ?? undefined,
+      userId,
+      entityType: 'Task',
+      entityId: updatedTask.id,
+      action: dto.status === TaskStatus.DONE && existingTask.status === TaskStatus.PENDING ? 'APPROVE_TASK' : 'UPDATE_TASK',
+      oldValue: { title: existingTask.title, description: existingTask.description, status: existingTask.status, priority: existingTask.priority, assigneeId: existingTask.assigneeId, dueDate: existingTask.dueDate },
+      newValue: { title: updatedTask.title, description: updatedTask.description, status: updatedTask.status, priority: updatedTask.priority, assigneeId: updatedTask.assigneeId, dueDate: updatedTask.dueDate },
+      metadata: { updatedByRole: member.role },
+    })
+
+    return updatedTask
   }
 
   async deletePracticeTask(workspaceId: string, userId: string, taskId: string) {

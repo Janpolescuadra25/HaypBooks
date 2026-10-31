@@ -60,3 +60,11 @@ Optional description, client, assignee, and due-date values can be cleared durin
 - `git diff --check`: passed.
 
 The repository-wide frontend suite was also run. It still fails in pre-existing, out-of-scope Chart of Accounts, ModalForm, and workspace navigation tests and then exits through a jsdom shutdown error. Those failures were not introduced or modified by Step 5B. Browser and database-backed acceptance remain separate release gates.
+
+## Task 916 — Backend Audit Logging and Review Authorization
+
+- `PracticeHubModule` imports `AuditModule`, and `PracticeHubService` uses `AuditService` for task mutation history.
+- `assertPracticeRole` restricts review-queue reads and the review-pending → `DONE` approval transition to active `OWNER` and `ADMIN` members.
+- Review queue queries use the repository's `TaskStatus.PENDING` value for review-pending work (the current Prisma enum has no `REVIEW` member) and exclude deleted tasks.
+- Task updates record before/after snapshots with `entityType: 'Task'`, including approval actions and the actor role.
+- The Practice Hub hides the Review Queue tab for non-owner/non-admin users and displays an access explanation if a stale route is opened.

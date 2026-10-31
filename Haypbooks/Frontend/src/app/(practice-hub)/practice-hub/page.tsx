@@ -20,6 +20,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import { authService } from '@/services/auth.service'
 import ReviewQueueView from '@/components/practice-hub/ReviewQueueView'
 import TaskQueueView from '@/components/practice-hub/TaskQueueView'
 import { useSearchParams } from 'next/navigation'
@@ -101,8 +102,13 @@ function PracticeHubPage() {
   const [clients, setClients] = useState<any[]>([])
   const [activity, setActivity] = useState<any[]>([])
   const [deadlines, setDeadlines] = useState<any[]>([])
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(() => authService.getStoredUser()?.role?.toUpperCase() ?? null)
+  const isOwnerOrAdmin = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN'
 
-  const activeItems = useMemo(() => navItemsByGroup[selectedGroup] ?? navItemsByGroup.Home, [selectedGroup])
+  const activeItems = useMemo(() => {
+    const items = navItemsByGroup[selectedGroup] ?? navItemsByGroup.Home
+    return selectedGroup === 'Work Mgmt' && !isOwnerOrAdmin ? items.filter((item) => item.title !== 'Review Queue') : items
+  }, [selectedGroup, isOwnerOrAdmin])
   const currentItem = useMemo(
     () => activeItems.find((item) => item.title === selectedItem) ?? activeItems[0],
     [activeItems, selectedItem],
@@ -137,6 +143,14 @@ function PracticeHubPage() {
 
   useEffect(() => {
     void loadData()
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    void authService.getCurrentUser().then((user) => {
+      if (mounted) setCurrentUserRole(user.role?.toUpperCase() ?? null)
+    }).catch(() => undefined)
+    return () => { mounted = false }
   }, [])
 
   useEffect(() => {
@@ -509,8 +523,12 @@ function PracticeHubPage() {
       return <TaskQueueView />
     }
 
-    if (selectedGroup === 'Work Mgmt' && currentItem.title === 'Review Queue') {
+    if (selectedGroup === 'Work Mgmt' && currentItem.title === 'Review Queue' && isOwnerOrAdmin) {
       return <ReviewQueueView />
+    }
+
+    if (selectedGroup === 'Work Mgmt' && currentItem.title === 'Review Queue') {
+      return <div role="alert" className="rounded-[24px] border border-amber-200 bg-amber-50 p-8 text-sm text-amber-800">Review Queue access is restricted to practice owners and admins.</div>
     }
 
     return renderDocsView()

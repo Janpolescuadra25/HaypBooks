@@ -4,8 +4,10 @@ import { PracticeHubController } from './practice-hub.controller'
 import { PracticeInvitePublicController } from './practice-invite-public.controller'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { MailService } from '../common/mail.service'
+import { AuditModule } from '../audit/audit.module'
 
 @Module({
+  imports: [AuditModule],
   providers: [PracticeHubService, PrismaService, MailService],
   controllers: [PracticeHubController, PracticeInvitePublicController],
   exports: [PracticeHubService],
