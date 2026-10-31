@@ -41,9 +41,32 @@ DROP TABLE IF EXISTS "AccountantActivity";
 -- DropTable
 DROP TABLE IF EXISTS "AccountantClient";
 
--- DropEnum (idempotent via DO block)
-DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PhilippinePayrollDeductionType') THEN DROP TYPE "PhilippinePayrollDeductionType"; END IF; END $$;
-DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'UserType') THEN DROP TYPE "UserType"; END IF; END $$;
+-- DropEnum (idempotent and restricted to the active schema)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON t.typnamespace = n.oid
+    WHERE t.typname = 'PhilippinePayrollDeductionType'
+      AND n.nspname = current_schema()
+  ) THEN
+    DROP TYPE "PhilippinePayrollDeductionType";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON t.typnamespace = n.oid
+    WHERE t.typname = 'UserType'
+      AND n.nspname = current_schema()
+  ) THEN
+    DROP TYPE "UserType";
+  END IF;
+END $$;
 
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "OnboardingData" (

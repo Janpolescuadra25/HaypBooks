@@ -40,33 +40,35 @@ export class ArRepository {
     }
 
     private async resolveInvoiceLineTaxData(tx: any, companyId: string, line: any) {
-        const taxCodeId = line.taxCodeId ?? null
-        let taxRateId = line.taxRateId ?? null
+        const inputTaxCodeId = line.taxCodeId ?? null
+        const inputTaxRateId = line.taxRateId ?? null
         let taxRate = line.taxRate != null ? Number(line.taxRate) : null
         const lineAmount = Number(line.amount ?? line.totalPrice ?? 0)
-        if (!taxCodeId && !taxRateId && taxRate == null) return null
 
-        if (!taxRateId && taxRate != null) {
+        if (!inputTaxCodeId && !inputTaxRateId && taxRate == null) return null
+
+        let effectiveTaxCodeId = inputTaxCodeId
+        let effectiveTaxRateId = inputTaxRateId
+
+        if (!effectiveTaxRateId && taxRate != null) {
             const existingRate = await tx.taxRate.findFirst({ where: { companyId, rate: taxRate } })
-            if (existingRate) taxRateId = existingRate.id
+            if (existingRate) effectiveTaxRateId = existingRate.id
         }
 
-        if (taxCodeId && !taxRateId && taxRate != null) {
-            const codeRate = await tx.taxCodeRate.findFirst({ where: { companyId, taxCodeId, ratePct: taxRate } })
-            if (codeRate) taxRateId = codeRate.taxRateId
+        if (effectiveTaxCodeId && !effectiveTaxRateId && taxRate != null) {
+            const codeRate = await tx.taxCodeRate.findFirst({ where: { companyId, taxCodeId: effectiveTaxCodeId, ratePct: taxRate } })
+            if (codeRate) effectiveTaxRateId = codeRate.taxRateId
         }
 
-        if (!taxCodeId && taxRateId) {
-            const codeRate = await tx.taxCodeRate.findFirst({ where: { companyId, taxRateId } })
-            if (codeRate) {
-                line.taxCodeId = codeRate.taxCodeId
-            }
+        if (!effectiveTaxCodeId && effectiveTaxRateId && taxRate != null) {
+            const codeRate = await tx.taxCodeRate.findFirst({ where: { companyId, taxRateId: effectiveTaxRateId } })
+            if (codeRate) effectiveTaxCodeId = codeRate.taxCodeId
         }
 
-        if (!taxRateId && taxCodeId && taxRate != null) {
+        if (!effectiveTaxRateId && effectiveTaxCodeId && taxRate != null) {
             const existingRate = await tx.taxRate.findFirst({ where: { companyId, rate: taxRate } })
             if (existingRate) {
-                taxRateId = existingRate.id
+                effectiveTaxRateId = existingRate.id
             } else {
                 const createdRate = await tx.taxRate.create({
                     data: {
@@ -77,11 +79,11 @@ export class ArRepository {
                         effectiveFrom: new Date(),
                     },
                 })
-                taxRateId = createdRate.id
+                effectiveTaxRateId = createdRate.id
                 await tx.taxCodeRate.create({
                     data: {
                         companyId,
-                        taxCodeId,
+                        taxCodeId: effectiveTaxCodeId,
                         taxRateId: createdRate.id,
                         sequence: 1,
                         ratePct: taxRate,
@@ -90,17 +92,16 @@ export class ArRepository {
             }
         }
 
-        const effectiveTaxCodeId = line.taxCodeId ?? taxCodeId
-        if (!effectiveTaxCodeId || !taxRateId) return null
+        if (!effectiveTaxCodeId || !effectiveTaxRateId) return null
         if (taxRate == null) {
-            const rateModel = await tx.taxRate.findUnique({ where: { id: taxRateId } })
+            const rateModel = await tx.taxRate.findUnique({ where: { id: effectiveTaxRateId } })
             taxRate = rateModel?.rate != null ? Number(rateModel.rate) : null
         }
         if (taxRate == null) return null
 
         const amount = this.roundMoney(lineAmount * (taxRate / 100))
         if (amount <= 0) return null
-        return { taxCodeId: effectiveTaxCodeId, taxRateId, amount }
+        return { taxCodeId: effectiveTaxCodeId, taxRateId: effectiveTaxRateId, amount }
     }
 
     private async createLineTaxesForInvoiceLines(tx: any, companyId: string, invoiceLines: any[], sourceLines: any[]) {
@@ -1056,8 +1057,8 @@ export class ArRepository {
                     poNumber: (data as any).poNumber ?? null,
                     discountType: (data as any).discountType ?? null,
                     discountAmount: (data as any).discountAmount ?? null,
-                    billAddress: (data as any).billAddress ?? null,
-                    shipAddress: (data as any).shipAddress ?? null,
+                    billAddress: (data as any).billAddress ?? undefined,
+                    shipAddress: (data as any).shipAddress ?? undefined,
                     createdById: data.createdById,
                     lines: {
                         create: data.lines.map((l: any) => ({
@@ -1080,7 +1081,7 @@ export class ArRepository {
 
             await this.createLineTaxesForInvoiceLines(tx, data.companyId, invoice.lines, data.lines)
             return invoice
-        })
+        }, { timeout: 10000 })
     }
 
     async updateInvoice(companyId: string, invoiceId: string, data: any, updatedById: string) {
@@ -1107,8 +1108,8 @@ export class ArRepository {
                     poNumber: data.poNumber !== undefined ? data.poNumber : undefined,
                     discountType: data.discountType !== undefined ? data.discountType : undefined,
                     discountAmount: data.discountAmount !== undefined ? data.discountAmount : undefined,
-                    billAddress: data.billAddress !== undefined ? data.billAddress : undefined,
-                    shipAddress: data.shipAddress !== undefined ? data.shipAddress : undefined,
+                    billAddress: data.billAddress !== undefined && data.billAddress !== null ? data.billAddress : undefined,
+                    shipAddress: data.shipAddress !== undefined && data.shipAddress !== null ? data.shipAddress : undefined,
                     totalAmount,
                     balance: totalAmount,
                     updatedById,
@@ -1167,8 +1168,8 @@ export class ArRepository {
                     poNumber: (source as any).poNumber,
                     discountType: (source as any).discountType,
                     discountAmount: (source as any).discountAmount,
-                    billAddress: (source as any).billAddress,
-                    shipAddress: (source as any).shipAddress,
+                    billAddress: (source as any).billAddress ?? undefined,
+                    shipAddress: (source as any).shipAddress ?? undefined,
                     templateId: source.templateId,
                     invoiceTemplateId: source.invoiceTemplateId,
                     createdById,
