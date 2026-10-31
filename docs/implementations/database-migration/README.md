@@ -93,3 +93,46 @@ If data inconsistency, connection refusal, tenant leakage, accounting mismatch, 
 - **No Split-Brain Writes:** Do not permit concurrent writes to the source and target unless an explicitly tested replication or delta-sync design is in force.
 - **Traceability:** Every snapshot and restore must record paths, byte sizes, SHA-256 checksums, timestamps, tool versions, operator, and exact application revision.
 - **Rollback Readiness:** Do not change `DATABASE_URL` or restart PM2 until the source backup is verified and the rollback command sequence has been rehearsed.
+
+---
+
+## 5. Production Connection Pooling Architecture
+
+Phase 18 uses two connection paths because Prisma application traffic and Prisma migration commands have different session requirements.
+
+### 5.1 pgBouncer transaction pool
+
+- Run pgBouncer on port `6432` with `pool_mode = transaction` for normal NestJS/Prisma traffic.
+- Use a bounded application pool (`max_client_conn = 1000`, `default_pool_size = 25`, `reserve_pool_size = 5`, and `server_idle_timeout = 60`). Measure and adjust these values against observed VPS load.
+- The application URL may use `pgbouncer=true` and must never contain a committed password.
+- Transaction pooling is unsuitable for session state and session-level advisory locks. Do not use it for Prisma migrations.
+
+### 5.2 Direct session connection for migrations
+
+- Keep PostgreSQL port `5432` bound to localhost or the private Docker network only.
+- Run `prisma migrate deploy` and other schema operations through the direct session URL on port `5432`, where advisory locks and session semantics are preserved.
+- Validate both URLs independently before cutover; a successful application connection does not prove migration connectivity.
+
+## 6. Automated Backup and Restore Specification
+
+### 6.1 `scripts/backup.sh`
+
+- Create custom-format archives with `pg_dump -Fc --no-owner --no-privileges` into `/var/backups/haypbooks/db/`.
+- Write a SHA-256 checksum beside each archive and verify it with `sha256sum --check` before retention cleanup.
+- Retain daily backups for 7 days and weekly backups for 4 weeks. Record the database identity, application revision, timestamp, archive size, and tool version without recording credentials.
+- Fail closed when the source is unreachable, disk space is insufficient, the archive is empty, or checksum generation fails.
+
+### 6.2 `scripts/restore.sh`
+
+- Require an explicit dump path and a target database whose name is approved for restore testing; reject production targets unless a separately approved force flag and confirmation are supplied.
+- Check PostgreSQL reachability, free disk space, archive readability, and checksum before restoring with `pg_restore --clean --if-exists --no-owner --no-privileges`.
+- Restore into `haypbooks_restore_test` during drills, then compare migration ledgers, row counts, sequences, journal debit/credit totals, and representative tenant records.
+- Preserve restore logs and validation output; never print the connection password.
+
+## 7. VPS PostgreSQL Security Hardening
+
+- Bind PostgreSQL to `127.0.0.1` and the private Docker bridge only. Deny public ingress to ports `5432` and `6432` at the host firewall.
+- Require `scram-sha-256` in `pg_hba.conf`; do not use plaintext or legacy `md5` authentication.
+- Run PostgreSQL under its dedicated non-root service account and keep `/var/lib/postgresql/data` permissions at `0700`.
+- Store secrets in the VPS secret/environment mechanism with restrictive permissions. Do not place passwords in scripts, documentation, Git history, or command output.
+- Enable bounded logging, disk monitoring, connection monitoring, backup alerts, and a tested rollback path before declaring Phase 18 complete.
