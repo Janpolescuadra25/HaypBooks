@@ -6,25 +6,26 @@
 
 ## 0. Critical Path Execution Order
 
-1. **Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 1 VERIFIED / Milestone 2 active)**
-   - **Status:** Milestone 1 infrastructure is completed and verified.
-   - **Verified implementation:** loopback PostgreSQL bind, scram-sha-256, pgBouncer, backup/restore scripts, and migration README updates.
-   - **Active next step:** Milestone 2 staging drill and VPS cutover remain active.
-   - **Gating:** Phase 10 release remains gated only by Milestone 2 execution.
-2. **Phase 11 Step 5B: Practice Hub Frontend Queues (VERIFIED IMPLEMENTED / 99% COMPLETE)**
-   - Queue views are mounted at `Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx`.
-   - Verified implementation includes RBAC enforcement, audit logging for task state changes, and `TaskStatus.PENDING` mapping invariants.
-   - Remaining work is limited to browser/E2E runtime verification of loading, error, retry, keyboard, and permission states.
-3. **Phase 17 Journeys 2–5 (P2)**
-   - Journey 1 passed 3/3 tests; expand coverage for multi-currency/FX, audit invariants, Practice Hub engagement, and closing/reporting.
+1. **Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 2 Active Next)**
+   - **Status:** Milestone 1 (Infrastructure: loopback binding, pgBouncer, backup/restore scripts) is COMPLETED & VERIFIED.
+   - **Active Next Step:** Milestone 2 staging backup/restore drill and VPS production cutover.
+   - **Gating:** Phase 10 VPS release remains gated by Milestone 2 execution.
+2. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
+   - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
+   - **Active Next Step:** Browser/E2E runtime verification.
+3. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journeys 2–5 Active Next)**
+   - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`.
+   - **Active Next Step:** Implement Journeys 2–5, starting with Journey 2: Accountant multi-entity lifecycle.
+4. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
+   - **Status:** Blocked until Phase 18 Milestone 2 and Phase 17 end-to-end acceptance tests pass.
 
 ## Current verification checkpoint - 2026-11-01
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
-- Source checkpoint reference: `631f6c58429b1864dbde985e1a7088f6735b8098`.
+- Source checkpoint reference: `de2041c0c58d09c4f57249f62fc0262ec540e73b`.
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD `631f6c58429b1864dbde985e1a7088f6735b8098` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
+- Working tree at HEAD `de2041c0c58d09c4f57249f62fc0262ec540e73b` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; the verified implementation now covers RBAC enforcement, audit logging, and the `TaskStatus.PENDING` mapping used by the review flow.
 - Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is VERIFIED IMPLEMENTED / 99% COMPLETE (owner/admin-only RBAC, task audit logging, and `TaskStatus.PENDING` mapping invariants verified; only browser/E2E runtime verification remains).
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
@@ -229,6 +230,18 @@ For each row: success, invalid input, permission denial, network/server failure,
 | **E12** | Sub-ledger & AP/AR posting/reversal lifecycle | `b724209bad9322031d614b11ac78386bc6114886` | 2026-10-04 |
 
 
+
+## Appendix: Archived Completed Phases
+
+### Phase 18 Milestone 1: Self-Hosted PostgreSQL & pgBouncer Infrastructure (COMPLETED & VERIFIED)
+- **Verified Deliverables:** Loopback PostgreSQL 15 binding (`127.0.0.1:5432:5432`), pgBouncer container (`127.0.0.1:6432:6432`) with transaction pooling, `scram-sha-256` auth, automated backup script (`scripts/backup.sh`), fail-closed restore script (`scripts/restore.sh`), and migration documentation in `docs/implementations/database-migration/README.md`.
+- **Status:** Locked into repository baseline at commit `de2041c0c58d09c4f57249f62fc0262ec540e73b`.
+
+### Phase 12: Security Containment S1/S2/S3 (COMPLETED & VERIFIED)
+- **Verified Deliverables:** Security containment, tenant boundary enforcement, and audit safeguards verified complete (2026-10-24).
+
+### Phase 11 Step 5A: Practice Hub Backend Queues & RBAC (COMPLETED & VERIFIED)
+- **Verified Deliverables:** Practice Hub backend task controllers, service architecture, RBAC enforcement, and queue operational flow validated in the repository.
 
 ## Definition of finished
 
