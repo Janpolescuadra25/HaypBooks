@@ -18,6 +18,48 @@
   - Restore: `Haypbooks/Backend/scripts/restore.sh` (Checksum integrity check, active connection termination, strict fail-closed error handling, safety confirmation gate).
 - **Security & Port Hardening:** Ports 5432 and 6432 restricted to loopback (`127.0.0.1`) in `docker-compose.yml`; backup dumps excluded via `.gitignore`.
 
+## Milestone 2: Staging Drill & Production Cutover Automation (IMPLEMENTED)
+
+Milestone 2 adds the operational automation required to validate a restore, verify schema/data parity, and safely switch the application to the self-hosted PostgreSQL target.
+
+### 2.1 `scripts/validate-parity.ts`
+- Validates the Prisma migration ledger and the core operational tables.
+- Audits row counts for `users`, `workspaces`, `companies`, `accounts`, `journal_entries`, `journal_lines`, `invoices`, and `bills`.
+- Confirms the general ledger remains balanced by checking the total debit and credit amounts across `journal_lines`.
+- Accepts `TARGET_DATABASE_URL` as the first argument and optionally a `SOURCE_DATABASE_URL` for direct parity comparison.
+
+Example:
+```bash
+npx ts-node scripts/validate-parity.ts <TARGET_DATABASE_URL> [SOURCE_DATABASE_URL]
+```
+
+### 2.2 `scripts/staging-drill.sh`
+- Creates a backup from the source database, saves a checksum, restores it to the staging target, and then executes the parity validator.
+- Requires both the source and staging database URLs as arguments.
+- Uses the repository `restore.sh` script as the fail-closed restore gate.
+
+Example:
+```bash
+./scripts/staging-drill.sh <SOURCE_DATABASE_URL> <STAGING_DATABASE_URL>
+```
+
+### 2.3 `scripts/production-cutover.sh`
+- Backs up the active `.env` file before cutover.
+- Validates the target database connection through the parity script.
+- Updates `DATABASE_URL` in the application env file and restarts the backend through PM2.
+- Performs a smoke check against the local health endpoint and supports a 1-tap rollback path via `--rollback`.
+
+Example:
+```bash
+./scripts/production-cutover.sh --confirm-cutover <NEW_DATABASE_URL>
+./scripts/production-cutover.sh --rollback
+```
+
+### 2.4 `DIRECT_URL` guidance
+- Local development keeps `DATABASE_URL` on port `5432` and is intended for the developer workstation flow.
+- For Prisma migration execution, use the direct connection string in `DIRECT_URL` so migration commands remain session-safe and are not forced through pgBouncer.
+- Application runtime traffic can continue to use the pooled `DATABASE_URL` path when the environment is configured through pgBouncer on port `6432`.
+
 ## 2. Migration Prerequisites
 1. **Tooling:** `pg_dump`, `pg_restore`, and `psql` from a PostgreSQL client version compatible with both source and target, installed and accessible on the VPS or deployment executor.
 2. **Access & Connectivity:**
