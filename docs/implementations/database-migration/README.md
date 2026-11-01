@@ -7,7 +7,7 @@
 
 ---
 
-## Milestone 1: Local & Staging Infrastructure (Implemented)
+## Milestone 1: Local & Staging Infrastructure (COMPLETED & VERIFIED - 2026-11-01)
 - **PostgreSQL Service:** Version `postgres:15-alpine` bound strictly to `127.0.0.1:5432` with persistent volume `haypbooks_pgdata` and `scram-sha-256` authentication initialization.
 - **pgBouncer Service:** Version `edoburu/pgbouncer:v1.22.1` bound to `127.0.0.1:6432` using `POOL_MODE=transaction`, `MAX_CLIENT_CONN=1000`, `DEFAULT_POOL_SIZE=25`, `SERVER_IDLE_TIMEOUT=300`, and `AUTH_TYPE=scram-sha-256` with container healthcheck.
 - **Connection Strings:**
@@ -139,6 +139,14 @@ Phase 18 uses two connection paths because Prisma application traffic and Prisma
 - Check PostgreSQL reachability, free disk space, archive readability, and checksum before restoring with `pg_restore --clean --if-exists --no-owner --no-privileges`.
 - Restore into `haypbooks_restore_test` during drills, then compare migration ledgers, row counts, sequences, journal debit/credit totals, and representative tenant records.
 - Preserve restore logs and validation output; never print the connection password.
+- On Windows, execute the script from Git Bash or WSL where the PostgreSQL client tools are installed and PATH is configured.
+
+Example usage:
+
+```bash
+./scripts/restore.sh ./backups/haypbooks_dev_20261101_120000.dump --confirm
+./scripts/restore.sh ./backups/haypbooks_dev_20261101_120000.dump --confirm --force-production
+```
 
 ## 7. VPS PostgreSQL Security Hardening
 

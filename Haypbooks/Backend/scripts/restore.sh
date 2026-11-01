@@ -1,72 +1,77 @@
 #!/usr/bin/env bash
-# ============================================================================== 
-# HaypBooks PostgreSQL Safe Restore Script
-# Verifies SHA-256 checksum, terminates active connections, and restores dump
-# Fail-closed execution: zero error suppression allowed
-# ============================================================================== 
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <path_to_backup_dump> [--confirm]"
-  echo "Example: $0 ./backups/haypbooks_dev_20261101_120000.dump --confirm"
+# HaypBooks Fail-Closed Database Restore Script
+# Usage: ./restore.sh <path_to_dump_file> --confirm [--force-production]
+# Note: On Windows development environments, run via Git Bash or WSL with PostgreSQL client tools installed.
+
+# 1. Validate --confirm flag presence anywhere in arguments
+if [[ ! " $* " =~ " --confirm " ]]; then
+  echo "ERROR: Refusing to restore without explicit --confirm flag." >&2
+  echo "Usage: $0 <path_to_dump_file> --confirm [--force-production]" >&2
   exit 1
 fi
 
-BACKUP_FILE="$1"
-CONFIRM_FLAG="${2:-}"
-CHECKSUM_FILE="${BACKUP_FILE}.sha256"
-DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_PORT="${DB_PORT:-5432}"
-DB_USER="${DB_USER:-haypbooks}"
-PGPASSWORD="${PGPASSWORD:-haypbooks}"
-DB_NAME="${DB_NAME:-haypbooks_dev}"
+# 2. Extract dump file path (first non-flag argument)
+DUMP_FILE=""
+for arg in "$@"; do
+  if [[ "$arg" != --* ]]; then
+    DUMP_FILE="$arg"
+    break
+  fi
+done
 
-if [[ ! -f "${BACKUP_FILE}" ]]; then
-  echo "ERROR: Backup file '${BACKUP_FILE}' does not exist!"
+if [[ -z "$DUMP_FILE" || ! -f "$DUMP_FILE" ]]; then
+  echo "ERROR: Valid dump file path not provided or file not found: $DUMP_FILE" >&2
   exit 1
 fi
 
-if [[ "${CONFIRM_FLAG}" != "--confirm" ]]; then
-  echo "SAFETY WARNING: This operation will overwrite database '${DB_NAME}' on ${DB_HOST}:${DB_PORT}!"
-  echo "To proceed, pass '--confirm' as the second argument."
+CHECKSUM_FILE="${DUMP_FILE}.sha256"
+if [[ ! -f "$CHECKSUM_FILE" ]]; then
+  echo "ERROR: Accompanying checksum file not found: $CHECKSUM_FILE" >&2
   exit 1
 fi
 
-if [[ -f "${CHECKSUM_FILE}" ]]; then
-  echo "Verifying SHA-256 integrity checksum..."
-  sha256sum -c "${CHECKSUM_FILE}"
-  echo "Checksum verification PASSED."
+# 3. Validate required CLI tools
+if ! command -v psql >/dev/null 2>&1; then
+  echo "ERROR: psql command-line client not found in PATH." >&2
+  exit 1
+fi
+
+if ! command -v pg_restore >/dev/null 2>&1; then
+  echo "ERROR: pg_restore command-line client not found in PATH." >&2
+  exit 1
+fi
+
+# 4. Verify SHA-256 checksum
+echo "Verifying SHA-256 checksum for $DUMP_FILE..."
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum -c "$CHECKSUM_FILE"
+elif command -v shasum >/dev/null 2>&1; then
+  shasum -a 256 -c "$CHECKSUM_FILE"
 else
-  echo "WARNING: No checksum file found at '${CHECKSUM_FILE}'. Proceeding with caution."
-fi
-
-echo "Verifying target database exists..."
-TARGET_EXISTS="$(PGPASSWORD="${PGPASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d postgres -Atqc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}';")"
-if [[ -z "${TARGET_EXISTS}" ]]; then
-  echo "ERROR: Target database '${DB_NAME}' does not exist."
+  echo "ERROR: Neither sha256sum nor shasum utility found in PATH." >&2
   exit 1
 fi
 
-echo "Terminating active connections to '${DB_NAME}'..."
-PGPASSWORD="${PGPASSWORD}" psql \
-  -h "${DB_HOST}" \
-  -p "${DB_PORT}" \
-  -U "${DB_USER}" \
-  -d postgres \
-  -v ON_ERROR_STOP=1 \
-  -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${DB_NAME}' AND pid <> pg_backend_pid();"
+PGHOST="${PGHOST:-127.0.0.1}"
+PGPORT="${PGPORT:-5432}"
+PGUSER="${PGUSER:-haypbooks}"
+PGDATABASE="${PGDATABASE:-haypbooks_dev}"
 
-echo "Restoring database from '${BACKUP_FILE}'..."
-PGPASSWORD="${PGPASSWORD}" pg_restore \
-  -h "${DB_HOST}" \
-  -p "${DB_PORT}" \
-  -U "${DB_USER}" \
-  -d "${DB_NAME}" \
-  --clean \
-  --if-exists \
-  --no-owner \
-  --no-privileges \
-  -v \
-  "${BACKUP_FILE}"
+# 5. Production database safety safeguard
+if [[ "$PGDATABASE" =~ (prod|production) ]] && [[ ! " $* " =~ " --force-production " ]]; then
+  echo "ERROR: Target database name appears to be production ($PGDATABASE)." >&2
+  echo "Refusing to overwrite without explicit --force-production flag." >&2
+  exit 1
+fi
 
-echo "=== [RESTORE COMPLETED SUCCESSFULLY] ==="
+# 6. Terminate active connections with zero error suppression
+echo "Terminating active connections on $PGDATABASE..."
+psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$PGDATABASE' AND pid <> pg_backend_pid();"
+
+# 7. Perform database restoration
+echo "Restoring database $PGDATABASE from $DUMP_FILE..."
+pg_restore -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" --clean --if-exists --no-owner --no-privileges "$DUMP_FILE"
+
+echo "Database restore completed successfully."

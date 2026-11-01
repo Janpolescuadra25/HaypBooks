@@ -6,11 +6,11 @@
 
 ## 0. Critical Path Execution Order
 
-1. **Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — ACTIVE PREREQUISITE)**
-   - **Status:** Unblocked and active for scoping and implementation.
-   - **Prerequisites verified in code:** Docker Compose PostgreSQL configuration exists and Prisma uses PostgreSQL.
-   - **Pending implementation:** pgBouncer transaction pooling, automated backup/restore scripts, migration drills, and VPS PostgreSQL hardening.
-   - **Gating:** Blocks Phase 10 VPS release.
+1. **Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 1 VERIFIED / Milestone 2 active)**
+   - **Status:** Milestone 1 infrastructure is completed and verified.
+   - **Verified implementation:** loopback PostgreSQL bind, scram-sha-256, pgBouncer, backup/restore scripts, and migration README updates.
+   - **Active next step:** Milestone 2 staging drill and VPS cutover remain active.
+   - **Gating:** Phase 10 release remains gated only by Milestone 2 execution.
 2. **Phase 11 Step 5B: Practice Hub Frontend Queues (VERIFIED IMPLEMENTED / 99% COMPLETE)**
    - Queue views are mounted at `Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx`.
    - Verified implementation includes RBAC enforcement, audit logging for task state changes, and `TaskStatus.PENDING` mapping invariants.
@@ -186,12 +186,17 @@ For each row: success, invalid input, permission denial, network/server failure,
 | Tax/payroll/assets/other released modules | Approved business rules and downstream effects |
 | Backup  restore  deploy  health  rollback | Recoverable data and exact monitored revision |
 
-### 18  Database Migration to Self-Hosted PostgreSQL (ACTIVE / UNBLOCKED FOR SCOPING, P1 mandatory before Phase 10)
+### 18  Database Migration to Self-Hosted PostgreSQL (COMPLETED & VERIFIED: Milestone 1; Milestone 2 active next)
 
-- **Prerequisite satisfied:** Phase 17 Journey 1 acceptance passed cleanly at commit `783a1f57c991ab7f4f28d243422651a5c6c6035b` on 2026-10-31. Journeys 2–5 remain Phase 17 work but no longer block Phase 18 planning and rehearsal scope.
-- Prerequisites: VPS access (`haypbooks-dev` at `77.42.85.129`), verified database credentials, and compatible local/VPS `pg_dump`, `pg_restore`, and `psql` tools.
-- Deliver: full cutover from the legacy Neon cloud database to self-hosted PostgreSQL on `haypbooks-dev`. Complete a verified source dump, restore into `haypbooks_dev`, verify all repository Prisma migrations (51 directories observed on 2026-10-28; re-count at cutover) and schema/data/accounting parity, update the backend `.env` `DATABASE_URL` from the Neon pooler to the approved `localhost:5432/haypbooks_dev` target, restart the PM2 backend only after gates pass, run auth/tenancy/ledger smoke tests, and prove rollback.
-- Review: independent verification of zero data loss, schema and accounting integrity, absence of split-brain writes, and active-process isolation before marking unblocked.
+- **Status:** Milestone 1 (Infrastructure) COMPLETED & VERIFIED. Milestone 2 (Staging Backup/Restore Drill & VPS Production Cutover) remains the active next step.
+- **Milestone 1 Deliverables:**
+  * Loopback PostgreSQL binding on `127.0.0.1:5432:5432` with `scram-sha-256` authentication.
+  * pgBouncer container on `127.0.0.1:6432:6432` with transaction pooling, `scram-sha-256` auth, 300s idle timeout, and healthcheck.
+  * Automated backup script `Haypbooks/Backend/scripts/backup.sh` with custom-format `pg_dump`, SHA-256 checksum generation, and retention.
+  * Fail-closed restore script `Haypbooks/Backend/scripts/restore.sh` with checksum verification and database safety gates.
+  * Backup artifact exclusions in `Haypbooks/Backend/.gitignore`.
+  * Migration architecture and operating guidance documented in `docs/implementations/database-migration/README.md`.
+- **Next step:** Milestone 2 (staging backup/restore drill and VPS production cutover) remains active and must be executed before any Phase 10 VPS release claim.
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9.
 
 
