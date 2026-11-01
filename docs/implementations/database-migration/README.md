@@ -128,10 +128,19 @@ Phase 18 uses two connection paths because Prisma application traffic and Prisma
 
 ### 6.1 `scripts/backup.sh`
 
-- Create custom-format archives with `pg_dump -Fc --no-owner --no-privileges` into `/var/backups/haypbooks/db/`.
+- Validate the presence of `pg_dump` and a checksum utility (`sha256sum` or `shasum`) before creating archives.
+- Create custom-format archives named `haypbooks_backup_YYYYMMDD_HHMMSS.dump` with `pg_dump -Fc --no-owner --no-privileges` into the local `./backups` directory unless `BACKUP_DIR` is overridden.
 - Write a SHA-256 checksum beside each archive and verify it with `sha256sum --check` before retention cleanup.
-- Retain daily backups for 7 days and weekly backups for 4 weeks. Record the database identity, application revision, timestamp, archive size, and tool version without recording credentials.
+- Retain backups for 7 days by pruning archived dumps and checksum files older than the threshold. Record the database identity, application revision, timestamp, archive size, and tool version without recording credentials.
 - Fail closed when the source is unreachable, disk space is insufficient, the archive is empty, or checksum generation fails.
+- On Windows, execute the script from Git Bash or WSL where the PostgreSQL client tools are installed and PATH is configured.
+
+Example usage:
+
+```bash
+./scripts/backup.sh
+BACKUP_DIR=./backups ./scripts/backup.sh
+```
 
 ### 6.2 `scripts/restore.sh`
 
