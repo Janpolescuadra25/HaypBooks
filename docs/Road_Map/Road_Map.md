@@ -1,25 +1,19 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: `2026-11-01`
-- Provenance Pin: `f079a7448a03a2f86af24fd613d9dc84cc067f03`
-- Authority: `Hydra 2026-11-01 Task 916 Verified State Audit`
+- Provenance Pin: `91fdea5d9e6179d1fc0f2cb3b226dcc157de1cd8`
+- Authority: `Hydra 2026-11-01 Task 939 Verified State Audit`
 
 ## 0. Critical Path Execution Order
 
-1. **Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 1 & 2 Automation COMPLETE & VERIFIED)**
-   - **Status:** Milestone 1 (Infrastructure) & Milestone 2 (Staging Drill & Cutover Automation) fully implemented in code.
-   - **Verified Tooling:** pgBouncer, loopback binding, `backup.sh`, `restore.sh`, `staging-drill.sh`, `validate-parity.ts`, `production-cutover.sh`, and migration README runbook.
-   - **Operational Gate:** Live VPS execution drill scheduled prior to Phase 10 deployment.
-2. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
+1. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
-3. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journeys 2–5 Active Next)**
-   - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`.
-   - **Active Next Step:** Implement Journeys 2–5, starting with Journey 2: Accountant multi-entity lifecycle.
-   - **Journey 2 specification:** Multi-entity practice setup, role matrix across owner/accountant/staff, tenant isolation, cross-entity journal balancing, and report boundary assertions.
-   - **Acceptance gate:** `Haypbooks/Backend/test/acceptance-journey2-multi-entity-accountant.e2e-spec.ts` plus isolated schema teardown under `npm run test:acceptance`.
-4. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
-   - **Status:** Blocked until Phase 18 Milestone 2 and Phase 17 end-to-end acceptance tests pass.
+2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Implemented)**
+   - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite implemented for accountant multi-entity lifecycle.
+   - **Active Next Step:** Implement Journeys 3–5, continuing with the acceptance backlog.
+3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
+   - **Status:** Blocked until the remaining acceptance tests and operational database drill pass.
 
 ## Current verification checkpoint - 2026-11-01
 
@@ -118,6 +112,14 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
 - Current blocker clarity: release remains blocked until tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed. Phase 11 Step 5B is verified implemented at 99% (resolved blocker), and Phase 11 Step 5A plus the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
 - Critical database migration blocker: RESOLVED at Milestone 1, verified in commit 15b73459f5d0a0a2d1ba84f2b6012d54485f6a4a. Only Phase 18 Milestone 2 staging drill and VPS production cutover remain active before Phase 10 release.
+
+## Appendix: Archived Completed Phases
+
+### Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 1 & 2 Automation COMPLETE & VERIFIED)
+- **Status:** Archived after completion; tooling remains verifiable in code and documentation.
+- **Verified Tooling:** pgBouncer, loopback binding, `backup.sh`, `restore.sh`, `staging-drill.sh`, `validate-parity.ts`, `production-cutover.sh`, and migration README runbook.
+- **Implementation Record:** `docs/implementations/phase18-milestone2-completion/README.md`.
+- **Operational Gate:** Live VPS execution drill remains a pre-release operational requirement before Phase 10.
 
 ### 11 Step 5B  Practice Hub frontend queue views (VERIFIED IMPLEMENTED / 99% COMPLETE, P1)
 
