@@ -1,8 +1,8 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
-- Current Checkpoint Date: `2026-10-31`
-- Provenance Pin: `f53ce3c111576b664833e9728d57530a86e9431f`
-- Authority: `Hydra 2026-10-31 Task 913 Alignment Audit`
+- Current Checkpoint Date: `2026-11-01`
+- Provenance Pin: `631f6c58429b1864dbde985e1a7088f6735b8098`
+- Authority: `Hydra 2026-11-01 Task 916 Verified State Audit`
 
 ## 0. Critical Path Execution Order
 
@@ -11,21 +11,22 @@
    - **Prerequisites verified in code:** Docker Compose PostgreSQL configuration exists and Prisma uses PostgreSQL.
    - **Pending implementation:** pgBouncer transaction pooling, automated backup/restore scripts, migration drills, and VPS PostgreSQL hardening.
    - **Gating:** Blocks Phase 10 VPS release.
-2. **Phase 11 Step 5B: Practice Hub Frontend Queues (VERIFIED IMPLEMENTED / 85% COMPLETE)**
+2. **Phase 11 Step 5B: Practice Hub Frontend Queues (VERIFIED IMPLEMENTED / 99% COMPLETE)**
    - Queue views are mounted at `Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx`.
-   - Remaining work is end-to-end status-transition polish and audit-log linking.
+   - Verified implementation includes RBAC enforcement, audit logging for task state changes, and `TaskStatus.PENDING` mapping invariants.
+   - Remaining work is limited to browser/E2E runtime verification of loading, error, retry, keyboard, and permission states.
 3. **Phase 17 Journeys 2–5 (P2)**
    - Journey 1 passed 3/3 tests; expand coverage for multi-currency/FX, audit invariants, Practice Hub engagement, and closing/reporting.
 
-## Current verification checkpoint - 2026-10-31
+## Current verification checkpoint - 2026-11-01
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
-- Source checkpoint reference: `783a1f57c991ab7f4f28d243422651a5c6c6035b`.
+- Source checkpoint reference: `631f6c58429b1864dbde985e1a7088f6735b8098`.
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD `783a1f57c991ab7f4f28d243422651a5c6c6035b` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
-- Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; current implementation remains limited to the shell and not the full functional queue modules.
-- Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is VERIFIED IMPLEMENTED at 85% (mounted queue components under `Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx`); end-to-end polish and audit-log linking remain.
+- Working tree at HEAD `631f6c58429b1864dbde985e1a7088f6735b8098` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
+- Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; the verified implementation now covers RBAC enforcement, audit logging, and the `TaskStatus.PENDING` mapping used by the review flow.
+- Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is VERIFIED IMPLEMENTED / 99% COMPLETE (owner/admin-only RBAC, task audit logging, and `TaskStatus.PENDING` mapping invariants verified; only browser/E2E runtime verification remains).
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
 - Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7 ✓ 2026-10-19). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
@@ -112,16 +113,16 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Deliver: reviewed revision -> owner push -> controlled pull/install/build/migration if approved -> restart/health check, with rollback. No blind overwrite of server changes.
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
-- Current blocker clarity: release remains blocked until Phase 11 Step 5B is implemented and verified, tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed. Phase 11 Step 5A and the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
+- Current blocker clarity: release remains blocked until tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed. Phase 11 Step 5B is verified implemented at 99% (resolved blocker), and Phase 11 Step 5A plus the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
 - Critical database migration blocker: active backend on VPS is still connected to the legacy Neon cloud database, not the intended self-hosted PostgreSQL. Complete database backup, schema migration verification, connection testing, and rollback plan before VPS release.
 
-### 11 Step 5B  Practice Hub frontend queue views (VERIFIED IMPLEMENTED / 85% COMPLETE, P1)
+### 11 Step 5B  Practice Hub frontend queue views (VERIFIED IMPLEMENTED / 99% COMPLETE, P1)
 
 - **Actual route:** `Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx`.
 - **Components:** `TaskQueueView.tsx`, `ReviewQueueView.tsx`, and `TaskModal.tsx` provide filtering, pagination, assignment, review workflow, task detail, comments, and status mutations.
 - **Documentation:** [Step 5B implementation guide](../implementations/practice-hub-step5b-frontend-queues/README.md).
-- **Verified state:** Components are mounted and typecheck cleanly; Step 5A backend controllers and services are operational.
-- **Remaining polish:** End-to-end task status transitions, audit-log linking, and browser verification of loading, error, retry, keyboard, and permission states.
+- **Verified state:** Components are mounted and typecheck cleanly; Step 5A backend controllers and services are operational; owner/admin-only role gating is enforced for the Review Queue; task transitions and audit logging are wired through `AuditService` with `entityType: 'Task'`; and the `TaskStatus.PENDING` mapping is preserved without schema drift.
+- **Remaining polish:** Only browser/E2E runtime verification of loading, error, retry, keyboard, permission, and audit-log event linking states remains.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
