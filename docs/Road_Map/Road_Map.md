@@ -1,7 +1,7 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: `2026-11-01`
-- Provenance Pin: `36ebf6321380916f35789819e94332a38be513ee`
+- Provenance Pin: `f079a7448a03a2f86af24fd613d9dc84cc067f03`
 - Authority: `Hydra 2026-11-01 Task 916 Verified State Audit`
 
 ## 0. Critical Path Execution Order
@@ -16,6 +16,8 @@
 3. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journeys 2–5 Active Next)**
    - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`.
    - **Active Next Step:** Implement Journeys 2–5, starting with Journey 2: Accountant multi-entity lifecycle.
+   - **Journey 2 specification:** Multi-entity practice setup, role matrix across owner/accountant/staff, tenant isolation, cross-entity journal balancing, and report boundary assertions.
+   - **Acceptance gate:** `Haypbooks/Backend/test/acceptance-journey2-multi-entity-accountant.e2e-spec.ts` plus isolated schema teardown under `npm run test:acceptance`.
 4. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
    - **Status:** Blocked until Phase 18 Milestone 2 and Phase 17 end-to-end acceptance tests pass.
 
