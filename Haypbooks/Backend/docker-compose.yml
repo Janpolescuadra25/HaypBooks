@@ -1,15 +1,52 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
+    container_name: haypbooks-postgres
+    restart: always
     environment:
-      POSTGRES_USER: haypbooks
-      POSTGRES_PASSWORD: haypbooks
-      POSTGRES_DB: haypbooks_dev
+      POSTGRES_USER: ${POSTGRES_USER:-haypbooks}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-haypbooks}
+      POSTGRES_DB: ${POSTGRES_DB:-haypbooks_dev}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-haypbooks} -d ${POSTGRES_DB:-haypbooks_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.22.1
+    container_name: haypbooks-pgbouncer
+    restart: always
+    environment:
+      DB_USER: ${POSTGRES_USER:-haypbooks}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-haypbooks}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB:-haypbooks_dev}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "1000"
+      DEFAULT_POOL_SIZE: "25"
+      MIN_POOL_SIZE: "5"
+      RESERVE_POOL_SIZE: "5"
+      SERVER_IDLE_TIMEOUT: "300"
+      AUTH_TYPE: scram-sha-256
     ports:
-      - '5432:5432'
+      - "127.0.0.1:6432:6432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-haypbooks} -d ${POSTGRES_DB:-haypbooks_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:

@@ -7,6 +7,17 @@
 
 ---
 
+## Milestone 1: Local & Staging Infrastructure (Implemented)
+- **PostgreSQL Service:** Version `postgres:15-alpine` bound strictly to `127.0.0.1:5432` with persistent volume `haypbooks_pgdata` and `scram-sha-256` authentication initialization.
+- **pgBouncer Service:** Version `edoburu/pgbouncer:v1.22.1` bound to `127.0.0.1:6432` using `POOL_MODE=transaction`, `MAX_CLIENT_CONN=1000`, `DEFAULT_POOL_SIZE=25`, `SERVER_IDLE_TIMEOUT=300`, and `AUTH_TYPE=scram-sha-256` with container healthcheck.
+- **Connection Strings:**
+  - Direct PostgreSQL (Migrations & Admin): `postgresql://haypbooks:haypbooks@127.0.0.1:5432/haypbooks_dev?sslmode=disable`
+  - pgBouncer Pooled (Application Runtime): `postgresql://haypbooks:haypbooks@127.0.0.1:6432/haypbooks_dev?sslmode=disable&pgbouncer=true&connection_limit=10`
+- **Automated Backup & Restore Scripts:**
+  - Backup: `Haypbooks/Backend/scripts/backup.sh` (Custom-format `pg_dump -Fc`, SHA-256 checksumming, 7-day automated retention).
+  - Restore: `Haypbooks/Backend/scripts/restore.sh` (Checksum integrity check, active connection termination, strict fail-closed error handling, safety confirmation gate).
+- **Security & Port Hardening:** Ports 5432 and 6432 restricted to loopback (`127.0.0.1`) in `docker-compose.yml`; backup dumps excluded via `.gitignore`.
+
 ## 2. Migration Prerequisites
 1. **Tooling:** `pg_dump`, `pg_restore`, and `psql` from a PostgreSQL client version compatible with both source and target, installed and accessible on the VPS or deployment executor.
 2. **Access & Connectivity:**
