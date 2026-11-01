@@ -114,7 +114,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
 - Current blocker clarity: release remains blocked until tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed. Phase 11 Step 5B is verified implemented at 99% (resolved blocker), and Phase 11 Step 5A plus the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
-- Critical database migration blocker: active backend on VPS is still connected to the legacy Neon cloud database, not the intended self-hosted PostgreSQL. Complete database backup, schema migration verification, connection testing, and rollback plan before VPS release.
+- Critical database migration blocker: RESOLVED at Milestone 1, verified in commit 15b73459f5d0a0a2d1ba84f2b6012d54485f6a4a. Only Phase 18 Milestone 2 staging drill and VPS production cutover remain active before Phase 10 release.
 
 ### 11 Step 5B  Practice Hub frontend queue views (VERIFIED IMPLEMENTED / 99% COMPLETE, P1)
 
@@ -200,6 +200,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 | **S1 — Tracked Credential Settings Containment** | **DONE & VERIFIED (2026-10-24)** | Untracked .vscode/settings.json from Git index, added .vscode/ to .gitignore, local settings preserved on disk. | [Gitignore Hardening README](../implementations/gitignore-hardening-task802/README.md#task-848s1-extension-tracked-credential-settings-containment-vscode) |
 | **S2 — Attachment Object Ownership & Tenant Isolation** | **DONE & VERIFIED (2026-10-24)** | Enforced workspaceId filtering and uploader ownership for attachment access and deletions. | [Attachment Ownership README](../implementations/attachment-ownership/README.md) |
 | **S3 — Guard/Controller Workspace Context Agreement** | **DONE & VERIFIED (2026-10-24)** | Enforced WorkspaceAccessGuard across all routes; eliminated raw header fallbacks. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
+| **Phase 12 — Security Containment** | **DONE & VERIFIED (2026-11-01)** | Completed and verified the security containment workstreams: credential settings, attachment ownership, and workspace access guard/controller agreement. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
 | **Phase 8 — AI Phase 2** | **DEFERRED / OPTIONAL** | Historical backlog retained for future AI review work; not a release-blocking phase for core product stability. | [Legacy AI roadmap backlog retained in this document] |
 
 
