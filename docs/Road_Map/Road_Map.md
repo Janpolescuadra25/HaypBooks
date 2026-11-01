@@ -1,15 +1,15 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: `2026-11-01`
-- Provenance Pin: `de2041c0c58d09c4f57249f62fc0262ec540e73b`
+- Provenance Pin: `36ebf6321380916f35789819e94332a38be513ee`
 - Authority: `Hydra 2026-11-01 Task 916 Verified State Audit`
 
 ## 0. Critical Path Execution Order
 
-1. **Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 2 Active Next)**
-   - **Status:** Milestone 1 (Infrastructure: loopback binding, pgBouncer, backup/restore scripts) is COMPLETED & VERIFIED.
-   - **Active Next Step:** Milestone 2 staging backup/restore drill and VPS production cutover.
-   - **Gating:** Phase 10 VPS release remains gated by Milestone 2 execution.
+1. **Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 1 & 2 Automation COMPLETE & VERIFIED)**
+   - **Status:** Milestone 1 (Infrastructure) & Milestone 2 (Staging Drill & Cutover Automation) fully implemented in code.
+   - **Verified Tooling:** pgBouncer, loopback binding, `backup.sh`, `restore.sh`, `staging-drill.sh`, `validate-parity.ts`, `production-cutover.sh`, and migration README runbook.
+   - **Operational Gate:** Live VPS execution drill scheduled prior to Phase 10 deployment.
 2. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
@@ -187,17 +187,20 @@ For each row: success, invalid input, permission denial, network/server failure,
 | Tax/payroll/assets/other released modules | Approved business rules and downstream effects |
 | Backup  restore  deploy  health  rollback | Recoverable data and exact monitored revision |
 
-### 18  Database Migration to Self-Hosted PostgreSQL (COMPLETED & VERIFIED: Milestone 1; Milestone 2 active next)
+### 18  Database Migration to Self-Hosted PostgreSQL (COMPLETED & VERIFIED: Milestone 1 & 2 Tooling; Live Drill Queued)
 
-- **Status:** Milestone 1 (Infrastructure) COMPLETED & VERIFIED. Milestone 2 (Staging Backup/Restore Drill & VPS Production Cutover) remains the active next step.
-- **Milestone 1 Deliverables:**
-  * Loopback PostgreSQL binding on `127.0.0.1:5432:5432` with `scram-sha-256` authentication.
-  * pgBouncer container on `127.0.0.1:6432:6432` with transaction pooling, `scram-sha-256` auth, 300s idle timeout, and healthcheck.
-  * Automated backup script `Haypbooks/Backend/scripts/backup.sh` with custom-format `pg_dump`, SHA-256 checksum generation, and retention.
-  * Fail-closed restore script `Haypbooks/Backend/scripts/restore.sh` with checksum verification and database safety gates.
-  * Backup artifact exclusions in `Haypbooks/Backend/.gitignore`.
-  * Migration architecture and operating guidance documented in `docs/implementations/database-migration/README.md`.
-- **Next step:** Milestone 2 (staging backup/restore drill and VPS production cutover) remains active and must be executed before any Phase 10 VPS release claim.
+- **Status:** Milestone 1 (Infrastructure) and Milestone 2 (Automation Tooling) are COMPLETED & VERIFIED.
+- **Milestone 1 Deliverables (Verified):**
+  * PostgreSQL 15 and pgBouncer container configuration on loopback (`127.0.0.1:5432` and `127.0.0.1:6432`) with `scram-sha-256` auth.
+  * Automated backup script `Haypbooks/Backend/scripts/backup.sh` with custom-format `pg_dump` and SHA-256 checksums.
+  * Fail-closed restore script `Haypbooks/Backend/scripts/restore.sh` with checksum validation and active connection termination.
+- **Milestone 2 Deliverables (Verified):**
+  * Schema & data parity validator `Haypbooks/Backend/scripts/validate-parity.ts` (migration counts, core tables row audit, ledger debit/credit balance).
+  * Automated staging drill script `Haypbooks/Backend/scripts/staging-drill.sh` with URL parsing and fail-closed checks.
+  * Production cutover runbook script `Haypbooks/Backend/scripts/production-cutover.sh` with `.env` backup, PM2 restart, and 1-tap `--rollback`.
+  * Updated `Haypbooks/Backend/.env.example` documenting `DIRECT_URL` (port 5432) alongside `DATABASE_URL` (port 6432).
+  * Complete operational runbook documented in `docs/implementations/database-migration/README.md`.
+- **Operational Next Step:** Execute live staging drill on VPS environment prior to Phase 10 deployment.
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9.
 
 
