@@ -1,27 +1,27 @@
 ﻿# HaypBooks  End-to-End Completion Roadmap
 
-- Current Checkpoint Date: `2026-11-01`
-- Provenance Pin: `91fdea5d9e6179d1fc0f2cb3b226dcc157de1cd8`
-- Authority: `Hydra 2026-11-01 Task 939 Verified State Audit`
+- Current Checkpoint Date: `2026-11-02`
+- Provenance Pin: `58a181eaaa34365ab05a4c7dee3e15ecc14cfb49`
+- Authority: `Hydra 2026-11-02 Task 943 Verified State Audit`
 
 ## 0. Critical Path Execution Order
 
 1. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
-2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Implemented)**
-   - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite implemented for accountant multi-entity lifecycle.
+2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified)**
+   - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite passed in the live repository baseline at `58a181eaaa34365ab05a4c7dee3e15ecc14cfb49` with 1/1 suites and 3/3 tests passing.
    - **Active Next Step:** Implement Journeys 3–5, continuing with the acceptance backlog.
 3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
    - **Status:** Blocked until the remaining acceptance tests and operational database drill pass.
 
-## Current verification checkpoint - 2026-11-01
+## Current verification checkpoint - 2026-11-02
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
-- Source checkpoint reference: `de2041c0c58d09c4f57249f62fc0262ec540e73b`.
+- Source checkpoint reference: `58a181eaaa34365ab05a4c7dee3e15ecc14cfb49`.
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
-- Working tree at HEAD `de2041c0c58d09c4f57249f62fc0262ec540e73b` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
+- Working tree at HEAD `58a181eaaa34365ab05a4c7dee3e15ecc14cfb49` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; the verified implementation now covers RBAC enforcement, audit logging, and the `TaskStatus.PENDING` mapping used by the review flow.
 - Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is VERIFIED IMPLEMENTED / 99% COMPLETE (owner/admin-only RBAC, task audit logging, and `TaskStatus.PENDING` mapping invariants verified; only browser/E2E runtime verification remains).
 - Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
@@ -242,7 +242,7 @@ For each row: success, invalid input, permission denial, network/server failure,
 
 ### Phase 18 Milestone 1: Self-Hosted PostgreSQL & pgBouncer Infrastructure (COMPLETED & VERIFIED)
 - **Verified Deliverables:** Loopback PostgreSQL 15 binding (`127.0.0.1:5432:5432`), pgBouncer container (`127.0.0.1:6432:6432`) with transaction pooling, `scram-sha-256` auth, automated backup script (`scripts/backup.sh`), fail-closed restore script (`scripts/restore.sh`), and migration documentation in `docs/implementations/database-migration/README.md`.
-- **Status:** Locked into repository baseline at commit `de2041c0c58d09c4f57249f62fc0262ec540e73b`.
+- **Status:** Locked into repository baseline at commit `58a181eaaa34365ab05a4c7dee3e15ecc14cfb49`.
 
 ### Phase 12: Security Containment S1/S2/S3 (COMPLETED & VERIFIED)
 - **Verified Deliverables:** Security containment, tenant boundary enforcement, and audit safeguards verified complete (2026-10-24).
