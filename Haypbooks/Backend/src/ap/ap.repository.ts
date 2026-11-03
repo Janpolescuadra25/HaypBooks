@@ -360,10 +360,10 @@ export class ApRepository {
                     amount: data.amount,
                     paymentDate: data.paymentDate,
                     method: data.method,
-                    referenceNumber: data.referenceNumber ?? null,
-                    memo: data.memo ?? null,
-                    attachments: data.attachments ?? null,
-                    bankAccountId: data.bankAccountId ?? null,
+                    referenceNumber: data.referenceNumber ?? undefined,
+                    memo: data.memo ?? undefined,
+                    attachments: data.attachments ?? undefined,
+                    bankAccountId: data.bankAccountId ?? undefined,
                 },
             })
 

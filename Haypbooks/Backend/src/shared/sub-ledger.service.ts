@@ -51,7 +51,15 @@ export class SubLedgerService {
   }
 
   private async resolveAccount(companyId: string, preferredId: string | null | undefined, fallbackCode: string, tx?: any): Promise<string | null> {
-    if (preferredId) return preferredId
+    if (preferredId) {
+      const db = tx ?? this.prisma
+      const bankAccount = await db.bankAccount.findFirst({
+        where: { id: preferredId, deletedAt: null },
+        select: { glAccountId: true },
+      })
+      if (bankAccount?.glAccountId) return bankAccount.glAccountId
+      return preferredId
+    }
     return this.findAccountByCode(companyId, fallbackCode, tx)
   }
 
