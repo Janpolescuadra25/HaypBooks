@@ -1,25 +1,25 @@
-# HaypBooks  End-to-End Completion Roadmap
+﻿# HaypBooks  End-to-End Completion Roadmap
 
-- Current Checkpoint Date: `2026-11-02`
-- Provenance Pin: `66b3a68979303b4541ad8f0c32f5b688c84db422`
-- Authority: `Hydra 2026-11-02 Task 943 Verified State Audit`
+- Current Checkpoint Date: 2026-11-04
+- Provenance Pin: d0cb66e5f63a7e170eea5c46fae80042120492cc
+- Authority: `Hydra 2026-11-04 Task 951 Verified State Audit`
 
 ## 0. Critical Path Execution Order
 
 1. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
-2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified)**
-- **Phase 17 Journey 3 Specification (Active Next Step):**
+2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified; Journey 3 Implementation Complete)**
+- **Phase 17 Journey 3 AP Bill Lifecycle (Implementation Complete; Execution Verification Pending):**
   * **Scope:** Vendor bill creation, line-item tax calculation, multi-currency support, approval workflow (preparer and approver segregation of duties), payment run execution, bank account deduction, sub-ledger to General Ledger posting (Dr Expense / Cr Accounts Payable, followed by Dr Accounts Payable / Cr Cash/Bank), and automated double-entry invariant verification.
-  * **Test Spec Target:** Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.e2e-spec.ts.
-  * **Status:** Specification established; test suite implementation next.
+  * **Test Spec Target:** Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.acceptance-spec.ts.
+  * **Status:** Test implementation complete; pending execution verification.
    - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite passed in the live repository baseline at `66b3a68979303b4541ad8f0c32f5b688c84db422` with 1/1 suites and 3/3 tests passing.
-   - **Active Next Step:** Implement Journeys 3–5, continuing with the acceptance backlog.
+   - **Active Next Step:** Execute the Journey 3 direct-service AP lifecycle suite and continue with Journeys 4–5 once the acceptance backlog is verified.
 3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
    - **Status:** Blocked until the remaining acceptance tests and operational database drill pass.
 
-## Current verification checkpoint - 2026-11-02
+## Current verification checkpoint - 2026-11-04
 
 This checkpoint supersedes stale statements below only for the items verified here. Full findings, source anchors, commands, limitations and acceptance order: [September 26 audit](../audits/2026-09-26-current-status.md).
 
@@ -151,7 +151,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 ### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
 - **Owner:** Hydra (test verification) + Mantra (fixtures)
-- **Status:** PARTIALLY COMPLETE (Journey 1 and harness infrastructure VERIFIED COMPLETE; Journeys 2–5 remaining).
+- **Status:** PARTIALLY COMPLETE (Journey 1 and Journey 2 verified complete; Journey 3 implementation complete and awaiting execution verification; Journeys 4–5 remaining).
 - **Verified passing commit:** `783a1f57c991ab7f4f28d243422651a5c6c6035b` (2026-10-31). Live isolated execution passed one suite and all three Journey 1 tests.
 - **Verified runtime components:** dedicated acceptance Jest configuration; schema-aware, idempotent migrations; Windows-compatible Prisma migration invocation; sequential lock-safe teardown; immutable invoice-line tax resolution with a bounded transaction; and the balanced double-entry owner AR lifecycle.
 - **Acceptance harness inventory:**
