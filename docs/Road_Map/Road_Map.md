@@ -13,9 +13,9 @@
 - **Phase 17 Journey 3 AP Bill Lifecycle (VERIFIED COMPLETE):**
   * **Scope:** Vendor bill creation, line-item tax calculation, multi-currency support, approval workflow (preparer and approver segregation of duties), payment run execution, bank account deduction, sub-ledger to General Ledger posting (Dr Expense / Cr Accounts Payable, followed by Dr Accounts Payable / Cr Cash/Bank), and automated double-entry invariant verification.
   * **Test Spec Target:** Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.acceptance-spec.ts.
-  * **Status:** Test implementation complete; pending execution verification.
+  * **Status:** VERIFIED COMPLETE — 7/7 acceptance tests passed in 26.551s (double-entry accrual, payment settlement, separation of duties, and immutability invariants validated in commit `258c37f586908db05ab51ab338d2f4cf91cf3b8c`).
    - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite passed in the live repository baseline at `66b3a68979303b4541ad8f0c32f5b688c84db422` with 1/1 suites and 3/3 tests passing; Journey 3 verified complete (7/7 tests passed).
-   - **Active Next Step:** Execute the Journey 3 direct-service AP lifecycle suite and continue with Journeys 4–5 once the acceptance backlog is verified.
+   - **Active Next Step:** Begin implementation of Phase 17 Journey 4 (Fixed Asset Lifecycle) per the acceptance matrix.
 3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
    - **Status:** Blocked until the remaining acceptance tests and operational database drill pass.
 
