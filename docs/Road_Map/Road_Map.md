@@ -9,7 +9,7 @@
 1. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
-2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified; Journey 3 Implementation Complete)**
+2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified; Journey 3 Verified Complete)**
 - **Phase 17 Journey 3 AP Bill Lifecycle (VERIFIED COMPLETE):**
   * **Scope:** Vendor bill creation, line-item tax calculation, multi-currency support, approval workflow (preparer and approver segregation of duties), payment run execution, bank account deduction, sub-ledger to General Ledger posting (Dr Expense / Cr Accounts Payable, followed by Dr Accounts Payable / Cr Cash/Bank), and automated double-entry invariant verification.
   * **Test Spec Target:** Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.acceptance-spec.ts.
@@ -312,6 +312,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 
