@@ -1,4 +1,4 @@
-﻿# HaypBooks  End-to-End Completion Roadmap
+# HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: 2026-11-04
 - Provenance Pin: 809fadc717ae711565a0a9fbc1f232c4a5175009
@@ -10,7 +10,7 @@
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
 2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified; Journey 3 Implementation Complete)**
-- **Phase 17 Journey 3 AP Bill Lifecycle (Implementation Complete; Execution Verification Pending):**
+- **Phase 17 Journey 3 AP Bill Lifecycle (VERIFIED COMPLETE):**
   * **Scope:** Vendor bill creation, line-item tax calculation, multi-currency support, approval workflow (preparer and approver segregation of duties), payment run execution, bank account deduction, sub-ledger to General Ledger posting (Dr Expense / Cr Accounts Payable, followed by Dr Accounts Payable / Cr Cash/Bank), and automated double-entry invariant verification.
   * **Test Spec Target:** Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.acceptance-spec.ts.
   * **Status:** Test implementation complete; pending execution verification.
@@ -151,7 +151,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 ### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
 - **Owner:** Hydra (test verification) + Mantra (fixtures)
-- **Status:** PARTIALLY COMPLETE (Journey 1 and Journey 2 verified complete; Journey 3 implementation complete and awaiting execution verification; Journeys 4–5 remaining).
+- **Status:** PARTIALLY COMPLETE (Journey 1 and Journey 2 verified complete; Journey 3 verified complete (7/7 tests passed); Journeys 4–5 remaining).
 - **Verified passing commit:** `783a1f57c991ab7f4f28d243422651a5c6c6035b` (2026-10-31). Live isolated execution passed one suite and all three Journey 1 tests.
 - **Verified runtime components:** dedicated acceptance Jest configuration; schema-aware, idempotent migrations; Windows-compatible Prisma migration invocation; sequential lock-safe teardown; immutable invoice-line tax resolution with a bounded transaction; and the balanced double-entry owner AR lifecycle.
 - **Acceptance harness inventory:**
@@ -312,6 +312,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 
