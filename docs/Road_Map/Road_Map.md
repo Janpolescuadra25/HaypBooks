@@ -1,7 +1,7 @@
 # HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: 2026-11-04
-- Provenance Pin: 809fadc717ae711565a0a9fbc1f232c4a5175009
+- Provenance Pin: 8b6fd580006ee5ce5cb42fd2f17cbbf4c61c0a95
 - Authority: `Hydra 2026-11-04 Task 951 Verified State Audit`
 
 ## 0. Critical Path Execution Order
@@ -17,7 +17,7 @@
    - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite passed in the live repository baseline at `66b3a68979303b4541ad8f0c32f5b688c84db422` with 1/1 suites and 3/3 tests passing; Journey 3 verified complete (7/7 tests passed).
    - **Active Next Step:** Begin implementation of Phase 17 Journey 4 (Fixed Asset Lifecycle) per the acceptance matrix.
 3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
-   - **Status:** Blocked until the remaining acceptance tests and operational database drill pass.
+   - **Status:** Blocked until Phase 11 Step 5B browser/E2E runtime verification is completed, Phase 18 Milestone 2 staging drill is executed, and remaining acceptance tests pass.
 
 ## Current verification checkpoint - 2026-11-04
 
@@ -114,7 +114,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Deliver: reviewed revision -> owner push -> controlled pull/install/build/migration if approved -> restart/health check, with rollback. No blind overwrite of server changes.
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
-- Current blocker clarity: release remains blocked until tenant-isolation validation is completed, billing/trial correctness is confirmed, and Phase 17 end-to-end acceptance testing is passed. Phase 11 Step 5B is verified implemented at 99% (resolved blocker), and Phase 11 Step 5A plus the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
+- Current blocker clarity: release remains blocked until Phase 11 Step 5B browser/E2E runtime verification is completed, tenant-isolation validation is completed, billing/trial correctness is confirmed, and remaining Phase 17 acceptance testing is passed. Phase 11 Step 5B is verified implemented at 99% (resolved blocker), and Phase 11 Step 5A plus the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
 - Critical database migration blocker: RESOLVED at Milestone 1, verified in commit 15b73459f5d0a0a2d1ba84f2b6012d54485f6a4a. Only Phase 18 Milestone 2 staging drill and VPS production cutover remain active before Phase 10 release.
 
 ## Appendix: Archived Completed Phases
@@ -312,6 +312,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 
