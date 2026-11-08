@@ -1,7 +1,7 @@
 # HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: 2026-11-08
-- Provenance Pin: cca39f510c65639be3e1cd86775e5e3e8da36ead
+- Provenance Pin: f050a065242589ec113d88b63c9d548cce59ff4c
 - Authority: `Hydra 2026-11-04 Task 951 Verified State Audit`
 
 ## 0. Critical Path Execution Order
@@ -34,7 +34,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 Updated 2026-10-27. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
-- Provenance pin: audited source commit `b724209bad9322031d614b11ac78386bc6114886`; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
+- Provenance pin: audited source commit `f050a065242589ec113d88b63c9d548cce59ff4c`; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
 - All 13 completed phases verified against codebase and READMEs by Hydra on 2026-10-23 at commit 6f8335e42752b276761e14f0bf3b938afeec63b0; pruned from active tracking table.
 
 ## Current audit findings
