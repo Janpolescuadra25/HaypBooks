@@ -1,13 +1,13 @@
 # HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: 2026-11-08
-- Provenance Pin: f050a065242589ec113d88b63c9d548cce59ff4c
+- Provenance Pin: cb5fbdd27f7c3da6cc01a9239a222e2cc847014b
 - Authority: `Hydra 2026-11-04 Task 951 Verified State Audit`
 
 ## 0. Critical Path Execution Order
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
-2. **Phase 17: Acceptance & Integration Testing (P1/P2 â€” Journey 1 Verified; Journey 2 Verified; Journey 3 Verified Complete)**
+2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified; Journey 3 Verified; Journey 4 Verified Complete; Journey 5 Remaining)**
 - **Phase 17 Journey 3 AP Bill Lifecycle (VERIFIED COMPLETE):**
   * **Scope:** Vendor bill creation, line-item tax calculation, multi-currency support, approval workflow (preparer and approver segregation of duties), payment run execution, bank account deduction, sub-ledger to General Ledger posting (Dr Expense / Cr Accounts Payable, followed by Dr Accounts Payable / Cr Cash/Bank), and automated double-entry invariant verification.
   * **Test Spec Target:** Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.acceptance-spec.ts.
@@ -34,7 +34,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 Updated 2026-10-27. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
-- Provenance pin: audited source commit `f050a065242589ec113d88b63c9d548cce59ff4c`; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
+- Provenance pin: audited source commit `cb5fbdd27f7c3da6cc01a9239a222e2cc847014b`; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
 - All 13 completed phases verified against codebase and READMEs by Hydra on 2026-10-23 at commit 6f8335e42752b276761e14f0bf3b938afeec63b0; pruned from active tracking table.
 
 ## Current audit findings
@@ -164,6 +164,11 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
   - Isolated test harness with zero pollution of production or development database records.
 - **Delivery criteria:**
   - 5 core journey fixtures passing deterministically in CI/local runs.
+  - **Phase 17 Journey 4 Fixed Asset Lifecycle (VERIFIED COMPLETE):**
+    * **Scope:** Fixed asset category creation, asset registration with chart-of-accounts validation, straight-line monthly depreciation schedule generation, multi-tenant access controls, soft-delete handling, and audit logging of all lifecycle mutations.
+    * **Test Spec Target:** `Haypbooks/Backend/test/acceptance/acceptance-journey4-fixed-asset-lifecycle.acceptance-spec.ts`.
+    * **Documentation:** `docs/implementations/phase17-journey4-fixed-asset-lifecycle/README.md`.
+    * **Status:** VERIFIED COMPLETE — TypeScript compilation passes; acceptance harness validates all core invariants in commit `cb5fbdd27f7c3da6cc01a9239a222e2cc847014b`.
   - Verification that period-close workflows, ledger balancing, and account state transitions adhere strictly to double-entry rules.
 - **Depends on:** Every phase required for release scope. Done only when the matrix below passes, no P0 remains, residual risks are scoped and accepted, and support/restore/rollback evidence is ready; then proceed to Phase 10.
 
