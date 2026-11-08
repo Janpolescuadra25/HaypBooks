@@ -77,6 +77,8 @@ const RepositoriesModule = PrismaRepositoriesModule
     (require('./payroll/payroll.module').PayrollModule),
     // Inventory & Fixed Assets (Items, Stock, Transactions, Assets, Depreciation)
     (require('./inventory/inventory.module').InventoryModule),
+    // Fixed Asset lifecycle module (Phase 17 Journey 4)
+    (require('./fixed-assets/fixed-assets.module').FixedAssetsModule),
     // AI & Integrations (Insights, Audit Logs, API Keys, Bank Feed)
     (require('./integrations/integrations.module').IntegrationsModule),
     // Projects & Work In Progress (Projects, Milestones, Budgets, Change Orders, WIP)
