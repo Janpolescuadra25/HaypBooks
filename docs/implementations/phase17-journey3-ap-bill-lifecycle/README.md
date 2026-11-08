@@ -1,4 +1,4 @@
-﻿# Phase 17 Journey 3 — AP Bill Lifecycle Implementation & Verification
+# Phase 17 Journey 3 — AP Bill Lifecycle Implementation & Verification
 
 ## Status: DONE (VERIFIED COMPLETE)
 # Phase 17 Journey 3: AP Bill Lifecycle Acceptance Tests
