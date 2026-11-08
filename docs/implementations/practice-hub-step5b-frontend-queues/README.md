@@ -1,70 +1,60 @@
-# Phase 11 Step 5B: Practice Hub Frontend Task & Review Queues
+# Phase 11 Step 5B — Practice Hub Frontend Queues & Audit Trail Implementation
 
-## Overview
+## Status: 99% IMPLEMENTED — PENDING BROWSER / E2E RUNTIME VERIFICATION
+- **Phase**: Phase 11 (Practice Hub & Multi-Client Accounting)
+- **Step**: Step 5B — Frontend Queue Views, Navigation & Task Mutation Audit Trail
+- **Date**: 2026-11-08
+- **Branch**: checkpoint/dev
+- **Baseline Commit**: cca39f510c65639be3e1cd86775e5e3e8da36ead
+- **Predecessor**: Phase 11 Step 5A (docs/implementations/practice-hub-step5a-backend-tasks/README.md)
 
-Implemented the Practice Hub task management and review queue interface. Practice members can create, assign, filter, paginate, edit, submit, review, complete, reopen, and soft-delete tasks from the authenticated Practice Hub workspace.
+---
 
-## Implemented Components and Architecture
+## 1. Overview & Architecture
+Phase 11 Step 5B delivers the accountant and firm-staff operational UI for managing tasks, review workflows, client assignments, and audit logs across client organizations from within the Practice Hub.
 
-### 1. Navigation integration
+### Core Architectural Layers
+1. **Frontend Entry Point & Routing:**
+   - Root Route: Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx
+   - Navigation & Sidebar: practiceHubNavConfig.ts, PracticeHubSidebar.tsx
+   - Client Directory View: Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/clients/page.tsx
+2. **Queue Views & Component Architecture:**
+   - **TaskQueueView (TaskQueueView.tsx):** Tabbed interface for practice tasks, status filtering (PENDING, IN_PROGRESS, DONE, BLOCKED), assignee filtering, priority badges, and quick-status mutations.
+   - **ReviewQueueView (ReviewQueueView.tsx):** Dedicated approval and review queue for work requiring senior accountant sign-off.
+   - **TaskModal (TaskModal.tsx):** Full task inspection, creation, assignee reassignment, and detailed notes modal.
+   - **Page Layout Defaults:** PageLayoutDefaults.tsx, PracticeHubPageTemplate.tsx, RightGapAdjuster.tsx, TopBarActions.tsx.
+3. **Backend Integration & RBAC Enforcement:**
+   - **Controller:** Haypbooks/Backend/src/practice-hub/practice-hub.controller.ts
+   - **Service:** Haypbooks/Backend/src/practice-hub/practice-hub.service.ts
+   - **Guards:** @RequireWorkspaceType('PRACTICE') and WorkspaceTypeGuard enforce strict isolation so only active practice members access queues.
+   - **Role Assertions:** ssertPracticeRole validates permissions for task creation, status advancement, and review approval.
+   - **Audit Trail:** Task mutations automatically invoke AuditService.log to record actor, timestamp, previous state, and new state.
 
-- `Haypbooks/Frontend/src/components/practice-hub/practiceHubNavConfig.ts` adds Work Queue, Tasks, Review Queue, Work in Progress, and Calendar under Work Management.
-- Tasks uses `/practice-hub?view=tasks`; Review Queue uses `/practice-hub?view=review-queue`.
-- `PracticeHubSidebar.tsx` includes the `view` search parameter when identifying the active section and item.
-- The existing Work Queue entry remains available.
+---
 
-### 2. Task queue
+## 2. Implemented Components & Files
+| Component / File | Purpose | Status |
+|---|---|---|
+| src/app/(practice-hub)/practice-hub/page.tsx | Main Practice Hub dashboard rendering queues | Verified |
+| src/components/practice-hub/TaskQueueView.tsx | Operational task queue with filters and pagination | Verified |
+| src/components/practice-hub/ReviewQueueView.tsx | Approval queue for review-pending items | Verified |
+| src/components/practice-hub/TaskModal.tsx | Detailed task view, creation, and editing modal | Verified |
+| src/components/practice-hub/practiceHubNavConfig.ts | Navigation links and active tab configuration | Verified |
+| src/components/practice-hub/PracticeHubSidebar.tsx | Practice Hub primary sidebar navigation | Verified |
+| practice-hub.service.ts | Task CRUD, assignee validation, audit logging | Verified |
+| practice-hub.controller.ts | REST API endpoints for dashboard, tasks, clients | Verified |
 
-`TaskQueueView.tsx` provides:
+---
 
-- Paginated task retrieval with a fixed page size of 10.
-- Search plus status, priority, client, and assignee filters.
-- Client and assignee choices loaded from live Practice Hub endpoints.
-- Priority, status, due-date, client, and assignee presentation.
-- Create, edit, submit-for-review, and soft-delete actions.
-- Loading skeletons, an empty state, request-error feedback, retry, and pagination controls.
-
-The UI uses the current backend `TaskStatus` contract. `IN_PROGRESS` represents active work, `PENDING` represents work awaiting review, and `DONE` represents approved/completed work.
-
-### 3. Review queue
-
-`ReviewQueueView.tsx` displays tasks returned by `/api/practice-hub/reviews` and provides:
-
-- Client, assignee, priority, and date context.
-- Approve, which changes status to `DONE`.
-- Request Changes, which returns status to `IN_PROGRESS`.
-- Loading, empty, error, retry, and pagination states.
-
-### 4. Task form
-
-`TaskModal.tsx` provides create and edit modes with title, description, priority, status, client, assignee, and due-date fields. It loads active clients and practice members, validates the required title, prevents duplicate submission while saving, and displays API errors inline.
-
-Optional description, client, assignee, and due-date values can be cleared during editing. The backend DTOs accept those nullable values without changing the database schema.
-
-### 5. Page routing and mounting
-
-`Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx` mounts `TaskQueueView` and `ReviewQueueView` from both the local Work Management navigation and the corresponding `view` search parameters. Other unfinished destinations continue to use the existing documentation placeholder.
-
-### 6. Backend alignment and boundaries
-
-- `GET /api/practice-hub/members` returns active members only after confirming the requester is an active member of the practice workspace.
-- Task client linkage validates that the selected company has an active engagement with the practice.
-- The existing task and review routes remain the source of truth; no Prisma schema or migration was changed.
-
-## Verification
-
-- Backend TypeScript build: passed with Node's heap raised to 6144 MB.
-- Existing backend Practice Hub unit suite: 18/18 passed.
-- Frontend TypeScript check: passed.
-- `PracticeHubPage.test.tsx`: 29/29 passed, including Tasks and Review Queue smoke coverage.
-- `git diff --check`: passed.
-
-The repository-wide frontend suite was also run. It still fails in pre-existing, out-of-scope Chart of Accounts, ModalForm, and workspace navigation tests and then exits through a jsdom shutdown error. Those failures were not introduced or modified by Step 5B. Browser and database-backed acceptance remain separate release gates.
-
-## Task 916 — Backend Audit Logging and Review Authorization
-
-- `PracticeHubModule` imports `AuditModule`, and `PracticeHubService` uses `AuditService` for task mutation history.
-- `assertPracticeRole` restricts review-queue reads and the review-pending → `DONE` approval transition to active `OWNER` and `ADMIN` members.
-- Review queue queries use the repository's `TaskStatus.PENDING` value for review-pending work (the current Prisma enum has no `REVIEW` member) and exclude deleted tasks.
-- Task updates record before/after snapshots with `entityType: 'Task'`, including approval actions and the actor role.
-- The Practice Hub hides the Review Queue tab for non-owner/non-admin users and displays an access explanation if a stale route is opened.
+## 3. Remaining Verification Requirements
+To advance this phase from 99% to 100% DONE and unblock Phase 10 VPS deployment:
+1. **Live Browser Runtime Testing:**
+   - Verify practice owner, admin, and staff login permissions.
+   - Confirm non-practice users receive access denied errors (403 Forbidden).
+2. **Queue State Lifecycle:**
+   - Create task -> move to IN_PROGRESS -> submit for review -> approve -> mark DONE.
+   - Confirm UI updates reactively without console errors.
+3. **Audit Trail Persistence:**
+   - Confirm every status change produces an audit log entry in the database.
+4. **Cross-Browser Verification:**
+   - Confirm layout and tab switching operate correctly on desktop and tablet viewports.

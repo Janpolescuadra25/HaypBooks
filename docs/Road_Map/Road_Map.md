@@ -1,22 +1,22 @@
 # HaypBooks  End-to-End Completion Roadmap
 
-- Current Checkpoint Date: 2026-11-04
-- Provenance Pin: b6faf87722a377020398328eff04a7b1149e4790
+- Current Checkpoint Date: 2026-11-08
+- Provenance Pin: cca39f510c65639be3e1cd86775e5e3e8da36ead
 - Authority: `Hydra 2026-11-04 Task 951 Verified State Audit`
 
 ## 0. Critical Path Execution Order
 
-1. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 — 99% Complete)**
+1. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 â€” 99% Complete)**
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
-2. **Phase 17: Acceptance & Integration Testing (P1/P2 — Journey 1 Verified; Journey 2 Verified; Journey 3 Verified Complete)**
+2. **Phase 17: Acceptance & Integration Testing (P1/P2 â€” Journey 1 Verified; Journey 2 Verified; Journey 3 Verified Complete)**
 - **Phase 17 Journey 3 AP Bill Lifecycle (VERIFIED COMPLETE):**
   * **Scope:** Vendor bill creation, line-item tax calculation, multi-currency support, approval workflow (preparer and approver segregation of duties), payment run execution, bank account deduction, sub-ledger to General Ledger posting (Dr Expense / Cr Accounts Payable, followed by Dr Accounts Payable / Cr Cash/Bank), and automated double-entry invariant verification.
   * **Test Spec Target:** Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.acceptance-spec.ts.
-  * **Status:** VERIFIED COMPLETE — 7/7 acceptance tests passed in 26.551s (double-entry accrual, payment settlement, separation of duties, and immutability invariants validated in commit `258c37f586908db05ab51ab338d2f4cf91cf3b8c`).
+  * **Status:** VERIFIED COMPLETE â€” 7/7 acceptance tests passed in 26.551s (double-entry accrual, payment settlement, separation of duties, and immutability invariants validated in commit `258c37f586908db05ab51ab338d2f4cf91cf3b8c`).
    - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite passed in the live repository baseline at `66b3a68979303b4541ad8f0c32f5b688c84db422` with 1/1 suites and 3/3 tests passing; Journey 3 verified complete (7/7 tests passed).
    - **Active Next Step:** Begin implementation of Phase 17 Journey 4 (Fixed Asset Lifecycle) per the acceptance matrix.
-3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate — BLOCKED)**
+3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate â€” BLOCKED)**
    - **Status:** Blocked until Phase 11 Step 5B browser/E2E runtime verification is completed, Phase 18 Milestone 2 staging drill is executed, and remaining acceptance tests pass.
 
 ## Current verification checkpoint - 2026-11-04
@@ -28,8 +28,8 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Working tree at HEAD `66b3a68979303b4541ad8f0c32f5b688c84db422` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; the verified implementation now covers RBAC enforcement, audit logging, and the `TaskStatus.PENDING` mapping used by the review flow.
 - Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is VERIFIED IMPLEMENTED / 99% COMPLETE (owner/admin-only RBAC, task audit logging, and `TaskStatus.PENDING` mapping invariants verified; only browser/E2E runtime verification remains).
-- Required security work: Phase 12 Security Containment (S1 ✓, S2 ✓, S3 ✓) completed and verified (2026-10-24); pruned to Appendix.
-- Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 ✓ 2026-10-18), inventory voiding (A5 ✓ 2026-10-18), bank matching (A6 ✓ 2026-10-18), numbering (A7 ✓ 2026-10-19). IDs refer to the linked audit.
+- Required security work: Phase 12 Security Containment (S1 âœ“, S2 âœ“, S3 âœ“) completed and verified (2026-10-24); pruned to Appendix.
+- Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 âœ“ 2026-10-18), inventory voiding (A5 âœ“ 2026-10-18), bank matching (A6 âœ“ 2026-10-18), numbering (A7 âœ“ 2026-10-19). IDs refer to the linked audit.
 - Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
@@ -145,7 +145,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 ### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
 
 - **Owner:** Hydra (test verification) + Mantra (fixtures)
-- **Status:** PARTIALLY COMPLETE (Journey 1 and Journey 2 verified complete; Journey 3 verified complete (7/7 tests passed); Journeys 4–5 remaining).
+- **Status:** PARTIALLY COMPLETE (Journey 1 and Journey 2 verified complete; Journey 3 verified complete (7/7 tests passed); Journeys 4â€“5 remaining).
 - **Verified passing commit:** `783a1f57c991ab7f4f28d243422651a5c6c6035b` (2026-10-31). Live isolated execution passed one suite and all three Journey 1 tests.
 - **Verified runtime components:** dedicated acceptance Jest configuration; schema-aware, idempotent migrations; Windows-compatible Prisma migration invocation; sequential lock-safe teardown; immutable invoice-line tax resolution with a bounded transaction; and the balanced double-entry owner AR lifecycle.
 - **Acceptance harness inventory:**
@@ -154,7 +154,7 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
   3. `Haypbooks/Backend/test/acceptance-global-setup.ts` (automated isolated schema setup with database name validation)
   4. `Haypbooks/Backend/test/acceptance-global-teardown.ts` (automated isolated schema cleanup)
   5. `Haypbooks/Backend/test/acceptance/shared/acceptance-harness.ts` (NestJS AppModule test bootstrap and service accessors)
-  6. `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` (complete Journey 1 owner lifecycle fixture: onboarding → customer → invoice → payment → balanced GL entries)
+  6. `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` (complete Journey 1 owner lifecycle fixture: onboarding â†’ customer â†’ invoice â†’ payment â†’ balanced GL entries)
   7. `docs/implementations/phase17-acceptance-harness/README.md` (centralized architectural guide and local provisioning instructions)
 - **Database Safety Controls:**
   - Automated schema-only lifecycle targeting `acceptance_test` schema exclusively (full database drops prohibited).
@@ -208,11 +208,11 @@ For each row: success, invalid input, permission denial, network/server failure,
 
 <a id="appendix-completed-tasks"></a>
 ## Appendix: Completed Tasks
-| **S1 — Tracked Credential Settings Containment** | **DONE & VERIFIED (2026-10-24)** | Untracked .vscode/settings.json from Git index, added .vscode/ to .gitignore, local settings preserved on disk. | [Gitignore Hardening README](../implementations/gitignore-hardening-task802/README.md#task-848s1-extension-tracked-credential-settings-containment-vscode) |
-| **S2 — Attachment Object Ownership & Tenant Isolation** | **DONE & VERIFIED (2026-10-24)** | Enforced workspaceId filtering and uploader ownership for attachment access and deletions. | [Attachment Ownership README](../implementations/attachment-ownership/README.md) |
-| **S3 — Guard/Controller Workspace Context Agreement** | **DONE & VERIFIED (2026-10-24)** | Enforced WorkspaceAccessGuard across all routes; eliminated raw header fallbacks. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
-| **Phase 12 — Security Containment** | **DONE & VERIFIED (2026-11-01)** | Completed and verified the security containment workstreams: credential settings, attachment ownership, and workspace access guard/controller agreement. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
-| **Phase 8 — AI Phase 2** | **DEFERRED / OPTIONAL** | Historical backlog retained for future AI review work; not a release-blocking phase for core product stability. | [Legacy AI roadmap backlog retained in this document] |
+| **S1 â€” Tracked Credential Settings Containment** | **DONE & VERIFIED (2026-10-24)** | Untracked .vscode/settings.json from Git index, added .vscode/ to .gitignore, local settings preserved on disk. | [Gitignore Hardening README](../implementations/gitignore-hardening-task802/README.md#task-848s1-extension-tracked-credential-settings-containment-vscode) |
+| **S2 â€” Attachment Object Ownership & Tenant Isolation** | **DONE & VERIFIED (2026-10-24)** | Enforced workspaceId filtering and uploader ownership for attachment access and deletions. | [Attachment Ownership README](../implementations/attachment-ownership/README.md) |
+| **S3 â€” Guard/Controller Workspace Context Agreement** | **DONE & VERIFIED (2026-10-24)** | Enforced WorkspaceAccessGuard across all routes; eliminated raw header fallbacks. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
+| **Phase 12 â€” Security Containment** | **DONE & VERIFIED (2026-11-01)** | Completed and verified the security containment workstreams: credential settings, attachment ownership, and workspace access guard/controller agreement. | [Security Tenant Isolation README](../implementations/security-tenant-isolation/README.md) |
+| **Phase 8 â€” AI Phase 2** | **DEFERRED / OPTIONAL** | Historical backlog retained for future AI review work; not a release-blocking phase for core product stability. | [Legacy AI roadmap backlog retained in this document] |
 
 
 ### Archived Verified Phases
