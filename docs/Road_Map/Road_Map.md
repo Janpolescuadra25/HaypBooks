@@ -1,7 +1,7 @@
 # HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: 2026-11-04
-- Provenance Pin: a72d04407566d08263540f5124f8e26561a9c20b
+- Provenance Pin: b6faf87722a377020398328eff04a7b1149e4790
 - Authority: `Hydra 2026-11-04 Task 951 Verified State Audit`
 
 ## 0. Critical Path Execution Order
@@ -118,12 +118,6 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Critical database migration blocker: RESOLVED at Milestone 1, verified in commit 15b73459f5d0a0a2d1ba84f2b6012d54485f6a4a. Only Phase 18 Milestone 2 staging drill and VPS production cutover remain active before Phase 10 release.
 
 ## Appendix: Archived Completed Phases
-
-### Phase 18: Self-Hosted PostgreSQL Database Migration (P1 — Milestone 1 & 2 Automation COMPLETE & VERIFIED)
-- **Status:** Archived after completion; tooling remains verifiable in code and documentation.
-- **Verified Tooling:** pgBouncer, loopback binding, `backup.sh`, `restore.sh`, `staging-drill.sh`, `validate-parity.ts`, `production-cutover.sh`, and migration README runbook.
-- **Implementation Record:** `docs/implementations/phase18-milestone2-completion/README.md`.
-- **Operational Gate:** Live VPS execution drill remains a pre-release operational requirement before Phase 10.
 
 ### 11 Step 5B  Practice Hub frontend queue views (VERIFIED IMPLEMENTED / 99% COMPLETE, P1)
 
@@ -247,12 +241,6 @@ For each row: success, invalid input, permission denial, network/server failure,
 ### Phase 18 Milestone 1: Self-Hosted PostgreSQL & pgBouncer Infrastructure (COMPLETED & VERIFIED)
 - **Verified Deliverables:** Loopback PostgreSQL 15 binding (`127.0.0.1:5432:5432`), pgBouncer container (`127.0.0.1:6432:6432`) with transaction pooling, `scram-sha-256` auth, automated backup script (`scripts/backup.sh`), fail-closed restore script (`scripts/restore.sh`), and migration documentation in `docs/implementations/database-migration/README.md`.
 - **Status:** Locked into repository baseline at commit `66b3a68979303b4541ad8f0c32f5b688c84db422`.
-
-### Phase 12: Security Containment S1/S2/S3 (COMPLETED & VERIFIED)
-- **Verified Deliverables:** Security containment, tenant boundary enforcement, and audit safeguards verified complete (2026-10-24).
-
-### Phase 11 Step 5A: Practice Hub Backend Queues & RBAC (COMPLETED & VERIFIED)
-- **Verified Deliverables:** Practice Hub backend task controllers, service architecture, RBAC enforcement, and queue operational flow validated in the repository.
 
 ## Definition of finished
 
