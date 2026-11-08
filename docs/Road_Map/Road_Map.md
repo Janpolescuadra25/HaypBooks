@@ -5,8 +5,6 @@
 - Authority: `Hydra 2026-11-04 Task 951 Verified State Audit`
 
 ## 0. Critical Path Execution Order
-
-1. **Phase 11 Step 5B: Practice Hub Frontend Queues & Audit Trail (P1 â€” 99% Complete)**
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
    - **Active Next Step:** Browser/E2E runtime verification.
 2. **Phase 17: Acceptance & Integration Testing (P1/P2 â€” Journey 1 Verified; Journey 2 Verified; Journey 3 Verified Complete)**
