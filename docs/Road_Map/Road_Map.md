@@ -1,8 +1,8 @@
 # HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: 2026-11-10
-- Provenance Pin: 6bfcb03d4235cb9e798e11a4ee325610eb8d21f3
-- Authority: `Hydra 2026-11-10 Task 1011 Post-Phase17 Completion Audit`
+- Provenance Pin: 5095516c86501279cb1126af95d767bb4ada8f86
+- Authority: `Hydra 2026-11-10 Task 1016 Practice Hub & Roadmap Audit`
 
 ## 0. Critical Path Execution Order
    - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
