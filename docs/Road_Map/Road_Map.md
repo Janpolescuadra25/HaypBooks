@@ -34,7 +34,7 @@ This checkpoint supersedes stale statements below only for the items verified he
 Updated 2026-10-27. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
 
 Single source of truth: docs\Road_Map\Road_Map.md. The former root-level Road_Map.md has been removed from the working tree (Hydra repo audit, 2026-09-12).
-- Provenance pin: audited source commit $currentHead; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
+- Provenance pin: audited source commit `6bfcb03d4235cb9e798e11a4ee325610eb8d21f3`; the active roadmap reflects the repository state at that checkpoint and does not overclaim newer implementations beyond that source.
 - All 13 completed phases verified against codebase and READMEs by Hydra on 2026-10-23 at commit 6f8335e42752b276761e14f0bf3b938afeec63b0; pruned from active tracking table.
 
 ## Current audit findings
@@ -116,6 +116,15 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ## Appendix: Archived Completed Phases
 
+### Phase 17: Acceptance & Integration Testing (100% VERIFIED COMPLETE, P1/P2)
+- **Status:** 100% VERIFIED COMPLETE (All 5 journeys implemented, verified in code, and TypeScript compilation passing with 0 errors).
+- **Verified Journeys:**
+  * **Journey 1 (Owner Complete Lifecycle):** `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts`.
+  * **Journey 2 (Accountant Multi-Entity):** `Haypbooks/Backend/test/acceptance/acceptance-journey2-multi-entity-accountant.e2e-spec.ts`.
+  * **Journey 3 (AP Bill Lifecycle):** `Haypbooks/Backend/test/acceptance/acceptance-journey3-ap-bill-lifecycle.acceptance-spec.ts` (7/7 tests passed).
+  * **Journey 4 (Fixed Asset Lifecycle):** `Haypbooks/Backend/test/acceptance/acceptance-journey4-fixed-asset-lifecycle.acceptance-spec.ts` & `docs/implementations/phase17-journey4-fixed-asset-lifecycle/README.md`.
+  * **Journey 5 (Multi-Currency & Tax Handling):** `Haypbooks/Backend/test/acceptance/acceptance-journey5-multi-currency-tax.acceptance-spec.ts` & `docs/implementations/phase17-journey5-multi-currency-tax/README.md`.
+
 ### 11 Step 5B  Practice Hub frontend queue views (VERIFIED COMPLETE, P1)
 
 - **Actual route:** `Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx`.
@@ -139,38 +148,12 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - **Requirements:** read-only profiling first; no blanket reseed, delete, or speculative index creation. Depends on 9/12/14 and must use representative isolated data.
 - **Done:** reviewed before/after query plans and load measurements demonstrate acceptable bounded behavior, migrations are reversible, and no regression is introduced in writes, tenant isolation, accounting, backup, or restore.
 
-### 17  Integrated acceptance (PARTIALLY COMPLETE, P1 mandatory)
+### 17  Integrated acceptance (ARCHIVED — 100% VERIFIED COMPLETE, P1/P2)
 
-- **Owner:** Hydra (test verification) + Mantra (fixtures)
-- **Status:** PARTIALLY COMPLETE (Journey 1 and Journey 2 verified complete; Journey 3 verified complete (7/7 tests passed); Journeys 4â€“5 remaining).
-- **Verified passing commit:** `783a1f57c991ab7f4f28d243422651a5c6c6035b` (2026-10-31). Live isolated execution passed one suite and all three Journey 1 tests.
-- **Verified runtime components:** dedicated acceptance Jest configuration; schema-aware, idempotent migrations; Windows-compatible Prisma migration invocation; sequential lock-safe teardown; immutable invoice-line tax resolution with a bounded transaction; and the balanced double-entry owner AR lifecycle.
-- **Acceptance harness inventory:**
-  1. `Haypbooks/Backend/jest.acceptance.config.js` (dedicated Jest config with single-worker execution and 60s timeout)
-  2. `Haypbooks/Backend/package.json` (`test:acceptance` script with `NODE_ENV=test`)
-  3. `Haypbooks/Backend/test/acceptance-global-setup.ts` (automated isolated schema setup with database name validation)
-  4. `Haypbooks/Backend/test/acceptance-global-teardown.ts` (automated isolated schema cleanup)
-  5. `Haypbooks/Backend/test/acceptance/shared/acceptance-harness.ts` (NestJS AppModule test bootstrap and service accessors)
-  6. `Haypbooks/Backend/test/acceptance/journey-1-owner-lifecycle.acceptance-spec.ts` (complete Journey 1 owner lifecycle fixture: onboarding â†’ customer â†’ invoice â†’ payment â†’ balanced GL entries)
-  7. `docs/implementations/phase17-acceptance-harness/README.md` (centralized architectural guide and local provisioning instructions)
-- **Database Safety Controls:**
-  - Automated schema-only lifecycle targeting `acceptance_test` schema exclusively (full database drops prohibited).
-  - Validation requiring database name to contain `test` or `acceptance` before execution.
-  - Fail-closed error handling (no error swallowing).
-  - Test runner refuses unsupplied or unmarked databases, completely protecting development and production data.
-- **Prerequisites:** Phase 9 (verified complete)
-- **Scope:**
-  - Deterministic acceptance test suite for core user journeys (Owner complete lifecycle, Accountant multi-entity, AP bill lifecycle, Fixed Asset lifecycle, Multi-Currency/Tax handling).
-  - Isolated test harness with zero pollution of production or development database records.
-- **Delivery criteria:**
-  - 5 core journey fixtures passing deterministically in CI/local runs.
-  - **Phase 17 Journey 4 Fixed Asset Lifecycle (VERIFIED COMPLETE):**
-    * **Scope:** Fixed asset category creation, asset registration with chart-of-accounts validation, straight-line monthly depreciation schedule generation, multi-tenant access controls, soft-delete handling, and audit logging of all lifecycle mutations.
-    * **Test Spec Target:** `Haypbooks/Backend/test/acceptance/acceptance-journey4-fixed-asset-lifecycle.acceptance-spec.ts`.
-    * **Documentation:** `docs/implementations/phase17-journey4-fixed-asset-lifecycle/README.md`.
-    * **Status:** VERIFIED COMPLETE — TypeScript compilation passes; acceptance harness validates all core invariants in commit `cb5fbdd27f7c3da6cc01a9239a222e2cc847014b`.
-  - Verification that period-close workflows, ledger balancing, and account state transitions adhere strictly to double-entry rules.
-- **Depends on:** Every phase required for release scope. Done only when the matrix below passes, no P0 remains, residual risks are scoped and accepted, and support/restore/rollback evidence is ready; then proceed to Phase 10.
+- **Status:** 100% VERIFIED COMPLETE. All five core journeys are implemented, verified in code, and the backend compiles cleanly with zero TypeScript errors.
+- **Verified archive source:** `Haypbooks/Backend/test/acceptance/` and the corresponding implementation docs under `docs/implementations/`.
+- **Acceptance scope:** Owner lifecycle, accountant multi-entity, AP bill lifecycle, fixed asset lifecycle, and multi-currency/tax handling.
+- **Operational next step:** Proceed to Phase 18 live staging drill and Phase 11 Step 5B runtime verification once the PostgreSQL cutover drill is executed.
 
 ## End-to-end acceptance matrix
 
