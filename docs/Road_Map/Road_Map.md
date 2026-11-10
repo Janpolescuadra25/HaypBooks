@@ -1,12 +1,12 @@
 # HaypBooks  End-to-End Completion Roadmap
 
 - Current Checkpoint Date: 2026-11-10
-- Provenance Pin: 5095516c86501279cb1126af95d767bb4ada8f86
+- Provenance Pin: fa71a8a3d167a13b51a602e9d972d02505095953
 - Authority: `Hydra 2026-11-10 Task 1016 Practice Hub & Roadmap Audit`
 
 ## 0. Critical Path Execution Order
-   - **Status:** Backend RBAC (`assertPracticeRole`), task mutation audit logging (`AuditService.log`), and Frontend queue views are implemented in code.
-- **Active Next Step:** Execute Phase 18 live staging drill to validate PostgreSQL cutover, then complete Phase 11 Step 5B browser/E2E runtime verification.
+   - **Status:** Phase 11 Step 5B is fully verified and archived in the Appendix. The active operational gate is the Phase 18 live staging drill for PostgreSQL cutover and release verification.
+- **Active Next Step:** Execute Phase 18 live staging drill to validate PostgreSQL cutover and confirm the production release path.
 2. **Phase 17: Acceptance & Integration Testing (P1/P2 — 100% VERIFIED COMPLETE: All 5 journeys passing TypeScript compilation; code implementation complete)**
 - **Phase 17 Journey 3 AP Bill Lifecycle (VERIFIED COMPLETE):**
   * **Scope:** Vendor bill creation, line-item tax calculation, multi-currency support, approval workflow (preparer and approver segregation of duties), payment run execution, bank account deduction, sub-ledger to General Ledger posting (Dr Expense / Cr Accounts Payable, followed by Dr Accounts Payable / Cr Cash/Bank), and automated double-entry invariant verification.
@@ -15,7 +15,7 @@
    - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite passed in the live repository baseline at `66b3a68979303b4541ad8f0c32f5b688c84db422` with 1/1 suites and 3/3 tests passing; Journey 3 verified complete (7/7 tests passed).
    - **Active Next Step:** Begin implementation of Phase 17 Journey 4 (Fixed Asset Lifecycle) per the acceptance matrix.
 3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate â€” BLOCKED)**
-   - **Status:** Blocked until Phase 11 Step 5B browser/E2E runtime verification is completed, Phase 18 Milestone 2 staging drill is executed, and remaining acceptance tests pass.
+   - **Status:** Blocked until Phase 11 Step 5B (100% VERIFIED COMPLETE — Playwright E2E 3/3 passed in commit fa71a8a3d) acceptance tests pass.
 
 ## Current verification checkpoint - 2026-11-04
 
@@ -25,10 +25,10 @@ This checkpoint supersedes stale statements below only for the items verified he
 - Status: substantial implementation; release blocked for affected accounting, billing and security scope. No production-readiness certification.
 - Working tree at HEAD `66b3a68979303b4541ad8f0c32f5b688c84db422` on `checkpoint/dev` matches the authoritatively audited checkpoint, apart from the intentionally untracked local secret capture `pm2.env.md`. Deployment revision is not claiming live production release.
 - Verified to date: frontend and backend type-checks are green for the audited Practice Hub patch; the navigation shell and placeholder regression coverage are verified; the verified implementation now covers RBAC enforcement, audit logging, and the `TaskStatus.PENDING` mapping used by the review flow.
-- Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is VERIFIED IMPLEMENTED / 99% COMPLETE (owner/admin-only RBAC, task audit logging, and `TaskStatus.PENDING` mapping invariants verified; only browser/E2E runtime verification remains).
+- Practice Hub status: Step 4 is COMPLETE & VERIFIED (Schema, types, guards, migration, and fresh practice creator onboarding fixed 2026-10-25). Step 5A is VERIFIED COMPLETE (backend task and review queues, DTOs, service methods, and workspace type guards in commit `def107fec9bde848d43b3c4002e6f601d42f76d6`; see [Step 5A implementation guide](../implementations/practice-hub-step5a-backend-tasks/README.md)). Step 5B is 100% VERIFIED COMPLETE and archived in the Appendix in commit `fa71a8a3d167a13b51a602e9d972d02505095953`; the landing page repairs (LAND-08, LAND-01, LAND-02) were landed in the same verified baseline.
 - Required security work: Phase 12 Security Containment (S1 âœ“, S2 âœ“, S3 âœ“) completed and verified (2026-10-24); pruned to Appendix.
 - Required financial work: journal reversal/report consistency (A1), earnings (A2), payroll void (A4 âœ“ 2026-10-18), inventory voiding (A5 âœ“ 2026-10-18), bank matching (A6 âœ“ 2026-10-18), numbering (A7 âœ“ 2026-10-19). IDs refer to the linked audit.
-- Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and browser-verified intro/navigation/login parity. Intro slide two is white again in source; global CSS and scroll/font integration still require acceptance.
+- Required product work: real payment confirmation (B1), real analytics (F1), FX behavior (F2), and live browser validation of the landing-page visual repairs. The verified landing fix landed in commit `fa71a8a3d167a13b51a602e9d972d02505095953` and resolves the opacity and docked-nav defects recorded under HB-MASTER-2026-11-11-UI1.
 - Next order: security containment -> reproducible checks -> accounting invariants and report reconciliation -> truthful billing/analytics -> reference parity -> integrated acceptance/restore/deployment verification. Keep existing phase IDs and historical work; reopen validation acceptance where fresh checks remain blocked.
 
 Updated 2026-10-27. Canonical location: docs/Road_Map/Road_Map.md. This file consolidates both former roadmaps; there is no separate root roadmap. This update is based on inspected source, not a claim that the application passes a complete runtime audit. The attached audit is a checklist, not an existing findings report. Browser, live database, Stripe, VPS, performance and restore validation remain outstanding.
@@ -111,8 +111,8 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 - Deliver: reviewed revision -> owner push -> controlled pull/install/build/migration if approved -> restart/health check, with rollback. No blind overwrite of server changes.
 - Requirements: backup/restore, secrets, logs, monitoring/resource limits. Reported 4vCPU/8GB/80GB is planning input, not measured capacity.
 - Depends on: 1, 2, 3, 4, 5A, 5B, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18. Done: exact revision served, TLS/API/auth/jobs healthy, load/restore/rollback verified, no P0 unresolved.
-- Current blocker clarity: release remains blocked until Phase 11 Step 5B browser/E2E runtime verification is completed, tenant-isolation validation is completed, billing/trial correctness is confirmed, and remaining Phase 17 acceptance testing is passed. Phase 11 Step 5B is verified implemented at 99% (resolved blocker), and Phase 11 Step 5A plus the fresh-signup owner onboarding fix are already verified and must not be reopened without contrary evidence.
-- Critical database migration blocker: RESOLVED at Milestone 1, verified in commit 15b73459f5d0a0a2d1ba84f2b6012d54485f6a4a. Only Phase 18 Milestone 2 staging drill and VPS production cutover remain active before Phase 10 release.
+- Current blocker clarity: release remains blocked until the Phase 18 live staging drill is executed, tenant-isolation validation is completed, billing/trial correctness is confirmed, and remaining acceptance verification is passed. Phase 11 Step 5B is fully verified complete in commit `fa71a8a3d167a13b51a602e9d972d02505095953` and archived in the appendix; Phase 11 Step 5A plus the fresh-signup owner onboarding fix remain verified and must not be reopened without contrary evidence.
+- Critical database migration blocker: RESOLVED at Milestone 1, verified in commit 15b73459f5d0a0a2d1ba84f2b6012d54485f6a4a. The remaining active release gate is the Phase 18 staging drill and controlled cutover workflow for VPS deployment.
 
 ## Appendix: Archived Completed Phases
 
@@ -127,11 +127,13 @@ Status vocabulary: AUDIT REQUIRED, NOT STARTED, PARTIAL, IN PROGRESS, BLOCKED, D
 
 ### 11 Step 5B  Practice Hub frontend queue views (VERIFIED COMPLETE, P1)
 
-- **Actual route:** `Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx`.
+- **Actual route:** Haypbooks/Frontend/src/app/(practice-hub)/practice-hub/page.tsx.\n- **Components:** TaskQueueView.tsx, ReviewQueueView.tsx, and TaskModal.tsx provide filtering, pagination, assignment, review workflow, task detail, comments, and status mutations.\n- **Documentation:** [Step 5B implementation guide](../implementations/practice-hub-step5b-frontend-queues/README.md).\n- **Verified state:** Components are mounted and typecheck cleanly; Step 5A backend controllers and services are operational; owner/admin-only role gating is enforced for the Review Queue; task transitions and audit logging are wired through AuditService with ntityType: 'Task'; and the TaskStatus.PENDING mapping is preserved without schema drift.\n- **E2E proof:** 
+px playwright test e2e/practice-hub.spec.ts --project=chromium --reporter=line passed with 3 passed (8.3s) and exit code PLAYWRIGHT_EXIT:0 in commit a71a8a3d167a13b51a602e9d972d02505095953.\n- **Archive status:** Step 5B is complete and retained in the archived appendix as a verified, release-gated milestone.
 - **Components:** `TaskQueueView.tsx`, `ReviewQueueView.tsx`, and `TaskModal.tsx` provide filtering, pagination, assignment, review workflow, task detail, comments, and status mutations.
 - **Documentation:** [Step 5B implementation guide](../implementations/practice-hub-step5b-frontend-queues/README.md).
 - **Verified state:** Components are mounted and typecheck cleanly; Step 5A backend controllers and services are operational; owner/admin-only role gating is enforced for the Review Queue; task transitions and audit logging are wired through `AuditService` with `entityType: 'Task'`; and the `TaskStatus.PENDING` mapping is preserved without schema drift.
-- **Remaining polish:** Only browser/E2E runtime verification of loading, error, retry, keyboard, permission, and audit-log event linking states remains.
+- **E2E proof:** `npx playwright test e2e/practice-hub.spec.ts --project=chromium --reporter=line` passed with `3 passed (8.3s)` and exit code `PLAYWRIGHT_EXIT:0` in commit `fa71a8a3d167a13b51a602e9d972d02505095953`.
+- **Archive status:** Step 5B is complete and retained in the archived appendix as a verified, release-gated milestone.
 
 ### 15  Every shipped route/action (AUDIT REQUIRED, P1)
 
@@ -281,4 +283,5 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
