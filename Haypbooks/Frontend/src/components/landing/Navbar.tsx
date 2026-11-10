@@ -184,13 +184,13 @@ export default function Navbar() {
   return (
     <>
       <motion.header
-        initial={{ y: -80, opacity: 0 }}
+        initial={false}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${
           scrolled
-            ? "bg-white/85 backdrop-blur-xl border-b border-navy-900/10 shadow-[0_8px_30px_rgba(8,22,49,0.06)]"
-            : "bg-transparent"
+            ? "border-slate-200/80 bg-white/95 backdrop-blur-md shadow-sm"
+            : "border-slate-200/60 bg-white/90 backdrop-blur-xs"
         }`}
       >
         <nav

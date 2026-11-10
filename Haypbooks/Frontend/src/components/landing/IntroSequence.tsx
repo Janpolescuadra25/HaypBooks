@@ -105,7 +105,7 @@ export default function IntroSequence() {
       {(!gone || leaving) && (
         <motion.div
           key="intro-root"
-          className="fixed inset-0 z-[100]"
+          className="fixed inset-0 z-[100] bg-white isolate overflow-hidden"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
@@ -344,7 +344,7 @@ function SlideTwo({ reduced }: { reduced: boolean }) {
   const chips = ["INVOICING", "BANK RECONCILIATION", "EXPENSES", "PAYROLL", "INVENTORY", "BIR-READY REPORTS"];
   return (
     <motion.div
-      className="absolute inset-0 overflow-hidden bg-white"
+      className="absolute inset-0 overflow-hidden bg-white opacity-100"
       initial={{ clipPath: "polygon(0 0, 0 0, 0 100%, 0 100%)" }}
       animate={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)" }}
       exit={{ scale: 1.05, opacity: 0.5, transition: { duration: 0.55 } }}

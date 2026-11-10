@@ -1,7 +1,25 @@
 #!/usr/bin/env node
 const http = require('http')
 const https = require('https')
-const url = process.argv[2] || 'http://127.0.0.1:4000/api/health'
+const defaultUrls = [
+  'http://127.0.0.1:4000/health',
+  'http://127.0.0.1:4000/api/health',
+]
+const rawUrl = process.argv[2]
+const fallbackUrls = new Set(rawUrl ? [rawUrl] : defaultUrls)
+if (rawUrl) {
+  try {
+    const parsed = new URL(rawUrl)
+    if (parsed.pathname === '/health') {
+      fallbackUrls.add(`${parsed.origin}/api/health`)
+    } else if (parsed.pathname === '/api/health') {
+      fallbackUrls.add(`${parsed.origin}/health`)
+    }
+  } catch (err) {
+    // ignore malformed URLs; they will fail naturally below
+  }
+}
+const urls = [...fallbackUrls]
 const timeoutSec = parseInt(process.argv[3] || '30', 10)
 const intervalMs = 1000
 let elapsed = 0
@@ -24,11 +42,19 @@ function ping(u) {
   while (elapsed < timeoutSec * 1000) {
     // eslint-disable-next-line no-console
     process.stdout.write('.')
-    // eslint-disable-next-line no-await-in-loop
-    const ok = await ping(url)
+    let ok = false
+    let healthyUrl = null
+    for (const u of urls) {
+      // eslint-disable-next-line no-await-in-loop
+      ok = await ping(u)
+      if (ok) {
+        healthyUrl = u
+        break
+      }
+    }
     if (ok) {
       // eslint-disable-next-line no-console
-      console.log('\nBackend healthy')
+      console.log(`\nBackend healthy (${healthyUrl})`)
       process.exit(0)
     }
     // eslint-disable-next-line no-await-in-loop
