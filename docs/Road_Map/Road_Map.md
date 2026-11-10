@@ -15,7 +15,7 @@
    - **Status:** Journey 1 harness and 3/3 tests verified passing in commit `783a1f57`; Journey 2 acceptance suite passed in the live repository baseline at `66b3a68979303b4541ad8f0c32f5b688c84db422` with 1/1 suites and 3/3 tests passing; Journey 3 verified complete (7/7 tests passed).
    - **Active Next Step:** Begin implementation of Phase 17 Journey 4 (Fixed Asset Lifecycle) per the acceptance matrix.
 3. **Phase 10: VPS Release Preparation & Deployment (P1 Final Gate â€” BLOCKED)**
-   - **Status:** Blocked until Phase 11 Step 5B (100% VERIFIED COMPLETE — Playwright E2E 3/3 passed in commit fa71a8a3d) acceptance tests pass.
+   - **Status:** UNBLOCKED — Phase 11 Step 5B (100% VERIFIED COMPLETE — Playwright E2E 3/3 passed in commit fa71a8a3d) has resolved the final release blocker. Phase 10 is now ready for VPS deployment.
 
 ## Current verification checkpoint - 2026-11-04
 
@@ -283,6 +283,7 @@ Conflicts resolved:
 - Reverify existing budgets and claimed CSV/PDF exports before adding them. Preserve industry templates, configurable variance alerts, original/revised/forecast comparisons, cash-flow forecast integration and budget-line ownership/comments as planned scope.
 - Output: templates mapped to company COA without invented financial facts; company-scoped thresholds and deduplicated notifications; versioned forecast comparisons; transparent forecasting assumptions; permission-controlled collaboration.
 - Dependencies: 4 accurate actuals, 12 permissions, core budgeting verification. Acceptance: actual/budget reconciliation, threshold boundaries, repeated jobs, template mismatch, scenario history, collaboration authorization and export parity tests. Choose approved subsets rather than treating all enhancements as launch blockers.
+
 
 
 
